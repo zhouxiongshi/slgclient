@@ -135,6 +135,33 @@ export default class MapUILogic extends Component {
     protected _resArray: any = [];
     protected _yieldArray: any = [];
 
+    /** 兜底返回：原工程每个面板只靠右上角 X 关闭，窗口非 16:9 时 X 会被裁到画布外 */
+    protected _onKeyDown = (e: KeyboardEvent): void => {
+        if (e.key === 'Escape' || e.keyCode === 27) {
+            this.closeTopPanel();
+        }
+    };
+
+    /** 关闭最上层弹窗；优先调用面板自身的关闭逻辑（会恢复主界面 UI） */
+    public closeTopPanel(): boolean {
+        if (!this.contentNode) { return false; }
+        const children = this.contentNode.children;
+        for (let i = children.length - 1; i >= 0; i--) {
+            const n = children[i];
+            if (!n || !n.active) { continue; }
+            let closed = false;
+            const comps = n.components;
+            for (let j = 0; j < comps.length; j++) {
+                const c: any = comps[j];
+                if (typeof c.onClickClose === 'function') { c.onClickClose(); closed = true; break; }
+                if (typeof c.onClickBack === 'function') { c.onClickBack(); closed = true; break; }
+            }
+            if (!closed) { n.active = false; }
+            return true;
+        }
+        return false;
+    }
+
     protected onLoad(): void {
 
         this._resArray.push({key:"grain", name:"谷:"});
@@ -172,6 +199,11 @@ export default class MapUILogic extends Component {
         
         
 
+        if (typeof window !== 'undefined') {
+            window.addEventListener('keydown', this._onKeyDown);
+            (window as any).__slgBack = () => this.closeTopPanel();
+        }
+
         this.updateRoleRes();
         this.updateRole();
         let unionId = MapCommand.getInstance().cityProxy.myUnionId;
@@ -200,6 +232,10 @@ export default class MapUILogic extends Component {
 
 
     protected onDestroy(): void {
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('keydown', this._onKeyDown);
+            delete (window as any).__slgBack;
+        }
         this.clearAllNode();
         MapUICommand.getInstance().proxy.clearData();
         EventMgr.targetOff(this);
