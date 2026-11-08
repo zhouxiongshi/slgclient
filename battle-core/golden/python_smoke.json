@@ -1,0 +1,2875 @@
+{
+  "seed": 20261106,
+  "config_fingerprint": "f186e15d0c1f266b",
+  "winner": 1,
+  "rounds": 6,
+  "survivors": {
+    "1": [
+      "曹植#1-1",
+      "潘凤#1-2"
+    ],
+    "2": []
+  },
+  "warnings": [
+    "BaseDamage 的属性换算式（兵力/攻/谋/防/伤害率 → 基础值）",
+    "mMinDamage 实例字段取值",
+    "Cfg.Counters 的 Normal/Armor/Chain 三档真实系数",
+    "Tcfg_skill_detail / Tcfg_hero 的二进制数值（U3：file_id↔path 映射未解）",
+    "伤害率波动与随机数的注入位置",
+    "probability_init / probability_max 的真实值",
+    "客户端算术是否等于服务端权威结算"
+  ],
+  "events": [
+    {
+      "round": 0,
+      "phase": "battle_start",
+      "actor": "严颜#1-0",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "木材收益提升",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 0,
+      "phase": "battle_start",
+      "actor": "黄忠#2-0",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "无心恋战",
+        "class": "指挥",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 0,
+      "phase": "battle_start",
+      "actor": "黄忠#2-0",
+      "kind": "buff",
+      "payload": {
+        "target": "黄忠#2-0",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 0,
+      "phase": "battle_start",
+      "actor": "张绣#2-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "南中平蛮",
+        "class": "指挥",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 0,
+      "phase": "battle_start",
+      "actor": "张绣#2-1",
+      "kind": "buff",
+      "payload": {
+        "target": "张绣#2-1",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 0,
+      "phase": "battle_start",
+      "actor": "曹植#1-1",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "措手不及",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 0,
+      "phase": "battle_start",
+      "actor": "夏侯月姬#2-2",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "革甲众行",
+        "class": "指挥",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 0,
+      "phase": "battle_start",
+      "actor": "夏侯月姬#2-2",
+      "kind": "buff",
+      "payload": {
+        "target": "夏侯月姬#2-2",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 0,
+      "phase": "battle_start",
+      "actor": "潘凤#1-2",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "骁悍野客",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "round_start",
+      "actor": "严颜#1-0",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "勇冠三军",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "round_start",
+      "actor": "严颜#1-0",
+      "kind": "buff",
+      "payload": {
+        "target": "严颜#1-0",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "round_start",
+      "actor": "黄忠#2-0",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "坐山观虎",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "round_start",
+      "actor": "黄忠#2-0",
+      "kind": "buff",
+      "payload": {
+        "target": "黄忠#2-0",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "round_start",
+      "actor": "张绣#2-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "剑关叛立",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "round_start",
+      "actor": "张绣#2-1",
+      "kind": "buff",
+      "payload": {
+        "target": "张绣#2-1",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "round_start",
+      "actor": "曹植#1-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "疾行速战",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "round_start",
+      "actor": "曹植#1-1",
+      "kind": "buff",
+      "payload": {
+        "target": "曹植#1-1",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "round_start",
+      "actor": "夏侯月姬#2-2",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "金吾飞将",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "round_start",
+      "actor": "夏侯月姬#2-2",
+      "kind": "buff",
+      "payload": {
+        "target": "夏侯月姬#2-2",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "round_start",
+      "actor": "潘凤#1-2",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "借刀斩叛",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "round_start",
+      "actor": "潘凤#1-2",
+      "kind": "buff",
+      "payload": {
+        "target": "潘凤#1-2",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "action",
+      "actor": "严颜#1-0",
+      "kind": "damage",
+      "payload": {
+        "target": "夏侯月姬#2-2",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 150.0,
+        "base_evidence": "E2",
+        "counter_note": "normal/normal (coefficient E2)",
+        "calc": {
+          "base": 110.0187250996016,
+          "counter": 1.0,
+          "bonus_total": 0.06,
+          "after_counter": 110.0187250996016,
+          "one_plus_bonus": 1.06,
+          "raw": 116.6198486055777,
+          "floored": 116,
+          "min_damage": 1,
+          "final": 116,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 1,
+      "phase": "action",
+      "actor": "严颜#1-0",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "青白分明",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "after_attack",
+      "actor": "严颜#1-0",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "雀伏",
+        "class": "追击",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "after_attack",
+      "actor": "严颜#1-0",
+      "kind": "damage",
+      "payload": {
+        "target": "黄忠#2-0",
+        "skill": "雀伏",
+        "effect_type": "STRATEGY_DAMAGE",
+        "rate_pct_at_level": 190.0,
+        "base_evidence": "E2",
+        "counter_note": "normal/normal (coefficient E2)",
+        "calc": {
+          "base": 134.53413014608233,
+          "counter": 1.0,
+          "bonus_total": 0.06,
+          "after_counter": 134.53413014608233,
+          "one_plus_bonus": 1.06,
+          "raw": 142.60617795484728,
+          "floored": 142,
+          "min_damage": 1,
+          "final": 142,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 1,
+      "phase": "action",
+      "actor": "黄忠#2-0",
+      "kind": "damage",
+      "payload": {
+        "target": "严颜#1-0",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 80.0,
+        "base_evidence": "E2",
+        "counter_note": "normal/normal (coefficient E2)",
+        "calc": {
+          "base": 58.67665338645419,
+          "counter": 1.0,
+          "bonus_total": 0.14,
+          "after_counter": 58.67665338645419,
+          "one_plus_bonus": 1.1400000000000001,
+          "raw": 66.89138486055778,
+          "floored": 66,
+          "min_damage": 1,
+          "final": 66,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 1,
+      "phase": "action",
+      "actor": "黄忠#2-0",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "万箭齐发",
+        "class": "主动",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "action",
+      "actor": "黄忠#2-0",
+      "kind": "damage",
+      "payload": {
+        "target": "严颜#1-0",
+        "skill": "万箭齐发",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 50.0,
+        "base_evidence": "E2",
+        "counter_note": "normal/normal (coefficient E2)",
+        "calc": {
+          "base": 36.67290836653387,
+          "counter": 1.0,
+          "bonus_total": 0.24,
+          "after_counter": 36.67290836653387,
+          "one_plus_bonus": 1.24,
+          "raw": 45.474406374501996,
+          "floored": 45,
+          "min_damage": 1,
+          "final": 45,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 1,
+      "phase": "action",
+      "actor": "黄忠#2-0",
+      "kind": "control",
+      "payload": {
+        "target": "严颜#1-0",
+        "state": "犹豫",
+        "probability": 0.25
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "after_attack",
+      "actor": "黄忠#2-0",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "桃园结义",
+        "class": "追击",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "after_attack",
+      "actor": "黄忠#2-0",
+      "kind": "damage",
+      "payload": {
+        "target": "严颜#1-0",
+        "skill": "桃园结义",
+        "effect_type": "STRATEGY_DAMAGE",
+        "rate_pct_at_level": 60.0,
+        "base_evidence": "E2",
+        "counter_note": "normal/normal (coefficient E2)",
+        "calc": {
+          "base": 42.484462151394425,
+          "counter": 1.0,
+          "bonus_total": 0.14,
+          "after_counter": 42.484462151394425,
+          "one_plus_bonus": 1.1400000000000001,
+          "raw": 48.43228685258965,
+          "floored": 48,
+          "min_damage": 1,
+          "final": 48,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 1,
+      "phase": "action",
+      "actor": "张绣#2-1",
+      "kind": "damage",
+      "payload": {
+        "target": "严颜#1-0",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 100.0,
+        "base_evidence": "E2",
+        "counter_note": "armor/normal (coefficient E2)",
+        "calc": {
+          "base": 73.34581673306774,
+          "counter": 1.0,
+          "bonus_total": 0.14,
+          "after_counter": 73.34581673306774,
+          "one_plus_bonus": 1.1400000000000001,
+          "raw": 83.61423107569723,
+          "floored": 83,
+          "min_damage": 1,
+          "final": 83,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 1,
+      "phase": "action",
+      "actor": "张绣#2-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "持刀从武",
+        "class": "主动",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "action",
+      "actor": "张绣#2-1",
+      "kind": "damage",
+      "payload": {
+        "target": "严颜#1-0",
+        "skill": "持刀从武",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 14.0,
+        "base_evidence": "E2",
+        "counter_note": "armor/normal (coefficient E2)",
+        "calc": {
+          "base": 10.268414342629484,
+          "counter": 1.0,
+          "bonus_total": 0.24,
+          "after_counter": 10.268414342629484,
+          "one_plus_bonus": 1.24,
+          "raw": 12.73283378486056,
+          "floored": 12,
+          "min_damage": 1,
+          "final": 12,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 1,
+      "phase": "after_attack",
+      "actor": "张绣#2-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "魏武之泽",
+        "class": "追击",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "after_attack",
+      "actor": "张绣#2-1",
+      "kind": "damage",
+      "payload": {
+        "target": "严颜#1-0",
+        "skill": "魏武之泽",
+        "effect_type": "STRATEGY_DAMAGE",
+        "rate_pct_at_level": 160.0,
+        "base_evidence": "E2",
+        "counter_note": "armor/normal (coefficient E2)",
+        "calc": {
+          "base": 113.29189907038516,
+          "counter": 1.0,
+          "bonus_total": 0.14,
+          "after_counter": 113.29189907038516,
+          "one_plus_bonus": 1.1400000000000001,
+          "raw": 129.15276494023908,
+          "floored": 129,
+          "min_damage": 1,
+          "final": 129,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 1,
+      "phase": "action",
+      "actor": "曹植#1-1",
+      "kind": "damage",
+      "payload": {
+        "target": "夏侯月姬#2-2",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 130.0,
+        "base_evidence": "E2",
+        "counter_note": "armor/normal (coefficient E2)",
+        "calc": {
+          "base": 95.34956175298807,
+          "counter": 1.0,
+          "bonus_total": 0.06,
+          "after_counter": 95.34956175298807,
+          "one_plus_bonus": 1.06,
+          "raw": 101.07053545816736,
+          "floored": 101,
+          "min_damage": 1,
+          "final": 101,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 1,
+      "phase": "action",
+      "actor": "曹植#1-1",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "沙场破阵",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "after_attack",
+      "actor": "曹植#1-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "破胆",
+        "class": "追击",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "after_attack",
+      "actor": "曹植#1-1",
+      "kind": "damage",
+      "payload": {
+        "target": "黄忠#2-0",
+        "skill": "破胆",
+        "effect_type": "STRATEGY_DAMAGE",
+        "rate_pct_at_level": 180.0,
+        "base_evidence": "E2",
+        "counter_note": "armor/normal (coefficient E2)",
+        "calc": {
+          "base": 127.45338645418329,
+          "counter": 1.0,
+          "bonus_total": 0.06,
+          "after_counter": 127.45338645418329,
+          "one_plus_bonus": 1.06,
+          "raw": 135.10058964143428,
+          "floored": 135,
+          "min_damage": 1,
+          "final": 135,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 1,
+      "phase": "action",
+      "actor": "夏侯月姬#2-2",
+      "kind": "damage",
+      "payload": {
+        "target": "严颜#1-0",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 300.0,
+        "base_evidence": "E2",
+        "counter_note": "chain/normal (coefficient E2)",
+        "calc": {
+          "base": 220.0374501992032,
+          "counter": 1.0,
+          "bonus_total": 0.14,
+          "after_counter": 220.0374501992032,
+          "one_plus_bonus": 1.1400000000000001,
+          "raw": 250.84269322709167,
+          "floored": 250,
+          "min_damage": 1,
+          "final": 250,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 1,
+      "phase": "action",
+      "actor": "夏侯月姬#2-2",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "枭姬",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "after_attack",
+      "actor": "夏侯月姬#2-2",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "反击之策",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "action",
+      "actor": "潘凤#1-2",
+      "kind": "damage",
+      "payload": {
+        "target": "夏侯月姬#2-2",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 160.0,
+        "base_evidence": "E2",
+        "counter_note": "chain/normal (coefficient E2)",
+        "calc": {
+          "base": 117.35330677290838,
+          "counter": 1.0,
+          "bonus_total": 0.06,
+          "after_counter": 117.35330677290838,
+          "one_plus_bonus": 1.06,
+          "raw": 124.39450517928289,
+          "floored": 124,
+          "min_damage": 1,
+          "final": 124,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 1,
+      "phase": "action",
+      "actor": "潘凤#1-2",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "怯心夺志",
+        "class": "主动",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "action",
+      "actor": "潘凤#1-2",
+      "kind": "damage",
+      "payload": {
+        "target": "黄忠#2-0",
+        "skill": "怯心夺志",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 190.0,
+        "base_evidence": "E2",
+        "counter_note": "chain/normal (coefficient E2)",
+        "calc": {
+          "base": 139.35705179282868,
+          "counter": 1.0,
+          "bonus_total": 0.16,
+          "after_counter": 139.35705179282868,
+          "one_plus_bonus": 1.16,
+          "raw": 161.65418007968125,
+          "floored": 161,
+          "min_damage": 1,
+          "final": 161,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 1,
+      "phase": "after_attack",
+      "actor": "潘凤#1-2",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "破魂",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 1,
+      "phase": "round_end",
+      "actor": "严颜#1-0",
+      "kind": "state_clear",
+      "payload": {
+        "state": "犹豫"
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "round_start",
+      "actor": "严颜#1-0",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "勇冠三军",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "round_start",
+      "actor": "严颜#1-0",
+      "kind": "buff",
+      "payload": {
+        "target": "严颜#1-0",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "round_start",
+      "actor": "黄忠#2-0",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "坐山观虎",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "round_start",
+      "actor": "黄忠#2-0",
+      "kind": "buff",
+      "payload": {
+        "target": "黄忠#2-0",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "round_start",
+      "actor": "张绣#2-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "剑关叛立",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "round_start",
+      "actor": "张绣#2-1",
+      "kind": "buff",
+      "payload": {
+        "target": "张绣#2-1",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "round_start",
+      "actor": "曹植#1-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "疾行速战",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "round_start",
+      "actor": "曹植#1-1",
+      "kind": "buff",
+      "payload": {
+        "target": "曹植#1-1",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "round_start",
+      "actor": "夏侯月姬#2-2",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "金吾飞将",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "round_start",
+      "actor": "夏侯月姬#2-2",
+      "kind": "buff",
+      "payload": {
+        "target": "夏侯月姬#2-2",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "round_start",
+      "actor": "潘凤#1-2",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "借刀斩叛",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "round_start",
+      "actor": "潘凤#1-2",
+      "kind": "buff",
+      "payload": {
+        "target": "潘凤#1-2",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "action",
+      "actor": "严颜#1-0",
+      "kind": "damage",
+      "payload": {
+        "target": "夏侯月姬#2-2",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 150.0,
+        "base_evidence": "E2",
+        "counter_note": "normal/normal (coefficient E2)",
+        "calc": {
+          "base": 110.0187250996016,
+          "counter": 1.0,
+          "bonus_total": 0.12,
+          "after_counter": 110.0187250996016,
+          "one_plus_bonus": 1.12,
+          "raw": 123.2209721115538,
+          "floored": 123,
+          "min_damage": 1,
+          "final": 123,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 2,
+      "phase": "action",
+      "actor": "严颜#1-0",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "青白分明",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "after_attack",
+      "actor": "严颜#1-0",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "雀伏",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "action",
+      "actor": "黄忠#2-0",
+      "kind": "damage",
+      "payload": {
+        "target": "严颜#1-0",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 80.0,
+        "base_evidence": "E2",
+        "counter_note": "normal/normal (coefficient E2)",
+        "calc": {
+          "base": 58.67665338645419,
+          "counter": 1.0,
+          "bonus_total": 0.2,
+          "after_counter": 58.67665338645419,
+          "one_plus_bonus": 1.2,
+          "raw": 70.41198406374502,
+          "floored": 70,
+          "min_damage": 1,
+          "final": 70,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 2,
+      "phase": "action",
+      "actor": "黄忠#2-0",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "万箭齐发",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "after_attack",
+      "actor": "黄忠#2-0",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "桃园结义",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "action",
+      "actor": "张绣#2-1",
+      "kind": "damage",
+      "payload": {
+        "target": "严颜#1-0",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 100.0,
+        "base_evidence": "E2",
+        "counter_note": "armor/normal (coefficient E2)",
+        "calc": {
+          "base": 73.34581673306774,
+          "counter": 1.0,
+          "bonus_total": 0.2,
+          "after_counter": 73.34581673306774,
+          "one_plus_bonus": 1.2,
+          "raw": 88.01498007968128,
+          "floored": 88,
+          "min_damage": 1,
+          "final": 88,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 2,
+      "phase": "action",
+      "actor": "张绣#2-1",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "持刀从武",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "after_attack",
+      "actor": "张绣#2-1",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "魏武之泽",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "action",
+      "actor": "曹植#1-1",
+      "kind": "damage",
+      "payload": {
+        "target": "夏侯月姬#2-2",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 130.0,
+        "base_evidence": "E2",
+        "counter_note": "armor/normal (coefficient E2)",
+        "calc": {
+          "base": 95.34956175298807,
+          "counter": 1.0,
+          "bonus_total": 0.12,
+          "after_counter": 95.34956175298807,
+          "one_plus_bonus": 1.12,
+          "raw": 106.79150916334665,
+          "floored": 106,
+          "min_damage": 1,
+          "final": 106,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 2,
+      "phase": "action",
+      "actor": "曹植#1-1",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "沙场破阵",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "after_attack",
+      "actor": "曹植#1-1",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "破胆",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "action",
+      "actor": "夏侯月姬#2-2",
+      "kind": "damage",
+      "payload": {
+        "target": "严颜#1-0",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 300.0,
+        "base_evidence": "E2",
+        "counter_note": "chain/normal (coefficient E2)",
+        "calc": {
+          "base": 220.0374501992032,
+          "counter": 1.0,
+          "bonus_total": 0.2,
+          "after_counter": 220.0374501992032,
+          "one_plus_bonus": 1.2,
+          "raw": 264.0449402390438,
+          "floored": 264,
+          "min_damage": 1,
+          "final": 264,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 2,
+      "phase": "action",
+      "actor": "夏侯月姬#2-2",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "枭姬",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "after_attack",
+      "actor": "夏侯月姬#2-2",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "反击之策",
+        "class": "追击",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "after_attack",
+      "actor": "夏侯月姬#2-2",
+      "kind": "damage",
+      "payload": {
+        "target": "严颜#1-0",
+        "skill": "反击之策",
+        "effect_type": "STRATEGY_DAMAGE",
+        "rate_pct_at_level": 20.0,
+        "base_evidence": "E2",
+        "counter_note": "chain/normal (coefficient E2)",
+        "calc": {
+          "base": 14.161487383798145,
+          "counter": 1.0,
+          "bonus_total": 0.2,
+          "after_counter": 14.161487383798145,
+          "one_plus_bonus": 1.2,
+          "raw": 16.993784860557774,
+          "floored": 16,
+          "min_damage": 1,
+          "final": 16,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 2,
+      "phase": "action",
+      "actor": "潘凤#1-2",
+      "kind": "damage",
+      "payload": {
+        "target": "夏侯月姬#2-2",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 160.0,
+        "base_evidence": "E2",
+        "counter_note": "chain/normal (coefficient E2)",
+        "calc": {
+          "base": 117.35330677290838,
+          "counter": 1.0,
+          "bonus_total": 0.12,
+          "after_counter": 117.35330677290838,
+          "one_plus_bonus": 1.12,
+          "raw": 131.4357035856574,
+          "floored": 131,
+          "min_damage": 1,
+          "final": 131,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 2,
+      "phase": "action",
+      "actor": "潘凤#1-2",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "怯心夺志",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "after_attack",
+      "actor": "潘凤#1-2",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "破魂",
+        "class": "追击",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 2,
+      "phase": "after_attack",
+      "actor": "潘凤#1-2",
+      "kind": "damage",
+      "payload": {
+        "target": "黄忠#2-0",
+        "skill": "破魂",
+        "effect_type": "STRATEGY_DAMAGE",
+        "rate_pct_at_level": 180.0,
+        "base_evidence": "E2",
+        "counter_note": "chain/normal (coefficient E2)",
+        "calc": {
+          "base": 127.45338645418329,
+          "counter": 1.0,
+          "bonus_total": 0.12,
+          "after_counter": 127.45338645418329,
+          "one_plus_bonus": 1.12,
+          "raw": 142.7477928286853,
+          "floored": 142,
+          "min_damage": 1,
+          "final": 142,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 3,
+      "phase": "round_start",
+      "actor": "严颜#1-0",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "勇冠三军",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "round_start",
+      "actor": "严颜#1-0",
+      "kind": "buff",
+      "payload": {
+        "target": "严颜#1-0",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "round_start",
+      "actor": "黄忠#2-0",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "坐山观虎",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "round_start",
+      "actor": "黄忠#2-0",
+      "kind": "buff",
+      "payload": {
+        "target": "黄忠#2-0",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "round_start",
+      "actor": "张绣#2-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "剑关叛立",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "round_start",
+      "actor": "张绣#2-1",
+      "kind": "buff",
+      "payload": {
+        "target": "张绣#2-1",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "round_start",
+      "actor": "曹植#1-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "疾行速战",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "round_start",
+      "actor": "曹植#1-1",
+      "kind": "buff",
+      "payload": {
+        "target": "曹植#1-1",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "round_start",
+      "actor": "夏侯月姬#2-2",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "金吾飞将",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "round_start",
+      "actor": "夏侯月姬#2-2",
+      "kind": "buff",
+      "payload": {
+        "target": "夏侯月姬#2-2",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "round_start",
+      "actor": "潘凤#1-2",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "借刀斩叛",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "round_start",
+      "actor": "潘凤#1-2",
+      "kind": "buff",
+      "payload": {
+        "target": "潘凤#1-2",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "action",
+      "actor": "严颜#1-0",
+      "kind": "damage",
+      "payload": {
+        "target": "夏侯月姬#2-2",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 150.0,
+        "base_evidence": "E2",
+        "counter_note": "normal/normal (coefficient E2)",
+        "calc": {
+          "base": 110.0187250996016,
+          "counter": 1.0,
+          "bonus_total": 0.18,
+          "after_counter": 110.0187250996016,
+          "one_plus_bonus": 1.18,
+          "raw": 129.82209561752987,
+          "floored": 129,
+          "min_damage": 1,
+          "final": 129,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 3,
+      "phase": "action",
+      "actor": "严颜#1-0",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "青白分明",
+        "class": "主动",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "action",
+      "actor": "严颜#1-0",
+      "kind": "damage",
+      "payload": {
+        "target": "黄忠#2-0",
+        "skill": "青白分明",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 300.0,
+        "base_evidence": "E2",
+        "counter_note": "normal/normal (coefficient E2)",
+        "calc": {
+          "base": 220.0374501992032,
+          "counter": 1.0,
+          "bonus_total": 0.28,
+          "after_counter": 220.0374501992032,
+          "one_plus_bonus": 1.28,
+          "raw": 281.6479362549801,
+          "floored": 281,
+          "min_damage": 1,
+          "final": 281,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 3,
+      "phase": "action",
+      "actor": "严颜#1-0",
+      "kind": "control",
+      "payload": {
+        "target": "黄忠#2-0",
+        "state": "犹豫",
+        "probability": 0.25
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "after_attack",
+      "actor": "严颜#1-0",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "雀伏",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "action",
+      "actor": "黄忠#2-0",
+      "kind": "damage",
+      "payload": {
+        "target": "严颜#1-0",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 80.0,
+        "base_evidence": "E2",
+        "counter_note": "normal/normal (coefficient E2)",
+        "calc": {
+          "base": 58.67665338645419,
+          "counter": 1.0,
+          "bonus_total": 0.26,
+          "after_counter": 58.67665338645419,
+          "one_plus_bonus": 1.26,
+          "raw": 73.93258326693228,
+          "floored": 73,
+          "min_damage": 1,
+          "final": 73,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 3,
+      "phase": "action",
+      "actor": "黄忠#2-0",
+      "kind": "skill_blocked",
+      "payload": {
+        "skill": "万箭齐发",
+        "state": "犹豫"
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 3,
+      "phase": "after_attack",
+      "actor": "黄忠#2-0",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "桃园结义",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "action",
+      "actor": "张绣#2-1",
+      "kind": "damage",
+      "payload": {
+        "target": "严颜#1-0",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 100.0,
+        "base_evidence": "E2",
+        "counter_note": "armor/normal (coefficient E2)",
+        "calc": {
+          "base": 73.34581673306774,
+          "counter": 1.0,
+          "bonus_total": 0.26,
+          "after_counter": 73.34581673306774,
+          "one_plus_bonus": 1.26,
+          "raw": 92.41572908366535,
+          "floored": 92,
+          "min_damage": 1,
+          "final": 92,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 3,
+      "phase": "action",
+      "actor": "system",
+      "kind": "unit_down",
+      "payload": {
+        "unit": "严颜#1-0"
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 3,
+      "phase": "action",
+      "actor": "张绣#2-1",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "持刀从武",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "after_attack",
+      "actor": "张绣#2-1",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "魏武之泽",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "action",
+      "actor": "曹植#1-1",
+      "kind": "damage",
+      "payload": {
+        "target": "夏侯月姬#2-2",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 130.0,
+        "base_evidence": "E2",
+        "counter_note": "armor/normal (coefficient E2)",
+        "calc": {
+          "base": 95.34956175298807,
+          "counter": 1.0,
+          "bonus_total": 0.18,
+          "after_counter": 95.34956175298807,
+          "one_plus_bonus": 1.18,
+          "raw": 112.51248286852591,
+          "floored": 112,
+          "min_damage": 1,
+          "final": 112,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 3,
+      "phase": "action",
+      "actor": "曹植#1-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "沙场破阵",
+        "class": "主动",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "action",
+      "actor": "曹植#1-1",
+      "kind": "damage",
+      "payload": {
+        "target": "黄忠#2-0",
+        "skill": "沙场破阵",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 160.0,
+        "base_evidence": "E2",
+        "counter_note": "armor/normal (coefficient E2)",
+        "calc": {
+          "base": 117.35330677290838,
+          "counter": 1.0,
+          "bonus_total": 0.28,
+          "after_counter": 117.35330677290838,
+          "one_plus_bonus": 1.28,
+          "raw": 150.21223266932273,
+          "floored": 150,
+          "min_damage": 1,
+          "final": 150,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 3,
+      "phase": "after_attack",
+      "actor": "曹植#1-1",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "破胆",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "action",
+      "actor": "夏侯月姬#2-2",
+      "kind": "damage",
+      "payload": {
+        "target": "曹植#1-1",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 300.0,
+        "base_evidence": "E2",
+        "counter_note": "chain/normal (coefficient E2)",
+        "calc": {
+          "base": 220.0374501992032,
+          "counter": 1.0,
+          "bonus_total": 0.26,
+          "after_counter": 220.0374501992032,
+          "one_plus_bonus": 1.26,
+          "raw": 277.24718725099603,
+          "floored": 277,
+          "min_damage": 1,
+          "final": 277,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 3,
+      "phase": "action",
+      "actor": "夏侯月姬#2-2",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "枭姬",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "after_attack",
+      "actor": "夏侯月姬#2-2",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "反击之策",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "action",
+      "actor": "潘凤#1-2",
+      "kind": "damage",
+      "payload": {
+        "target": "夏侯月姬#2-2",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 160.0,
+        "base_evidence": "E2",
+        "counter_note": "chain/normal (coefficient E2)",
+        "calc": {
+          "base": 117.35330677290838,
+          "counter": 1.0,
+          "bonus_total": 0.18,
+          "after_counter": 117.35330677290838,
+          "one_plus_bonus": 1.18,
+          "raw": 138.47690199203188,
+          "floored": 138,
+          "min_damage": 1,
+          "final": 138,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 3,
+      "phase": "action",
+      "actor": "潘凤#1-2",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "怯心夺志",
+        "class": "主动",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "action",
+      "actor": "潘凤#1-2",
+      "kind": "damage",
+      "payload": {
+        "target": "黄忠#2-0",
+        "skill": "怯心夺志",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 190.0,
+        "base_evidence": "E2",
+        "counter_note": "chain/normal (coefficient E2)",
+        "calc": {
+          "base": 139.35705179282868,
+          "counter": 1.0,
+          "bonus_total": 0.28,
+          "after_counter": 139.35705179282868,
+          "one_plus_bonus": 1.28,
+          "raw": 178.37702629482072,
+          "floored": 178,
+          "min_damage": 1,
+          "final": 178,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 3,
+      "phase": "after_attack",
+      "actor": "潘凤#1-2",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "破魂",
+        "class": "追击",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 3,
+      "phase": "after_attack",
+      "actor": "潘凤#1-2",
+      "kind": "damage",
+      "payload": {
+        "target": "黄忠#2-0",
+        "skill": "破魂",
+        "effect_type": "STRATEGY_DAMAGE",
+        "rate_pct_at_level": 180.0,
+        "base_evidence": "E2",
+        "counter_note": "chain/normal (coefficient E2)",
+        "calc": {
+          "base": 127.45338645418329,
+          "counter": 1.0,
+          "bonus_total": 0.18,
+          "after_counter": 127.45338645418329,
+          "one_plus_bonus": 1.18,
+          "raw": 150.39499601593627,
+          "floored": 150,
+          "min_damage": 1,
+          "final": 150,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 3,
+      "phase": "after_attack",
+      "actor": "system",
+      "kind": "unit_down",
+      "payload": {
+        "unit": "黄忠#2-0"
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 3,
+      "phase": "round_end",
+      "actor": "黄忠#2-0",
+      "kind": "state_clear",
+      "payload": {
+        "state": "犹豫"
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 4,
+      "phase": "round_start",
+      "actor": "张绣#2-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "剑关叛立",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 4,
+      "phase": "round_start",
+      "actor": "张绣#2-1",
+      "kind": "buff",
+      "payload": {
+        "target": "张绣#2-1",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 4,
+      "phase": "round_start",
+      "actor": "曹植#1-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "疾行速战",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 4,
+      "phase": "round_start",
+      "actor": "曹植#1-1",
+      "kind": "buff",
+      "payload": {
+        "target": "曹植#1-1",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 4,
+      "phase": "round_start",
+      "actor": "夏侯月姬#2-2",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "金吾飞将",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 4,
+      "phase": "round_start",
+      "actor": "夏侯月姬#2-2",
+      "kind": "buff",
+      "payload": {
+        "target": "夏侯月姬#2-2",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 4,
+      "phase": "round_start",
+      "actor": "潘凤#1-2",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "借刀斩叛",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 4,
+      "phase": "round_start",
+      "actor": "潘凤#1-2",
+      "kind": "buff",
+      "payload": {
+        "target": "潘凤#1-2",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 4,
+      "phase": "action",
+      "actor": "张绣#2-1",
+      "kind": "damage",
+      "payload": {
+        "target": "曹植#1-1",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 100.0,
+        "base_evidence": "E2",
+        "counter_note": "armor/normal (coefficient E2)",
+        "calc": {
+          "base": 73.34581673306774,
+          "counter": 1.0,
+          "bonus_total": 0.32,
+          "after_counter": 73.34581673306774,
+          "one_plus_bonus": 1.32,
+          "raw": 96.81647808764941,
+          "floored": 96,
+          "min_damage": 1,
+          "final": 96,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 4,
+      "phase": "action",
+      "actor": "张绣#2-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "持刀从武",
+        "class": "主动",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 4,
+      "phase": "action",
+      "actor": "张绣#2-1",
+      "kind": "damage",
+      "payload": {
+        "target": "曹植#1-1",
+        "skill": "持刀从武",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 14.0,
+        "base_evidence": "E2",
+        "counter_note": "armor/normal (coefficient E2)",
+        "calc": {
+          "base": 10.268414342629484,
+          "counter": 1.0,
+          "bonus_total": 0.42,
+          "after_counter": 10.268414342629484,
+          "one_plus_bonus": 1.42,
+          "raw": 14.581148366533867,
+          "floored": 14,
+          "min_damage": 1,
+          "final": 14,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 4,
+      "phase": "after_attack",
+      "actor": "张绣#2-1",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "魏武之泽",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 4,
+      "phase": "action",
+      "actor": "曹植#1-1",
+      "kind": "damage",
+      "payload": {
+        "target": "夏侯月姬#2-2",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 130.0,
+        "base_evidence": "E2",
+        "counter_note": "armor/normal (coefficient E2)",
+        "calc": {
+          "base": 95.34956175298807,
+          "counter": 1.0,
+          "bonus_total": 0.24,
+          "after_counter": 95.34956175298807,
+          "one_plus_bonus": 1.24,
+          "raw": 118.2334565737052,
+          "floored": 118,
+          "min_damage": 1,
+          "final": 118,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 4,
+      "phase": "action",
+      "actor": "曹植#1-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "沙场破阵",
+        "class": "主动",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 4,
+      "phase": "action",
+      "actor": "曹植#1-1",
+      "kind": "damage",
+      "payload": {
+        "target": "张绣#2-1",
+        "skill": "沙场破阵",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 160.0,
+        "base_evidence": "E2",
+        "counter_note": "armor/normal (coefficient E2)",
+        "calc": {
+          "base": 117.35330677290838,
+          "counter": 1.0,
+          "bonus_total": 0.34,
+          "after_counter": 117.35330677290838,
+          "one_plus_bonus": 1.34,
+          "raw": 157.25343107569725,
+          "floored": 157,
+          "min_damage": 1,
+          "final": 157,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 4,
+      "phase": "after_attack",
+      "actor": "曹植#1-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "破胆",
+        "class": "追击",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 4,
+      "phase": "after_attack",
+      "actor": "曹植#1-1",
+      "kind": "damage",
+      "payload": {
+        "target": "张绣#2-1",
+        "skill": "破胆",
+        "effect_type": "STRATEGY_DAMAGE",
+        "rate_pct_at_level": 180.0,
+        "base_evidence": "E2",
+        "counter_note": "armor/normal (coefficient E2)",
+        "calc": {
+          "base": 127.45338645418329,
+          "counter": 1.0,
+          "bonus_total": 0.24,
+          "after_counter": 127.45338645418329,
+          "one_plus_bonus": 1.24,
+          "raw": 158.04219920318727,
+          "floored": 158,
+          "min_damage": 1,
+          "final": 158,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 4,
+      "phase": "action",
+      "actor": "夏侯月姬#2-2",
+      "kind": "damage",
+      "payload": {
+        "target": "曹植#1-1",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 300.0,
+        "base_evidence": "E2",
+        "counter_note": "chain/normal (coefficient E2)",
+        "calc": {
+          "base": 220.0374501992032,
+          "counter": 1.0,
+          "bonus_total": 0.32,
+          "after_counter": 220.0374501992032,
+          "one_plus_bonus": 1.32,
+          "raw": 290.4494342629482,
+          "floored": 290,
+          "min_damage": 1,
+          "final": 290,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 4,
+      "phase": "action",
+      "actor": "夏侯月姬#2-2",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "枭姬",
+        "class": "主动",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 4,
+      "phase": "action",
+      "actor": "夏侯月姬#2-2",
+      "kind": "damage",
+      "payload": {
+        "target": "曹植#1-1",
+        "skill": "枭姬",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 280.0,
+        "base_evidence": "E2",
+        "counter_note": "chain/normal (coefficient E2)",
+        "calc": {
+          "base": 205.36828685258965,
+          "counter": 1.0,
+          "bonus_total": 0.42,
+          "after_counter": 205.36828685258965,
+          "one_plus_bonus": 1.42,
+          "raw": 291.6229673306773,
+          "floored": 291,
+          "min_damage": 1,
+          "final": 291,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 4,
+      "phase": "after_attack",
+      "actor": "夏侯月姬#2-2",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "反击之策",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 4,
+      "phase": "action",
+      "actor": "潘凤#1-2",
+      "kind": "damage",
+      "payload": {
+        "target": "夏侯月姬#2-2",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 160.0,
+        "base_evidence": "E2",
+        "counter_note": "chain/normal (coefficient E2)",
+        "calc": {
+          "base": 117.35330677290838,
+          "counter": 1.0,
+          "bonus_total": 0.24,
+          "after_counter": 117.35330677290838,
+          "one_plus_bonus": 1.24,
+          "raw": 145.5181003984064,
+          "floored": 145,
+          "min_damage": 1,
+          "final": 145,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 4,
+      "phase": "action",
+      "actor": "system",
+      "kind": "unit_down",
+      "payload": {
+        "unit": "夏侯月姬#2-2"
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 4,
+      "phase": "action",
+      "actor": "潘凤#1-2",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "怯心夺志",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 4,
+      "phase": "after_attack",
+      "actor": "潘凤#1-2",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "破魂",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 5,
+      "phase": "round_start",
+      "actor": "张绣#2-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "剑关叛立",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 5,
+      "phase": "round_start",
+      "actor": "张绣#2-1",
+      "kind": "buff",
+      "payload": {
+        "target": "张绣#2-1",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 5,
+      "phase": "round_start",
+      "actor": "曹植#1-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "疾行速战",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 5,
+      "phase": "round_start",
+      "actor": "曹植#1-1",
+      "kind": "buff",
+      "payload": {
+        "target": "曹植#1-1",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 5,
+      "phase": "round_start",
+      "actor": "潘凤#1-2",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "借刀斩叛",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 5,
+      "phase": "round_start",
+      "actor": "潘凤#1-2",
+      "kind": "buff",
+      "payload": {
+        "target": "潘凤#1-2",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 5,
+      "phase": "action",
+      "actor": "张绣#2-1",
+      "kind": "damage",
+      "payload": {
+        "target": "曹植#1-1",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 100.0,
+        "base_evidence": "E2",
+        "counter_note": "armor/normal (coefficient E2)",
+        "calc": {
+          "base": 73.34581673306774,
+          "counter": 1.0,
+          "bonus_total": 0.38,
+          "after_counter": 73.34581673306774,
+          "one_plus_bonus": 1.38,
+          "raw": 101.21722709163346,
+          "floored": 101,
+          "min_damage": 1,
+          "final": 101,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 5,
+      "phase": "action",
+      "actor": "张绣#2-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "持刀从武",
+        "class": "主动",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 5,
+      "phase": "action",
+      "actor": "张绣#2-1",
+      "kind": "damage",
+      "payload": {
+        "target": "曹植#1-1",
+        "skill": "持刀从武",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 14.0,
+        "base_evidence": "E2",
+        "counter_note": "armor/normal (coefficient E2)",
+        "calc": {
+          "base": 10.268414342629484,
+          "counter": 1.0,
+          "bonus_total": 0.48,
+          "after_counter": 10.268414342629484,
+          "one_plus_bonus": 1.48,
+          "raw": 15.197253227091636,
+          "floored": 15,
+          "min_damage": 1,
+          "final": 15,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 5,
+      "phase": "after_attack",
+      "actor": "张绣#2-1",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "魏武之泽",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 5,
+      "phase": "action",
+      "actor": "曹植#1-1",
+      "kind": "damage",
+      "payload": {
+        "target": "张绣#2-1",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 130.0,
+        "base_evidence": "E2",
+        "counter_note": "armor/normal (coefficient E2)",
+        "calc": {
+          "base": 95.34956175298807,
+          "counter": 1.0,
+          "bonus_total": 0.3,
+          "after_counter": 95.34956175298807,
+          "one_plus_bonus": 1.3,
+          "raw": 123.95443027888449,
+          "floored": 123,
+          "min_damage": 1,
+          "final": 123,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 5,
+      "phase": "action",
+      "actor": "曹植#1-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "沙场破阵",
+        "class": "主动",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 5,
+      "phase": "action",
+      "actor": "曹植#1-1",
+      "kind": "damage",
+      "payload": {
+        "target": "张绣#2-1",
+        "skill": "沙场破阵",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 160.0,
+        "base_evidence": "E2",
+        "counter_note": "armor/normal (coefficient E2)",
+        "calc": {
+          "base": 117.35330677290838,
+          "counter": 1.0,
+          "bonus_total": 0.4,
+          "after_counter": 117.35330677290838,
+          "one_plus_bonus": 1.4,
+          "raw": 164.2946294820717,
+          "floored": 164,
+          "min_damage": 1,
+          "final": 164,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 5,
+      "phase": "after_attack",
+      "actor": "曹植#1-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "破胆",
+        "class": "追击",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 5,
+      "phase": "after_attack",
+      "actor": "曹植#1-1",
+      "kind": "damage",
+      "payload": {
+        "target": "张绣#2-1",
+        "skill": "破胆",
+        "effect_type": "STRATEGY_DAMAGE",
+        "rate_pct_at_level": 180.0,
+        "base_evidence": "E2",
+        "counter_note": "armor/normal (coefficient E2)",
+        "calc": {
+          "base": 127.45338645418329,
+          "counter": 1.0,
+          "bonus_total": 0.3,
+          "after_counter": 127.45338645418329,
+          "one_plus_bonus": 1.3,
+          "raw": 165.6894023904383,
+          "floored": 165,
+          "min_damage": 1,
+          "final": 165,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 5,
+      "phase": "action",
+      "actor": "潘凤#1-2",
+      "kind": "damage",
+      "payload": {
+        "target": "张绣#2-1",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 160.0,
+        "base_evidence": "E2",
+        "counter_note": "chain/normal (coefficient E2)",
+        "calc": {
+          "base": 117.35330677290838,
+          "counter": 1.0,
+          "bonus_total": 0.3,
+          "after_counter": 117.35330677290838,
+          "one_plus_bonus": 1.3,
+          "raw": 152.5592988047809,
+          "floored": 152,
+          "min_damage": 1,
+          "final": 152,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 5,
+      "phase": "action",
+      "actor": "潘凤#1-2",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "怯心夺志",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 5,
+      "phase": "after_attack",
+      "actor": "潘凤#1-2",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "破魂",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 6,
+      "phase": "round_start",
+      "actor": "张绣#2-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "剑关叛立",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 6,
+      "phase": "round_start",
+      "actor": "张绣#2-1",
+      "kind": "buff",
+      "payload": {
+        "target": "张绣#2-1",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 6,
+      "phase": "round_start",
+      "actor": "曹植#1-1",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "疾行速战",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 6,
+      "phase": "round_start",
+      "actor": "曹植#1-1",
+      "kind": "buff",
+      "payload": {
+        "target": "曹植#1-1",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 6,
+      "phase": "round_start",
+      "actor": "潘凤#1-2",
+      "kind": "skill_trigger",
+      "payload": {
+        "skill": "借刀斩叛",
+        "class": "被动",
+        "probability": 1.0
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 6,
+      "phase": "round_start",
+      "actor": "潘凤#1-2",
+      "kind": "buff",
+      "payload": {
+        "target": "潘凤#1-2",
+        "terms": [
+          "指挥战法伤害提高"
+        ]
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 6,
+      "phase": "action",
+      "actor": "张绣#2-1",
+      "kind": "damage",
+      "payload": {
+        "target": "曹植#1-1",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 100.0,
+        "base_evidence": "E2",
+        "counter_note": "armor/normal (coefficient E2)",
+        "calc": {
+          "base": 73.34581673306774,
+          "counter": 1.0,
+          "bonus_total": 0.44,
+          "after_counter": 73.34581673306774,
+          "one_plus_bonus": 1.44,
+          "raw": 105.61797609561754,
+          "floored": 105,
+          "min_damage": 1,
+          "final": 105,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 6,
+      "phase": "action",
+      "actor": "张绣#2-1",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "持刀从武",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 6,
+      "phase": "after_attack",
+      "actor": "张绣#2-1",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "魏武之泽",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 6,
+      "phase": "action",
+      "actor": "曹植#1-1",
+      "kind": "damage",
+      "payload": {
+        "target": "张绣#2-1",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 130.0,
+        "base_evidence": "E2",
+        "counter_note": "armor/normal (coefficient E2)",
+        "calc": {
+          "base": 95.34956175298807,
+          "counter": 1.0,
+          "bonus_total": 0.36,
+          "after_counter": 95.34956175298807,
+          "one_plus_bonus": 1.3599999999999999,
+          "raw": 129.67540398406376,
+          "floored": 129,
+          "min_damage": 1,
+          "final": 129,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 6,
+      "phase": "action",
+      "actor": "曹植#1-1",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "沙场破阵",
+        "probability": 0.35
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 6,
+      "phase": "after_attack",
+      "actor": "曹植#1-1",
+      "kind": "skill_miss",
+      "payload": {
+        "skill": "破胆",
+        "probability": 0.3
+      },
+      "evidence": "E2"
+    },
+    {
+      "round": 6,
+      "phase": "action",
+      "actor": "潘凤#1-2",
+      "kind": "damage",
+      "payload": {
+        "target": "张绣#2-1",
+        "skill": "普通攻击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_at_level": 160.0,
+        "base_evidence": "E2",
+        "counter_note": "chain/normal (coefficient E2)",
+        "calc": {
+          "base": 117.35330677290838,
+          "counter": 1.0,
+          "bonus_total": 0.36,
+          "after_counter": 117.35330677290838,
+          "one_plus_bonus": 1.3599999999999999,
+          "raw": 159.60049721115539,
+          "floored": 159,
+          "min_damage": 1,
+          "final": 159,
+          "evidence": "E0",
+          "il": "Game.Map.dll::CalcDamageByTerms"
+        }
+      },
+      "evidence": "E0"
+    },
+    {
+      "round": 6,
+      "phase": "action",
+      "actor": "system",
+      "kind": "unit_down",
+      "payload": {
+        "unit": "张绣#2-1"
+      },
+      "evidence": "E0"
+    }
+  ],
+  "event_fingerprint": "b1e8b82031471baa"
+}

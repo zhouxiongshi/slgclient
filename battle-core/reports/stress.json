@@ -1,0 +1,44 @@
+{
+  "generated_at": "2026-11-07T16:59:42.626Z",
+  "total_battles": 10000,
+  "elapsed_ms": 29207,
+  "battles_per_second": 342,
+  "invariant_failures": 0,
+  "determinism_failures": 0,
+  "determinism_samples": 200,
+  "total_events": 1969524,
+  "avg_events": 197,
+  "min_events": 10,
+  "max_events": 620,
+  "max_rounds": 10,
+  "total_damage_applied": 50606701,
+  "winner_distribution": {
+    "1": 121,
+    "2": 20,
+    "null": 9859
+  },
+  "rounds_distribution": {
+    "1": 2505,
+    "2": 17,
+    "3": 16,
+    "4": 2502,
+    "5": 15,
+    "6": 12,
+    "7": 2479,
+    "8": 10,
+    "9": 11,
+    "10": 2433
+  },
+  "event_kind_totals": {
+    "skill_miss": 474387,
+    "skill_trigger": 556988,
+    "buff": 346827,
+    "damage": 535470,
+    "control": 24928,
+    "state_clear": 24928,
+    "skill_blocked": 4781,
+    "unit_down": 1215
+  },
+  "failure_samples": [],
+  "passed": true
+}

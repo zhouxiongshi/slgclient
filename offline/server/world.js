@@ -4,7 +4,7 @@
  * 静态配置来自原工程 conf/，动态数据持久化到 save.json。
  */
 import { readFileSync, writeFileSync, renameSync, existsSync, mkdirSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SKILLS, LEVEL_COUNT, skillById } from './skills.js';
 
@@ -338,6 +338,9 @@ export function mainCity(state) {
 
 export function resolveWebDir(explicit) {
   if (explicit) return resolve(explicit);
-  // offline/ → slg/ → runtime/client-src/build/web-desktop
+  // 仓库布局优先：offline/web（本分支自带的 web-desktop 逐字节副本）
+  const inRepo = resolve(ROOT, 'web');
+  if (existsSync(join(inRepo, 'index.html'))) return inRepo;
+  // 旧开发布局：slg/runtime/client-src/build/web-desktop
   return resolve(ROOT, '..', 'runtime', 'client-src', 'build', 'web-desktop');
 }

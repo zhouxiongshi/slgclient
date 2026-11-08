@@ -74,7 +74,9 @@ node --test tests/*.test.js      # 单元测试 31 条
 ## 五、设计文档（后续开发路线）
 
 - `../../REPORT.md` —— 项目总报告
-- 经济体系 + 剧情体系 + GM 大地图模块设计案：四层资源、四个消耗水槽、历史惯性时间轴、宿命替身机制、七幕主线、GM 控制台三阶段（P0 地图手改 / P1 剧情轴 / P2 试玩+仪表盘）
+- `docs/DESIGN-loop.md` —— 当前设计基线：经济闭环、演义主线不可改道、名将替身、GM 覆盖层、序章 40 日。先设计，未落地
+- `docs/ARCHITECTURE.md` —— 模块分层与依赖方向。新代码按此放置；`handlers.js` 只许变薄
+- 早期构想（四层资源、七幕、GM 三阶段）仍可作素材，与 `docs/DESIGN-loop.md` 冲突时以该文件为准
 
 ## 六、开发约定（重要）
 
@@ -83,8 +85,21 @@ node --test tests/*.test.js      # 单元测试 31 条
 3. **GM 改动只写覆盖层**——后续 GM 模块对配置的修改一律写入 overrides 文件，原配置（conf/json/）逐字节不动。
 4. 服务端所有逻辑改动必须跑 `node --test tests/*.test.js` 全绿再提交。
 
-## 七、与源目录的关系
+## 七、开发方式（本分支即主线）
 
-本分支是基线快照。当前活跃开发目录在 `D:\WorkBuddy\slg\offline\`（服务端）与
-`D:\WorkBuddy\slg\runtime\client-src\`（Cocos 源工程，本仓库 slgclient 是其留档副本）。
-在活跃目录改动后，将对应文件同步覆盖到本分支提交即可。
+**本分支（offline-standalone）就是离线包的开发主线**，`offline/` + 根目录 `battle-core/` 自包含全部开发所需：
+
+```bash
+git clone -b offline-standalone <仓库地址>
+cd slgclient
+cd battle-core && npm install && cd ../offline   # battle-core 需 typescript；offline 需 electron
+npm test                                          # 单元测试 31 条
+npm run pack                                      # 打包 exe → offline/build/SLG-Offline-win32-x64/
+node tools/smoke.js --packaged                    # 打包态冒烟 21 项
+npm run check                                     # 发行核查（含 battle-core 内核测试与黄金向量）
+```
+
+- Electron 由 devDependencies 提供（45.2.3，与历史打包版本一致），`npm install` 后自动就位；
+- `offline/web/` 是原版构建产物副本，**只有重新用 Cocos Creator 构建后才需要整体覆盖它**；
+- 历史副本 `D:\WorkBuddy\slg\offline\` 与 `D:\WorkBuddy\slg\runtime\client-src\` 保留作参考，不再同步维护；
+- 工具链同时兼容旧目录布局（候选路径自动回退），但请以本分支为准。

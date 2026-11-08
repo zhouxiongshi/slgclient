@@ -1,0 +1,111 @@
+{
+  "_说明": "TS 内核回归快照。纯函数向量应与 golden/expected_vectors.json 精确一致；整场统计量应与 Python 参考一致。",
+  "config_fingerprint_ts": "9d7295a2464cc39e",
+  "config_fingerprint_python": "f186e15d0c1f266b",
+  "level_value": {
+    "v(40,1)": 40,
+    "v(40,5)": 57.77777777777778,
+    "v(40,10)": 80
+  },
+  "normalize_bonus": {
+    "(25, op=0)": 0.25,
+    "(0.25, op=1)": 0.25
+  },
+  "sum_terms_bonus": 0.45000000000000007,
+  "calc_damage": {
+    "(100, 1.2, 0.25, min=1)": {
+      "base": 100,
+      "counter": 1.2,
+      "bonus_total": 0.25,
+      "after_counter": 120,
+      "one_plus_bonus": 1.25,
+      "raw": 150,
+      "floored": 150,
+      "min_damage": 1,
+      "final": 150,
+      "evidence": "E0",
+      "il": "Game.Map.dll::CalcDamageByTerms"
+    },
+    "(1, 1.0, 0.0, min=5)": {
+      "base": 1,
+      "counter": 1,
+      "bonus_total": 0,
+      "after_counter": 1,
+      "one_plus_bonus": 1,
+      "raw": 1,
+      "floored": 1,
+      "min_damage": 5,
+      "final": 5,
+      "evidence": "E0",
+      "il": "Game.Map.dll::CalcDamageByTerms"
+    },
+    "(0.4, 1.0, 0.0, min=7)": {
+      "base": 0.4,
+      "counter": 1,
+      "bonus_total": 0,
+      "after_counter": 0.4,
+      "one_plus_bonus": 1,
+      "raw": 0.4,
+      "floored": 0,
+      "min_damage": 7,
+      "final": 7,
+      "evidence": "E0",
+      "il": "Game.Map.dll::CalcDamageByTerms"
+    }
+  },
+  "counter_factor_fallback": [
+    1,
+    1,
+    1,
+    1
+  ],
+  "crc32": {
+    "曹植#1-1": 358507899
+  },
+  "mt19937_first5": [
+    0.6487056318546132,
+    0.0883413190661606,
+    0.23508019751039444,
+    0.6175329674012319,
+    0.3250700787145119
+  ],
+  "battle_smoke": {
+    "seed": 20261106,
+    "winner": 1,
+    "rounds": 6,
+    "event_count": 175,
+    "damage_event_count": 48,
+    "survivors": {
+      "1": [
+        "曹植#1-1",
+        "潘凤#1-2"
+      ],
+      "2": []
+    },
+    "first_damage_calc": {
+      "base": 110.0187250996016,
+      "counter": 1,
+      "bonus_total": 0.06,
+      "after_counter": 110.0187250996016,
+      "one_plus_bonus": 1.06,
+      "raw": 116.6198486055777,
+      "floored": 116,
+      "min_damage": 1,
+      "final": 116,
+      "evidence": "E0",
+      "il": "Game.Map.dll::CalcDamageByTerms"
+    },
+    "event_summary": {
+      "skill_miss": 36,
+      "skill_trigger": 51,
+      "buff": 31,
+      "damage": 48,
+      "control": 2,
+      "state_clear": 2,
+      "skill_blocked": 1,
+      "unit_down": 4
+    },
+    "event_fingerprint": "919ea63236ba8a8e",
+    "rng_calls": 70
+  }
+}

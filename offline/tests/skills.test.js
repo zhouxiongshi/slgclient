@@ -21,7 +21,10 @@ import { createWorld } from '../server/world.js';
 import { startOfflineServer } from '../server/index.js';
 import { ProtocolClient } from './client.js';
 
-const WEB = resolve(import.meta.dirname, '..', '..', 'runtime', 'client-src', 'build', 'web-desktop');
+// 仓库布局优先：offline/web；旧布局回退 runtime 构建目录
+const WEB = existsSync(resolve(import.meta.dirname, '..', 'web', 'index.html'))
+  ? resolve(import.meta.dirname, '..', 'web')
+  : resolve(import.meta.dirname, '..', '..', 'runtime', 'client-src', 'build', 'web-desktop');
 const CFG = JSON.parse(readFileSync(resolve(import.meta.dirname, '..', 'conf', 'skills.json'), 'utf8'));
 const BATTLE_KIT = JSON.parse(readFileSync(resolve(import.meta.dirname, '..', '..', 'battle-core', 'config', 'battle_config.json'), 'utf8'));
 
@@ -123,6 +126,12 @@ test('运行时注入：原磁盘产物不改，客户端拿到新战法、旧 4
   const cfg = JSON.parse(assets.intercept('/assets/resources/config.json').body);
   const legacyPaths = Object.keys(cfg.paths).filter((uuid) => Object.values(LEGACY_UUIDS).includes(uuid));
   assert.equal(legacyPaths.length, 0, '旧 4 个占位技能路径仍在 bundle config 中');
+  // ★ skill_outline 必须被替换：原版 target 表只有 8 条，新表 target=9（敌军全体）会越界
+  const outlineUuid = Object.keys(cfg.paths).find((u) => cfg.paths[u][0] === 'config/json/skill/skill_outline');
+  assert.ok(outlineUuid, 'config 里找不到 skill_outline 路径');
+  const outlineBody = JSON.parse(assets.intercept(`/assets/resources/import/${outlineUuid.slice(0, 2)}/${outlineUuid}.json`).body);
+  assert.equal(outlineBody[5][0][1], 'skill_outline');
+  assert.ok(outlineBody[5][0][2].target_type.list.length >= 9, 'outline target 表不足 9 条，target=9 战法会崩');
   for (const uuid of Object.values(LEGACY_UUIDS)) {
     const body = JSON.parse(assets.intercept(`/assets/resources/import/${uuid.slice(0, 2)}/${uuid}.json`).body);
     // cc.JsonAsset 序列化：body[5][0] = [0, _name, json]

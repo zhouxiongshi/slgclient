@@ -10,8 +10,17 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SLG = resolve(ROOT, '..');
-const ELECTRON_DIST = resolve(SLG, 'standalone', 'node_modules', 'electron', 'dist');
-const WEB_SRC = resolve(SLG, 'runtime', 'client-src', 'build', 'web-desktop');
+// Electron dist：仓库内 node_modules（npm install 即得）优先，其次旧 standalone 布局，可用 SLG_ELECTRON_DIST 覆盖
+const ELECTRON_DIST = process.env.SLG_ELECTRON_DIST
+  || (existsSync(join(ROOT, 'node_modules', 'electron', 'dist'))
+    ? join(ROOT, 'node_modules', 'electron', 'dist')
+    : existsSync(join(SLG, 'standalone', 'node_modules', 'electron', 'dist'))
+      ? join(SLG, 'standalone', 'node_modules', 'electron', 'dist')
+      : join(ROOT, 'node_modules', 'electron', 'dist'));
+// web 源：仓库布局优先（offline/web 即构建产物副本），其次旧 runtime 构建目录
+const WEB_SRC = existsSync(join(ROOT, 'web', 'index.html'))
+  ? join(ROOT, 'web')
+  : resolve(SLG, 'runtime', 'client-src', 'build', 'web-desktop');
 const OUT = resolve(ROOT, 'build', 'SLG-Offline-win32-x64');
 const APP = join(OUT, 'resources', 'app');
 const REPORTS = join(ROOT, 'reports');

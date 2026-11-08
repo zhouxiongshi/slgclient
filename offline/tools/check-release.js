@@ -15,9 +15,13 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SLG = resolve(ROOT, '..');
+// 仓库布局（offline-standalone 分支）：SLG 即客户端仓库本身，battle-core 在仓库根
 const BATTLE_CORE = join(SLG, 'battle-core');
-const CLIENT = join(SLG, 'slgclient');
-const WEB_SRC = join(SLG, 'runtime', 'client-src', 'build', 'web-desktop');
+// 旧开发布局时 SLG 是父目录、客户端仓库在其 slgclient/ 子目录
+const CLIENT = existsSync(join(SLG, '.git')) ? SLG : join(SLG, 'slgclient');
+const WEB_SRC = existsSync(join(ROOT, 'web', 'index.html'))
+  ? join(ROOT, 'web')
+  : join(SLG, 'runtime', 'client-src', 'build', 'web-desktop');
 const OUT = join(ROOT, 'build', 'SLG-Offline-win32-x64');
 const APP = join(OUT, 'resources', 'app');
 const REPORTS = join(ROOT, 'reports');
@@ -124,7 +128,9 @@ check('原 index.html 未被注入自定义脚本/悬浮按钮',
 
 // 原工程源码工作区必须干净：证明"其他内容都不要换"
 const git = spawnSync('git', ['status', '--porcelain'], { cwd: CLIENT, encoding: 'utf8' });
-check('原 slgclient 源码未被本次改造修改',
+check(existsSync(join(SLG, '.git'))
+  ? '客户端仓库工作区干净（本分支改动全部已提交）'
+  : '原 slgclient 源码未被本次改造修改',
   git.status === 0 && (git.stdout ?? '').trim() === '',
   (git.stdout ?? '').trim().slice(0, 200) || 'clean');
 

@@ -17,9 +17,15 @@ const SLG = resolve(ROOT, '..');
 const packaged = process.argv.includes('--packaged');
 const tag = packaged ? 'packaged' : 'original';
 
+// Electron 候选：环境变量 → 仓库内 node_modules → 旧 standalone 布局
+const electronCandidates = [
+  process.env.SLG_ELECTRON,
+  join(ROOT, 'node_modules', 'electron', 'dist', 'electron.exe'),
+  join(SLG, 'standalone', 'node_modules', 'electron', 'dist', 'electron.exe'),
+].filter(Boolean);
 const exe = packaged
   ? join(ROOT, 'build', 'SLG-Offline-win32-x64', 'SLG-Offline.exe')
-  : (process.env.SLG_ELECTRON || join(SLG, 'standalone', 'node_modules', 'electron', 'dist', 'electron.exe'));
+  : electronCandidates.find((p) => existsSync(p)) || electronCandidates[0];
 
 if (!existsSync(exe)) {
   console.error(`[slg-offline:smoke] 找不到 Electron：${exe}`);

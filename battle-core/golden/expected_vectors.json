@@ -1,0 +1,124 @@
+{
+  "_说明": "纯函数级验收向量：与实现语言无关，任何语言重写后都必须逐项精确匹配。",
+  "config_fingerprint": "f186e15d0c1f266b",
+  "level_value": {
+    "v(40,1)": 40.0,
+    "v(40,5)": 57.77777777777778,
+    "v(40,10)": 80.0,
+    "规则": "v(lv)=v1*(1+(lv-1)/9)，Lv10 恰好为 Lv1 的 2 倍"
+  },
+  "normalize_bonus": {
+    "(25, op=0)": 0.25,
+    "(0.25, op=1)": 0.25,
+    "规则": "op!=0 ? v : v/100"
+  },
+  "sum_terms_bonus": {
+    "[10%, 20%, 0.15(op=1)]": 0.45000000000000007,
+    "规则": "逐项 add 求和，全部修正项只乘一次；不是分桶连乘"
+  },
+  "calc_damage": {
+    "(100, 1.2, 0.25, min=1)": {
+      "base": 100.0,
+      "counter": 1.2,
+      "bonus_total": 0.25,
+      "after_counter": 120.0,
+      "one_plus_bonus": 1.25,
+      "raw": 150.0,
+      "floored": 150,
+      "min_damage": 1,
+      "final": 150
+    },
+    "(1, 1.0, 0.0, min=5)": {
+      "base": 1.0,
+      "counter": 1.0,
+      "bonus_total": 0.0,
+      "after_counter": 1.0,
+      "one_plus_bonus": 1.0,
+      "raw": 1.0,
+      "floored": 1,
+      "min_damage": 5,
+      "final": 5
+    },
+    "(0.4, 1.0, 0.0, min=7)": {
+      "base": 0.4,
+      "counter": 1.0,
+      "bonus_total": 0.0,
+      "after_counter": 0.4,
+      "one_plus_bonus": 1.0,
+      "raw": 0.4,
+      "floored": 0,
+      "min_damage": 7,
+      "final": 7
+    },
+    "规则": "raw=(float)base*counter*(1+ΣBonus); final=Max(int(Floor(raw)), mMinDamage)"
+  },
+  "counter_factor_fallback": {
+    "weakness=0": 1.0,
+    "weakness=4": 1.0,
+    "weakness=-1": 1.0,
+    "weakness=99": 1.0,
+    "规则": "weakness 不在 1..3 或档位缺失时退化为 1.0"
+  },
+  "action_order": {
+    "输入": [
+      [
+        "c",
+        99
+      ],
+      [
+        "b",
+        10
+      ],
+      [
+        "a",
+        10
+      ]
+    ],
+    "输出": [
+      "c",
+      "a",
+      "b"
+    ],
+    "规则": "speed 降序，同速按 unit_id 升序稳定排序"
+  },
+  "control_blocks": {
+    "犹豫+主动战法": "HESITATE(阻止)",
+    "犹豫+被动战法": "None(不阻止)",
+    "规则": "犹豫只阻止 ACTIVE；怯战只阻止普通攻击"
+  },
+  "battle_smoke": {
+    "_说明": "整场战斗参考值。Python 版事件流指纹依赖 Mersenne Twister，换语言实现只要求统计量与事件结构一致，不要求此指纹字节级相同。",
+    "参数": {
+      "seed": 20261106,
+      "rounds": 8,
+      "per_side": 3,
+      "level": 10,
+      "troops": 1200
+    },
+    "winner": 1,
+    "rounds": 6,
+    "event_count": 175,
+    "event_fingerprint": "b1e8b82031471baa",
+    "survivors": {
+      "1": [
+        "曹植#1-1",
+        "潘凤#1-2"
+      ],
+      "2": []
+    },
+    "damage_event_count": 48,
+    "first_damage_calc": {
+      "base": 110.0187250996016,
+      "counter": 1.0,
+      "bonus_total": 0.06,
+      "after_counter": 110.0187250996016,
+      "one_plus_bonus": 1.06,
+      "raw": 116.6198486055777,
+      "floored": 116,
+      "min_damage": 1,
+      "final": 116,
+      "evidence": "E0",
+      "il": "Game.Map.dll::CalcDamageByTerms"
+    }
+  }
+}

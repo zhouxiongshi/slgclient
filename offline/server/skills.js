@@ -136,6 +136,16 @@ export function createSkillAssets(webDir) {
     importBodies.set(uuid, jsonAsset('skill_outline', outline));
   }
 
+  // 1b) ★ 替换原版 skill_outline：原版 target_type.list 只有 8 条（1~8），
+  //     新战法表用到 target=9（敌军全体），不替换则技能详情面板读
+  //     target_type.list[8].des 时对 undefined 取值直接抛错。
+  for (const [uuid, p] of Object.entries(patched.paths)) {
+    if (Array.isArray(p) && p[0] === 'config/json/skill/skill_outline') {
+      importBodies.set(uuid, jsonAsset('skill_outline', outline));
+      break;
+    }
+  }
+
   // 2) 新增全部 48 个战法：路径统一挂在 config/json/skill/ 下（loadDir 会加载）
   for (const s of SKILLS) {
     const uuid = uuidFor(s.cfgId);

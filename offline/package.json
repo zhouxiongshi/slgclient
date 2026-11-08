@@ -11,5 +11,8 @@
     "smoke": "node tools/smoke.js",
     "check": "node tools/check-release.js",
     "pack": "node tools/pack.js"
+  },
+  "devDependencies": {
+    "electron": "45.2.3"
   }
 }
