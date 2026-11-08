@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>偏离与履历</title>
+  <style>
+    body { font: 15px/1.5 "Segoe UI", sans-serif; margin: 24px; max-width: 760px; }
+    .bar { height: 18px; background: #e6e6e6; border-radius: 9px; overflow: hidden; }
+    .fill { height: 100%; background: #3d6b4f; width: 0; }
+    article { border-top: 1px solid #ddd; padding: 10px 0; }
+    h2 { font-size: 16px; margin: 18px 0 8px; }
+  </style>
+</head>
+<body>
+  <h1>偏离与履历</h1>
+  <p><a href="/__slg/gm">回到 GM</a></p>
+  <p id="band">读取中</p>
+  <div class="bar"><div class="fill" id="fill"></div></div>
+  <h2>身故</h2>
+  <div id="list"></div>
+  <script>
+    const label = { canon: '旧史', shift: '偏移', rewrite: '改写' };
+    async function tick() {
+      const state = await fetch('/__slg/state').then((r) => r.json());
+      const score = state.drift?.score || 0;
+      const band = state.drift?.band || 'canon';
+      document.getElementById('band').textContent = `${label[band] || band} ${score}/100。天下仍按当前这一段走。`;
+      document.getElementById('fill').style.width = `${Math.max(0, Math.min(100, score))}%`;
+      const rows = state.chronicle || [];
+      document.getElementById('list').innerHTML = rows.length
+        ? rows.map((row) => `<article><strong>${row.name || '武将'} · 第 ${row.day} 日 · ${label[row.band] || ''}</strong><p>正史：${row.official}</p><p>本局：${row.played}</p></article>`).join('')
+        : '<p>还没有人死去。</p>';
+    }
+    tick();
+    setInterval(tick, 3000);
+  </script>
+</body>
+</html>

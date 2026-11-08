@@ -185,6 +185,10 @@ const REPORT_DETAIL_PROBE = `(function(){
     // 注意：模板字符串里 \d \( 会丢反斜杠，这里刻意用无反斜杠写法
     var skillTexts = texts.filter(function(t){ return t.indexOf('使用技能') >= 0 && t.indexOf('(lv') >= 0 && /lv[0-9]+/.test(t); });
     var anySkillVisible = texts.filter(function(t){ return /使用技能/.test(t); });
+    // 旧占位技能必须是「完整技能名」：新战法表里有「全军突击」这类真实战法，
+    // 子串 indexOf('突击') 会把它们误判成占位技能导致冒烟假失败。
+    // 模板字符串会吞掉反斜杠，用 [(] / [0-9] 等无反斜杠写法。
+    var legacyHit = /使用技能[^<]*<color=[^>]*>(突击|百战精兵|重斩|锋矢)[(]lv[0-9]+/;
     var legacy = ['突击','百战精兵','重斩','锋矢'];
     return {
       ok: skillTexts.length > 0,
@@ -194,7 +198,7 @@ const REPORT_DETAIL_PROBE = `(function(){
       desNodes: desNodes.slice(0, 6),
       detailTitleVisible: texts.some(function(t){ return /战报详情/.test(t); }),
       sample: (anySkillVisible.length ? anySkillVisible : skillTexts).slice(0, 3).map(function(t){ return t.slice(0, 220); }),
-      hasLegacy: skillTexts.some(function(t){ return legacy.some(function(n){ return t.indexOf(n) >= 0; }); }),
+      hasLegacy: skillTexts.some(function(t){ return legacyHit.test(t); }),
     };
   } catch(e){ return {ok:false, why:String(e&&e.stack||e)}; }
 })()`;

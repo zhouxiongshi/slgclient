@@ -1,0 +1,11 @@
+{
+  "id": "guanyu",
+  "heroName": "关羽",
+  "standIn": "陆昭",
+  "nodes": [
+    { "id": "yanliang", "title": "斩颜良" },
+    { "id": "pass", "title": "过关" },
+    { "id": "jingzhou", "title": "守荆州" },
+    { "id": "maicheng", "title": "败走麦城" }
+  ]
+}

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>序章 GM</title>
+  <style>
+    body { font: 15px/1.5 "Segoe UI", sans-serif; margin: 24px; max-width: 860px; }
+    h1 { font-size: 22px; }
+    fieldset { margin: 16px 0; }
+    label { display: block; margin: 8px 0; }
+    input, textarea { width: 100%; box-sizing: border-box; }
+    button { margin-right: 8px; }
+    #msg { min-height: 1.4em; }
+  </style>
+</head>
+<body>
+  <h1>序章 GM</h1>
+  <p>只写覆盖层。原表 <code>conf/json/</code> 不动。保存后重开一局才作用到新城和设施；地块产量在下次读档时叠上去。</p>
+  <p><a href="/__slg/board">看偏离和履历</a></p>
+  <fieldset>
+    <legend>地块</legend>
+    <label>JSON 数组。每格可写 x、y、type、level、wood、iron、stone、grain。
+      <textarea id="tiles" rows="6"></textarea>
+    </label>
+  </fieldset>
+  <fieldset>
+    <legend>城池与设施</legend>
+    <label>主城 x <input id="cx" /></label>
+    <label>主城 y <input id="cy" /></label>
+    <label>主城名字 <input id="cname" /></label>
+    <label>设施 JSON。例如 [{"type":19,"level":1}]
+      <textarea id="facilities" rows="4"></textarea>
+    </label>
+  </fieldset>
+  <fieldset>
+    <legend>系数</legend>
+    <label>每兵每日军饷 <input id="upkeep" /></label>
+    <label>借粮扣多少 <input id="lend" /></label>
+    <label>一游戏日的真实毫秒 <input id="day" /></label>
+    <label>曲辕犁加成，填 0.2 表示两成 <input id="bonus" /></label>
+  </fieldset>
+  <fieldset>
+    <legend>第 20 日借粮文案</legend>
+    <label>借 <textarea id="lendText" rows="3"></textarea></label>
+    <label>不借 <textarea id="refuseText" rows="3"></textarea></label>
+  </fieldset>
+  <p>
+    <button id="save" type="button">保存覆盖层</button>
+    <button id="reload" type="button">重新读取</button>
+  </p>
+  <p id="msg"></p>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    function fill(data) {
+      $('tiles').value = JSON.stringify(data.tiles || [], null, 2);
+      $('facilities').value = JSON.stringify(data.facilities || [], null, 2);
+      $('cx').value = data.city && data.city.x != null ? data.city.x : '';
+      $('cy').value = data.city && data.city.y != null ? data.city.y : '';
+      $('cname').value = data.city?.name || '';
+      $('upkeep').value = data.rules?.upkeepPerSoldier ?? '';
+      $('lend').value = data.rules?.lendGrain ?? '';
+      $('day').value = data.rules?.realMsPerDay ?? '';
+      $('bonus').value = data.rules?.blueprintBonus ?? '';
+      $('lendText').value = data.story?.lend || '';
+      $('refuseText').value = data.story?.refuse || '';
+    }
+    async function reload() {
+      const res = await fetch('/__slg/gm/overrides');
+      fill(await res.json());
+      $('msg').textContent = '已读取';
+    }
+    $('reload').onclick = () => reload().catch((err) => { $('msg').textContent = err.message; });
+    $('save').onclick = async () => {
+      let tiles, facilities;
+      try {
+        tiles = JSON.parse($('tiles').value || '[]');
+        facilities = JSON.parse($('facilities').value || '[]');
+      } catch (err) {
+        $('msg').textContent = 'JSON 没有写对';
+        return;
+      }
+      const num = (v) => v === '' || v == null ? undefined : Number(v);
+      const body = {
+        tiles,
+        facilities,
+        city: {
+          x: num($('cx').value),
+          y: num($('cy').value),
+          name: $('cname').value,
+        },
+        rules: {
+          upkeepPerSoldier: num($('upkeep').value),
+          lendGrain: num($('lend').value),
+          realMsPerDay: num($('day').value),
+          blueprintBonus: num($('bonus').value),
+        },
+        story: { lend: $('lendText').value, refuse: $('refuseText').value },
+      };
+      const res = await fetch('/__slg/gm/overrides', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const out = await res.json();
+      $('msg').textContent = out.ok ? '已写入覆盖层' : '没有保存';
+      if (out.overrides) fill(out.overrides);
+    };
+    reload();
+  </script>
+</body>
+</html>

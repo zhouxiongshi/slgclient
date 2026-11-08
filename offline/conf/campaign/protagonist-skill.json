@@ -1,0 +1,52 @@
+{
+  "cfgId": 19001,
+  "name": "后世之识",
+  "trigger": 4,
+  "dir": "zhihui",
+  "ui": {
+    "cfgId": 19001,
+    "name": "后世之识",
+    "des": "自身攻击提高（%n%%）。此为穿越者自带战法，不在原战法名录中。",
+    "trigger": 4,
+    "target": 1,
+    "limit": 1,
+    "arms": [1, 2, 3, 4, 5, 6, 7, 8, 9],
+    "include_effect": [2],
+    "levels": [
+      { "probability": 100, "effect_value": [6], "effect_round": [0] },
+      { "probability": 100, "effect_value": [6.67], "effect_round": [0] },
+      { "probability": 100, "effect_value": [7.33], "effect_round": [0] },
+      { "probability": 100, "effect_value": [8], "effect_round": [0] },
+      { "probability": 100, "effect_value": [8.67], "effect_round": [0] },
+      { "probability": 100, "effect_value": [9.33], "effect_round": [0] },
+      { "probability": 100, "effect_value": [10], "effect_round": [0] },
+      { "probability": 100, "effect_value": [10.67], "effect_round": [0] },
+      { "probability": 100, "effect_value": [11.33], "effect_round": [0] },
+      { "probability": 100, "effect_value": [12], "effect_round": [0] }
+    ]
+  },
+  "kernel": {
+    "cfgId": 19001,
+    "name": "后世之识",
+    "skill_class": "指挥",
+    "effect_type": "BUFF",
+    "rate_pct_lv1": 6,
+    "rate_pct_lv10": 12,
+    "probability_init": 1,
+    "probability_max": 1,
+    "prepare": 0,
+    "target_type": "self",
+    "attack_type": "normal",
+    "control_state": null,
+    "control_probability": 0,
+    "bonus_terms": [{ "name": "攻击提高", "value": 0.06, "op": 1 }],
+    "detail_id": 900190
+  },
+  "provenance": {
+    "pairing": "authored",
+    "descSource": "本局为穿越者写的自带战法，不是 battle-kit 原文",
+    "nameSource": "原创",
+    "rateSource": "原创，不取伤害率样本",
+    "probability": "指挥，开战即生效"
+  }
+}

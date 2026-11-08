@@ -1,0 +1,25 @@
+{
+  "note": "穿越者是本局原创角色。战法不在 battle-kit 名录里，数值也不是从原表抄的。客户端详情面板只有 3 个技能格，第四格天赋只记在服务器。",
+  "general": {
+    "name": "主公",
+    "cfgId": 880001,
+    "force": 7200,
+    "strategy": 7800,
+    "defense": 7000,
+    "speed": 7400,
+    "destroy": 2800,
+    "cost": 5,
+    "force_grow": 40,
+    "strategy_grow": 45,
+    "defense_grow": 35,
+    "speed_grow": 40,
+    "destroy_grow": 20,
+    "physical_power_limit": 100,
+    "cost_physical_power": 1,
+    "probability": 0,
+    "star": 4,
+    "arms": [1, 4, 7],
+    "camp": 1
+  },
+  "skillCfgId": 19001
+}

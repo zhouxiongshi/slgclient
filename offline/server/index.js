@@ -12,15 +12,17 @@
  *   - 单机世界状态：JSON 存档；定时任务持久化，重启续跑
  */
 import http from 'node:http';
-import { createReadStream, existsSync, statSync, readFileSync } from 'node:fs';
+import { createReadStream, existsSync, statSync, readFileSync, renameSync } from 'node:fs';
 import { resolve, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadConfig, defaultConfDir } from './config.js';
-import { createWorld, loadWorld, saveWorld, resolveWebDir, normalizeWorld } from './world.js';
+import { createWorld, loadWorld, saveWorld, resolveWebDir, normalizeWorld, hasProtagonist } from './world.js';
 import { handleRequest, processTask } from './handlers.js';
 import { handshakeFrame, encodeFrame, decodeFrame, generateKey } from './codec.js';
 import { attachWebSocketServer } from './wsserver.js';
 import { createSkillAssets } from './skills.js';
+import { loadOverrides, saveOverrides } from './gm/overrides.js';
+import { dossierFor } from './domain/dossier.js';
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -65,7 +67,14 @@ export async function startOfflineServer(options = {}) {
   const cfg = loadConfig(confDir);
   // 新战斗系统：运行时重写技能资源（磁盘上的原 web-desktop 保持逐字节不变）
   const skillAssets = createSkillAssets(webDir);
-  let state = normalizeWorld(loadWorld(savePath) || createWorld(cfg), cfg);
+  let loaded = loadWorld(savePath);
+  if (loaded && !hasProtagonist(loaded)) {
+    // 序章改造前的旧档：没有穿越者，也没有游戏日。归档留底，重开新局。
+    const backup = `${savePath}.pre-prologue-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    try { renameSync(savePath, backup); console.log(`[slg-offline:info] 旧档无穿越者主公，已归档为 ${backup}，重开序章`); } catch { /* 归档失败则不读旧档 */ }
+    loaded = null;
+  }
+  let state = normalizeWorld(loaded || createWorld(cfg), cfg);
   const logs = [];
   const requestLog = [];
   const startedAt = Date.now();
@@ -190,6 +199,50 @@ export async function startOfflineServer(options = {}) {
     if (urlPath === '/__slg/state') {
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify(state));
+      return;
+    }
+    if (urlPath === '/__slg/general-dossier' && req.method === 'GET') {
+      const q = new URL(req.url, 'http://127.0.0.1').searchParams;
+      const doc = dossierFor(state, { cfgId: q.get('cfgId'), name: q.get('name') || '' });
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify(doc));
+      return;
+    }
+    if (urlPath === '/__slg/gm' && req.method === 'GET') {
+      const html = readFileSync(join(ROOT, 'server', 'gm', 'index.html'));
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(html);
+      return;
+    }
+    if (urlPath === '/__slg/board' && req.method === 'GET') {
+      const html = readFileSync(join(ROOT, 'server', 'gm', 'board.html'));
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(html);
+      return;
+    }
+    if (urlPath === '/__slg/gm/overrides' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify(loadOverrides()));
+      return;
+    }
+    if (urlPath === '/__slg/gm/overrides' && req.method === 'POST') {
+      const chunks = [];
+      let size = 0;
+      req.on('data', (chunk) => {
+        size += chunk.length;
+        if (size > 100000) { req.destroy(); return; }
+        chunks.push(chunk);
+      });
+      req.on('end', () => {
+        try {
+          const saved = saveOverrides(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'));
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({ ok: true, overrides: saved }));
+        } catch {
+          res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({ ok: false }));
+        }
+      });
       return;
     }
 

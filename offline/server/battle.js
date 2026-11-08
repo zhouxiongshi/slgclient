@@ -41,6 +41,7 @@ function loadoutFor(g) {
     .filter((s) => s && s.cfgId && kernelSkillAt(s.cfgId, s.lv))
     .map((s) => kernelSkillAt(s.cfgId, s.lv || 1));
   if (equipped.length > 0) return equipped;
+  if (Array.isArray(g.skills)) return [];
   const seed = Number(g.id) || 1;
   return [0, 1, 2].map((k) => {
     const s = SKILLS[(seed * 7 + k * 13) % SKILLS.length];
@@ -104,7 +105,8 @@ export function makeDefenders(cfg, state, x, y) {
   const [, level] = cfg.tileAt(x, y);
   const tier = cfg.npcArmy.armys?.[Math.max(0, (level || 1) - 1)] || cfg.npcArmy.armys?.[0];
   const layout = tier?.army?.[0] || { lvs: [1, 1, 1], cfgIds: [100002, 100003, 100004] };
-  const soldierCount = tier?.soldiers ?? 1000;
+  const garrison = (state.garrisons || []).find((g) => g.x === x && g.y === y && !g.cleared);
+  const soldierCount = garrison?.soldiers ?? tier?.soldiers ?? 1000;
   const ids = [910001, 910002, 910003];
   return {
     generals: layout.cfgIds.slice(0, 3).map((cfgId, k) => ({

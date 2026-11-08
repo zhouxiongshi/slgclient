@@ -123,7 +123,7 @@ test('离线协议服务：完整链路 + 确定性战斗 + 存档', async (t) =
         }
       }
       const generals = JSON.parse(r.b_a_general);
-      assert.equal(generals.length, 3);
+      assert.equal(generals.length, 1);
       assert.equal(generals[0].length, 17);
 
       // 内核证据：事件指纹 / rng 调用数 / 可复现

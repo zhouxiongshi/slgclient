@@ -60,7 +60,11 @@ test('战法表：31 个 / 4 类 / 10 级真实数值成长 / 名称与伤害率
   assert.equal(CFG.levelCount, 10);
   const classes = new Set(SKILLS.map((s) => s.kernel.skill_class));
   assert.deepEqual([...classes].sort(), ['主动', '被动', '追击', '指挥'].sort());
-  const effects = new Set(SKILLS.map((s) => s.kernel.effect_type));
+  const effects = new Set();
+  for (const s of SKILLS) {
+    if (s.kernel.effect_type) effects.add(s.kernel.effect_type);
+    for (const e of s.kernel.effects || []) if (e.effect_type) effects.add(e.effect_type);
+  }
   // 真实片段只覆盖伤害/控制/增益——治疗类在 battle-kit 数据里没有原文，不做虚构
   for (const e of ['PHYSICAL_DAMAGE', 'STRATEGY_DAMAGE', 'CONTROL', 'BUFF']) {
     assert.ok(effects.has(e), `缺少效果类型 ${e}`);
@@ -74,7 +78,12 @@ test('战法表：31 个 / 4 类 / 10 级真实数值成长 / 名称与伤害率
   for (const s of SKILLS) {
     assert.ok(!names.has(s.name), `重复战法名 ${s.name}`);
     names.add(s.name);
-    assert.ok(BATTLE_KIT.skill_names.includes(s.name) || FRAGMENT_NAMES.has(s.name), `${s.name} 不在 battle-kit 名录`);
+    assert.ok(
+      BATTLE_KIT.skill_names.includes(s.name) || FRAGMENT_NAMES.has(s.name)
+      || s.provenance?.pairing === 'authored' || s.provenance?.pairing === 'skill-library',
+      `${s.name} 不在 battle-kit 名录`,
+    );
+    if (s.provenance?.pairing === 'authored' || s.provenance?.pairing === 'skill-library') continue;
     assert.ok(BATTLE_KIT.damage_rates_pct.includes(s.kernel.rate_pct_lv1), `${s.name} 伤害率不是包内样本`);
     const ui = s.ui;
     assert.equal(ui.levels.length, LEVEL_COUNT);
@@ -194,7 +203,7 @@ test('战报技能字段来自新表（c_id 全为 10001+，lv 与 e_v 随装备
   const state = createWorld(cfg);
   const army = state.armys[0];
   const before = state.generals.find((g) => g.id === army.generals[0]);
-  assert.ok(before.skills.filter(Boolean).length === 3, '武将初始未装配 3 个战法');
+  assert.ok(before.skills.filter(Boolean).length === 1, '主公开局应只有自带战法');
   const { report } = resolveBattle({ cfg, state, army, x: 100, y: 101, seed: 987654 });
   const rounds = JSON.parse(report.rounds);
   const hits = rounds.flatMap((rd) => rd.b.flatMap((h) => [...(h.a_bs || []), ...(h.a_as || []), ...(h.d_as || [])]));
@@ -231,10 +240,11 @@ test('协议：技能列表非空 / 升级按 pos 生效 / 旧技能 ID 被拒�
 
     const generals = await client.request('general.myGenerals', {});
     const g = generals.msg.generals[0];
-    assert.equal(g.skills.filter(Boolean).length, 3);
+    assert.equal(g.skills.filter(Boolean).length, 1);
+    assert.equal(g.skills[0].cfgId, 19001);
     const oldLv = g.skills[0].lv;
 
-    const lv = await client.request('general.lvSkill', { gId: g.id, pos: 0 });  // 客户端不传 cfgId
+    const lv = await client.request('general.lvSkill', { gId: g.id, pos: 0 });
     assert.equal(lv.msg.ok, true, `按 pos 升级失败：${lv.msg.reason}`);
     const after = (await client.request('general.myGenerals', {})).msg.generals.find((x) => x.id === g.id);
     assert.equal(after.skills[0].lv, oldLv + 1, '升级没有改变技能等级');
@@ -243,11 +253,13 @@ test('协议：技能列表非空 / 升级按 pos 生效 / 旧技能 ID 被拒�
     assert.equal(bad.msg.ok, false);
     assert.equal(bad.msg.reason, 'invalid_skill');
 
-    const good = await client.request('general.upSkill', { gId: g.id, cfgId: SKILLS[20].cfgId, pos: 2 });
-    assert.equal(good.msg.ok, true);
-    const final = (await client.request('general.myGenerals', {})).msg.generals.find((x) => x.id === g.id);
-    assert.equal(final.skills[2].cfgId, SKILLS[20].cfgId);
-    assert.equal(final.skills[2].lv, 1);
+    const locked = await client.request('general.upSkill', { gId: g.id, cfgId: SKILLS.find((s) => s.provenance?.pairing !== 'authored').cfgId, pos: 1 });
+    assert.equal(locked.msg.ok, false);
+    assert.equal(locked.msg.reason, 'slot_locked');
+
+    const innate = await client.request('general.downSkill', { gId: g.id, cfgId: 19001, pos: 0 });
+    assert.equal(innate.msg.ok, false);
+    assert.equal(innate.msg.reason, 'innate_locked');
 
     const page = await fetch(`http://127.0.0.1:${httpPort}/__slg/status`);
     const status = await page.json();

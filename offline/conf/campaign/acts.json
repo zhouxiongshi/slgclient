@@ -1,0 +1,10 @@
+[
+  { "id": "prologue", "title": "序章·落地", "years": "184春夏", "playable": true },
+  { "id": "settle", "title": "一·安身", "years": "184–189", "playable": false },
+  { "id": "enter", "title": "二·入世", "years": "189–192", "playable": false },
+  { "id": "hold", "title": "三·立足", "years": "192–199", "playable": false },
+  { "id": "guandu", "title": "四·官渡", "years": "200前后", "playable": false },
+  { "id": "chibi", "title": "五·赤壁", "years": "208", "playable": false },
+  { "id": "contest", "title": "六·争霸", "years": "208–234", "playable": false },
+  { "id": "end", "title": "终章", "years": "随偏离与地盘", "playable": false }
+]

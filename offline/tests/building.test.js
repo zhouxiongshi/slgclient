@@ -8,7 +8,7 @@
  *  5. interior.transform：无集市拒绝(58) / from→to 跨资源兑换 / 透支拒绝(1)
  *  6. nationMap.build：领地上建要塞，扣政令+资源，有工期
  *  7. nationMap.upBuild / delBuild：只有要塞可操作(53/54)，到点被动完成
- *  8. 资源随时间产出（基础+设施+领地）、政令恢复、仓库封顶
+ *  8. 资源按游戏日产出（基础+设施+领地）、政令恢复、仓库封顶
  *  9. 旧存档 normalizeWorld 兼容
  */
 import test from 'node:test';
@@ -144,6 +144,7 @@ test('nationMap.build：在自己领地建要塞，扣政令+资源，有工期�
   const state = createWorld(cfg);
   const ctx = makeCtx(state);
   const b = state.builds[0];
+  const originalLevel = b.level;
   assert.ok((b.wood || 0) + (b.grain || 0) > 0);   // 领地有产量，可建造
   const res = state.roleRes;
   const before = { wood: res.wood, decree: res.decree };
@@ -153,13 +154,17 @@ test('nationMap.build：在自己领地建要塞，扣政令+资源，有工期�
   assert.equal(res.decree, before.decree - fort.need.decree);
   assert.equal(res.wood, before.wood - fort.need.wood);
   assert.equal(b.type, 56);
-  assert.equal(b.level, 0);            // 建造中
+  // ★ 修复：建造中不再把 level 降为 0（客户端 npc.levels 只有 1~10，
+  //   level=0 会让地形详情面板越界崩溃），改用 building 标记工期。
+  assert.equal(b.level, originalLevel);
+  assert.equal(b.building, true);
   assert.equal(b.op_level, 1);
   assert.ok(b.end_time > nowSec());
   // 到点被动完成
   b.end_time = nowSec() - 1;
   tick(ctx);
   assert.equal(b.level, 1);
+  assert.equal(b.building, false);
   assert.equal(b.op_level, 1);
   assert.equal(b.end_time, 0);
   assert.equal(b.maxDurable, fort.durable);
@@ -212,24 +217,26 @@ test('nationMap.build：资源不足返回 16，要塞达到上限返回 49', ()
   assert.equal(handleRequest(ctx, req('nationMap.build', { x: b.x, y: b.y, type: 56 })).code, 49);
 });
 
-test('资源按时间产出（基础+设施+领地）、政令恢复、仓库封顶', () => {
+test('资源按游戏日产出、政令恢复、仓库封顶', () => {
   const state = createWorld(cfg);
   const ctx = makeCtx(state);
   tick(ctx);
   const expectedWoodYield = (cfg.basic.role.wood_yield ?? 1000)
     + state.builds.reduce((s, b) => s + (b.wood || 0), 0);
   assert.equal(state.roleRes.wood_yield, expectedWoodYield);
-  // 2 小时产出
-  state.roleAttr.lastYieldAt = Date.now() - 2 * 3600 * 1000;
+  // 2 个游戏日（1 倍速下 1 日 = 60 秒），不再按真实小时
+  state.clock.lastRealMs = Date.now() - 2 * 60 * 1000;
+  state.clock.accMs = 0;
   const w0 = state.roleRes.wood;
   const d0 = state.roleRes.decree = 0;
   tick(ctx);
-  assert.ok(state.roleRes.wood >= w0 + expectedWoodYield * 2 - 1); // ±1s 误差
+  assert.ok(state.roleRes.wood >= w0 + expectedWoodYield * 2 - 1);
   assert.equal(state.roleRes.decree, Math.min(cfg.basic.role.decree_limit, d0 + 60));
   // 爆仓封顶
   const cap = state.roleRes.depot_capacity;
   state.roleRes.wood = cap;
-  state.roleAttr.lastYieldAt = Date.now() - 3600 * 1000;
+  state.clock.lastRealMs = Date.now() - 60 * 1000;
+  state.clock.accMs = 0;
   tick(ctx);
   assert.equal(state.roleRes.wood, cap);
 });

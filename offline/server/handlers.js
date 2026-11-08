@@ -9,15 +9,54 @@
  */
 import {
   nextId, findGeneral, findArmy, findCity, mainCity, makeGeneral,
-  makeBuild, makeCity, generalToArray, defaultLoadout,
+  makeBuild, makeCity, makeArmy, generalToArray,
 } from './world.js';
 import { resolveBattle } from './battle.js';
 import { skillById, LEVEL_COUNT } from './skills.js';
+import { marchMs } from './clock.js';
+import { facilityBonus } from './domain/economy.js';
+import {
+  chapterRules, settleCampaign, chooseChapter, onTileCleared,
+} from './domain/campaign.js';
+import { slotBlock } from './domain/slots.js';
+import { ensureTavern, guestsNow, announceTavern } from './domain/tavern.js';
+import { noteIfGeneralDown } from './command.js';
 
 const OK = 0;
 const nowSec = () => Math.floor(Date.now() / 1000);
 const clone = (v) => JSON.parse(JSON.stringify(v));
 const RES_KEYS = ['wood', 'iron', 'stone', 'grain'];
+
+/**
+ * 协议入参数值规范化（防 NaN / null 污染存档）。
+ * 客户端偶发会带 null、字符串或 NaN（例如拖拽坐标未初始化）。服务端直接
+ * Number() 会得到 NaN，JSON 序列化后变成 null 写进存档，重启后客户端读
+ * `.x/.y` 就崩（crash.log 中的 reading 'y' / 'width'）。
+ * 这里统一把已知数值字段转成有限数；字符串型字段（名称、章节选项、聊天内容）
+ * 一律原样保留，避免误伤剧情/聊天协议。
+ */
+const NUMERIC_KEYS = new Set([
+  'x', 'y', 'cityId', 'order', 'position', 'pos', 'gId', 'generalId', 'armyId',
+  'id', 'rid', 'RId', 'uid', 'level', 'lv', 'type', 'fType', 'cfgId', 'skillId',
+  'seq', 'cnt', 'num', 'count', 'star', 'starLv', 'decree', 'ctime', 'time',
+  'index', 'slot', 'scale', 'curDurable', 'maxDurable',
+]);
+const ARRAY_NUMERIC_KEYS = new Set(['cnts', 'from', 'to', 'generals', 'soldiers', 'levels']);
+function sanitizeMsg(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const out = { ...raw };
+  for (const [k, v] of Object.entries(out)) {
+    if (NUMERIC_KEYS.has(k)) {
+      const n = Number(v);
+      out[k] = Number.isFinite(n) ? n : 0;
+    } else if (ARRAY_NUMERIC_KEYS.has(k) && Array.isArray(v)) {
+      out[k] = v.map((n) => { const x = Number(n); return Number.isFinite(x) ? x : 0; });
+    } else if (typeof v === 'number' && !Number.isFinite(v)) {
+      out[k] = 0;
+    }
+  }
+  return out;
+}
 
 /** 原版错误码（slgserver/constant/code.go），客户端据此弹原版提示框。 */
 const CODE = {
@@ -63,7 +102,12 @@ function tickFacilities(state, cfg) {
 function tickBuilds(state, cfg) {
   const done = [];
   for (const b of state.builds) {
-    if ((b.end_time || 0) <= 0 || nowSec() < b.end_time) continue;
+    // ★ 工期判断只看 end_time：旧版依赖 op_level !== level，建造中的领地若
+    //   level 恰好等于目标等级就会永远卡住；旧存档的 level=0 也能在这里被纠正。
+    const end = b.end_time || 0;
+    if (end <= 0 || nowSec() < end) continue;
+    const inProgress = b.building || (b.op_level ?? b.level) !== b.level;
+    if (!inProgress && (b.op_level ?? 0) !== 0) continue;
     if ((b.op_level ?? 0) === 0) {
       const [t, lv] = cfg.tileAt(b.x, b.y);
       const conf = cfg.confs.find((c) => c.type === t && c.level === (lv || 1))
@@ -80,7 +124,7 @@ function tickBuilds(state, cfg) {
       b.curDurable = Math.min(b.maxDurable, b.curDurable || b.maxDurable);
       b.defender = conf.defender ?? 1;
       b.op_level = b.level;
-    } else if (b.op_level !== b.level) {
+    } else if (b.op_level !== b.level || b.building) {
       b.level = b.op_level;
       const c = cfg.buildCustomCfg(b.type, b.level);
       if (c) {
@@ -93,6 +137,7 @@ function tickBuilds(state, cfg) {
       continue;
     }
     b.end_time = 0;
+    b.building = false;
     done.push(b);
   }
   return done;
@@ -107,12 +152,14 @@ function facilityAdditions(state, cfg) {
       if (lv <= 0) continue;
       const values = cfg.facilityValues(f.type, lv);
       cfg.facilityAdditions(f.type).forEach((aType, i) => {
-        if (aType === 17) y.wood += values[i] || 0;        // 木材产量
-        else if (aType === 18) y.iron += values[i] || 0;   // 铁矿产量
-        else if (aType === 19) y.grain += values[i] || 0;  // 粮食产量
-        else if (aType === 20) y.stone += values[i] || 0;  // 石矿产量
-        else if (aType === 21) y.gold += values[i] || 0;   // 税收
-        else if (aType === 23) y.capacity += values[i] || 0; // 仓库容量
+        const bonus = facilityBonus(state, aType, chapterRules());
+        const v = Math.floor((values[i] || 0) * (1 + bonus));
+        if (aType === 17) y.wood += v;
+        else if (aType === 18) y.iron += v;
+        else if (aType === 19) y.grain += v;
+        else if (aType === 20) y.stone += v;
+        else if (aType === 21) y.gold += v;
+        else if (aType === 23) y.capacity += v;
       });
     }
   }
@@ -165,23 +212,14 @@ function tryUseNeed(state, need) {
   return OK;
 }
 
-/** 资源按时间被动产出（复刻 produce()：产量/小时 × 小时，仓库封顶；政令每 2 分钟 +1）。 */
-function accrue(state, cfg) {
-  tickFacilities(state, cfg);          // 先被动完成到点的设施升级
-  const r = totalYield(state, cfg);    // 每次请求都重算产量并同步到 role_res（客户端实时显示）
-  const now = Date.now();
-  const last = state.roleAttr.lastYieldAt || state.createdAt || now;
-  const hours = Math.min(24, Math.max(0, (now - last) / 3600000));
-  if (hours > 0) {
-    const cap = r.depot_capacity || 1000000;
-    for (const k of ['wood', 'iron', 'stone', 'grain', 'gold']) {
-      const gain = Math.floor((r[`${k}_yield`] || 0) * hours);
-      r[k] = Math.min(cap, (r[k] || 0) + gain);
-    }
-    const limit = cfg.basic.role?.decree_limit ?? 20;
-    r.decree = Math.min(limit, (r.decree || 0) + Math.floor(hours * 30));
-    state.roleAttr.lastYieldAt = now;
-  }
+/** 设施到点仍按真实秒。资源改按游戏日入账，军饷和序章在 settleCampaign。 */
+function accrue(ctx) {
+  const { state, cfg } = ctx;
+  tickFacilities(state, cfg);
+  totalYield(state, cfg);
+  settleCampaign(state, cfg, ctx, Date.now());
+  ensureTavern(state, cfg);
+  announceTavern(state, ctx, chapterRules().realMsPerDay);
   return tickBuilds(state, cfg);
 }
 
@@ -227,6 +265,7 @@ export function processTask(ctx, task) {
     army.cmd = 0;
     army.state = 1;
     army.to_x = 0; army.to_y = 0; army.end = 0;
+    noteIfGeneralDown(state, ctx, army);
     for (const [gid, exp] of Object.entries(expByGeneral)) {
       const g = findGeneral(state, Number(gid));
       if (g) g.exp += exp;
@@ -234,8 +273,9 @@ export function processTask(ctx, task) {
     state.warReports.unshift(report);
     if (state.warReports.length > 100) state.warReports.length = 100;
 
-    // 胜利后占领该格：沿用原有 roleBuild.push 逻辑
+    // 胜利后占领该格：沿用原有 roleBuild.push 逻辑。黄巾格先清掉守军并还原产量，再推送。
     if (report.result === 2) {
+      onTileCleared(state, cfg, task.x, task.y);
       const [type, level] = cfg.tileAt(task.x, task.y);
       const exists = state.builds.find((b) => b.x === task.x && b.y === task.y);
       if (exists) {
@@ -278,8 +318,8 @@ export function processTask(ctx, task) {
 export function handleRequest(ctx, req) {
   const { state, cfg, options } = ctx;
   const name = req.name;
-  const m = req.msg || {};
-  const finishedBuilds = accrue(state, cfg);
+  const m = sanitizeMsg(req.msg);
+  const finishedBuilds = accrue(ctx);
   for (const b of finishedBuilds) ctx.push('roleBuild.push', b); // 建造/升级/拆除到点，主动推原版通道
   const rsp = {};
 
@@ -390,8 +430,11 @@ export function handleRequest(ctx, req) {
     case 'nationMap.giveUp': {
       const x = Number(m.x ?? 0), y = Number(m.y ?? 0);
       state.builds = state.builds.filter((b) => !(b.x === x && b.y === y));
+      // ★ 修复：放弃领地推送的占位对象 level 不能是 0，客户端地形详情面板
+      //   getDefenseSoldiers(0) 会读 npc.levels[-1].soilders 崩溃。
+      const [, tileLevel] = cfg.tileAt(x, y);
       ctx.push('roleBuild.push', {
-        rid: 0, x, y, type: 53, level: 0, curDurable: 0, maxDurable: 0,
+        rid: 0, x, y, type: 53, level: tileLevel || 1, curDurable: 0, maxDurable: 0,
       });
       ctx.save();
       rsp.msg = { x, y };
@@ -403,7 +446,7 @@ export function handleRequest(ctx, req) {
       const b = state.builds.find((bb) => bb.x === x && bb.y === y);
       if (!b) { rsp.code = CODE.BuildNotMe; break; }
       const isRes = (b.wood || 0) + (b.iron || 0) + (b.stone || 0) + (b.grain || 0) > 0;
-      if (!isRes || (b.op_level ?? b.level) !== b.level) { rsp.code = CODE.CanNotBuildNew; break; }
+      if (!isRes || b.building || (b.op_level ?? b.level) !== b.level) { rsp.code = CODE.CanNotBuildNew; break; }
       const fortressLimit = cfg.basic.build?.fortress_limit ?? 10;
       if (state.builds.filter((bb) => bb.type === 56).length >= fortressLimit) {
         rsp.code = CODE.CanNotBuildNew;
@@ -415,7 +458,10 @@ export function handleRequest(ctx, req) {
       if (code !== OK) { rsp.code = code; break; }
       b.type = c.type ?? type;
       b.name = c.name ?? b.name;
-      b.level = (c.level ?? 1) - 1;    // 建造中：level 先降 1，op_level 为目标等级（原版 BuildOrUp）
+      // ★ 修复：原版把 level 降为 c.level-1=0 标记「建造中」，但客户端
+      //   npc.levels 只有 1~10，level=0 下发给详情面板必崩。改用独立
+      //   building 标记，level 全程保持合法值，工期结束再设为目标等级。
+      b.building = true;
       b.op_level = c.level ?? 1;
       b.end_time = nowSec() + (c.time ?? 0);
       b.giveUp_time = 0;
@@ -432,12 +478,13 @@ export function handleRequest(ctx, req) {
       if (!b) { rsp.code = CODE.BuildNotMe; break; }
       if (b.type !== 56) { rsp.code = name === 'nationMap.upBuild' ? CODE.CanNotUpBuild : CODE.CanNotDestroy; break; }
       if ((b.giveUp_time || 0) > 0) { rsp.code = CODE.CanNotUpBuild; break; }
-      if ((b.op_level ?? b.level) !== b.level) { rsp.code = CODE.CanNotUpBuild; break; } // 建造中
+      if ((b.op_level ?? b.level) !== b.level || b.building) { rsp.code = CODE.CanNotUpBuild; break; } // 建造/升级中
       if (name === 'nationMap.upBuild') {
         const c = cfg.buildCustomCfg(b.type, b.level + 1);
         if (!c) { rsp.code = CODE.InvalidParam; break; }
         const code = tryUseNeed(state, c.need);
         if (code !== OK) { rsp.code = code; break; }
+        b.building = true;
         b.op_level = c.level;            // level 保持当前值，op_level 为目标等级
         b.end_time = nowSec() + (c.time ?? 0);
       } else {
@@ -445,6 +492,7 @@ export function handleRequest(ctx, req) {
         if (!c) { rsp.code = CODE.InvalidParam; break; }
         const code = tryUseNeed(state, c.need);
         if (code !== OK) { rsp.code = code; break; }
+        b.building = true;
         b.op_level = 0;                  // 标记拆除中，到点由 tickBuilds 恢复为资源地
         b.end_time = nowSec() + (c.time ?? 0);
       }
@@ -554,30 +602,34 @@ export function handleRequest(ctx, req) {
       rsp.msg = { generals: clone(state.generals) };
       break;
     case 'general.drawGeneral': {
+      ensureTavern(state, cfg);
       const times = Math.max(1, Math.min(10, Number(m.drawTimes ?? 1)));
-      const cost = (cfg.basic.general?.draw_general_cost ?? 30) * times;
-      state.roleRes.gold = Math.max(0, state.roleRes.gold - cost);
-      const ids = [...cfg.generalByCfg.keys()];
+      const here = guestsNow(state, chapterRules().realMsPerDay).slice(0, times);
+      const costEach = cfg.basic.general?.draw_general_cost ?? 30;
       const added = [];
-      for (let i = 0; i < times && ids.length; i += 1) {
-        const cfgId = ids[(state.counters.generalId + i * 7) % ids.length];
-        const g = makeGeneral(cfg, nextId(state, 'generalId'), cfgId, mainCity(state)?.cityId ?? 1, 1);
-        g.skills = defaultLoadout(state.generals.length + i);
-        state.generals.push(g);
-        added.push(g);
-        ctx.push('general.push', g);
+      if (here.length && (state.roleRes.gold || 0) >= costEach) {
+        const affordable = Math.min(here.length, Math.floor((state.roleRes.gold || 0) / costEach));
+        state.roleRes.gold -= costEach * affordable;
+        for (const person of here.slice(0, affordable)) {
+          person.recruited = true;
+          const row = state.tavern.people.find((p) => p.cfgId === person.cfgId);
+          if (row) row.recruited = true;
+          const g = makeGeneral(cfg, nextId(state, 'generalId'), person.cfgId, mainCity(state)?.cityId ?? 1, 1);
+          state.generals.push(g);
+          added.push(g);
+          ctx.push('general.push', g);
+        }
+        syncOwnedSkills(state);
+        ctx.push('roleRes.push', roleResOf(state));
+        ctx.save();
       }
-      syncOwnedSkills(state);
-      ctx.push('roleRes.push', roleResOf(state));
-      ctx.save();
       rsp.msg = { generals: clone(added) };
       break;
     }
     case 'general.composeGeneral': {
       const ids = (m.gIds || []).map(Number);
       state.generals = state.generals.filter((g) => !ids.includes(g.id));
-      const g = makeGeneral(cfg, nextId(state, 'generalId'), Number(m.compId) || [...cfg.generalByCfg.keys()][0], mainCity(state)?.cityId ?? 1, 10);
-      g.skills = defaultLoadout(state.generals.length);
+      const g = makeGeneral(cfg, nextId(state, 'generalId'), Number(m.compId) || [...cfg.generalByCfg.keys()][0], mainCity(state)?.cityId ?? 1, 1);
       state.generals.push(g);
       syncOwnedSkills(state);
       ctx.save();
@@ -630,13 +682,19 @@ export function handleRequest(ctx, req) {
             if (usedByOthers >= conf.ui.limit) {
               reason = 'limit_reached';
             } else {
-              slots[pos] = { id: cfgId, lv: 1, cfgId };
-              ok = true;
+              const blocked = slotBlock(g, pos, 'replace');
+              if (blocked) reason = blocked;
+              else {
+                slots[pos] = { id: cfgId, lv: 1, cfgId };
+                ok = true;
+              }
             }
           }
         } else if (name === 'general.downSkill') {
+          const blocked = slotBlock(g, pos, 'remove');
           const cur = slots[pos];
-          if (cur && (cfgId === 0 || cur.cfgId === cfgId)) {
+          if (blocked) reason = blocked;
+          else if (cur && (cfgId === 0 || cur.cfgId === cfgId)) {
             slots[pos] = null;
             ok = true;
           }
@@ -686,15 +744,18 @@ export function handleRequest(ctx, req) {
       const gid = Number(m.generalId ?? 0);
       let army = state.armys.find((a) => a.cityId === cityId && a.order === order);
       if (!army) {
-        army = { id: nextId(state, 'armyId'), cityId, order };
+        // ★ 修复：新建队伍必须带完整字段，否则 army.generals[pos] 直接抛异常，
+        //   该请求在网关层被吞掉（玩家点「配置武将」无反应），state.armys 还被污染。
+        army = makeArmy(nextId(state, 'armyId'), cityId, order, [0, 0, 0], [0, 0, 0]);
         state.armys.push(army);
       }
+      if (!Array.isArray(army.generals)) army.generals = [0, 0, 0];
       if (pos >= 0 && pos < 3) army.generals[pos] = gid;
       else {
         for (let i = 0; i < 3; i += 1) if (army.generals[i] === gid) army.generals[i] = 0;
       }
       for (const g of state.generals) g.order = 0;
-      for (const a of state.armys) for (const id of a.generals) {
+      for (const a of state.armys) for (const id of (a.generals || [])) {
         const g = findGeneral(state, id);
         if (g) g.order = a.order;
       }
@@ -739,7 +800,9 @@ export function handleRequest(ctx, req) {
       army.start = nowSec();
       if (cmd === 1) {
         // ★ 攻击：排队到点后由确定性 battle-core 结算，再推原版战报
-        const travelMs = options.travelMs ?? 3000;
+        const travelMs = marchMs(
+          state, army.from_x, army.from_y, x, y, chapterRules(), options.travelMs,
+        );
         army.state = 0;
         army.to_x = x; army.to_y = y;
         army.end = nowSec() + Math.ceil(travelMs / 1000);
@@ -843,6 +906,35 @@ export function handleRequest(ctx, req) {
     case 'chat.exit':
       rsp.msg = { type: Number(m.type ?? 0), id: Number(m.id ?? 0) };
       break;
+
+    case 'campaign.status':
+      rsp.msg = {
+        day: state.clock?.day ?? 1,
+        scale: state.clock?.scale ?? 1,
+        drift: state.drift?.score ?? 0,
+        band: state.drift?.band ?? 'canon',
+        choice: state.campaign?.choice ?? null,
+        ending: state.campaign?.ending ?? null,
+        blueprints: [...(state.campaign?.blueprints || [])],
+        spearmanId: state.campaign?.spearmanId ?? 0,
+      };
+      break;
+    case 'campaign.choose': {
+      const picked = m.option === 'lend' || m.option === 0 ? 'lend'
+        : (m.option === 'refuse' || m.option === 1 ? 'refuse' : '');
+      const result = chooseChapter(state, picked);
+      if (!result.ok) rsp.code = CODE.InvalidParam;
+      else ctx.save();
+      rsp.msg = { choice: state.campaign?.choice ?? null, ok: result.ok };
+      break;
+    }
+    case 'campaign.speed': {
+      const scale = Number(m.scale) === 4 ? 4 : 1;
+      state.clock.scale = scale;
+      ctx.save();
+      rsp.msg = { scale };
+      break;
+    }
 
     default:
       // 未知消息一律给空对象 + code 0，客户端不会 toast，也不会卡住请求队列

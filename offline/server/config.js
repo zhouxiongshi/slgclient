@@ -5,6 +5,7 @@
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadOverrides } from './gm/overrides.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -70,14 +71,26 @@ export function loadConfig(confDir = defaultConfDir()) {
     defender: c.defender ?? 0,
   }));
 
+  try {
+    const protag = JSON.parse(readFileSync(resolve(confDir, 'campaign', 'protagonist.json'), 'utf8'));
+    if (protag.general && !(general.list || []).some((g) => g.cfgId === protag.general.cfgId)) {
+      general.list.push(protag.general);
+    }
+  } catch { /* 没有穿越者模板时仍用原武将表 */ }
   const generalByCfg = new Map((general.list || []).map((g) => [g.cfgId, g]));
   const armsByType = new Map((generalArms.arms || []).map((a) => [a.id, a]));
 
-  const tileAt = (x, y) => {
+  const baseTileAt = (x, y) => {
     if (!mapRes) return [55, 1];
     const w = mapRes.w || 200;
     const idx = x + y * w;
     return mapRes.list?.[idx] ?? [0, 0];
+  };
+  const tileAt = (x, y) => {
+    const base = baseTileAt(x, y);
+    const hit = loadOverrides().tiles.find((t) => t.x === x && t.y === y);
+    if (!hit) return base;
+    return [hit.type ?? base[0], hit.level ?? base[1]];
   };
 
   return {
