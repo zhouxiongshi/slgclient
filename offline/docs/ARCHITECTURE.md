@@ -149,14 +149,18 @@ server/
   domain/army.js                       编制、征兵、行军
   domain/battle.js                     由现有 battle.js 逐步成为「只吃双方、只吐战报」
   domain/general.js                    名册
+  domain/people.js                     性情与正史短评（只读配置）
+  domain/drift.js                      蝴蝶进度 0–100 与三段
+  domain/chronicle.js                  身故时的正史轨迹与本局轨迹
   domain/fate.js                       在册 / 归玩家 / 替身 / 断链
-  domain/story.js                      到期判断，输出命令列表
+  domain/story.js                      按偏离段选稿，输出命令列表
   handlers.js                          瘦成协议适配，不再长公式
   gm/                                  以后的本地编辑页，只写覆盖层
 conf/
   json/                                原版，只读
   campaign/chapter1.json               章节表
   campaign/fates.json                  关羽—陆昭这种链
+  campaign/people.json                 性情、口吻、正史短评、偏离分值
   campaign/overrides.json              GM 手改
 ```
 
@@ -181,7 +185,9 @@ conf/
 2. 经济的日结算和军饷。
 3. 命令 `Accrue`、`ScheduleBattle`，协议仍走现有推送。
 4. 剧情只对序章那几日输出命令。
-5. 宿命模块先空着，用虚构枪兵的「发一名武将」命令即可。关羽链接入时再启用宿命，不改经济和战斗的接口。
-6. GM 最后接，而且只写覆盖层。
+5. 偏离模块先只记分和分段。序章的借粮、胜仗用 `AddDrift` 加个位数，保证进不了偏移段。
+6. 履历在有人死亡时记两本轨迹。枪兵的正史是「史无此人」。
+7. 宿命模块先空着，用虚构枪兵的「发一名武将」命令即可。关羽链接入时再启用宿命，不改经济和战斗的接口。
+8. GM 最后接，而且只写覆盖层。
 
 这样序章、关羽、以后的官渡，走的是同一条命令管道。新增的是章节 JSON 和宿命表，不是一套新的调用关系。
