@@ -1,0 +1,6 @@
+# 打包产物与本地缓存，不入库
+node_modules/
+build/
+reports/
+*.log
+web/index.html.pre-patch.bak

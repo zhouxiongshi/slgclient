@@ -1,0 +1,1 @@
+[1,0,0,[["cc.TextAsset",["_name","text"],1]],[[0,0,1,3]],[[0,"water_edge_3","<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<tileset version=\"1.4\" tiledversion=\"1.4.3\" name=\"water_edge_3\" tilewidth=\"200\" tileheight=\"100\" tilecount=\"15\" columns=\"1\">\r\n <image source=\"water_edge_3.png\" width=\"256\" height=\"1504\"/>\r\n</tileset>\r\n"]],0,0,[],[],[]]

@@ -1,0 +1,4575 @@
+{
+  "version": 3,
+  "generatedBy": "offline/tools/build-skills.js",
+  "source": "battle-kit/data/{damage_rates.csv, skill_names.csv, damage_effect_terms.csv}（原游戏真实数据）",
+  "sourceSha256": "98359854c43c855a451f60d884d0dad4620a3d384f1042a0df1650504a8938eb",
+  "fidelity": {
+    "descriptionText": "original",
+    "ratesAndScaling": "original",
+    "names": "original",
+    "nameEffectPairing": "reconstructed",
+    "probability": "placeholder"
+  },
+  "levelCount": 10,
+  "count": 31,
+  "oldSystemRemoved": true,
+  "skills": [
+    {
+      "cfgId": 10001,
+      "name": "击势",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10001,
+        "name": "击势",
+        "des": "对敌军群体发动一次攻击（伤害率%n%%）",
+        "trigger": 1,
+        "target": 9,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              50
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              55.56
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              61.11
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              66.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              72.22
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              77.78
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              83.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              88.89
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              94.44
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10001,
+        "name": "击势",
+        "skill_class": "主动",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_lv1": 50,
+        "rate_pct_lv10": 100,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_all",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900000
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10002,
+      "name": "兵贵神速",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10002,
+        "name": "兵贵神速",
+        "des": "对敌军群体发动一次攻击（伤害率%n%%）",
+        "trigger": 1,
+        "target": 9,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              60
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              66.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              73.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              80
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              86.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              93.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              106.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              113.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              120
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10002,
+        "name": "兵贵神速",
+        "skill_class": "主动",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_lv1": 60,
+        "rate_pct_lv10": 120,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_all",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900001
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10003,
+      "name": "万箭齐发",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10003,
+        "name": "万箭齐发",
+        "des": "对敌军群体发动一次攻击（伤害率%n%%）",
+        "trigger": 1,
+        "target": 9,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              75
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              83.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              91.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              108.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              116.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              125
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              133.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              141.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              150
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10003,
+        "name": "万箭齐发",
+        "skill_class": "主动",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_lv1": 75,
+        "rate_pct_lv10": 150,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_all",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900002
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10004,
+      "name": "三军齐出",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10004,
+        "name": "三军齐出",
+        "des": "对敌军群体发动一次攻击（伤害率%n%%）",
+        "trigger": 1,
+        "target": 9,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              80
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              88.89
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              97.78
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              106.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              115.56
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              124.44
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              133.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              142.22
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              151.11
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              160
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10004,
+        "name": "三军齐出",
+        "skill_class": "主动",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_lv1": 80,
+        "rate_pct_lv10": 160,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_all",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900003
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10005,
+      "name": "侵掠如火",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10005,
+        "name": "侵掠如火",
+        "des": "对敌军群体发动一次攻击（伤害率%n%%）",
+        "trigger": 1,
+        "target": 9,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              90
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              110
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              120
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              130
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              140
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              150
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              160
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              170
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              180
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10005,
+        "name": "侵掠如火",
+        "skill_class": "主动",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_lv1": 90,
+        "rate_pct_lv10": 180,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_all",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900004
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10006,
+      "name": "先声夺人",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10006,
+        "name": "先声夺人",
+        "des": "对敌军群体发动一次进攻（伤害率%n%%）",
+        "trigger": 1,
+        "target": 9,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              95
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              105.56
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              116.11
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              126.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              137.22
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              147.78
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              158.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              168.89
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              179.44
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              190
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10006,
+        "name": "先声夺人",
+        "skill_class": "主动",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_lv1": 95,
+        "rate_pct_lv10": 190,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_all",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900005
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10007,
+      "name": "全军突击",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10007,
+        "name": "全军突击",
+        "des": "对敌军群体发动一次进攻（伤害率%n%%）",
+        "trigger": 1,
+        "target": 9,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              111.11
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              122.22
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              133.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              144.44
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              155.56
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              166.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              177.78
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              188.89
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              200
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10007,
+        "name": "全军突击",
+        "skill_class": "主动",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_lv1": 100,
+        "rate_pct_lv10": 200,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_all",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900006
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10008,
+      "name": "一骑当千",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10008,
+        "name": "一骑当千",
+        "des": "对敌军单体发动1次攻击（伤害率%n%%）",
+        "trigger": 1,
+        "target": 6,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              140
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              155.56
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              171.11
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              186.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              202.22
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              217.78
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              233.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              248.89
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              264.44
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              280
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10008,
+        "name": "一骑当千",
+        "skill_class": "主动",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_lv1": 140,
+        "rate_pct_lv10": 280,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_single",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900007
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10009,
+      "name": "万军取首",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10009,
+        "name": "万军取首",
+        "des": "对敌军单体发动1次攻击（伤害率%n%%）",
+        "trigger": 1,
+        "target": 6,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              150
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              166.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              183.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              200
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              216.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              233.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              250
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              266.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              283.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              300
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10009,
+        "name": "万军取首",
+        "skill_class": "主动",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_lv1": 150,
+        "rate_pct_lv10": 300,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_single",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900008
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10010,
+      "name": "三术奇谋",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10010,
+        "name": "三术奇谋",
+        "des": "对敌军群体发动一次策略攻击（伤害率%n%%）",
+        "trigger": 1,
+        "target": 9,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              120
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              133.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              146.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              160
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              173.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              186.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              200
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              213.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              226.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              240
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10010,
+        "name": "三术奇谋",
+        "skill_class": "主动",
+        "effect_type": "STRATEGY_DAMAGE",
+        "rate_pct_lv1": 120,
+        "rate_pct_lv10": 240,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_all",
+        "attack_type": "chain",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900009
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10011,
+      "name": "凤仪施计",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10011,
+        "name": "凤仪施计",
+        "des": "对敌军群体发动一次策略攻击（伤害率%n%%）",
+        "trigger": 1,
+        "target": 9,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              120
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              133.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              146.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              160
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              173.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              186.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              200
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              213.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              226.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              240
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10011,
+        "name": "凤仪施计",
+        "skill_class": "主动",
+        "effect_type": "STRATEGY_DAMAGE",
+        "rate_pct_lv1": 120,
+        "rate_pct_lv10": 240,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_all",
+        "attack_type": "chain",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900010
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10012,
+      "name": "决绝",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10012,
+        "name": "决绝",
+        "des": "对有效距离以内的敌军发动一次策略攻击（伤害率%n%%）",
+        "trigger": 1,
+        "target": 8,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              75
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              83.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              91.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              108.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              116.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              125
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              133.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              141.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              150
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10012,
+        "name": "决绝",
+        "skill_class": "主动",
+        "effect_type": "STRATEGY_DAMAGE",
+        "rate_pct_lv1": 75,
+        "rate_pct_lv10": 150,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_all",
+        "attack_type": "chain",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900011
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10013,
+      "name": "乱矢蓄川",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10013,
+        "name": "乱矢蓄川",
+        "des": "对有效距离以内的敌军发动一次策略攻击（伤害率%n%%）",
+        "trigger": 1,
+        "target": 8,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              90
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              110
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              120
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              130
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              140
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              150
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              160
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              170
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              180
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10013,
+        "name": "乱矢蓄川",
+        "skill_class": "主动",
+        "effect_type": "STRATEGY_DAMAGE",
+        "rate_pct_lv1": 90,
+        "rate_pct_lv10": 180,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_all",
+        "attack_type": "chain",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900012
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10014,
+      "name": "乘间击隙",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10014,
+        "name": "乘间击隙",
+        "des": "发动1次无视兵种相克的攻击（伤害率%n%%）",
+        "trigger": 1,
+        "target": 6,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              60
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              66.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              73.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              80
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              86.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              93.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              106.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              113.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              120
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10014,
+        "name": "乘间击隙",
+        "skill_class": "主动",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_lv1": 60,
+        "rate_pct_lv10": 120,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_single",
+        "attack_type": "armor",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900013
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10015,
+      "name": "亡命一搏",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10015,
+        "name": "亡命一搏",
+        "des": "发动1次无视兵种相克的攻击（伤害率%n%%）",
+        "trigger": 1,
+        "target": 6,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              70
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              77.78
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              85.56
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              93.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              101.11
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              108.89
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              116.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              124.44
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              132.22
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              140
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10015,
+        "name": "亡命一搏",
+        "skill_class": "主动",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_lv1": 70,
+        "rate_pct_lv10": 140,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_single",
+        "attack_type": "armor",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900014
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10016,
+      "name": "兵无常势",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10016,
+        "name": "兵无常势",
+        "des": "发动一次攻击（伤害率%n%%）或策略攻击（伤害率%n%%）",
+        "trigger": 1,
+        "target": 9,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1,
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              90,
+              90
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              100,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              110,
+              110
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              120,
+              120
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              130,
+              130
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              140,
+              140
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              150,
+              150
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              160,
+              160
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              170,
+              170
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              180,
+              180
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10016,
+        "name": "兵无常势",
+        "skill_class": "主动",
+        "effect_type": "STRATEGY_DAMAGE",
+        "rate_pct_lv1": 90,
+        "rate_pct_lv10": 180,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_all",
+        "attack_type": "chain",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900015
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10017,
+      "name": "乱击",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10017,
+        "name": "乱击",
+        "des": "使攻击目标随机陷入动摇（伤害率%n%%）、恐慌（伤害率%n%%）、妖术（伤害率%n%%）状态中的一种，持续1回合",
+        "trigger": 1,
+        "target": 6,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1,
+          1,
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              80,
+              80,
+              80
+            ],
+            "effect_round": [
+              1,
+              1,
+              1
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              80,
+              80,
+              80
+            ],
+            "effect_round": [
+              1,
+              1,
+              1
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              80,
+              80,
+              80
+            ],
+            "effect_round": [
+              1,
+              1,
+              1
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              80,
+              80,
+              80
+            ],
+            "effect_round": [
+              1,
+              1,
+              1
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              80,
+              80,
+              80
+            ],
+            "effect_round": [
+              2,
+              2,
+              2
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              80,
+              80,
+              80
+            ],
+            "effect_round": [
+              2,
+              2,
+              2
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              80,
+              80,
+              80
+            ],
+            "effect_round": [
+              2,
+              2,
+              2
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              80,
+              80,
+              80
+            ],
+            "effect_round": [
+              2,
+              2,
+              2
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              80,
+              80,
+              80
+            ],
+            "effect_round": [
+              3,
+              3,
+              3
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              80,
+              80,
+              80
+            ],
+            "effect_round": [
+              3,
+              3,
+              3
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10017,
+        "name": "乱击",
+        "skill_class": "主动",
+        "effect_type": "CONTROL",
+        "rate_pct_lv1": 80,
+        "rate_pct_lv10": 80,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_single",
+        "attack_type": "chain",
+        "control_state": "混乱",
+        "control_probability": 1,
+        "bonus_terms": [],
+        "detail_id": 900016
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x2fbbc99d/2271（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段固定值（无 {0} 成长标记）",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10018,
+      "name": "中级扰乱",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10018,
+        "name": "中级扰乱",
+        "des": "有几率引发一次动摇效果（伤害率%n%%）",
+        "trigger": 1,
+        "target": 6,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              17.5
+            ],
+            "effect_round": [
+              1
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              19.44
+            ],
+            "effect_round": [
+              1
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              21.39
+            ],
+            "effect_round": [
+              1
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              23.33
+            ],
+            "effect_round": [
+              1
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              25.28
+            ],
+            "effect_round": [
+              2
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              27.22
+            ],
+            "effect_round": [
+              2
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              29.17
+            ],
+            "effect_round": [
+              2
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              31.11
+            ],
+            "effect_round": [
+              2
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              33.06
+            ],
+            "effect_round": [
+              3
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              35
+            ],
+            "effect_round": [
+              3
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10018,
+        "name": "中级扰乱",
+        "skill_class": "主动",
+        "effect_type": "CONTROL",
+        "rate_pct_lv1": 17.5,
+        "rate_pct_lv10": 35,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_single",
+        "attack_type": "chain",
+        "control_state": "动摇",
+        "control_probability": 0.35,
+        "bonus_terms": [],
+        "detail_id": 900017
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10019,
+      "name": "乱阵",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10019,
+        "name": "乱阵",
+        "des": "有几率引发一次动摇效果（伤害率%n%%）",
+        "trigger": 1,
+        "target": 6,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              30
+            ],
+            "effect_round": [
+              1
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              33.33
+            ],
+            "effect_round": [
+              1
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              36.67
+            ],
+            "effect_round": [
+              1
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              1
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              43.33
+            ],
+            "effect_round": [
+              2
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              46.67
+            ],
+            "effect_round": [
+              2
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              50
+            ],
+            "effect_round": [
+              2
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              53.33
+            ],
+            "effect_round": [
+              2
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              56.67
+            ],
+            "effect_round": [
+              3
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              60
+            ],
+            "effect_round": [
+              3
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10019,
+        "name": "乱阵",
+        "skill_class": "主动",
+        "effect_type": "CONTROL",
+        "rate_pct_lv1": 30,
+        "rate_pct_lv10": 60,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_single",
+        "attack_type": "chain",
+        "control_state": "动摇",
+        "control_probability": 0.35,
+        "bonus_terms": [],
+        "detail_id": 900018
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10020,
+      "name": "一雷惊蛰",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10020,
+        "name": "一雷惊蛰",
+        "des": "1回合准备，对随机敌军发动攻击，每次目标独立判定，每次伤害率都递增%n%%",
+        "trigger": 1,
+        "target": 6,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              7
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              7
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              7
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              7
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              7
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              7
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              7
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              7
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              7
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              7
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10020,
+        "name": "一雷惊蛰",
+        "skill_class": "主动",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_lv1": 7,
+        "rate_pct_lv10": 7,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 1,
+        "target_type": "enemy_single",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900019
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0xc4f8c96f（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段固定值（无 {0} 成长标记）",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10021,
+      "name": "乘胜追击",
+      "trigger": 3,
+      "dir": "zuiji",
+      "ui": {
+        "cfgId": 10021,
+        "name": "乘胜追击",
+        "des": "对目标再次发动策略攻击（伤害率%n%%）",
+        "trigger": 3,
+        "target": 6,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              59.5
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              66.11
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              72.72
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              79.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              85.94
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              92.56
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              99.17
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              105.78
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              112.39
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              119
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10021,
+        "name": "乘胜追击",
+        "skill_class": "追击",
+        "effect_type": "STRATEGY_DAMAGE",
+        "rate_pct_lv1": 59.5,
+        "rate_pct_lv10": 119,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_single",
+        "attack_type": "chain",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900020
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10022,
+      "name": "中宫追玺",
+      "trigger": 3,
+      "dir": "zuiji",
+      "ui": {
+        "cfgId": 10022,
+        "name": "中宫追玺",
+        "des": "对目标再次发动策略攻击（伤害率%n%%）",
+        "trigger": 3,
+        "target": 6,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              65
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              72.22
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              79.44
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              86.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              93.89
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              101.11
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              108.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              115.56
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              122.78
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              130
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10022,
+        "name": "中宫追玺",
+        "skill_class": "追击",
+        "effect_type": "STRATEGY_DAMAGE",
+        "rate_pct_lv1": 65,
+        "rate_pct_lv10": 130,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_single",
+        "attack_type": "chain",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900021
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10023,
+      "name": "先驱突击",
+      "trigger": 3,
+      "dir": "zuiji",
+      "ui": {
+        "cfgId": 10023,
+        "name": "先驱突击",
+        "des": "陈到对其发动1次攻击（伤害率%n%%）",
+        "trigger": 3,
+        "target": 6,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              44.44
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              48.89
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              53.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              57.78
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              62.22
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              66.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              71.11
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              75.56
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              80
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10023,
+        "name": "先驱突击",
+        "skill_class": "追击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_lv1": 40,
+        "rate_pct_lv10": 80,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_single",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900022
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10024,
+      "name": "伏波扬砂",
+      "trigger": 3,
+      "dir": "zuiji",
+      "ui": {
+        "cfgId": 10024,
+        "name": "伏波扬砂",
+        "des": "陈到对其发动1次攻击（伤害率%n%%）",
+        "trigger": 3,
+        "target": 6,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              60
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              66.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              73.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              80
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              86.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              93.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              106.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              113.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              120
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10024,
+        "name": "伏波扬砂",
+        "skill_class": "追击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_lv1": 60,
+        "rate_pct_lv10": 120,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_single",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900023
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10025,
+      "name": "反击",
+      "trigger": 2,
+      "dir": "beidong",
+      "ui": {
+        "cfgId": 10025,
+        "name": "反击",
+        "des": "受到普通攻击时能进行反击（伤害率%n%%）",
+        "trigger": 2,
+        "target": 1,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          2
+        ],
+        "levels": [
+          {
+            "probability": 100,
+            "effect_value": [
+              75
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              75
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              75
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              75
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              75
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              75
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              75
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              75
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              75
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              75
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10025,
+        "name": "反击",
+        "skill_class": "被动",
+        "effect_type": "BUFF",
+        "rate_pct_lv1": 75,
+        "rate_pct_lv10": 75,
+        "probability_init": 1,
+        "probability_max": 1,
+        "prepare": 0,
+        "target_type": "self",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [
+          {
+            "name": "普通攻击伤害提高",
+            "value": 0.75,
+            "op": 1
+          }
+        ],
+        "detail_id": 900024
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x24b22708/1755（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段固定值（无 {0} 成长标记）",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10026,
+      "name": "健卒不殆",
+      "trigger": 2,
+      "dir": "beidong",
+      "ui": {
+        "cfgId": 10026,
+        "name": "健卒不殆",
+        "des": "行动时对附近的敌军造成伤害（伤害率%n%%）",
+        "trigger": 2,
+        "target": 1,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          2
+        ],
+        "levels": [
+          {
+            "probability": 100,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10026,
+        "name": "健卒不殆",
+        "skill_class": "被动",
+        "effect_type": "BUFF",
+        "rate_pct_lv1": 40,
+        "rate_pct_lv10": 40,
+        "probability_init": 1,
+        "probability_max": 1,
+        "prepare": 0,
+        "target_type": "self",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [
+          {
+            "name": "普通攻击伤害提高",
+            "value": 0.4,
+            "op": 1
+          }
+        ],
+        "detail_id": 900025
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0xc4f8c96f（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段固定值（无 {0} 成长标记）",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10027,
+      "name": "混战",
+      "trigger": 2,
+      "dir": "beidong",
+      "ui": {
+        "cfgId": 10027,
+        "name": "混战",
+        "des": "行动时对附近的敌军造成伤害（伤害率%n%%）",
+        "trigger": 2,
+        "target": 1,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          2
+        ],
+        "levels": [
+          {
+            "probability": 100,
+            "effect_value": [
+              50
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              50
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              50
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              50
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              50
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              50
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              50
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              50
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              50
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              50
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10027,
+        "name": "混战",
+        "skill_class": "被动",
+        "effect_type": "BUFF",
+        "rate_pct_lv1": 50,
+        "rate_pct_lv10": 50,
+        "probability_init": 1,
+        "probability_max": 1,
+        "prepare": 0,
+        "target_type": "self",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [
+          {
+            "name": "普通攻击伤害提高",
+            "value": 0.5,
+            "op": 1
+          }
+        ],
+        "detail_id": 900026
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0xc4f8c96f（原文）",
+        "nameSource": "片段内嵌真实战法名",
+        "rateSource": "片段固定值（无 {0} 成长标记）",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10028,
+      "name": "众叛亲离",
+      "trigger": 2,
+      "dir": "beidong",
+      "ui": {
+        "cfgId": 10028,
+        "name": "众叛亲离",
+        "des": "使目标陷入动摇状态，每回合产生逃兵（伤害率%n%%）",
+        "trigger": 2,
+        "target": 9,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 100,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              1
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              44.44
+            ],
+            "effect_round": [
+              1
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              48.89
+            ],
+            "effect_round": [
+              1
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              53.33
+            ],
+            "effect_round": [
+              1
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              57.78
+            ],
+            "effect_round": [
+              2
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              62.22
+            ],
+            "effect_round": [
+              2
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              66.67
+            ],
+            "effect_round": [
+              2
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              71.11
+            ],
+            "effect_round": [
+              2
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              75.56
+            ],
+            "effect_round": [
+              3
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              80
+            ],
+            "effect_round": [
+              3
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10028,
+        "name": "众叛亲离",
+        "skill_class": "被动",
+        "effect_type": "CONTROL",
+        "rate_pct_lv1": 40,
+        "rate_pct_lv10": 80,
+        "probability_init": 1,
+        "probability_max": 1,
+        "prepare": 0,
+        "target_type": "enemy_all",
+        "attack_type": "normal",
+        "control_state": "动摇",
+        "control_probability": 0.35,
+        "bonus_terms": [],
+        "detail_id": 900027
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10029,
+      "name": "轻骑冲阵",
+      "trigger": 4,
+      "dir": "zhihui",
+      "ui": {
+        "cfgId": 10029,
+        "name": "轻骑冲阵",
+        "des": "前2回合优先行动，行动时对附近的敌军造成伤害（伤害率%n%%）",
+        "trigger": 4,
+        "target": 1,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          2
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              40
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10029,
+        "name": "轻骑冲阵",
+        "skill_class": "指挥",
+        "effect_type": "BUFF",
+        "rate_pct_lv1": 40,
+        "rate_pct_lv10": 40,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "self",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [
+          {
+            "name": "普通攻击伤害提高",
+            "value": 0.4,
+            "op": 1
+          }
+        ],
+        "detail_id": 900028
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0xc4f8c96f（原文）",
+        "nameSource": "片段内嵌真实战法名",
+        "rateSource": "片段固定值（无 {0} 成长标记）",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10030,
+      "name": "异士",
+      "trigger": 4,
+      "dir": "zhihui",
+      "ui": {
+        "cfgId": 10030,
+        "name": "异士",
+        "des": "当兵力少于战斗初始兵力时，对距离1的敌军发动一次攻击（伤害率%n%%）",
+        "trigger": 4,
+        "target": 6,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              25
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              25
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              25
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              25
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              25
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              25
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              25
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              25
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              25
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              25
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10030,
+        "name": "异士",
+        "skill_class": "指挥",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_lv1": 25,
+        "rate_pct_lv10": 25,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "enemy_single",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900029
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0xc4f8c96f（原文）",
+        "nameSource": "片段内嵌真实战法名",
+        "rateSource": "片段固定值（无 {0} 成长标记）",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    },
+    {
+      "cfgId": 10031,
+      "name": "义勇军",
+      "trigger": 4,
+      "dir": "zhihui",
+      "ui": {
+        "cfgId": 10031,
+        "name": "义勇军",
+        "des": "进入分兵状态（伤害率%n%%）；可进行2次普通攻击",
+        "trigger": 4,
+        "target": 1,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          2
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              32.5
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 39,
+            "effect_value": [
+              32.5
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 43,
+            "effect_value": [
+              32.5
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 47,
+            "effect_value": [
+              32.5
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 51,
+            "effect_value": [
+              32.5
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 54,
+            "effect_value": [
+              32.5
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 58,
+            "effect_value": [
+              32.5
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 62,
+            "effect_value": [
+              32.5
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 66,
+            "effect_value": [
+              32.5
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 70,
+            "effect_value": [
+              32.5
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 10031,
+        "name": "义勇军",
+        "skill_class": "指挥",
+        "effect_type": "BUFF",
+        "rate_pct_lv1": 32.5,
+        "rate_pct_lv10": 32.5,
+        "probability_init": 0.35,
+        "probability_max": 0.7,
+        "prepare": 0,
+        "target_type": "self",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [
+          {
+            "name": "普通攻击伤害提高",
+            "value": 0.325,
+            "op": 1
+          }
+        ],
+        "detail_id": 900030
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x86739953（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段固定值（无 {0} 成长标记）",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
+      }
+    }
+  ]
+}

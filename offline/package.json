@@ -1,0 +1,15 @@
+{
+  "name": "slg-offline",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "原 slgclient web-desktop 画面的 100% 保留版离线单机运行时（本地协议服务 + 确定性战斗内核）",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "serve": "node server/standalone.js",
+    "test": "node --test tests/*.test.js",
+    "smoke": "node tools/smoke.js",
+    "check": "node tools/check-release.js",
+    "pack": "node tools/pack.js"
+  }
+}
