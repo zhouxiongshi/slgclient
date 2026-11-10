@@ -10,6 +10,7 @@ import { applyDays } from './economy.js';
 import { addDrift } from './drift.js';
 import { lineFor } from './story.js';
 import { peopleById } from './people.js';
+import { chainDef, transitionFate } from './fate.js';
 import { loadOverrides, overridesMtime } from '../gm/overrides.js';
 import { makeBuild, makeGeneral, nextId, mainCity } from '../world.js';
 
@@ -38,12 +39,16 @@ export function chapterRules() {
 export function blankCampaign() {
   return {
     id: 'chapter1',
+    chapter: 1,
     fired: {},
     choice: null,
     waveFactor: null,
     blueprints: [],
     ending: null,
+    endingDay: null,
     spearmanId: 0,
+    pendingDay: 0,
+    lastPatrolDay: 0,
   };
 }
 
@@ -59,6 +64,12 @@ function say(state, ctx, text) {
   state.chat.push(cm);
   if (state.chat.length > 200) state.chat.shift();
   ctx.push?.('chat.push', cm);
+}
+
+export function sayDrift(state, ctx) {
+  const d = state.drift || { score: 0, band: 'canon' };
+  const label = (chapterRules().driftBands || []).find((b) => b.id === d.band)?.label || d.band;
+  say(state, ctx, `天机 ${d.score}/100 · ${label}。`);
 }
 
 function spotFree(state, x, y) {
@@ -86,8 +97,8 @@ function findSpot(cfg, state, dist) {
   return null;
 }
 
-function spawnWave(state, cfg, ctx, spec, factor) {
-  const at = findSpot(cfg, state, 2);
+function spawnWave(state, cfg, ctx, spec, factor, dist = 2) {
+  const at = findSpot(cfg, state, dist);
   if (!at) return null;
   const [type, level] = cfg.tileAt(at.x, at.y);
   const soldiers = Math.max(1, Math.round((spec.soldiers || 800) * (factor || 1)));
@@ -174,9 +185,13 @@ function finishChapter(state, cfg, ctx, rules) {
     state.campaign.ending = 'held';
     say(state, ctx, '坞堡守住了。曲辕犁已作用在磨坊上。');
   }
+  // 结局落档：界面据此显示「第一章结束」与「重开一局」
+  state.campaign.chapter = state.campaign.chapter || 1;
+  state.campaign.endingDay = state.clock?.day ?? null;
   if (!state.campaign.blueprints.includes(rules.blueprint.id)) {
     state.campaign.blueprints.push(rules.blueprint.id);
     addDrift(state, 1, 'blueprint:quyuanli', rules.driftBands);
+    sayDrift(state, ctx);
   }
   ctx.push?.('roleRes.push', state.roleRes);
 }
@@ -198,36 +213,108 @@ function runDay(state, cfg, ctx, day, rules) {
     if (live) dropLowestLand(state, ctx);
   }
   if (day === rules.choice.day) {
-    const choice = state.campaign.choice === 'lend' ? 'lend' : 'refuse';
-    state.campaign.choice = choice;
-    const who = peopleById('xiangren');
-    const story = loadOverrides().story || {};
-    if (choice === 'lend') {
-      const cost = rules.lendGrain ?? 3000;
-      state.roleRes.grain = Math.max(0, (state.roleRes.grain || 0) - cost);
-      state.campaign.waveFactor = rules.wave2.lendFactor;
-      addDrift(state, rules.lendDrift ?? 2, 'lend-grain', rules.driftBands);
-      grantSpearman(state, cfg, ctx, rules);
-      say(state, ctx, story.lend || lineFor(state.drift?.band, {
-        canon: `${who.voice}借出 ${cost} 粮。下一波会弱一些。`,
-        shift: `${who.voice}这点粮会把后面的仗带偏。借出 ${cost}。`,
-        rewrite: `${who.voice}旧史里没有这笔账。借出 ${cost}。`,
-      }));
-    } else {
-      state.campaign.waveFactor = rules.wave2.refuseFactor;
-      say(state, ctx, story.refuse || lineFor(state.drift?.band, {
-        canon: `${who.voice}粮留下了。下一波黄巾会更猛，没有人因此入队。`,
-        shift: `${who.line}粮留下了，后面的人会记得。`,
-        rewrite: `${who.voice}这条线已经不是旧史。粮留下了。`,
-      }));
+    if (!state.campaign.choice && !state.campaign.waveFactor) {
+      // 等玩家点选：只推弹窗，不替他做决定
+      state.campaign.pendingDay = day;
+      ctx.push?.('campaign.pending', pendingPayload(state, rules));
+      say(state, ctx, '乡人来问借粮。等你的答复。');
     }
-    ctx.push?.('roleRes.push', state.roleRes);
   }
   if (day === rules.wave2.day) {
+    if (!state.campaign.waveFactor) {
+      // 到点无人应答：按拒援记入本局
+      say(state, ctx, '没有等到答复。乡人把这一笔记成了拒援。');
+      applyChoice(state, cfg, ctx, rules, 'refuse');
+    }
     const factor = state.campaign.waveFactor || rules.wave2.refuseFactor;
     spawnWave(state, cfg, ctx, rules.wave2, factor);
   }
   if (day === rules.finale.day && !state.campaign.ending) finishChapter(state, cfg, ctx, rules);
+}
+
+/** 第 20 日二选一的后果。玩家点选（或到点超时）时执行。 */
+export function applyChoice(state, cfg, ctx, rules, choice) {
+  if (state.campaign.waveFactor) return { ok: false, reason: 'decided' };
+  if (choice !== 'lend' && choice !== 'refuse') return { ok: false, reason: 'bad' };
+  state.campaign.choice = choice;
+  const who = peopleById('xiangren');
+  const story = loadOverrides().story || {};
+  if (choice === 'lend') {
+    const cost = rules.lendGrain ?? 3000;
+    state.roleRes.grain = Math.max(0, (state.roleRes.grain || 0) - cost);
+    state.campaign.waveFactor = rules.wave2.lendFactor;
+    addDrift(state, rules.lendDrift ?? 2, 'lend-grain', rules.driftBands);
+    grantSpearman(state, cfg, ctx, rules);
+    say(state, ctx, story.lend || lineFor(state.drift?.band, {
+      canon: `${who.voice}借出 ${cost} 粮。下一波会弱一些。`,
+      shift: `${who.voice}这点粮会把后面的仗带偏。借出 ${cost}。`,
+      rewrite: `${who.voice}旧史里没有这笔账。借出 ${cost}。`,
+    }));
+  } else {
+    state.campaign.waveFactor = rules.wave2.refuseFactor;
+    say(state, ctx, story.refuse || lineFor(state.drift?.band, {
+      canon: `${who.voice}粮留下了。下一波黄巾会更猛，没有人因此入队。`,
+      shift: `${who.line}粮留下了，后面的人会记得。`,
+      rewrite: `${who.voice}这条线已经不是旧史。粮留下了。`,
+    }));
+  }
+  sayDrift(state, ctx);
+  ctx.push?.('roleRes.push', state.roleRes);
+  return { ok: true, choice };
+}
+
+/** 招募到宿命链上的名字时，链子往前走一格，并让玩家看见替身接棒。 */
+export function noticeRecruit(state, ctx, name) {
+  const chain = chainDef();
+  if (!chain || name !== chain.heroName) return null;
+  const result = transitionFate(state, 'recruit');
+  if (!result.ok) return null;
+  say(state, ctx, `${name}入营。此后旧史里他的那一站，由 ${chain.standIn}替他走。`);
+  return result;
+}
+
+export function pendingPayload(state, rules) {  const cost = rules.lendGrain ?? 3000;
+  return {
+    day: rules.choice.day,
+    deadlineDay: rules.wave2.day,
+    text: (rules.choicePrompt || '借粮 / 拒援？')
+      .replace('%n%', String(cost)),
+    lend: { grain: cost, waveFactor: rules.wave2.lendFactor, grantsGeneral: true },
+    refuse: { waveFactor: rules.wave2.refuseFactor, grantsGeneral: false },
+  };
+}
+
+/** 序章结束后的余波：黄巾流寇按周期出现，太久不打就掠田。 */
+function runPatrols(state, cfg, ctx, rules) {
+  const p = rules.patrol;
+  if (!p) return;
+  const day = state.clock.day;
+  const finaleDay = rules.finale.day;
+  state.campaign.lastPatrolDay = state.campaign.lastPatrolDay || finaleDay;
+  const active = (state.garrisons || []).filter((g) => g.patrol && !g.cleared);
+
+  for (const g of active) {
+    if (!g.raided && day - (g.spawnDay || finaleDay) >= (p.raidAfterDays ?? 9)) {
+      g.raided = true;
+      if (dropLowestLand(state, ctx)) {
+        say(state, ctx, `${g.name}掠走了田，往别处去了。打过这一格可以追回些什么。`);
+      }
+    }
+  }
+
+  const stillActive = (state.garrisons || []).filter((g) => g.patrol && !g.cleared);
+  if (day - state.campaign.lastPatrolDay >= (p.intervalDays ?? 6)
+      && stillActive.length < (p.maxActive ?? 2)) {
+    const garrison = spawnWave(state, cfg, ctx, {
+      name: p.name || '黄巾流寇',
+      soldiers: (p.baseSoldiers ?? 600) + (day - finaleDay) * (p.growthPerDay ?? 25),
+    }, 1, 3);
+    if (garrison) {
+      garrison.patrol = true;
+      garrison.spawnDay = day;
+      state.campaign.lastPatrolDay = day;
+    }
+  }
 }
 
 /** 时钟往前走，然后入账，然后触发跨过的那些日。 */
@@ -236,17 +323,30 @@ export function settleCampaign(state, cfg, ctx, now = Date.now()) {
   const from = state.clock.day;
   const { days } = advanceClock(state, now, rules);
   if (days > 0) applyDays(state, cfg, days, rules);
-  if (!state.campaign.fired['1']) runDay(state, cfg, ctx, 1, rules);
-  for (let d = from + 1; d <= state.clock.day; d += 1) runDay(state, cfg, ctx, d, rules);
+  // 结局后连开篇文本都不再补推，fired 完全冻结
+  if (!state.campaign.ending && !state.campaign.fired['1']) runDay(state, cfg, ctx, 1, rules);
+  // ★ P0-4：章节一经结算就停止按日触发。旧实现每天仍写一次 fired，
+  //   存档里 fired 会随天数线性膨胀（实测 40 日章节在 day 276 已有 267 个键）。
+  if (!state.campaign.ending) {
+    for (let d = from + 1; d <= state.clock.day; d += 1) runDay(state, cfg, ctx, d, rules);
+  }
+  if (!state.campaign.ending
+      && state.clock.day >= rules.choice.day && state.clock.day < rules.wave2.day
+      && !state.campaign.choice && !state.campaign.waveFactor
+      && state.campaign.pendingDay !== state.clock.day) {
+    // 读档后落在窗口内：把弹窗补推一次（每天至多一次）
+    state.campaign.pendingDay = state.clock.day;
+    ctx.push?.('campaign.pending', pendingPayload(state, rules));
+  }
+  if (state.campaign.ending) runPatrols(state, cfg, ctx, rules);
   if (days > 0) ctx.push?.('roleRes.push', state.roleRes);
   return { days, day: state.clock.day };
 }
 
 export function chooseChapter(state, option) {
   if (state.campaign.ending) return { ok: false, reason: 'ended' };
-  if (state.campaign.fired[String(chapterRules().choice.day)]) return { ok: false, reason: 'late' };
+  if (state.campaign.waveFactor) return { ok: false, reason: 'decided' };
   if (option !== 'lend' && option !== 'refuse') return { ok: false, reason: 'bad' };
-  state.campaign.choice = option;
   return { ok: true, choice: option };
 }
 
@@ -271,7 +371,10 @@ export function onTileCleared(state, cfg, x, y) {
   }
   if (!g.drifted) {
     g.drifted = true;
-    addDrift(state, chapterRules().clearDrift ?? 3, `clear:${g.name}`, chapterRules().driftBands);
+    const bonus = g.patrol
+      ? (chapterRules().patrol?.clearDrift ?? 1)
+      : (chapterRules().clearDrift ?? 3);
+    addDrift(state, bonus, `clear:${g.name}`, chapterRules().driftBands);
   }
   return g;
 }

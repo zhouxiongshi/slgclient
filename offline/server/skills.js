@@ -598,14 +598,1513 @@ export function patchClientBundle(source) {
       `              this.labelName.string = resCfg.name;`,
       `              this.labelName.string = resCfg ? resCfg.name : (this._data.name || "");`,
     ],
+    [
+      `        _proto.account_logout = function account_logout() {`,
+      `        if (typeof window !== 'undefined' && !window.__slgSend) {
+          window.__slgSend = function (name, msg) {
+            return NetManager.getInstance().send({ name: name, msg: msg || {} });
+          };
+        }
+        _proto.account_logout = function account_logout() {`,
+    ],
+    [
+      `          EventMgr.on(LogicEvent.openGeneralRoster, this.onOpenGeneralRoster, this);`,
+      `          EventMgr.on(LogicEvent.openGeneralRoster, this.onOpenGeneralRoster, this);
+          EventMgr.on("campaign.pending", this.onCampaignPending, this);
+          EventMgr.on("warReport.push", this.onWarReportAnim, this);`,
+    ],
+    [
+      `        _proto.robLoginUI = function robLoginUI() {`,
+      `        _proto.onCampaignPending = function onCampaignPending(frame) {
+          var d = frame && frame.msg ? frame.msg : (frame || {});
+          if (window.__slgCampaignChoice) window.__slgCampaignChoice(d);
+        };
+        _proto.onWarReportAnim = function onWarReportAnim(frame) {
+          var rep = frame && frame.msg ? frame.msg : null;
+          if (!rep || !rep.anim) return;
+          window.lastWarReport = rep;
+          // 本地地图已删除：Cocos 面板都在遮罩之下打不开，战报详情统一走 DOM 战报窗
+          if (window.__slgReportsWindow) window.__slgReportsWindow();
+          if (window.__slgPlayBattle) window.__slgPlayBattle(rep.anim);
+        };
+        _proto.robLoginUI = function robLoginUI() {`,
+    ],
+    [
+      `            _this2.clearAllScene();
+
+            _this2._mapScene = instantiate(_this2.mapScenePrefab);
+            _this2._mapScene.parent = _this2.node;
+            _this2._mapUIScene = instantiate(_this2.mapUIScenePrefab);
+            _this2._mapUIScene.parent = _this2.node;
+
+            _this2.addLoadingNode();`,
+      `            _this2.clearAllScene();
+
+            _this2._mapScene = instantiate(_this2.mapScenePrefab);
+            _this2._mapScene.parent = _this2.node;
+            _this2._mapUIScene = instantiate(_this2.mapUIScenePrefab);
+            _this2._mapUIScene.parent = _this2.node;
+            // 本地地图即刻遮蔽：场景一挂上树就盖住，玩家看不到一帧
+            if (typeof document !== 'undefined') {
+              var cover0 = document.getElementById('slgLocalCover');
+              if (cover0) cover0.style.display = 'block';
+              if (window.__slgStrategyShow) setTimeout(function () { window.__slgStrategyShow(); }, 50);
+            }
+
+            _this2.addLoadingNode();`,
+    ],
   ];
   let out = source;
   for (const [from, to] of pieces) {
     if (!out.includes(from)) throw new Error(`客户端补丁对不上：${from.slice(0, 40)}`);
     out = out.replace(from, to);
   }
-  return out;
+  return `${out}\n${STRATEGY_OVERLAY_SOURCE}\n${BATTLE_ANIM_SOURCE}\n${CITY_WINDOW_V2_IMPL}`;
 }
+
+/** 战略大地图覆盖层：纯 DOM + canvas，不进 Cocos 场景，磁盘不动。 */
+const STRATEGY_OVERLAY_SOURCE = `;(function () {
+  if (typeof document === 'undefined') return;
+  var MAP_W = 2400, MAP_H = 1350;
+  var overlay = null, canvas = null, timer = null, lastState = null, picked = null, mapImg = null;
+
+  function boot() {
+    if (document.getElementById('slgStrategyBtn')) return;
+    // 本地地图遮罩：进图前不显示（登录首页要露出来），进图后才盖住 Cocos 场景
+    var cover = document.createElement('div');
+    cover.id = 'slgLocalCover';
+    cover.style.cssText = 'position:fixed;inset:0;z-index:99000;background:#0c0d10;cursor:pointer;display:none;';
+    cover.innerHTML = '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);'
+      + 'color:#3d4046;font:22px "Microsoft YaHei",sans-serif;letter-spacing:8px;">天下 · 点击进入</div>';
+    cover.onclick = function () { if (window.__slgStrategyShow) window.__slgStrategyShow(); };
+    document.body.appendChild(cover);
+    var btn = document.createElement('button');
+    btn.id = 'slgStrategyBtn';
+    btn.textContent = '天下';
+    btn.style.cssText = 'position:fixed;top:8px;right:10px;z-index:99999;padding:4px 14px;'
+      + 'background:#1a1c20;color:#e8c670;border:1px solid #ba9a52;border-radius:6px;'
+      + 'font:14px/1.6 "Microsoft YaHei",sans-serif;cursor:pointer;opacity:.85;';
+    btn.onclick = toggle;
+    document.body.appendChild(btn);
+    overlay = document.createElement('div');
+    overlay.id = 'slgStrategyOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;display:none;'
+      + 'background:#e4d3c6;';
+    canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
+    var btnCss = 'background:rgba(22,24,16,.88);color:#e8c670;border:1px solid #ba9a52;'
+      + 'border-radius:4px;padding:3px 10px;cursor:pointer;font:13px "Microsoft YaHei",sans-serif;';
+    var dock = document.createElement('div');
+    dock.id = 'slgDock';
+    dock.style.cssText = 'position:absolute;top:12px;right:12px;z-index:4;display:flex;gap:6px;';
+    dock.innerHTML = ''
+      + '<button id="slgStratTick" style="' + btnCss + '">推演一月</button>'
+      + '<button id="slgBtnHome" style="' + btnCss + '">本城</button>'
+      + '<button id="slgBtnGens" style="' + btnCss + '">武将</button>'
+      + '<button id="slgBtnReps" style="' + btnCss + '">战报</button>'
+      + '<button id="slgBtnZoomIn" style="' + btnCss + '">放大</button>'
+      + '<button id="slgBtnZoomOut" style="' + btnCss + '">缩小</button>'
+      + '<button id="slgBtnFit" style="' + btnCss + '">全图</button>'
+      + '<button id="slgStratClose" style="' + btnCss + 'color:#c9c9c9;border-color:#666;">收起</button>';
+    var side = document.createElement('div');
+    side.id = 'slgSide';
+    side.style.cssText = 'position:absolute;left:12px;bottom:12px;width:340px;z-index:4;'
+      + 'display:flex;flex-direction:column;align-items:stretch;gap:8px;text-align:left;';
+    var legend = document.createElement('div');
+    legend.id = 'slgLegend';
+    legend.style.cssText = 'text-align:left;background:rgba(14,15,11,0.88);'
+      + 'border:1px solid rgba(186,154,82,0.45);border-radius:8px;padding:8px 12px;'
+      + 'color:#e2d6ba;font:13px/1.7 "Microsoft YaHei",sans-serif;'
+      + 'box-shadow:0 6px 20px rgba(0,0,0,.45);';
+    var foot = document.createElement('div');
+    foot.style.cssText = 'text-align:left;background:rgba(14,15,11,0.88);'
+      + 'border:1px solid rgba(186,154,82,0.45);border-radius:8px;'
+      + 'box-shadow:0 6px 20px rgba(0,0,0,.45);overflow:hidden;';
+    var footHead = document.createElement('div');
+    footHead.style.cssText = 'padding:6px 12px 4px;color:#e8c670;font:bold 13px "Microsoft YaHei",sans-serif;'
+      + 'letter-spacing:2px;text-align:left;border-bottom:1px solid rgba(186,154,82,0.25);';
+    footHead.innerHTML = '天下大势'
+      + '<div id="slgStratTurn" style="font-weight:normal;letter-spacing:0;opacity:.85;'
+      + 'font-size:12px;margin-top:2px;text-align:left;"></div>'
+      + '<div id="slgAlert" style="color:#ffb27a;font:12px/1.5 "Microsoft YaHei",sans-serif;'
+      + 'font-weight:normal;letter-spacing:0;text-align:left;"></div>';
+    var footList = document.createElement('div');
+    footList.id = 'slgStratEvents';
+    footList.style.cssText = 'max-height:150px;overflow-y:auto;padding:5px 12px 7px;text-align:left;'
+      + 'color:#e6dac0;font:13px/1.85 "Microsoft YaHei",sans-serif;text-shadow:0 1px 2px rgba(0,0,0,.8);';
+    foot.appendChild(footHead); foot.appendChild(footList);
+    side.appendChild(legend); side.appendChild(foot);
+    overlay.appendChild(canvas); overlay.appendChild(dock); overlay.appendChild(side);
+    document.body.appendChild(overlay);
+    document.getElementById('slgStratClose').onclick = function () { toggle(); };
+    document.getElementById('slgBtnFit').onclick = function () {
+      view.zoom = 1; view.px = 0; view.py = 0; picked = null;
+      if (lastState) draw(lastState);
+    };
+    document.getElementById('slgBtnZoomIn').onclick = function () { if (window.__slgZoom) window.__slgZoom(1); };
+    document.getElementById('slgBtnZoomOut').onclick = function () { if (window.__slgZoom) window.__slgZoom(-1); };
+    document.getElementById('slgBtnHome').onclick = function () {
+      if (window.__slgHomeWindow && lastState) window.__slgHomeWindow();
+    };
+    document.getElementById('slgBtnGens').onclick = function () {
+      if (window.__slgGeneralsWindow) window.__slgGeneralsWindow();
+    };
+    document.getElementById('slgBtnReps').onclick = function () {
+      if (window.__slgReportsWindow) window.__slgReportsWindow();
+    };
+    document.getElementById('slgStratTick').onclick = function () {
+      // ★ P0-1：推演一月现在是服务端原子推进 10 天并跑一次诸侯决策，必须给玩家回话
+      fetch('/__slg/strategy/tick', { method: 'POST' })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+          refresh();
+          if (!window.__slgToast) return;
+          if (res.skipped) window.__slgToast('本回合已推演过，还需 ' + Math.max(1, res.need || 0) + ' 个游戏日', false);
+          else window.__slgToast('推演至第 ' + (res.month || (res.turn || 0) + 1) + ' 月 · 游戏日 ' + res.day, true);
+        })
+        .catch(function () {});
+    };
+    // 滚轮缩放（以光标为锚）＋拖拽平移；轻点仍是选城
+    canvas.style.cursor = 'grab';
+    var drag = null;
+    canvas.addEventListener('wheel', function (ev) {
+      ev.preventDefault();
+      var rect = canvas.getBoundingClientRect();
+      var mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
+      var old = viewScale(rect);
+      var zoom = Math.max(1, Math.min(4, view.zoom * (ev.deltaY < 0 ? 1.15 : 0.87)));
+      if (zoom === view.zoom && zoom === 1) return;
+      var org = origin(rect);
+      var wx = (mx - org[0]) / old, wy = (my - org[1]) / old;
+      view.zoom = zoom;
+      if (view.zoom === 1) { view.px = 0; view.py = 0; }
+      else {
+        var org2 = origin(rect);
+        view.px += mx - (org2[0] + wx * viewScale(rect));
+        view.py += my - (org2[1] + wy * viewScale(rect));
+      }
+      clampPan(rect);
+      draw(lastState);
+    }, { passive: false });
+    canvas.addEventListener('mousedown', function (ev) {
+      drag = { x: ev.clientX, y: ev.clientY, px: view.px, py: view.py, moved: false };
+      canvas.style.cursor = 'grabbing';
+    });
+    window.addEventListener('mousemove', function (ev) {
+      if (!drag) {
+        if (ev.target === canvas && lastState) canvas.style.cursor = cityAt(ev) ? 'pointer' : 'grab';
+        return;
+      }
+      var dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
+      if (Math.abs(dx) + Math.abs(dy) > 5) drag.moved = true;
+      if (drag.moved && view.zoom > 1) {
+        view.px = drag.px + dx;
+        view.py = drag.py + dy;
+        clampPan(canvas.getBoundingClientRect());
+        if (lastState) draw(lastState);
+      }
+    });
+    window.addEventListener('mouseup', function (ev) {
+      if (!drag) return;
+      var moved = drag.moved;
+      var isOnCanvas = ev.target === canvas;
+      drag = null;
+      canvas.style.cursor = 'grab';
+      if (!moved && isOnCanvas) pickCity(ev);
+    });
+    var img = new Image();
+    img.onload = function () { mapImg = img; if (lastState) draw(lastState); };
+    img.src = '/__slg/strategy/panorama.png';
+  }
+
+  function toggle() {
+    var ov = document.getElementById('slgStrategyOverlay');
+    var show = ov.style.display === 'none';
+    ov.style.display = show ? 'block' : 'none';
+    if (show) { refresh(); timer = setInterval(refresh, 5000); }
+    else if (timer) { clearInterval(timer); timer = null; }
+  }
+
+  window.__slgStrategyShow = function () {
+    var ov = document.getElementById('slgStrategyOverlay');
+    if (!ov) return;
+    if (ov.style.display === 'none') toggle();
+    else refresh();
+  };
+  window.__slgZoom = function (dir) {
+    var rect = canvas.getBoundingClientRect();
+    var zoom = Math.max(1, Math.min(4, view.zoom * (dir > 0 ? 1.25 : 0.8)));
+    var org = origin(rect);
+    var cx = rect.width / 2, cy = rect.height / 2;
+    var wx = (cx - org[0]) / viewScale(rect), wy = (cy - org[1]) / viewScale(rect);
+    view.zoom = zoom;
+    if (zoom === 1) { view.px = 0; view.py = 0; }
+    else {
+      var org2 = origin(rect);
+      view.px += cx - (org2[0] + wx * viewScale(rect));
+      view.py += cy - (org2[1] + wy * viewScale(rect));
+      clampPan(rect);
+    }
+    if (lastState) draw(lastState);
+  };
+
+  function refresh() {
+    fetch('/__slg/strategy/state').then(function (r) { return r.json(); }).then(function (s) {
+      lastState = s; draw(s);
+      if (window.__slgHudTick) window.__slgHudTick();
+    }).catch(function () {});
+  }
+
+  var view = { zoom: 1, px: 0, py: 0 };
+  function clampPan(rect) {
+    var s = viewScale(rect);
+    var maxX = Math.max(0, (MAP_W * s - rect.width) / 2 + 60);
+    var maxY = Math.max(0, (MAP_H * s - rect.height) / 2 + 60);
+    view.px = Math.max(-maxX, Math.min(maxX, view.px));
+    view.py = Math.max(-maxY, Math.min(maxY, view.py));
+  }
+  function viewScale(rect) { return Math.min(rect.width / MAP_W, rect.height / MAP_H) * view.zoom; }
+  function origin(rect) {
+    var s = viewScale(rect);
+    return [(rect.width - MAP_W * s) / 2 + view.px, (rect.height - MAP_H * s) / 2 + view.py];
+  }
+
+  function cityAt(ev) {
+    if (!lastState || !canvas) return null;
+    var rect = canvas.getBoundingClientRect();
+    var scale = viewScale(rect);
+    var org = origin(rect);
+    var x = (ev.clientX - rect.left - org[0]) / scale;
+    var y = (ev.clientY - rect.top - org[1]) / scale;
+    var hw = 42 / scale, hh = 28 / scale;
+    var best = null, bestD = Infinity;
+    for (var i = 0; i < lastState.cities.length; i++) {
+      var c = lastState.cities[i];
+      if (Math.abs(c.x - x) > hw || Math.abs(c.y - y) > hh) continue;
+      var d = Math.hypot(c.x - x, c.y - y);
+      if (d < bestD) { bestD = d; best = c; }
+    }
+    return best;
+  }
+
+  function pickCity(ev) {
+    picked = cityAt(ev);
+    if (lastState) draw(lastState);
+    if (picked && window.__slgCityWindow) window.__slgCityWindow(picked.id);
+  }
+
+  function draw(s) {
+    if (!canvas) return;
+    var rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width; canvas.height = rect.height;
+    var g = canvas.getContext('2d');
+    var scale = viewScale(rect);
+    var org = origin(rect);
+    var ox = org[0], oy = org[1];
+    function P(p) { return [ox + p[0] * scale, oy + p[1] * scale]; }
+    g.fillStyle = '#12140f'; g.fillRect(0, 0, rect.width, rect.height);
+    var useImg = !!mapImg && mapImg.complete && mapImg.naturalWidth > 0;
+    if (useImg) {
+      // 你指定的那张图本图（霜寒定九州·五十四城版 全景合成），坐标同系 2400×1800
+      g.drawImage(mapImg, ox, oy, MAP_W * scale, MAP_H * scale);
+    } else {
+      g.fillStyle = '#f0e4c8'; g.fillRect(ox, oy, MAP_W * scale, MAP_H * scale);
+      g.setLineDash([6, 5]); g.strokeStyle = 'rgba(60,110,130,0.55)'; g.lineWidth = 1.5;
+      for (var i = 0; i < s.routes.length; i++) {
+        var r = s.routes[i];
+        if (!r.sea || !r.points || r.points.length < 2) continue;
+        g.beginPath();
+        r.points.forEach(function (p, k) { var q = P(p); k ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); });
+        g.stroke();
+      }
+      g.setLineDash([]);
+      for (var i = 0; i < s.routes.length; i++) {
+        var r = s.routes[i];
+        if (r.sea || !r.points || r.points.length < 2) continue;
+        g.strokeStyle = 'rgba(120,90,50,0.4)'; g.lineWidth = 1.5;
+        g.beginPath();
+        r.points.forEach(function (p, k) { var q = P(p); k ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); });
+        g.stroke();
+      }
+    }
+    // 城池：图本已有城徽与城名，交互层只描归属环，不再盖住城池
+    g.textAlign = 'center';
+    for (var i = 0; i < s.cities.length; i++) {
+      var c = s.cities[i];
+      var q = P([c.x, c.y]);
+      var rad = c.level === 3 ? 9 : c.level === 2 ? 8 : 7;
+      if (useImg) {
+        var isHome = s.playerCity === c.id;
+        var sel = picked && picked.id === c.id;
+        g.beginPath(); g.arc(q[0], q[1], rad, 0, 6.2832);
+        g.strokeStyle = c.color; g.lineWidth = sel ? 2.6 : 2; g.stroke();
+        if (isHome) {
+          g.beginPath(); g.arc(q[0], q[1], rad + 3.5, 0, 6.2832);
+          g.strokeStyle = '#e8c670'; g.lineWidth = 1.8; g.stroke();
+        }
+        if (sel) {
+          g.setLineDash([5, 4]);
+          g.beginPath(); g.arc(q[0], q[1], rad + 7, 0, 6.2832);
+          g.strokeStyle = '#ffe9b0'; g.lineWidth = 1.8; g.stroke();
+          g.setLineDash([]);
+        }
+      } else {
+        if (picked && picked.id === c.id) { rad += 3; }
+        g.beginPath(); g.arc(q[0], q[1], rad, 0, 6.2832);
+        g.fillStyle = c.color; g.fill();
+        g.lineWidth = 1.4; g.strokeStyle = '#2a2418'; g.stroke();
+        if (c.level === 3) {
+          g.beginPath(); g.arc(q[0], q[1], rad + 3.5, 0, 6.2832);
+          g.strokeStyle = c.color; g.lineWidth = 1.6; g.stroke();
+        }
+        g.fillStyle = '#3a2c1e';
+        g.font = (c.level >= 2 ? '13px' : '11px') + ' "Microsoft YaHei",sans-serif';
+        g.fillText(c.name, q[0], q[1] - rad - 4);
+      }
+    }
+    if (picked) {
+      g.fillStyle = 'rgba(20,18,10,0.85)';
+      g.fillRect(ox + 10, oy + 10, 210, 74);
+      g.fillStyle = '#e8c670'; g.textAlign = 'left';
+      g.font = '14px "Microsoft YaHei",sans-serif';
+      g.fillText(picked.name + '（' + picked.province + '）', ox + 22, oy + 34);
+      g.font = '12px "Microsoft YaHei",sans-serif'; g.fillStyle = '#c8b88a';
+      g.fillText('归属：' + picked.ownerName, ox + 22, oy + 56);
+      g.fillText('驻军：' + picked.troops, ox + 22, oy + 74);
+    }
+    // 势力图例：DOM 固定层（右下角），不画进 canvas，不随地图拖动
+    var legend = document.getElementById('slgLegend');
+    if (legend) {
+      var html = '';
+      for (var i = 0; i < s.factions.length; i++) {
+        var f = s.factions[i];
+        html += '<div><span style="display:inline-block;width:9px;height:9px;border-radius:50%;'
+          + 'background:' + f.color + ';margin-right:6px;vertical-align:-1px;"></span>' + f.name + '</div>';
+      }
+      html += '<div><span style="display:inline-block;width:9px;height:9px;border-radius:50%;'
+        + 'background:' + s.neutral.color + ';margin-right:6px;vertical-align:-1px;"></span>' + s.neutral.name + '</div>';
+      html += '<div style="border-top:1px solid rgba(186,154,82,.25);margin-top:3px;padding-top:3px;">'
+        + '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;'
+        + 'border:2px solid #e8c670;margin-right:5px;vertical-align:-1px;"></span>金环＝本城</div>';
+      legend.innerHTML = html;
+    }
+    // 事件与回合
+    var camp = s.campaign || {};
+    var endTxt = camp.ending === 'held' ? ' · 序章已守住'
+      : (camp.ending === 'lost' ? ' · 序章失守' : '');
+    var turnEl = document.getElementById('slgStratTurn');
+    if (turnEl) turnEl.textContent = '第 ' + (s.month || (s.turn || 0) + 1) + ' 月 · 游戏日 ' + s.day
+      + '（下一月：第 ' + s.nextTurnDay + ' 日）' + endTxt;
+    // ★ P1-6：来犯军必须在天下界面可见，否则本地地图被遮住后威胁等于不存在
+    var alertEl = document.getElementById('slgAlert');
+    if (alertEl) {
+      alertEl.textContent = (s.threats && s.threats.length) ? ('来犯 ' + s.threats.length + ' 支 · 本城可清剿') : '';
+    }
+    var ev = document.getElementById('slgStratEvents');
+    if (ev) {
+      ev.innerHTML = s.events.length
+        ? s.events.map(function (e) {
+          return '<div>· 第' + (e.month || (e.turn || 0) + 1) + '月 ' + e.text + '</div>';
+        }).join('')
+        : '<div style="opacity:.6">天下尚无大事。</div>';
+    }
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();`;
+
+/** 战斗回放：把战报里的确定性事件流播成平铺对拼动画。 */
+const BATTLE_ANIM_SOURCE = `;(function () {
+  if (typeof document === 'undefined') return;
+  var overlay = null, canvas = null, raf = null;
+  var anim = null, cues = [], t0 = 0, particles = [], units = {}, finished = false;
+
+  var SIDE_COLOR = { a: '#c0392b', d: '#2c5f8a' };
+  var SIDE_NAME = { a: '攻方', d: '守方' };
+  var DUR = { banner: 650, prepare: 450, skill: 950, hit: 620, control: 550, heal: 550, down: 800, result: 1400 };
+
+  function ensureOverlay() {
+    if (overlay) return;
+    overlay = document.createElement('div');
+    overlay.id = 'slgBattleOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99997;display:none;background:#101216;';
+    var head = document.createElement('div');
+    head.style.cssText = 'position:absolute;top:0;left:0;right:0;height:34px;display:flex;align-items:center;'
+      + 'padding:0 12px;gap:14px;background:#161810;color:#e8c670;font:14px "Microsoft YaHei",sans-serif;z-index:3;';
+    head.innerHTML = '<b id="slgBattleTitle"></b><span style="flex:1"></span>'
+      + '<button id="slgBattleReplay" style="background:#2a2c30;color:#e8c670;border:1px solid #ba9a52;border-radius:4px;padding:2px 10px;cursor:pointer;">重播</button>'
+      + '<button id="slgBattleReport" style="background:#2a2c30;color:#e8c670;border:1px solid #ba9a52;border-radius:4px;padding:2px 10px;cursor:pointer;">战报详情</button>'
+      + '<button id="slgBattleClose" style="background:#2a2c30;color:#c9c9c9;border:1px solid #666;border-radius:4px;padding:2px 10px;cursor:pointer;">关闭</button>';
+    canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:absolute;top:34px;left:0;right:0;bottom:0;width:100%;height:calc(100% - 34px);';
+    overlay.appendChild(head); overlay.appendChild(canvas);
+    document.body.appendChild(overlay);
+    document.getElementById('slgBattleClose').onclick = hide;
+    document.getElementById('slgBattleReplay').onclick = function () { if (anim) play(anim); };
+    document.getElementById('slgBattleReport').onclick = function () {
+      hide();
+      if (window.__slgOpenWarReport) window.__slgOpenWarReport();
+    };
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape' && overlay && overlay.style.display !== 'none') hide();
+    });
+  }
+
+  function hide() {
+    if (overlay) overlay.style.display = 'none';
+    if (raf) { cancelAnimationFrame(raf); raf = null; }
+  }
+
+  function unitKey(u) { return u ? (u.s + u.i) : ''; }
+
+  function buildUnits(a) {
+    units = {};
+    var put = function (side, list) {
+      (list || []).forEach(function (u, i) {
+        units[side + u.slot] = {
+          side: side, slot: u.slot, name: u.name,
+          troops: Math.max(1, u.troops), cur: Math.max(0, u.remain),
+          dead: u.remain <= 0, x: 0, y: 0, lungeT: -1, flashT: -1, fallT: -1,
+        };
+      });
+    };
+    put('a', a.a && a.a.units); put('d', a.d && a.d.units);
+  }
+
+  function buildCues(a) {
+    cues = [];
+    var t = 400;
+    cues.push({ t: 0, fn: function () {} });
+    a.rounds.forEach(function (r) {
+      cues.push({ t: t, fn: function (ctx) { ctx.roundBanner = '第 ' + r.round + ' 回合'; ctx.roundUntil = t + DUR.banner; } });
+      t += DUR.banner;
+      r.acts.forEach(function (act) {
+        var dur = DUR[act.t] || 500;
+        cues.push({
+          t: t, fn: function (ctx) { applyAct(ctx, act); },
+          end: t + dur,
+        });
+        t += Math.max(220, dur * 0.55);
+      });
+    });
+    cues.push({
+      t: t, fn: function (ctx) {
+        ctx.resultBanner = a.winner === 2 ? '胜' : (a.winner === 0 ? '败' : '平');
+        ctx.resultColor = a.winner === 2 ? '#e8c670' : (a.winner === 0 ? '#c0392b' : '#9aa0a6');
+      },
+    });
+    cues.push({ t: t + DUR.result, fn: function (ctx) { ctx.finished = true; } });
+    return t + DUR.result;
+  }
+
+  function applyAct(ctx, act) {
+    var f = units[unitKey(act.f)];
+    var to = units[unitKey(act.to || act.unit)];
+    if (act.t === 'hit' && f && to && !f.dead) {
+      f.lungeT = performance.now();
+      f.lungeTarget = to;
+      to.flashT = performance.now();
+      damage(to, act.loss);
+      particles.push(mkText('-' + fmt(act.loss), to.x, to.y - 46, '#ff6b5e'));
+    } else if (act.t === 'skill' && f) {
+      // 战法伤害已由同回合的 hit 动作结算，这里只做演出，不重复扣兵
+      ctx.skillBanner = (f.name || '') + ' · ' + (act.skill || '战法');
+      ctx.skillUntil = performance.now() + 900;
+      f.skillT = performance.now();
+      if (act.to && to) to.flashT = performance.now();
+    } else if (act.t === 'control' && to) {
+      to.stateText = act.state;
+      to.stateT = performance.now();
+      particles.push(mkText(act.state || '受制', to.x, to.y - 46, '#b07ce8'));
+    } else if (act.t === 'heal' && to) {
+      var amt = Math.min(act.amount || 0, to.troops - to.cur);
+      to.cur += amt;
+      particles.push(mkText('+' + fmt(amt), to.x, to.y - 46, '#6fcf97'));
+    } else if (act.t === 'prepare' && f) {
+      ctx.skillBanner = (f.name || '') + ' · ' + (act.skill || '战法') + '（蓄）';
+      ctx.skillUntil = performance.now() + 700;
+    } else if (act.t === 'down' && to) {
+      to.dead = true; to.cur = 0; to.fallT = performance.now();
+    }
+  }
+
+  function damage(u, loss) {
+    if (!u || u.dead) return;
+    u.cur = Math.max(0, u.cur - loss);
+    if (u.cur <= 0) { u.dead = true; u.fallT = performance.now(); }
+  }
+
+  function fmt(n) { n = Math.round(n || 0); return n >= 10000 ? (n / 10000).toFixed(1) + '万' : String(n); }
+  function mkText(text, x, y, color) { return { text: text, x: x, y: y, t0: performance.now(), color: color }; }
+
+  function play(data) {
+    ensureOverlay();
+    overlay.style.display = 'block';
+    anim = data;
+    finished = false;
+    document.getElementById('slgBattleTitle').textContent =
+      (data.a.name || '') + ' ⚔ ' + (data.d.name || '') + '　@ (' + data.x + ',' + data.y + ')';
+    buildUnits(data);
+    var total = buildCues(data);
+    particles = [];
+    t0 = performance.now();
+    if (raf) cancelAnimationFrame(raf);
+    var loop = function () {
+      var now = performance.now();
+      if (now - t0 >= total) { finished = true; }
+      var ctxState = { roundBanner: null, skillBanner: null, resultBanner: null, finished: finished };
+      for (var i = 0; i < cues.length; i++) {
+        var c = cues[i];
+        if (now - t0 >= c.t && !c.done) { c.done = true; c.fn(ctxState); }
+      }
+      draw(now, ctxState);
+      if (now - t0 < total) raf = requestAnimationFrame(loop);
+      else { draw(now, ctxState); raf = null; }
+    };
+    raf = requestAnimationFrame(loop);
+  }
+
+  function drawFigure(g, u, now) {
+    var side = SIDE_COLOR[u.side] || '#999';
+    var isGen = true;
+    var x = u.x, y = u.y;
+    var lunge = 0;
+    if (u.lungeT > 0) {
+      var dt = now - u.lungeT;
+      if (dt < 620) {
+        var p = dt / 620;
+        lunge = Math.sin(p * Math.PI) * 46 * (u.side === 'a' ? 1 : -1);
+      } else u.lungeT = -1;
+    }
+    var flash = u.flashT > 0 && now - u.flashT < 260;
+    var dying = u.dead && u.fallT > 0;
+    var fall = dying ? Math.min(1, (now - u.fallT) / 700) : 0;
+    g.save();
+    g.translate(x + lunge, y);
+    if (fall > 0) { g.rotate(fall * Math.PI / 2 * (u.side === 'a' ? 1 : -1)); g.globalAlpha = 1 - fall * 0.85; }
+    if (flash) { g.globalAlpha = 0.55; }
+    // 主将：披风+盔缨的小像
+    g.fillStyle = side;
+    g.beginPath();
+    g.moveTo(-12, 18); g.lineTo(0, -6); g.lineTo(12, 18); g.closePath(); g.fill();
+    g.fillStyle = '#f0d9a8';
+    g.beginPath(); g.arc(0, -14, 7, 0, 6.2832); g.fill();
+    g.fillStyle = side;
+    g.beginPath(); g.arc(0, -20, 4, 0, 6.2832); g.fill();
+    g.strokeStyle = '#d8cfa8'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(10, 8); g.lineTo(26, -14); g.stroke();
+    if (flash) { g.globalAlpha = 0.9; g.fillStyle = '#fff'; g.fillRect(-14, -26, 30, 48); }
+    g.restore();
+    // 随队小兵：兵力折算，最多 12 个
+    var count = Math.min(12, Math.ceil((u.dead ? 0 : u.cur) / Math.max(1, u.troops / 10)));
+    for (var i = 0; i < count; i++) {
+      var sx = x + (u.side === 'a' ? -1 : 1) * (26 + (i % 4) * 12);
+      var sy = y + 20 + Math.floor(i / 4) * 11;
+      g.fillStyle = side; g.globalAlpha = 0.75;
+      g.beginPath(); g.arc(sx, sy, 3.4, 0, 6.2832); g.fill();
+      g.strokeStyle = '#d8cfa8'; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(sx, sy - 3); g.lineTo(sx + (u.side === 'a' ? 5 : -5), sy - 12); g.stroke();
+      g.globalAlpha = 1;
+    }
+    // 名字与兵力条
+    if (!u.dead || fall < 1) {
+      g.fillStyle = '#e8dcc0'; g.font = '12px "Microsoft YaHei",sans-serif'; g.textAlign = 'center';
+      g.fillText(u.name, x, y - 34);
+      var w = 74;
+      g.fillStyle = '#22252b'; g.fillRect(x - w / 2, y + 34, w, 5);
+      g.fillStyle = side; g.fillRect(x - w / 2, y + 34, w * Math.max(0, u.cur / Math.max(1, u.troops)), 5);
+      g.fillStyle = '#c8b88a'; g.font = '11px "Microsoft YaHei",sans-serif';
+      g.fillText(fmt(u.cur) + '/' + fmt(u.troops), x, y + 56);
+      if (u.stateText && now - u.stateT < 2500) {
+        g.fillStyle = '#b07ce8';
+        g.fillText(u.stateText, x, y - 48);
+      }
+    }
+  }
+
+  function draw(now, ctxState) {
+    if (!canvas || !anim) return;
+    var rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width; canvas.height = rect.height;
+    var g = canvas.getContext('2d');
+    g.fillStyle = '#101216'; g.fillRect(0, 0, rect.width, rect.height);
+    g.strokeStyle = 'rgba(200,180,130,0.18)'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(0, rect.height * 0.78); g.lineTo(rect.width, rect.height * 0.78); g.stroke();
+    var slots = [0.34, 0.58, 0.82];
+    for (var k in units) {
+      var u = units[k];
+      u.x = rect.width * (u.side === 'a' ? 0.26 : 0.74);
+      u.y = rect.height * slots[u.slot % 3];
+      drawFigure(g, u, now);
+    }
+    // 粒子文字
+    particles = particles.filter(function (p) { return now - p.t0 < 1100; });
+    particles.forEach(function (p) {
+      var dt = (now - p.t0) / 1100;
+      g.globalAlpha = 1 - dt;
+      g.fillStyle = p.color;
+      g.font = 'bold 15px "Microsoft YaHei",sans-serif';
+      g.fillText(p.text, p.x, p.y - dt * 26);
+      g.globalAlpha = 1;
+    });
+    if (ctxState.roundBanner) {
+      g.fillStyle = 'rgba(20,18,12,0.75)';
+      g.fillRect(rect.width / 2 - 90, 16, 180, 34);
+      g.fillStyle = '#e8c670'; g.font = 'bold 17px "Microsoft YaHei",sans-serif'; g.textAlign = 'center';
+      g.fillText(ctxState.roundBanner, rect.width / 2, 40);
+    }
+    if (ctxState.skillBanner && now < (ctxState.skillUntil || 0)) {
+      g.fillStyle = 'rgba(30,24,10,0.85)';
+      g.fillRect(rect.width / 2 - 170, rect.height * 0.16, 340, 44);
+      g.strokeStyle = '#e8c670'; g.lineWidth = 1.5;
+      g.strokeRect(rect.width / 2 - 170, rect.height * 0.16, 340, 44);
+      g.fillStyle = '#ffe9b0'; g.font = 'bold 19px "Microsoft YaHei",sans-serif'; g.textAlign = 'center';
+      g.fillText(ctxState.skillBanner, rect.width / 2, rect.height * 0.16 + 30);
+    }
+    if (ctxState.resultBanner) {
+      g.fillStyle = 'rgba(16,14,8,0.7)'; g.fillRect(0, 0, rect.width, rect.height);
+      g.fillStyle = ctxState.resultColor || '#e8c670';
+      g.font = 'bold 52px "KaiTi","Microsoft YaHei",sans-serif'; g.textAlign = 'center';
+      g.fillText(ctxState.resultBanner, rect.width / 2, rect.height / 2);
+      g.font = '15px "Microsoft YaHei",sans-serif'; g.fillStyle = '#c8b88a';
+      var sa = 0, sd = 0;
+      for (var k in units) { if (units[k].side === 'a') sa += units[k].cur; else sd += units[k].cur; }
+      g.fillText('我军余 ' + fmt(sa) + ' · 敌军余 ' + fmt(sd), rect.width / 2, rect.height / 2 + 34);
+    }
+  }
+
+  window.__slgPlayBattle = function (data) {
+    if (!data || !data.rounds) return;
+    play(data);
+  };
+})();`;
+
+
+/** 城池面板 v2：完整实现（样式/布局/六页/全局面板/HUD/抉择弹窗） */
+const CITY_WINDOW_V2_IMPL = `;(function () {
+  if (typeof document === 'undefined') return;
+  var cache = null, tab = 'overview', currentCity = 0, neighbors = {}, attackMode = 'all';
+  var host = null;
+
+  var STYLE = document.createElement('style');
+  STYLE.textContent = [
+    '#slgUIv2 *{box-sizing:border-box;margin:0;padding:0;}',
+    '#slgUIv2 .win{position:fixed;top:44px;right:10px;bottom:10px;width:560px;z-index:100000;'
+    + 'background:linear-gradient(180deg,#1b1d16,#141610);border:1px solid #8a7038;border-radius:10px;'
+    + 'color:#e2d6b8;font:13px/1.8 "Microsoft YaHei",sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.7);display:none;}',
+    '#slgUIv2 .win-head{position:relative;padding:12px 16px 8px;border-bottom:1px solid #4a4030;background:rgba(60,48,24,.35);}',
+    '#slgUIv2 .win-head b{font-size:17px;color:#f0d998;letter-spacing:2px;}',
+    '#slgUIv2 .win-head .sub{opacity:.85;font-size:12px;margin-top:2px;}',
+    '#slgUIv2 .badge{display:inline-block;padding:0 6px;border-radius:3px;font-size:11px;margin-left:6px;vertical-align:2px;}',
+    '#slgUIv2 .badge.cap{background:#7a2a20;color:#ffd9c0;}',
+    '#slgUIv2 .badge.home{background:#7a5822;color:#ffe9b0;}',
+    '#slgUIv2 .x{position:absolute;top:10px;right:12px;cursor:pointer;color:#a89f86;font-size:16px;padding:2px 8px;}',
+    '#slgUIv2 .tabs{display:flex;border-bottom:1px solid #4a4030;}',
+    '#slgUIv2 .tabs button{flex:1;background:#20221c;border:none;border-right:1px solid #33302a;color:#a89f86;',
+    'padding:7px 0;cursor:pointer;font:13px "Microsoft YaHei",sans-serif;}',
+    '#slgUIv2 .tabs button.on{background:#5c4318;color:#ffe9b0;font-weight:bold;}',
+    '#slgUIv2 .body{position:absolute;top:98px;left:0;right:0;bottom:0;overflow-y:auto;padding:12px 16px;}',
+    '#slgUIv2 .card{background:rgba(255,255,255,.04);border:1px solid #3a3428;border-radius:6px;padding:10px 12px;margin-bottom:10px;}',
+    '#slgUIv2 .grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;}',
+    '#slgUIv2 .kv{display:flex;justify-content:space-between;border-bottom:1px dashed #33302a;padding:4px 0;}',
+    '#slgUIv2 .kv span:last-child{color:#f0d998;}',
+    '#slgUIv2 .res{display:flex;gap:10px;flex-wrap:wrap;}',
+    '#slgUIv2 .res .r{background:rgba(255,255,255,.05);border:1px solid #3a3428;border-radius:6px;',
+    'padding:6px 12px;min-width:96px;}',
+    '#slgUIv2 .res .r b{color:#f0d998;font-size:15px;}',
+    '#slgUIv2 .res .r small{display:block;opacity:.7;font-size:11px;}',
+    '#slgUIv2 .row{display:flex;align-items:center;justify-content:space-between;gap:8px;',
+    'padding:7px 0;border-bottom:1px solid #2a2822;}',
+    '#slgUIv2 .btn{background:linear-gradient(180deg,#6d5320,#54400f);color:#ffe9b0;border:1px solid #a8863e;',
+    'border-radius:4px;padding:3px 14px;cursor:pointer;font:12px "Microsoft YaHei",sans-serif;white-space:nowrap;}',
+    '#slgUIv2 .btn:hover{filter:brightness(1.15);}',
+    '#slgUIv2 .btn:disabled{background:#2a2c30;color:#6a6a6a;border-color:#4a4a4a;cursor:not-allowed;}',
+    '#slgUIv2 .btn.ghost{background:#20221c;color:#c8b88a;border-color:#4a4436;}',
+    '#slgUIv2 .chip{display:inline-block;background:#20221c;border:1px solid #4a4436;border-radius:3px;',
+    'padding:0 7px;font-size:11px;margin:1px 3px 1px 0;color:#c8b88a;}',
+    '#slgUIv2 .cost{font-size:11px;color:#c8b88a;opacity:.95;}',
+    '#slgUIv2 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle;}',
+    '#slgUIv2 .star5{color:#ffd766;}#slgUIv2 .star4{color:#c8a2ff;}#slgUIv2 .star3{color:#9fd0ff;}',
+    '#slgUIv2 .winTag{color:#a89f86;}',
+    '#slgUIv2 .toast{position:fixed;top:52px;left:50%;transform:translateX(-50%);z-index:100003;',
+    'padding:8px 22px;border-radius:6px;font:13px "Microsoft YaHei",sans-serif;',
+    'box-shadow:0 4px 16px rgba(0,0,0,.6);opacity:0;transition:opacity .25s;}',
+    '#slgUIv2 .toast.ok{background:#2c3e28;color:#a9e2a0;border:1px solid #4a6a42;}',
+    '#slgUIv2 .toast.bad{background:#41241f;color:#ffb3a7;border:1px solid #7a4038;}',
+    '#slgUIv2 .modal{position:fixed;inset:0;z-index:100002;background:rgba(0,0,0,.55);display:flex;',
+    'align-items:center;justify-content:center;}',
+    '#slgUIv2 .modal .box{width:430px;background:#1b1d16;border:1px solid #8a7038;border-radius:8px;padding:18px 20px;}',
+    '#slgUIv2 .modal .box p{margin:0 0 14px;line-height:1.9;}',
+    '#slgUIv2 .modal .bar{display:flex;justify-content:flex-end;gap:8px;}',
+    '#slgUIv2 .seg{display:inline-flex;border:1px solid #4a4436;border-radius:4px;overflow:hidden;}',
+    '#slgUIv2 .seg button{background:#20221c;color:#a89f86;border:none;padding:3px 12px;cursor:pointer;',
+    'font:12px "Microsoft YaHei",sans-serif;border-right:1px solid #33302a;}',
+    '#slgUIv2 .seg button.on{background:#5c4318;color:#ffe9b0;}',
+    '#slgUIv2 input.n{width:80px;background:#101208;color:#f0d998;border:1px solid #4a4436;',
+    'border-radius:4px;padding:3px 8px;font:13px "Microsoft YaHei",sans-serif;}',
+    '#slgUIv2 .empty{opacity:.6;padding:20px 0;text-align:center;}',
+    '#slgUIv2 h4{color:#c8b88a;font-size:12px;margin:10px 0 6px;letter-spacing:2px;}',
+  ].join('');
+  document.head.appendChild(STYLE);
+
+  host = document.createElement('div');
+  host.id = 'slgUIv2';
+  document.body.appendChild(host);
+
+  function toast(msg, ok) {
+    var old = host.querySelector('.toast');
+    if (old) old.remove();
+    var t = document.createElement('div');
+    t.className = 'toast ' + (ok ? 'ok' : 'bad');
+    t.textContent = msg;
+    host.appendChild(t);
+    requestAnimationFrame(function () { t.style.opacity = '1'; });
+    setTimeout(function () { t.style.opacity = '0'; setTimeout(function () { t.remove(); }, 300); }, 2400);
+  }
+  window.__slgToast = toast;
+
+  function fmt(n) { n = Math.floor(Number(n) || 0); return n >= 10000 ? (n / 10000).toFixed(1) + '万' : String(n); }
+  var ERR_TEXT = { 1: '资源不足', 12: '已达最高等级', 16: '资源不足', 53: '此处不可操作', 55: '今日次数已用完', 56: '冷却中', 58: '需要先建集市' };
+  function errText(rsp) {
+    if (rsp && rsp.msg && rsp.msg.reason) return String(rsp.msg.reason);
+    return ERR_TEXT[rsp && rsp.code] || ('失败（' + ((rsp && rsp.code) || '?') + '）');
+  }
+  function send(name, msg) {
+    if (!window.__slgSend) { toast('尚未连上游戏', false); return Promise.reject(new Error('not ready')); }
+    return window.__slgSend(name, msg || {}).then(function (r) { return r.rsp; })
+      .catch(function () { toast('请求失败', false); throw new Error('send fail'); });
+  }
+  function mkBtn(label, cls, onClick) {
+    var b = document.createElement('button');
+    b.className = 'btn ' + (cls || '');
+    b.textContent = label;
+    b.onclick = onClick;
+    return b;
+  }
+  function el(tag, cls, html) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html != null) e.innerHTML = html;
+    return e;
+  }
+  function kv(k, v) { return '<div class="kv"><span>' + k + '</span><span>' + v + '</span></div>'; }
+
+  function confirmBox(title, lines, okLabel, cancelLabel, onOk) {
+    var modal = el('div', 'modal');
+    var box = el('div', 'box');
+    box.innerHTML = '<h4 style="margin:0 0 8px;font-size:15px;color:#f0d998">' + title + '</h4>'
+      + '<p>' + lines.join('<br>') + '</p>';
+    var bar = el('div', 'bar');
+    bar.appendChild(mkBtn(cancelLabel || '取消', 'ghost', function () { modal.remove(); }));
+    bar.appendChild(mkBtn(okLabel || '确定', '', function () { modal.remove(); onOk(); }));
+    box.appendChild(bar);
+    modal.appendChild(box);
+    host.appendChild(modal);
+  }
+
+  function fetchState() {
+    return fetch('/__slg/strategy/state').then(function (r) { return r.json(); });
+  }
+  function postJSON(url, body) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {}),
+    }).then(function (r) { return r.json(); })
+      .catch(function () { return { ok: false, reason: '网络异常' }; });
+  }
+  var metaV = null;
+  function loadMeta() {
+    if (metaV) return Promise.resolve(metaV);
+    return send('world.meta', {}).then(function (rsp) { metaV = rsp.msg; return rsp.msg; });
+  }
+
+  function makeWindow(id, title, subHtml, tabs, active, onTab, onClose) {
+    var old = document.getElementById(id);
+    if (old) old.remove();
+    var win = el('div', 'win');
+    win.id = id;
+    var head = el('div', 'win-head');
+    head.innerHTML = '<b>' + title + '</b>' + (subHtml || '') + '<span class="x">✕</span>';
+    win.appendChild(head);
+    head.querySelector('.x').onclick = onClose;
+    if (tabs && tabs.length) {
+      var bar = el('div', 'tabs');
+      tabs.forEach(function (t) {
+        var b = document.createElement('button');
+        b.textContent = t[1];
+        if (active === t[0]) b.className = 'on';
+        b.onclick = function () { onTab(t[0]); };
+        bar.appendChild(b);
+      });
+      win.appendChild(bar);
+    }
+    var body = el('div', 'body');
+    win.appendChild(body);
+    host.appendChild(win);
+    return body;
+  }
+
+  // 战役抉择（借粮/拒援）——DOM 弹窗，替代被遮罩挡住的 Cocos 弹窗
+  window.__slgCampaignChoice = function (d) {
+    confirmBox('乡人来问', [
+      d.text || '是否借粮？',
+      '<span class="cost">借粮：扣 ' + ((d.lend && d.lend.grain) || '?') + ' 粮，屯长来投，下一波黄巾减为 '
+      + Math.round(((d.lend && d.lend.waveFactor) || 1) * 100) + '%</span><br>'
+      + '<span class="cost">拒援：粮不动，下一波黄巾增至 '
+      + Math.round(((d.refuse && d.refuse.waveFactor) || 1) * 100) + '%</span>',
+    ], '借粮', '拒援', function () {
+      send('campaign.choose', { option: 'lend' }).then(function (rsp) {
+        toast(rsp.msg && rsp.msg.ok ? '已借粮。屯长入营。' : errText(rsp), rsp.msg && rsp.msg.ok);
+      });
+    });
+  };
+
+  function cityOf(s, id) {
+    for (var i = 0; i < s.cities.length; i++) if (s.cities[i].id === Number(id)) return s.cities[i];
+    return null;
+  }
+  function buildNeighbors(s) {
+    neighbors = {};
+    s.routes.forEach(function (r) {
+      (neighbors[r.from] = neighbors[r.from] || []).push(r.to);
+      (neighbors[r.to] = neighbors[r.to] || []).push(r.from);
+    });
+  }
+
+  window.__slgCityWindow = function (cityId) {
+    currentCity = Number(cityId);
+    tab = 'overview';
+    fetchState().then(function (s) {
+      cache = s; buildNeighbors(s);
+      renderCity(s);
+    }).catch(function () {});
+  };
+  window.__slgCityClose = function () {
+    var w = document.getElementById('slgCityWin');
+    if (w) w.remove();
+  };
+  window.__slgHomeWindow = function () {
+    fetchState().then(function (s) {
+      cache = s; buildNeighbors(s);
+      currentCity = s.playerCity;
+      tab = 'home';
+      renderCity(s);
+    }).catch(function () {});
+  };
+
+  function renderCity(s) {
+    var c = cityOf(s, currentCity);
+    if (!c) { window.__slgCityClose(); return; }
+    var isHome = s.playerCity === c.id;
+    var shownTab = tab;
+    if ((tab === 'home' || tab === 'army' || tab === 'tavern') && !isHome) shownTab = 'overview';
+    var title = c.name + (c.level === 3 ? '<span class="badge cap">州治</span>' : '')
+      + (isHome ? '<span class="badge home">本城</span>' : '');
+    var body = makeWindow('slgCityWin', title,
+      '<div class="sub">' + c.province + ' · <span style="color:' + c.color + '">' + c.ownerName
+      + '</span> · 驻军 ' + fmt(c.troops) + '</div>',
+      [['overview', '概览'], ['home', '城内'], ['army', '征兵'], ['gens', '武将'], ['tavern', '酒馆'], ['reports', '战报']],
+      shownTab,
+      function (t) { tab = t; renderCity(s); },
+      window.__slgCityClose);
+    body.innerHTML = '';
+    if (shownTab === 'overview') tabOverview(s, c, body, isHome);
+    else if (shownTab === 'home') tabHome(body);
+    else if (shownTab === 'army') tabArmy(body);
+    else if (shownTab === 'gens') renderGensInto(body);
+    else if (shownTab === 'tavern') renderTavernInto(body);
+    else if (shownTab === 'reports') renderReportsInto(body);
+  }
+
+  function tabOverview(s, c, body, isHome) {
+    var card = el('div', 'card');
+    card.innerHTML = '<h4 style="margin-top:0">城池画像</h4><div class="grid">'
+      + kv('行政', c.adminLevel || c.levelName || ('Lv' + c.level))
+      + kv('人口', fmt(c.population))
+      + kv('农业', c.agri) + kv('商业', c.commerce)
+      + kv('城防', c.cityDef) + kv('特产', c.specialty || '—')
+      + kv('主要兵种', c.arms || '—') + kv('地形', c.terrain || '—')
+      + '</div>';
+    if (c.history) card.appendChild(el('div', '', '<h4>史略</h4><div style="opacity:.85;line-height:1.9">' + c.history + '</div>'));
+    body.appendChild(card);
+
+    var adjCard = el('div', 'card', '<h4 style="margin-top:0">相邻城池</h4>');
+    var list = neighbors[c.id] || [];
+    if (!list.length) adjCard.appendChild(el('div', 'empty', '此地孤悬。'));
+    list.forEach(function (id) {
+      var n = cityOf(s, id);
+      if (!n) return;
+      var row = el('div', 'row');
+      row.innerHTML = '<span><span class="dot" style="background:' + n.color + '"></span>'
+        + n.name + ' <span class="winTag">（' + n.province + '·' + n.ownerName + '·驻' + fmt(n.troops) + '）</span></span>';
+      var open = mkBtn('前往', 'ghost', function () { window.__slgCityWindow(n.id); });
+      open.style.padding = '1px 10px';
+      row.appendChild(open);
+      adjCard.appendChild(row);
+    });
+    body.appendChild(adjCard);
+
+    var canAttack = !isHome && (neighbors[s.playerCity] || []).indexOf(c.id) >= 0;
+    if (canAttack) {
+      var mine = (s.armies || []).reduce(function (sum, a) {
+        return sum + (a.soldiers || []).reduce(function (x, y) { return x + (Number(y) || 0); }, 0);
+      }, 0);
+      var ratio = attackMode === 'all' ? 1 : (attackMode === 'half' ? 0.5 : 0.34);
+      var deploy = Math.round(mine * ratio);
+      var box = el('div', 'card', '<h4 style="margin-top:0">出征</h4>');
+      box.appendChild(el('div', '', '出兵规模：'));
+      var seg = el('div', 'seg');
+      [['all', '全军'], ['half', '半军'], ['third', '三成']].forEach(function (m) {
+        var b = document.createElement('button');
+        b.textContent = m[1];
+        if (attackMode === m[0]) b.className = 'on';
+        b.onclick = function () {
+          attackMode = m[0];
+          Array.prototype.forEach.call(seg.children, function (x) { x.className = ''; });
+          b.className = 'on';
+          if (cache) renderCity(cache);
+        };
+        seg.appendChild(b);
+      });
+      box.appendChild(seg);
+      // ★ P0-3：给出双方兵力与胜算提示，别让玩家拿 800 去打 1800
+      var enough = deploy >= c.troops * 1.25;
+      box.appendChild(el('div', 'cost',
+        '我军可出 ' + fmt(deploy) + ' · 敌军驻军约 ' + fmt(c.troops) + '　'
+        + (enough ? '<span style="color:#a9e2a0">兵力占优</span>'
+          : '<span style="color:#ff6b5e">兵力偏少，建议先打小城或增兵</span>')
+        + (ratio < 1 ? '　（按比例出击，其余留守）' : '')));
+      box.appendChild(mkBtn('出兵攻打 ' + c.name, '', function () {
+        confirmBox('出兵确认', [
+          '目标：<b>' + c.name + '</b>（' + c.ownerName + '·驻军约 ' + fmt(c.troops) + '）',
+          '规模：' + (attackMode === 'all' ? '全军' : attackMode === 'half' ? '半军' : '三成')
+            + '，约 ' + fmt(deploy) + ' 人',
+          '<span class="cost">战败会损兵，并留下溃兵归营；战胜城池入版图。</span>',
+        ], '出征', function () {
+          send('strategy.attack', {
+            cityId: c.id,
+            frac: ratio,
+          }).then(function (rsp) {
+            if (rsp.msg && rsp.msg.ok) {
+              toast(rsp.msg.summary || '出兵！战况已展开。', rsp.msg.result === 2);
+              window.__slgCityClose();
+            } else {
+              var rs = (rsp.msg && rsp.msg.reason) || '';
+              toast('出兵失败：' + (rs === 'no_troops' ? '没有可出战的兵' : rs === 'no_general' ? '该队还没有武将'
+                : rs === 'no_army' ? '没有队伍' : errText(rsp)), false);
+            }
+            fetchState().then(function (s2) { cache = s2; buildNeighbors(s2); });
+          });
+        });
+      }));
+      body.appendChild(box);
+    }
+  }
+
+  function tabHome(body) {
+    body.innerHTML = '<div class="empty">读取中…</div>';
+    Promise.all([send('city.facilities', { cityId: 1 }), send('role.myRoleRes', {}), loadMeta()])
+      .then(function (rs) {
+        body.innerHTML = '';
+        var res = (rs[1].msg && rs[1].msg.role_res) || {};
+        var meta = rs[2] || { collectIntervalSec: 30, collectLimit: 3 };
+        var card = el('div', 'card');
+        card.innerHTML = '<h4 style="margin-top:0">府库</h4>';
+        var resRow = el('div', 'res');
+        [['wood', '木', res.wood_yield], ['iron', '铁', res.iron_yield], ['stone', '石', res.stone_yield],
+         ['grain', '粮', res.grain_yield], ['gold', '金', res.gold_yield], ['decree', '政令', null]]
+          .forEach(function (r) {
+            resRow.appendChild(el('div', 'r', '<b>' + fmt(res[r[0]]) + '</b>'
+              + (r[2] != null ? '<small>+' + fmt(r[2]) + '/日</small>' : '<small>&nbsp;</small>')));
+          });
+        card.appendChild(resRow);
+        var collect = el('div', '');
+        collect.style.marginTop = '8px';
+        collect.appendChild(mkBtn('征收金币（' + meta.collectIntervalSec + ' 秒一次，每日 ' + meta.collectLimit + ' 次）', '', function () {
+          send('interior.collect', {}).then(function (rsp) {
+            if (rsp.code === 0) toast('征得 ' + fmt(rsp.msg.gold) + ' 金', true);
+            else toast('征收失败：' + errText(rsp), false);
+            tabHome(body);
+          });
+        }));
+        card.appendChild(collect);
+        body.appendChild(card);
+
+        var facCard = el('div', 'card', '<h4 style="margin-top:0">设施</h4>');
+        (rs[0].msg && rs[0].msg.facilities || []).forEach(function (f) {
+          var row = el('div', 'row');
+          var left = el('div', '');
+          left.innerHTML = '<b style="color:#f0d998">' + f.name + '</b> <span class="winTag">Lv'
+            + f.level + '/' + f.maxLevel + '</span>';
+          var cost = f.nextNeed || {};
+          var chips = '';
+          [['wood', '木'], ['iron', '铁'], ['stone', '石'], ['grain', '粮'], ['gold', '金'], ['decree', '令']]
+            .forEach(function (k) {
+              if (cost[k[0]]) {
+                var lack = Number(res[k[0]] || 0) < cost[k[0]];
+                chips += '<span class="chip" style="' + (lack ? 'color:#ff6b5e;border-color:#7a4038' : '') + '">'
+                  + k[1] + ' ' + fmt(cost[k[0]]) + '</span>';
+              }
+            });
+          if (f.nextTime) chips += '<span class="chip">工期 ' + f.nextTime + 's</span>';
+          left.innerHTML += '<div class="cost">' + (f.level >= f.maxLevel ? '已满级' : chips) + '</div>';
+          row.appendChild(left);
+          if (f.up_time && f.up_time > 0) {
+            row.appendChild(el('span', 'cost', '升级中…'));
+          } else if (f.level >= f.maxLevel) {
+            row.appendChild(el('span', 'cost', '—'));
+          } else {
+            row.appendChild(mkBtn('升级', '', function () {
+              send('city.upFacility', { cityId: 1, fType: f.type }).then(function (rsp) {
+                if (rsp.code === 0) toast(f.name + ' 开始升级', true);
+                else toast('升级失败：' + errText(rsp), false);
+                tabHome(body);
+              });
+            }));
+          }
+          facCard.appendChild(row);
+        });
+        body.appendChild(facCard);
+
+        // ★ P1-6 / P0-4：来犯军与章节结局都放在本城页，玩家不用切回被遮住的本地地图
+        var extra = el('div', '');
+        body.appendChild(extra);
+
+        // ★ P2-5：存档三档位 + 导出 / 导入。旧实现只有一份 save.json，换机就没了。
+        var saveCard = el('div', 'card', '<h4 style="margin-top:0">存档</h4>');
+        var slotBox = el('div', '');
+        saveCard.appendChild(slotBox);
+        var ioRow = el('div', '');
+        ioRow.style.marginTop = '8px';
+        ioRow.appendChild(mkBtn('导出存档文件', 'ghost', function () {
+          fetch('/__slg/save/export').then(function (r) { return r.blob(); }).then(function (blob) {
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'shuanghan-save-' + Date.now() + '.json';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+            toast('存档已导出到下载目录', true);
+          }).catch(function () { toast('导出失败', false); });
+        }));
+        var fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.json,application/json';
+        fileInput.style.display = 'none';
+        fileInput.onchange = function () {
+          var f = fileInput.files && fileInput.files[0];
+          if (!f) return;
+          var reader = new FileReader();
+          reader.onload = function () {
+            var data;
+            try { data = JSON.parse(String(reader.result)); } catch { toast('这不是合法的存档文件', false); return; }
+            confirmBox('导入存档', ['当前进度会被覆盖（旧档会自动备份一份）。', '确定导入 <b>' + f.name + '</b>？'],
+              '导入', '取消', function () {
+                postJSON('/__slg/save/import', data).then(function (r) {
+                  if (r.ok) { toast('已导入，正在重载', true); setTimeout(function () { location.reload(); }, 600); }
+                  else toast('导入失败：' + (r.reason || '格式不对'), false);
+                });
+              });
+          };
+          reader.readAsText(f);
+          fileInput.value = '';
+        };
+        ioRow.appendChild(fileInput);
+        ioRow.appendChild(mkBtn('导入存档文件', 'ghost', function () { fileInput.click(); }));
+        saveCard.appendChild(ioRow);
+        body.appendChild(saveCard);
+
+        function renderSlots(list) {
+          slotBox.innerHTML = '';
+          (list || []).forEach(function (s) {
+            var row = el('div', 'row');
+            row.innerHTML = '<span>' + s.slot + ' 号档 <span class="winTag">'
+              + (s.exists ? ('第 ' + (s.day || '?') + ' 日' + (s.ending ? ' · ' + (s.ending === 'held' ? '守住' : '失守') : ''))
+                : '空档') + '</span></span>';
+            row.appendChild(mkBtn('存入', 'ghost', function () {
+              confirmBox('存入 ' + s.slot + ' 号档',
+                [s.exists ? '会覆盖这个档位原来的进度。' : '这个档位还是空的。'], '存入', '取消', function () {
+                  postJSON('/__slg/save/slot', { slot: s.slot, action: 'save' }).then(function (r) {
+                    toast(r.ok ? ('已存入 ' + s.slot + ' 号档') : '存档失败', !!r.ok);
+                    if (r.ok) renderSlots(r.slots);
+                  });
+                });
+            }));
+            if (s.exists) {
+              row.appendChild(mkBtn('读取', 'ghost', function () {
+                confirmBox('读取 ' + s.slot + ' 号档',
+                  ['会覆盖当前进度（旧档会自动备份）。'], '读取', '取消', function () {
+                    postJSON('/__slg/save/slot', { slot: s.slot, action: 'load' }).then(function (r) {
+                      if (r.ok) { toast('已读取，正在重载', true); setTimeout(function () { location.reload(); }, 600); }
+                      else toast('读档失败：' + (r.reason || ''), false);
+                    });
+                  });
+              }));
+            }
+            slotBox.appendChild(row);
+          });
+        }
+        fetch('/__slg/save/slots').then(function (r) { return r.json(); })
+          .then(function (r) { renderSlots(r.slots); })
+          .catch(function () { slotBox.innerHTML = '<div class="empty">档位读取失败</div>'; });
+        fetchState().then(function (s) {
+          extra.innerHTML = '';
+          var th = s.threats || [];
+          var mil = el('div', 'card', '<h4 style="margin-top:0">军情</h4>');
+          if (!th.length) mil.appendChild(el('div', 'empty', '境内无来犯之敌。'));
+          th.forEach(function (t) {
+            var row = el('div', 'row');
+            row.innerHTML = '<span>' + t.name + ' <span class="winTag">兵力 ' + fmt(t.soldiers)
+              + ' · (' + t.x + ',' + t.y + ')</span></span>';
+            row.appendChild(mkBtn('出兵清剿', '', function () {
+              confirmBox('清剿来犯军', [
+                '目标：<b>' + t.name + '</b>（兵力约 ' + fmt(t.soldiers) + '）',
+                '<span class="cost">用当前最强的一支部队出战，战败不会清空家底。</span>',
+              ], '出战', function () {
+                send('strategy.clearThreat', { garrisonId: t.id }).then(function (rsp) {
+                  if (rsp.msg && rsp.msg.ok) toast(rsp.msg.summary || '已清剿', rsp.msg.result === 2);
+                  else toast('清剿失败：' + ((rsp.msg && rsp.msg.reason) || errText(rsp)), false);
+                  tabHome(body);
+                });
+              });
+            }));
+            mil.appendChild(row);
+          });
+          extra.appendChild(mil);
+
+          var camp = s.campaign || {};
+          if (camp.ending) {
+            var endCard = el('div', 'card');
+            endCard.innerHTML = '<h4 style="margin-top:0">序章 ' +
+              (camp.ending === 'held' ? '守住' : '失守') + '</h4>'
+              + '<div class="cost">第 ' + (camp.endingDay || '?') + ' 日结算。'
+              + '这局还能继续经营，也可以从头再来。</div>';
+            endCard.appendChild(mkBtn('重开一局', 'ghost', function () {
+              confirmBox('重开一局', ['当前进度会被覆盖，确定重来？'], '重来', function () {
+                fetch('/__slg/restart', { method: 'POST' })
+                  .then(function (r) { return r.json(); })
+                  .then(function (r) { if (r.ok) location.reload(); else toast('重开失败', false); })
+                  .catch(function () { toast('重开失败', false); });
+              });
+            }));
+            extra.appendChild(endCard);
+          }
+        }).catch(function () {});
+      })
+      .catch(function () { body.innerHTML = '<div class="empty">读取失败，稍后再试。</div>'; });
+  }
+
+  /**
+   * 征兵页：编队 + 征入指定槽位。
+   * ★ P0-3：原版只有这一个页面能征到 slot0，且没有编队入口 —— 玩家永远只有
+   *   主公一支部队，1 将打 3 将必败。现在三槽都能配将、都能征兵。
+   */
+  function tabArmy(body) {
+    body.innerHTML = '<div class="empty">读取中…</div>';
+    Promise.all([send('army.myList', { cityId: 1 }), loadMeta(), send('role.myRoleRes', {}),
+      send('general.myGenerals', {})])
+      .then(function (rs) {
+        body.innerHTML = '';
+        var meta = rs[1] || { conscript: { wood: 10, iron: 10, grain: 10, gold: 1 } };
+        var per = meta.conscript || { wood: 10, iron: 10, grain: 10, gold: 1 };
+        var res = (rs[2].msg && rs[2].msg.role_res) || {};
+        var gens = (rs[3].msg && rs[3].msg.generals) || [];
+        var armies = (rs[0].msg && rs[0].msg.armys) || [];
+        var byOrder = {};
+        armies.forEach(function (a) { byOrder[a.order] = a; });
+
+        body.appendChild(el('div', 'card',
+          '一支队伍最多三将。<b style="color:#f0d998">一将只能带一槽</b>：先配将，再征兵。'
+          + '多一支部队上阵，就多一份输出——1 将打 3 将必败。'));
+        if (!gens.length) {
+          body.appendChild(el('div', 'empty', '帐下无人。先去「酒馆」招募。'));
+          return;
+        }
+
+        [1, 2, 3].forEach(function (order) {
+          var a = byOrder[order] || {
+            id: 0, order: order, generals: [0, 0, 0], soldiers: [0, 0, 0], con_times: [0, 0, 0],
+          };
+          var total = (a.soldiers || []).reduce(function (x, y) { return x + (Number(y) || 0); }, 0);
+          var card = el('div', 'card');
+          card.innerHTML = '<div class="row" style="border:none;padding:0 0 2px">'
+            + '<b style="color:#f0d998">第 ' + order + ' 军</b><span>兵力 ' + fmt(total) + '</span></div>';
+          [0, 1, 2].forEach(function (pos) {
+            var gid = (a.generals || [])[pos] || 0;
+            var soldiers = (a.soldiers || [])[pos] || 0;
+            var waiting = (a.con_times || [])[pos] || 0;
+            var row = el('div', 'row');
+            var left = el('span', '');
+            left.innerHTML = '<span class="winTag">' + ['一', '二', '三'][pos] + '</span> ';
+            var sel = document.createElement('select');
+            sel.style.cssText = 'background:#101208;color:#e2d6b8;border:1px solid #4a4436;'
+              + 'border-radius:4px;padding:2px 6px;font:12px "Microsoft YaHei",sans-serif;';
+            var empty = document.createElement('option');
+            empty.value = '0';
+            empty.textContent = '（空）';
+            sel.appendChild(empty);
+            gens.forEach(function (g) {
+              var o = document.createElement('option');
+              o.value = String(g.id);
+              o.textContent = (g.name || ('武将' + g.cfgId)) + ' ★' + (g.star || 0);
+              if (g.id === gid) o.selected = true;
+              sel.appendChild(o);
+            });
+            sel.onchange = function () {
+              send('army.dispose', {
+                cityId: 1, order: order, position: pos, generalId: Number(sel.value) || 0,
+              }).then(function (rsp) {
+                if (rsp.code === 0) toast('第 ' + order + ' 军 · ' + ['一', '二', '三'][pos] + ' 位已更新', true);
+                else toast('编队失败：' + errText(rsp), false);
+                tabArmy(body);
+              });
+            };
+            left.appendChild(sel);
+            left.appendChild(el('span', 'cost', '　兵力 ' + fmt(soldiers)
+              + (waiting > nowSec() ? '（征兵中，' + (waiting - nowSec()) + 's）' : '')));
+            row.appendChild(left);
+
+            if (!gid) {
+              row.appendChild(el('span', 'cost', '先配将'));
+            } else {
+              var input = document.createElement('input');
+              input.className = 'n';
+              input.type = 'number';
+              input.value = 100;
+              input.min = 1;
+              input.style.width = '66px';
+              var go = mkBtn('征兵', '', function () {
+                var n = Math.max(0, Number(input.value) || 0);
+                var cnts = [0, 0, 0];
+                cnts[pos] = n;
+                send('army.conscript', { armyId: a.id, cnts: cnts }).then(function (rsp) {
+                  if (rsp.code === 0) {
+                    var eta = (rsp.msg && rsp.msg.etaSec) || 2;
+                    toast('征兵 ' + n + ' 人，约 ' + eta + ' 秒后入营', true);
+                    setTimeout(function () { tabArmy(body); }, (eta + 1) * 1000);
+                  } else {
+                    var reason = (rsp.msg && rsp.msg.reason) || '';
+                    toast('征兵失败：' + (reason === 'res_not_enough' ? '资源不足' : errText(rsp)), false);
+                  }
+                });
+              });
+              var n0 = 100;
+              var need = { wood: n0 * per.wood, iron: n0 * per.iron, grain: n0 * per.grain, gold: n0 * per.gold };
+              var lack = need.wood > res.wood || need.iron > res.iron
+                || need.grain > res.grain || need.gold > res.gold;
+              var wrap = el('span', '');
+              wrap.style.cssText = 'display:flex;align-items:center;gap:4px;';
+              wrap.appendChild(input);
+              wrap.appendChild(go);
+              if (lack) {
+                wrap.title = '资源不足：100 兵需 木' + fmt(need.wood) + ' 铁' + fmt(need.iron)
+                  + ' 粮' + fmt(need.grain) + ' 金' + fmt(need.gold);
+                go.disabled = true;
+              }
+              row.appendChild(wrap);
+            }
+            card.appendChild(row);
+          });
+          body.appendChild(card);
+        });
+        body.appendChild(el('div', 'cost',
+          '每兵：木 ' + per.wood + ' · 铁 ' + per.iron + ' · 粮 ' + per.grain + ' · 金 ' + per.gold));
+      })
+      .catch(function () { body.innerHTML = '<div class="empty">读取失败，稍后再试。</div>'; });
+  }
+
+  function nowSec() { return Math.floor(Date.now() / 1000); }
+
+  function renderGensInto(hostEl) {
+    hostEl.innerHTML = '<div class="empty">读取中…</div>';
+    send('general.myGenerals', {}).then(function (rsp) {
+      hostEl.innerHTML = '';
+      var gens = (rsp.msg.generals || []);
+      if (!gens.length) { hostEl.appendChild(el('div', 'empty', '帐下无人。')); return; }
+      gens.forEach(function (g) {
+        var card = el('div', 'card');
+        card.innerHTML = '<div class="row" style="border:none;padding:0 0 4px">'
+          + '<b class="star' + (g.star >= 5 ? '5' : g.star === 4 ? '4' : '3') + '">'
+          + (g.name || '武将' + g.cfgId) + '</b>'
+          + '<span>★' + (g.star || 0) + ' · Lv' + g.level + '</span></div>'
+          + '<div>' + (g.skills || []).filter(Boolean).map(function (sk) {
+            return '<span class="chip">' + (sk.name || ('技' + sk.cfgId)) + ' lv' + sk.lv + '</span>';
+          }).join('') + '</div>';
+        var skillBar = el('div', '');
+        skillBar.style.marginTop = '6px';
+        (g.skills || []).forEach(function (sk, pos) {
+          if (!sk) return;
+          var b = mkBtn('强化「' + (sk.name || '技' + sk.cfgId) + '」', 'ghost', function () {
+            send('general.lvSkill', { gId: g.id, pos: pos }).then(function (rsp) {
+              if (rsp.code === 0) toast('「' + (sk.name || '技') + '」已强化', true);
+              else toast('强化失败：' + errText(rsp), false);
+              renderGensInto(hostEl);
+            });
+          });
+          b.style.margin = '2px 6px 2px 0';
+          skillBar.appendChild(b);
+        });
+        card.appendChild(skillBar);
+        hostEl.appendChild(card);
+      });
+    });
+  }
+
+  function renderTavernInto(hostEl) {
+    hostEl.innerHTML = '<div class="empty">读取中…</div>';
+    send('tavern.guests', {}).then(function (rsp) {
+      hostEl.innerHTML = '';
+      var m = rsp.msg || {};
+      hostEl.appendChild(el('div', 'card', '招募一位 <b style="color:#f0d998">' + m.cost
+        + '</b> 金。豪杰按辰光来访，过了时辰便见不到。'));
+      var list = el('div', 'card', '<h4 style="margin-top:0">此刻在店</h4>');
+      var now = m.now || [];
+      if (!now.length) {
+        list.appendChild(el('div', 'empty', '此刻无人来访——' + (m.nextAt ? (m.nextAt + '再来看') : '等下个时辰')));
+      }
+      now.forEach(function (g) {
+        var row = el('div', 'row');
+        row.innerHTML = '<span><b style="color:#f0d998">' + g.name + '</b> <span class="chip">'
+          + g.when + '</span></span>';
+        row.appendChild(mkBtn('招募', '', function () {
+          send('general.drawGeneral', { drawTimes: 1 }).then(function (r2) {
+            var got = (r2.msg && r2.msg.generals) || [];
+            var reason = (r2.msg && r2.msg.reason) || '';
+            if (got.length) {
+              toast('入营：' + got.map(function (x) { return x.name || '武将'; }).join('、')
+                + '　到「征兵」页把他编入队伍', true);
+            } else if (reason === 'not_enough_gold') {
+              toast('金不足：需 ' + ((r2.msg && r2.msg.cost) || m.cost) + ' 金', false);
+            } else if (reason === 'no_guest') {
+              toast('此刻无人来访' + (m.nextAt ? '，' + m.nextAt + '再来' : ''), false);
+            } else {
+              toast('招募失败：' + errText(r2), false);
+            }
+            renderTavernInto(hostEl);
+          });
+        }));
+        list.appendChild(row);
+      });
+      var today = m.today || [];
+      if (today.length) {
+        var STATE_TXT = { now: '此刻在店', upcoming: '尚未到店', passed: '已过时辰' };
+        list.appendChild(el('div', 'cost', '今日可见：' + today.map(function (g) {
+          return g.name + '（' + g.when + '·' + (STATE_TXT[g.state] || '') + '）'
+            + (g.recruited ? ' ✓已入营' : '');
+        }).join('、')));
+      }
+      hostEl.appendChild(list);
+    });
+  }
+
+  function renderReportsInto(hostEl) {
+    hostEl.innerHTML = '<div class="empty">读取中…</div>';
+    send('war.report', {}).then(function (rsp) {
+      hostEl.innerHTML = '';
+      var list = (rsp.msg.list || []).slice(0, 30);
+      if (!list.length) { hostEl.appendChild(el('div', 'empty', '尚无战报。')); return; }
+      list.forEach(function (r) {
+        var tag = r.result === 2 ? ['胜', '#6fcf97'] : (r.result === 0 ? ['败', '#ff6b5e'] : ['平', '#c8b88a']);
+        var place = r.anim && r.anim.place ? r.anim.place : ('(' + r.x + ',' + r.y + ')');
+        var row = el('div', 'row');
+        row.innerHTML = '<span>#' + r.id + ' <b>' + place + '</b></span>'
+          + '<span style="display:flex;align-items:center;gap:4px">'
+          + '<b style="color:' + tag[1] + '">' + tag[0] + '</b></span>';
+        var bar = el('div', '');
+        if (r.anim) bar.appendChild(mkBtn('回放', 'ghost', function () {
+          if (window.__slgPlayBattle) window.__slgPlayBattle(r.anim);
+        }));
+        // ★ P0-2：详情必须能在被遮住的 Cocos 面板之外打开，否则玩家永远看不到「为什么输」
+        bar.appendChild(mkBtn('详情', 'ghost', function () { openReportDetail(r); }));
+        row.appendChild(bar);
+        hostEl.appendChild(row);
+      });
+    });
+  }
+
+  /** 战报详情（DOM）：胜负、双方兵力、逐回合动作与战法名，全部来自同一份确定性事件流。 */
+  function openReportDetail(r) {
+    var tag = r.result === 2 ? ['胜', '#6fcf97'] : (r.result === 0 ? ['败', '#ff6b5e'] : ['平', '#c8b88a']);
+    var anim = r.anim || { a: { units: [] }, d: { units: [] }, rounds: [] };
+    var body = makeWindow('slgRepDetail',
+      '战报 #' + r.id + ' · <span style="color:' + tag[1] + '">' + tag[0] + '</span>',
+      '<div class="sub">' + (anim.place || ('(' + r.x + ',' + r.y + ')'))
+      + (r.ctime ? ' · ' + new Date(r.ctime).toLocaleString('zh-CN') : '') + '</div>',
+      null, null, null,
+      function () { var w = document.getElementById('slgRepDetail'); if (w) w.remove(); });
+    var sum = el('div', 'card');
+    sum.innerHTML = '<h4 style="margin-top:0">战果</h4><div>' + (r.summary || '（无摘要）') + '</div>'
+      + (r.analysis ? ('<div class="cost">我军 ' + r.analysis.aTotal + ' → ' + r.analysis.aRemain.reduce(function (a, b) { return a + b; }, 0)
+        + '　守军 ' + r.analysis.dTotal + '</div>') : '');
+    body.appendChild(sum);
+
+    [['我军', anim.a, '#c0392b'], ['守军', anim.d, '#2c5f8a']].forEach(function (side) {
+      var card = el('div', 'card');
+      card.innerHTML = '<h4 style="margin-top:0">' + side[0] + '：' + (side[1].name || '') + '</h4>';
+      (side[1].units || []).forEach(function (u) {
+        card.appendChild(el('div', 'kv', '<span>' + (u.name || '武将') + '</span><span>'
+          + u.troops + ' → ' + u.remain + '</span>'));
+      });
+      body.appendChild(card);
+    });
+
+    (anim.rounds || []).slice(0, 12).forEach(function (rd) {
+      var card = el('div', 'card', '<h4 style="margin-top:0">第 ' + rd.round + ' 回合</h4>');
+      (rd.acts || []).forEach(function (act) {
+        var who = function (u) {
+          var list = u.s === 'a' ? (anim.a.units || []) : (anim.d.units || []);
+          var hit = list[u.i];
+          return hit ? hit.name : (u.s === 'a' ? '我军' : '守军');
+        };
+        var text = '';
+        if (act.t === 'skill') text = who(act.f) + ' 发动「' + act.skill + '」' + (act.loss ? '（歼 ' + act.loss + '）' : '');
+        else if (act.t === 'prepare') text = who(act.f) + ' 准备「' + act.skill + '」';
+        else if (act.t === 'hit') text = who(act.f) + ' → ' + who(act.to) + '　' + act.skill + ' 损 ' + act.loss;
+        else if (act.t === 'control') text = who(act.f) + ' 使 ' + who(act.to) + ' 陷入「' + act.state + '」';
+        else if (act.t === 'heal') text = who(act.f) + ' 回复 ' + Math.round(act.amount || 0);
+        else if (act.t === 'down') text = who(act.unit) + ' 溃败';
+        if (text) card.appendChild(el('div', 'cost', text));
+      });
+      body.appendChild(card);
+    });
+    body.appendChild(mkBtn('关闭', 'ghost', function () {
+      var w = document.getElementById('slgRepDetail'); if (w) w.remove();
+    }));
+  }
+
+  window.__slgGeneralsWindow = function () {
+    var body = makeWindow('slgGenWin', '帐下武将', '', null, null, null,
+      function () { document.getElementById('slgGenWin').remove(); });
+    renderGensInto(body);
+  };
+  window.__slgReportsWindow = function () {
+    var body = makeWindow('slgRepWin', '战报', '', null, null, null,
+      function () { document.getElementById('slgRepWin').remove(); });
+    renderReportsInto(body);
+  };
+
+  window.__slgHudTick = function () {
+    var hud = document.getElementById('slgHud');
+    if (!hud || !window.__slgSend) return;
+    window.__slgSend('role.myRoleRes', {}).then(function (r) {
+      var res = (r.rsp.msg && r.rsp.msg.role_res) || {};
+      var cap = Number(res.depot_capacity) || 0;
+      hud.innerHTML = ['wood|木', 'iron|铁', 'stone|石', 'grain|粮', 'gold|金'].map(function (pair) {
+        var p = pair.split('|');
+        // ★ P1-5：满仓后仍显示「+2000/日」会骗人，这里直接给「已满仓」
+        var full = cap > 0 && p[0] !== 'gold' && Number(res[p[0]] || 0) >= cap;
+        var tail = full ? '<span style="color:#ff9d6b"> (已满仓)</span>'
+          : '<span style="opacity:.65"> (+' + fmt(res[p[0] + '_yield']) + '/日)</span>';
+        return '<span>' + p[1] + ' ' + fmt(res[p[0]]) + tail + '</span>';
+      }).join('　') + '　<span>令 ' + fmt(res.decree) + '</span>';
+    }).catch(function () {});
+  };
+  // 预取 world.meta：此刻 WS 可能还没连上，失败是正常的，不要让 promise 未捕获
+  loadMeta().catch(function () {});
+})();`;
+
 
 /**
  * 构造运行时资源重写器。

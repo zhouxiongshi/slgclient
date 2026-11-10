@@ -17,6 +17,16 @@
   "raid": { "day": 12 },
   "choice": { "day": 20 },
   "wave2": { "day": 28, "soldiers": 1200, "name": "黄巾再至", "lendFactor": 0.7, "refuseFactor": 1.3 },
+  "choicePrompt": "乡人来问：借出 %n% 粮，他们替你挡下一波；不借，黄巾会更猛。点「确定」借粮，点「取消」拒援。",
+  "patrol": {
+    "name": "黄巾流寇",
+    "intervalDays": 6,
+    "baseSoldiers": 600,
+    "growthPerDay": 25,
+    "maxActive": 2,
+    "raidAfterDays": 9,
+    "clearDrift": 1
+  },
   "finale": { "day": 40, "holdLands": 3 },
   "blueprint": { "id": "quyuanli", "facilityAddition": 19, "bonus": 0.2, "label": "曲辕犁" },
   "spearman": {

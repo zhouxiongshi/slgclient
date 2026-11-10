@@ -13,13 +13,16 @@ import {
 } from './world.js';
 import { resolveBattle } from './battle.js';
 import { skillById, LEVEL_COUNT } from './skills.js';
-import { marchMs } from './clock.js';
+import { marchMs, rewindDays } from './clock.js';
 import { facilityBonus } from './domain/economy.js';
 import {
-  chapterRules, settleCampaign, chooseChapter, onTileCleared,
+  chapterRules, settleCampaign, chooseChapter, onTileCleared, applyChoice, noticeRecruit,
 } from './domain/campaign.js';
 import { slotBlock } from './domain/slots.js';
-import { ensureTavern, guestsNow, announceTavern } from './domain/tavern.js';
+import { ensureTavern, guestsNow, announceTavern, todaysGuests, dayFraction } from './domain/tavern.js';
+import {
+  strategyTick, strategyAttack, strategyTurnDays, ensureStrategy, clearThreat,
+} from './domain/strategy.js';
 import { noteIfGeneralDown } from './command.js';
 
 const OK = 0;
@@ -193,6 +196,15 @@ function totalYield(state, cfg) {
   return r;
 }
 
+/** 3 槽数组归一化：补长、去 NaN/null、取非负整数。 */
+function normalizeTriple(list) {
+  const out = [0, 0, 0];
+  for (let i = 0; i < 3; i += 1) {
+    out[i] = Math.max(0, Math.floor(Number(list?.[i]) || 0));
+  }
+  return out;
+}
+
 /** 原版 TryUseNeed：政令不足→25，资源不足→16，成功扣除→0。 */
 function tryUseNeed(state, need) {
   const r = state.roleRes;
@@ -212,15 +224,62 @@ function tryUseNeed(state, need) {
   return OK;
 }
 
-/** 设施到点仍按真实秒。资源改按游戏日入账，军饷和序章在 settleCampaign。 */
-function accrue(ctx) {
+/**
+ * 世界日结算：请求内与「服务端定时器」共用同一个入口。
+ *
+ * ★ 试玩 P0-1：原先只有收到客户端请求才结算，窗口失焦 / 玩家长时间不点界面时
+ *   世界直接停摆（day、accMs、savedAt 纹丝不动）。现在由 index.js 每 500ms
+ *   调一次，时钟与请求彻底解耦；请求内再调只是为了「读完就拿到最新值」。
+ *
+ * 返回 { days, day, builds }：days>0 才需要落盘，避免 500ms 写一次存档。
+ */
+export function settleWorld(ctx, now = Date.now()) {
   const { state, cfg } = ctx;
   tickFacilities(state, cfg);
   totalYield(state, cfg);
-  settleCampaign(state, cfg, ctx, Date.now());
+  const settled = settleCampaign(state, cfg, ctx, now);
+  strategyTick(state, cfg, ctx, now);
   ensureTavern(state, cfg);
   announceTavern(state, ctx, chapterRules().realMsPerDay);
-  return tickBuilds(state, cfg);
+  const finishedBuilds = tickBuilds(state, cfg);
+  for (const b of finishedBuilds) ctx.push?.('roleBuild.push', b);
+  return { days: settled.days, day: state.clock.day, builds: finishedBuilds.length };
+}
+
+/**
+ * 推演一月：原子地把时钟推到下一个回合日，并立刻执行一次诸侯决策。
+ * ★ 试玩 P0-1：旧实现只发一个 tick，天数不够时返回 {skipped:true} 且界面无提示，
+ *   玩家点了跟没点一样。现在要么真的推进 10 天，要么返回还差几天。
+ */
+export function advanceToNextTurn(ctx, now = Date.now()) {
+  const { state, cfg } = ctx;
+  const st = ensureStrategy(state);
+  const turnDays = strategyTurnDays();
+  const turnBefore = st.turn;
+  const target = (st.lastTurnDay || 0) + turnDays;
+  const need = Math.max(0, target - (state.clock?.day ?? 1));
+  if (need > 0) {
+    // rewindDays 把上次结算时刻拨回 need 个游戏日，下一次 settle 正好补足
+    rewindDays(state, need, chapterRules(), now);
+    settleWorld(ctx, now);
+  } else {
+    strategyTick(state, cfg, ctx, now);
+  }
+  return {
+    skipped: st.turn === turnBefore,
+    advanced: need,
+    day: state.clock.day,
+    turn: st.turn,
+    month: (st.turn || 0) + 1,
+    nextTurnDay: (st.lastTurnDay || 0) + turnDays,
+    need: Math.max(0, (st.lastTurnDay || 0) + turnDays - state.clock.day),
+  };
+}
+
+/** 征兵工期：原版 1 秒/兵，单机下压到 2~30 秒，并给出 ETA 让界面能显示倒计时。 */
+function conscriptSec(total, secPerTroop = 1) {
+  const raw = Math.ceil(total * Math.max(0.001, Number(secPerTroop) || 1) * 0.02);
+  return Math.max(2, Math.min(30, raw));
 }
 
 function roleResOf(state) {
@@ -232,6 +291,16 @@ function armyById(state, id) {
 }
 
 /** 玩家已拥有技能 = 所有武将装配技能的去重集合（原 proto.Skill{id,cfgId,generals}）。 */
+function withGeneralNames(state, cfg, list) {
+  return list.map((g) => ({
+    ...g,
+    name: cfg.generalByCfg.get(g.cfgId)?.name || '',
+    star: g.star ?? 0,
+    skills: (g.skills || []).map((s) => (s
+      ? { ...s, name: skillById(s.cfgId)?.ui?.name || '' }
+      : null)),
+  }));
+}
 function syncOwnedSkills(state) {
   const owned = new Map();
   for (const g of state.generals) {
@@ -304,8 +373,15 @@ export function processTask(ctx, task) {
   if (task.type === 'conscript_done') {
     const army = armyById(state, task.armyId);
     if (!army) return;
+    // ★ 试玩 P1-2：soldiers 只有 1 个元素时，旧写法 undefined + 0 = NaN，
+    //   Math.max(0, NaN) 仍是 NaN，JSON 序列化成 null 写进存档。
+    //   这里先补齐数组并按「有限整数」入账，绝不让 null/NaN 落盘。
+    army.soldiers = normalizeTriple(army.soldiers);
+    army.con_times = normalizeTriple(army.con_times);
+    army.con_cnts = normalizeTriple(army.con_cnts);
     for (let i = 0; i < 3; i += 1) {
-      army.soldiers[i] = Math.max(0, army.soldiers[i] + (task.cnts?.[i] || 0));
+      const add = Math.max(0, Math.floor(Number(task.cnts?.[i]) || 0));
+      army.soldiers[i] += add;
       army.con_times[i] = 0;
       army.con_cnts[i] = 0;
     }
@@ -319,8 +395,7 @@ export function handleRequest(ctx, req) {
   const { state, cfg, options } = ctx;
   const name = req.name;
   const m = sanitizeMsg(req.msg);
-  const finishedBuilds = accrue(ctx);
-  for (const b of finishedBuilds) ctx.push('roleBuild.push', b); // 建造/升级/拆除到点，主动推原版通道
+  settleWorld(ctx);
   const rsp = {};
 
   switch (name) {
@@ -505,7 +580,13 @@ export function handleRequest(ctx, req) {
     /* ---------------- 城池设施 / 内政 ---------------- */
     case 'city.facilities': {
       const cityId = Number(m.cityId ?? mainCity(state)?.cityId ?? 1);
-      rsp.msg = { cityId, facilities: clone(state.facilities[cityId] || []) };
+      const facilities = (state.facilities[cityId] || []).map((f) => ({
+        ...clone(f),
+        maxLevel: cfg.facilityMaxLevel(f.type),
+        nextNeed: cfg.facilityNeed(f.type, f.level + 1),
+        nextTime: cfg.facilityTime(f.type, f.level + 1),
+      }));
+      rsp.msg = { cityId, facilities };
       break;
     }
     case 'city.upFacility': {
@@ -599,31 +680,46 @@ export function handleRequest(ctx, req) {
 
     /* ---------------- 武将 ---------------- */
     case 'general.myGenerals':
-      rsp.msg = { generals: clone(state.generals) };
+      rsp.msg = { generals: withGeneralNames(state, cfg, clone(state.generals)) };
       break;
     case 'general.drawGeneral': {
       ensureTavern(state, cfg);
       const times = Math.max(1, Math.min(10, Number(m.drawTimes ?? 1)));
-      const here = guestsNow(state, chapterRules().realMsPerDay).slice(0, times);
+      const realMsPerDay = chapterRules().realMsPerDay;
+      const here = guestsNow(state, realMsPerDay).slice(0, times);
       const costEach = cfg.basic.general?.draw_general_cost ?? 30;
       const added = [];
-      if (here.length && (state.roleRes.gold || 0) >= costEach) {
-        const affordable = Math.min(here.length, Math.floor((state.roleRes.gold || 0) / costEach));
-        state.roleRes.gold -= costEach * affordable;
-        for (const person of here.slice(0, affordable)) {
-          person.recruited = true;
-          const row = state.tavern.people.find((p) => p.cfgId === person.cfgId);
-          if (row) row.recruited = true;
-          const g = makeGeneral(cfg, nextId(state, 'generalId'), person.cfgId, mainCity(state)?.cityId ?? 1, 1);
-          state.generals.push(g);
-          added.push(g);
-          ctx.push('general.push', g);
-        }
-        syncOwnedSkills(state);
-        ctx.push('roleRes.push', roleResOf(state));
-        ctx.save();
+      // ★ 试玩 P1-3：旧实现「此刻无人 / 金不足」都返回 code 0 + 空数组，静默失败。
+      //   现在把原因和今天剩下的人一并回给界面，玩家知道自己在等什么。
+      if (!here.length) {
+        rsp.msg = {
+          generals: [],
+          reason: 'no_guest',
+          cost: costEach,
+          today: todaysGuests(state).map((g) => ({ cfgId: g.cfgId, name: g.name, when: g.when })),
+        };
+        break;
       }
-      rsp.msg = { generals: clone(added) };
+      if ((state.roleRes.gold || 0) < costEach) {
+        rsp.msg = { generals: [], reason: 'not_enough_gold', cost: costEach, gold: state.roleRes.gold || 0 };
+        break;
+      }
+      const affordable = Math.min(here.length, Math.floor((state.roleRes.gold || 0) / costEach));
+      state.roleRes.gold -= costEach * affordable;
+      for (const person of here.slice(0, affordable)) {
+        person.recruited = true;
+        const row = state.tavern.people.find((p) => p.cfgId === person.cfgId);
+        if (row) row.recruited = true;
+        const g = makeGeneral(cfg, nextId(state, 'generalId'), person.cfgId, mainCity(state)?.cityId ?? 1, 1);
+        state.generals.push(g);
+        added.push(g);
+        noticeRecruit(state, ctx, cfg.generalByCfg.get(g.cfgId)?.name || '');
+        ctx.push('general.push', g);
+      }
+      syncOwnedSkills(state);
+      ctx.push('roleRes.push', roleResOf(state));
+      ctx.save();
+      rsp.msg = { generals: withGeneralNames(state, cfg, clone(added)), reason: added.length ? '' : 'not_enough_gold' };
       break;
     }
     case 'general.composeGeneral': {
@@ -631,9 +727,10 @@ export function handleRequest(ctx, req) {
       state.generals = state.generals.filter((g) => !ids.includes(g.id));
       const g = makeGeneral(cfg, nextId(state, 'generalId'), Number(m.compId) || [...cfg.generalByCfg.keys()][0], mainCity(state)?.cityId ?? 1, 1);
       state.generals.push(g);
+      noticeRecruit(state, ctx, cfg.generalByCfg.get(g.cfgId)?.name || '');
       syncOwnedSkills(state);
       ctx.save();
-      rsp.msg = { generals: [clone(g)] };
+      rsp.msg = { generals: withGeneralNames(state, cfg, [g]) };
       break;
     }
     case 'general.addPrGeneral': {
@@ -741,18 +838,38 @@ export function handleRequest(ctx, req) {
       const cityId = Number(m.cityId ?? 1);
       const order = Number(m.order ?? 0);
       const pos = Number(m.position ?? 0);
-      const gid = Number(m.generalId ?? 0);
+      const gid = Math.max(0, Math.floor(Number(m.generalId ?? 0)));
+      // ★ 试玩 P1-4：原版只有 3 支队伍。旧逻辑对 order 不做校验，客户端发 order:0
+      //   就凭空造出第 4 支空队，同一武将还能同时挂在两支队伍里。
+      if (!Number.isInteger(order) || order < 1 || order > 3) {
+        rsp.code = CODE.InvalidParam;
+        rsp.msg = { reason: 'bad_order', army: {} };
+        break;
+      }
+      if (!Number.isInteger(pos) || pos < 0 || pos > 2) {
+        rsp.code = CODE.InvalidParam;
+        rsp.msg = { reason: 'bad_pos', army: {} };
+        break;
+      }
       let army = state.armys.find((a) => a.cityId === cityId && a.order === order);
       if (!army) {
-        // ★ 修复：新建队伍必须带完整字段，否则 army.generals[pos] 直接抛异常，
-        //   该请求在网关层被吞掉（玩家点「配置武将」无反应），state.armys 还被污染。
+        if (gid <= 0) { rsp.msg = { army: {} }; break; }   // 只是把空槽位清空，不建队
+        // 新建队伍必须带完整字段，否则 army.generals[pos] 直接抛异常
         army = makeArmy(nextId(state, 'armyId'), cityId, order, [0, 0, 0], [0, 0, 0]);
         state.armys.push(army);
       }
-      if (!Array.isArray(army.generals)) army.generals = [0, 0, 0];
-      if (pos >= 0 && pos < 3) army.generals[pos] = gid;
-      else {
-        for (let i = 0; i < 3; i += 1) if (army.generals[i] === gid) army.generals[i] = 0;
+      army.generals = normalizeTriple(army.generals);
+      army.soldiers = normalizeTriple(army.soldiers);
+      // 同一武将只能占一个槽位：先从其它队伍/槽位摘掉，再落到目标槽位
+      if (gid > 0) {
+        for (const a of state.armys) {
+          a.generals = normalizeTriple(
+            (a.generals || []).map((id, i) => (id === gid && !(a === army && i === pos) ? 0 : id)),
+          );
+        }
+        army.generals[pos] = gid;
+      } else {
+        army.generals[pos] = 0;
       }
       for (const g of state.generals) g.order = 0;
       for (const a of state.armys) for (const id of (a.generals || [])) {
@@ -766,25 +883,43 @@ export function handleRequest(ctx, req) {
     }
     case 'army.conscript': {
       const army = armyById(state, m.armyId);
-      const cnts = (m.cnts || [0, 0, 0]).map((n) => Math.max(0, Number(n) || 0));
+      if (!army) { rsp.code = CODE.InvalidParam; rsp.msg = { reason: 'no_army' }; break; }
+      const cnts = normalizeTriple(m.cnts);
+      const total = cnts.reduce((s, n) => s + n, 0);
+      if (total <= 0) { rsp.code = CODE.InvalidParam; rsp.msg = { reason: 'zero' }; break; }
+      // ★ 试玩 P1-1：每兵成本按 basic.json 逐项扣。旧逻辑把四项加总（31/兵）
+      //   全从木头扣，还用 Math.max(0, ...) 兜底 —— 资源不足也能白嫖。
       const c = cfg.basic.conscript || {};
-      let cost = 0;
+      const per = {
+        wood: c.cost_wood ?? 10, iron: c.cost_iron ?? 10, stone: c.cost_stone ?? 0,
+        grain: c.cost_grain ?? 10, gold: c.cost_gold ?? 1,
+      };
+      const need = {
+        wood: total * per.wood, iron: total * per.iron, stone: total * per.stone,
+        grain: total * per.grain, gold: total * per.gold,
+      };
+      // 槽位必须已有武将：内核按槽位取将，空槽位征兵等于白扣资源
+      const emptySlot = cnts.findIndex((n, i) => n > 0 && !army.generals?.[i]);
+      if (emptySlot >= 0) {
+        rsp.code = CODE.InvalidParam;
+        rsp.msg = { reason: 'empty_slot', slot: emptySlot, per };
+        break;
+      }
+      const code = tryUseNeed(state, need);
+      if (code !== OK) { rsp.code = code; rsp.msg = { reason: 'res_not_enough', need, per }; break; }
+      const sec = conscriptSec(total, c.cost_time);
+      army.soldiers = normalizeTriple(army.soldiers);
+      army.con_times = normalizeTriple(army.con_times);
+      army.con_cnts = normalizeTriple(army.con_cnts);
       for (let i = 0; i < 3; i += 1) {
-        cost += cnts[i] * ((c.cost_wood ?? 10) + (c.cost_iron ?? 10) + (c.cost_grain ?? 10) + (c.cost_gold ?? 1));
+        army.con_cnts[i] = cnts[i];
+        army.con_times[i] = cnts[i] > 0 ? nowSec() + sec : 0;
       }
-      state.roleRes.wood = Math.max(0, state.roleRes.wood - cost);
-      if (army) {
-        for (let i = 0; i < 3; i += 1) {
-          army.con_cnts[i] = cnts[i];
-          army.con_times[i] = nowSec() + Math.max(1, (c.cost_time ?? 1) * cnts[i]);
-        }
-      }
-      // 原版征兵需等待；单机下缩短到 2 秒，仍走同一 army.push 通道
-      ctx.schedule(Date.now() + 2000, { type: 'conscript_done', armyId: Number(m.armyId), cnts });
+      ctx.schedule(Date.now() + sec * 1000, { type: 'conscript_done', armyId: army.id, cnts });
       ctx.push('roleRes.push', roleResOf(state));
-      ctx.push('army.push', army || {});
+      ctx.push('army.push', army);
       ctx.save();
-      rsp.msg = { army: clone(army || {}), role_res: roleResOf(state) };
+      rsp.msg = { army: clone(army), role_res: roleResOf(state), etaSec: sec, need };
       break;
     }
     case 'army.assign': {
@@ -837,6 +972,46 @@ export function handleRequest(ctx, req) {
     case 'skill.list':
       rsp.msg = { list: clone(state.skills) };
       break;
+
+    case 'tavern.guests': {
+      const realMsPerDay = chapterRules().realMsPerDay;
+      const frac = dayFraction(state, realMsPerDay);
+      const live = guestsNow(state, realMsPerDay);
+      const now = live.map((g) => ({ cfgId: g.cfgId, name: g.name, when: g.when }));
+      const today = todaysGuests(state).map((g) => ({
+        cfgId: g.cfgId,
+        name: g.name,
+        when: g.when,
+        recruited: false,
+        // ★ P1-3：让界面能区分「还没到时辰 / 此刻在店 / 已过时辰」
+        state: frac >= g.to ? 'passed' : (frac >= g.from ? 'now' : 'upcoming'),
+      }));
+      const nextAt = live.length
+        ? null
+        : today.find((g) => g.state === 'upcoming')?.when || '明日';
+      rsp.msg = {
+        now, today,
+        cost: cfg.basic.general?.draw_general_cost ?? 30,
+        day: state.clock?.day ?? 1,
+        nextAt,
+      };
+      break;
+    }
+
+    case 'world.meta': {
+      const c = cfg.basic.conscript || {};
+      rsp.msg = {
+        conscript: {
+          wood: c.cost_wood ?? 10, iron: c.cost_iron ?? 10,
+          grain: c.cost_grain ?? 10, gold: c.cost_gold ?? 1,
+          timePer: c.cost_time ?? 1,
+        },
+        drawGeneralCost: cfg.basic.general?.draw_general_cost ?? 30,
+        collectLimit: cfg.basic.role?.collect_times_limit ?? 3,
+        collectIntervalSec: cfg.basic.role?.collect_interval ?? 30,
+      };
+      break;
+    }
 
     /* ---------------- 联盟（单机：仅自己） ---------------- */
     case 'union.create': {
@@ -915,6 +1090,10 @@ export function handleRequest(ctx, req) {
         band: state.drift?.band ?? 'canon',
         choice: state.campaign?.choice ?? null,
         ending: state.campaign?.ending ?? null,
+        endingDay: state.campaign?.endingDay ?? null,
+        chapter: state.campaign?.chapter ?? 1,
+        // 结局之后是否还能按日触发（P0-4：结算完就冻结，不再写 fired）
+        frozen: !!state.campaign?.ending,
         blueprints: [...(state.campaign?.blueprints || [])],
         spearmanId: state.campaign?.spearmanId ?? 0,
       };
@@ -922,10 +1101,16 @@ export function handleRequest(ctx, req) {
     case 'campaign.choose': {
       const picked = m.option === 'lend' || m.option === 0 ? 'lend'
         : (m.option === 'refuse' || m.option === 1 ? 'refuse' : '');
-      const result = chooseChapter(state, picked);
-      if (!result.ok) rsp.code = CODE.InvalidParam;
+      const decided = chooseChapter(state, picked);
+      let applied = false;
+      if (decided.ok) {
+        const result = applyChoice(state, cfg, ctx, chapterRules(), picked);
+        applied = result.ok || state.campaign.choice === picked;
+      }
+      const ok = decided.ok && applied;
+      if (!ok) rsp.code = CODE.InvalidParam;
       else ctx.save();
-      rsp.msg = { choice: state.campaign?.choice ?? null, ok: result.ok };
+      rsp.msg = { choice: state.campaign?.choice ?? null, ok };
       break;
     }
     case 'campaign.speed': {
@@ -933,6 +1118,30 @@ export function handleRequest(ctx, req) {
       state.clock.scale = scale;
       ctx.save();
       rsp.msg = { scale };
+      break;
+    }
+    case 'strategy.attack': {
+      const fracRaw = Number(m.frac);
+      const frac = Number.isFinite(fracRaw) && fracRaw > 0 && fracRaw <= 1 ? fracRaw : 1;
+      const result = strategyAttack(state, cfg, ctx, {
+        cityId: Number(m.cityId), armyId: Number(m.armyId), frac,
+      });
+      if (!result.ok) rsp.code = CODE.InvalidParam;
+      else ctx.save();
+      rsp.msg = {
+        ok: result.ok, result: result.result, reason: result.reason,
+        reportId: result.reportId, city: result.city, summary: result.summary,
+        aTotal: result.aTotal, dTotal: result.dTotal, recovered: result.recovered,
+      };
+      break;
+    }
+    case 'strategy.clearThreat': {
+      const result = clearThreat(state, cfg, ctx, {
+        garrisonId: Number(m.garrisonId), armyId: Number(m.armyId),
+      });
+      if (!result.ok) rsp.code = CODE.InvalidParam;
+      else ctx.save();
+      rsp.msg = result;
       break;
     }
 

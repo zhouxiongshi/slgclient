@@ -14,15 +14,17 @@
 import http from 'node:http';
 import { createReadStream, existsSync, statSync, readFileSync, renameSync } from 'node:fs';
 import { resolve, extname, join } from 'node:path';
+import { gzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { loadConfig, defaultConfDir } from './config.js';
 import { createWorld, loadWorld, saveWorld, resolveWebDir, normalizeWorld, hasProtagonist } from './world.js';
-import { handleRequest, processTask } from './handlers.js';
+import { handleRequest, processTask, settleWorld, advanceToNextTurn } from './handlers.js';
 import { handshakeFrame, encodeFrame, decodeFrame, generateKey } from './codec.js';
 import { attachWebSocketServer } from './wsserver.js';
 import { createSkillAssets } from './skills.js';
 import { loadOverrides, saveOverrides } from './gm/overrides.js';
 import { dossierFor } from './domain/dossier.js';
+import { strategyViewState } from './domain/strategy.js';
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -96,6 +98,74 @@ export async function startOfflineServer(options = {}) {
     saveTimer = setTimeout(() => { saveTimer = null; saveWorld(savePath, state); }, 250);
   };
 
+  /* ---------------- 存档档位与 HTTP 小工具（试玩 P2-5） ---------------- */
+  /** 1 号档就是正在玩的 save.json（兼容旧档），2/3 号档另起文件 */
+  const slotPathOf = (n) => (Number(n) === 1 ? savePath : join(saveDir, `save.slot${Number(n)}.json`));
+  const slotInfoOf = (n) => {
+    const p = slotPathOf(n);
+    const out = { slot: n, path: p, exists: false };
+    try {
+      const st = statSync(p);
+      out.exists = true;
+      out.bytes = st.size;
+      out.updatedAt = st.mtime.toISOString();
+      const data = loadWorld(p);
+      if (data) {
+        out.day = data.clock?.day ?? null;
+        out.roleName = data.role?.nickName || null;
+        out.chapter = data.campaign?.chapter ?? null;
+        out.ending = data.campaign?.ending || null;
+      }
+    } catch { /* 读不到就当空档 */ }
+    return out;
+  };
+  const json = (res, status, obj) => {
+    res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.end(JSON.stringify(obj));
+  };
+  /**
+   * 大 JSON 响应：看 Accept-Encoding 决定是否 gzip。
+   * 战略层全量约 59KB，前端 5 秒轮询一次；压缩后约 8KB（试玩 P2-10）。
+   * 浏览器 / node fetch 都会自动解压，调用方无需改动。
+   */
+  const sendJson = (req, res, obj, minBytes = 2048) => {
+    const body = Buffer.from(JSON.stringify(obj));
+    const headers = {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+      Vary: 'Accept-Encoding',
+    };
+    if (body.length >= minBytes && /\bgzip\b/i.test(String(req.headers['accept-encoding'] || ''))) {
+      const packed = gzipSync(body);
+      headers['Content-Encoding'] = 'gzip';
+      headers['Content-Length'] = packed.length;
+      res.writeHead(200, headers);
+      res.end(packed);
+      return;
+    }
+    headers['Content-Length'] = body.length;
+    res.writeHead(200, headers);
+    res.end(body);
+  };
+  /** 带体积上限的 JSON 请求体读取；超限或解析失败都回调 null，由调用方回 400 */
+  const readJson = (req, limit, done) => {
+    const chunks = [];
+    let size = 0;
+    let closed = false;
+    req.on('data', (chunk) => {
+      if (closed) return;
+      size += chunk.length;
+      if (size > limit) { closed = true; req.destroy(); done(null); return; }
+      chunks.push(chunk);
+    });
+    req.on('end', () => {
+      if (closed) return;
+      closed = true;
+      try { done(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')); } catch { done(null); }
+    });
+    req.on('error', () => { if (!closed) { closed = true; done(null); } });
+  };
+
   let wss = null; // 稍后赋值，push 需要它
 
   const ctx = {
@@ -129,6 +199,24 @@ export async function startOfflineServer(options = {}) {
     }
     save();
   }, 200);
+
+  /* ---------------- 世界时钟（与客户端请求解耦，试玩 P0-1） ----------------
+   * 旧实现只有收到协议请求才结算，窗口失焦 / 玩家长时间不点界面时世界停摆。
+   * 现在由服务端自己推进：每 500ms 结算一次，只有跨过游戏日才落盘。
+   * 支持热重启后继续：clock.lastRealMs 存在存档里。 */
+  let lastWorldSaveDay = state.clock?.day ?? 1;
+  const worldTimer = setInterval(() => {
+    try {
+      const r = settleWorld(ctx);
+      if (r.days > 0 || r.builds > 0) {
+        lastWorldSaveDay = r.day;
+        save();
+      }
+    } catch (err) {
+      log('error', `world tick: ${err.stack || err.message}`);
+    }
+  }, 500);
+  void lastWorldSaveDay;
 
   /* ---------------- HTTP 8088：原画面 + 账号接口 ---------------- */
   /** 静态文件响应：读取成功才发响应；读流出错（如新打包文件被杀毒/索引短暂锁定）自动重试，绝不让请求悬死。 */
@@ -186,6 +274,7 @@ export async function startOfflineServer(options = {}) {
       res.end(JSON.stringify({
         ok: true, startedAt, uptimeMs: Date.now() - startedAt,
         httpPort, wsPort, webDir, savePath,
+        clock: { day: state.clock?.day ?? 1, scale: state.clock?.scale ?? 1 },
         connections: wss?.connections.size ?? 0,
         pending: state.pending.length,
         warReports: state.warReports.length,
@@ -197,8 +286,7 @@ export async function startOfflineServer(options = {}) {
       return;
     }
     if (urlPath === '/__slg/state') {
-      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-      res.end(JSON.stringify(state));
+      sendJson(req, res, state);
       return;
     }
     if (urlPath === '/__slg/general-dossier' && req.method === 'GET') {
@@ -206,6 +294,114 @@ export async function startOfflineServer(options = {}) {
       const doc = dossierFor(state, { cfgId: q.get('cfgId'), name: q.get('name') || '' });
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(JSON.stringify(doc));
+      return;
+    }
+    if (urlPath === '/__slg/strategy/state') {
+      sendJson(req, res, strategyViewState(state, cfg));
+      return;
+    }
+    if (urlPath === '/__slg/strategy/panorama.png') {
+      try {
+        const img = readFileSync(join(ROOT, 'conf', 'campaign', 'strategy', 'map-panorama.png'));
+        res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'no-store', 'Content-Length': img.length });
+        res.end(img);
+      } catch {
+        res.writeHead(404); res.end('no panorama');
+      }
+      return;
+    }
+    if (urlPath === '/__slg/strategy/tick' && req.method === 'POST') {
+      // ★ 试玩 P0-1：推演一月必须真的推进 10 天并跑一次诸侯决策，而不是只发个空 tick
+      const result = advanceToNextTurn(ctx, Date.now());
+      save();
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify(result));
+      return;
+    }
+    if (urlPath === '/__slg/restart' && req.method === 'POST') {
+      // ★ 试玩 P0-4：结局之后给玩家一个「重开一局」的出口
+      try {
+        state = createWorld(cfg);
+        flush();
+        log('info', 'world restart by player');
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+        res.end(JSON.stringify({ ok: true, day: state.clock.day }));
+      } catch (err) {
+        log('error', `restart failed: ${err.stack || err.message}`);
+        res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ ok: false }));
+      }
+      return;
+    }
+    /* ---------------- 存档：三档位 + 导出 / 导入（试玩 P2-5） ----------------
+     * 旧实现只有一个 save.json，换机或重装就没了。现在：
+     *   1 号档 = 正在玩的 save.json（兼容旧档）
+     *   2/3 号档 = save.slot2.json / save.slot3.json，可随时存/读
+     *   另给 /save/export 下载与 /save/import 导入，跨机器搬档不再靠翻 AppData。 */
+    if (urlPath === '/__slg/save/slots' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify({ current: savePath, slots: [1, 2, 3].map(slotInfoOf) }));
+      return;
+    }
+    if (urlPath === '/__slg/save/slot' && req.method === 'POST') {
+      readJson(req, 200000, (body) => {
+        const slot = Number(body && body.slot);
+        const action = String((body && body.action) || '');
+        if (!(slot >= 1 && slot <= 3) || !['save', 'load'].includes(action)) {
+          json(res, 400, { ok: false, reason: 'bad_request' });
+          return;
+        }
+        try {
+          if (action === 'save') {
+            flush();
+            saveWorld(slotPathOf(slot), state);
+            log('info', `save to slot ${slot}`);
+            json(res, 200, { ok: true, slots: [1, 2, 3].map(slotInfoOf) });
+            return;
+          }
+          const data = loadWorld(slotPathOf(slot));
+          if (!data) { json(res, 404, { ok: false, reason: 'empty_slot' }); return; }
+          state = normalizeWorld(data, cfg);
+          flush();
+          log('info', `load from slot ${slot}`);
+          json(res, 200, { ok: true, day: state.clock?.day ?? 1, slots: [1, 2, 3].map(slotInfoOf) });
+        } catch (err) {
+          log('error', `slot ${action} failed: ${err.stack || err.message}`);
+          json(res, 500, { ok: false, reason: 'io_error' });
+        }
+      });
+      return;
+    }
+    if (urlPath === '/__slg/save/export' && req.method === 'GET') {
+      flush();
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+      res.writeHead(200, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Content-Disposition': `attachment; filename="shuanghan-save-${stamp}.json"`,
+        'Cache-Control': 'no-store',
+      });
+      res.end(JSON.stringify(state));
+      return;
+    }
+    if (urlPath === '/__slg/save/import' && req.method === 'POST') {
+      readJson(req, 40 * 1024 * 1024, (body) => {
+        try {
+          const data = body && body.state ? body.state : body;
+          if (!data || typeof data !== 'object' || !data.role) {
+            json(res, 400, { ok: false, reason: 'not_a_save' });
+            return;
+          }
+          // 导入前先把现有档备份一份，导错了还能退回去
+          try { flush(); renameSync(savePath, `${savePath}.before-import-${Date.now()}.json`); } catch { /* 没有旧档就不用备 */ }
+          state = normalizeWorld(data, cfg);
+          flush();
+          log('info', 'save imported');
+          json(res, 200, { ok: true, day: state.clock?.day ?? 1 });
+        } catch (err) {
+          log('error', `import failed: ${err.stack || err.message}`);
+          json(res, 400, { ok: false, reason: 'bad_save' });
+        }
+      });
       return;
     }
     if (urlPath === '/__slg/gm' && req.method === 'GET') {
@@ -331,6 +527,7 @@ export async function startOfflineServer(options = {}) {
     getState: () => state,
     async close() {
       clearInterval(tick);
+      clearInterval(worldTimer);
       flush();
       wss.closeAll();
       await new Promise((r) => wsHttpServer.close(r));

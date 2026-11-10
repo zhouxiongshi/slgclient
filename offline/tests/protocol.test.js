@@ -81,7 +81,7 @@ test('离线协议服务：完整链路 + 确定性战斗 + 存档', async (t) =
       const cityId = server.getState().citys[0].cityId;
       assert.equal((await client.request('interior.collect', {})).code, 0);
       assert.equal((await client.request('city.upFacility', { cityId, fType: 1 })).code, 0);
-      assert.equal((await client.request('army.conscript', { armyId: server.getState().armys[0].id, cnts: [100, 100, 100] })).code, 0);
+      assert.equal((await client.request('army.conscript', { armyId: server.getState().armys[0].id, cnts: [100, 0, 0] })).code, 0);
       assert.equal((await client.request('role.opPosTag', { type: 1, x: 10, y: 10, name: '标记' })).code, 0);
       assert.equal((await client.request('chat.chat', { type: 0, msg: '单机测试' })).code, 0);
       assert.equal((await client.request('nationMap.scanBlock', { x: 90, y: 90, length: 20 })).code, 0);

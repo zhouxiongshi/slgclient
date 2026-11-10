@@ -2,37 +2,110 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
-  <title>偏离与履历</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>偏离与履历 · 霜寒定九州</title>
   <style>
-    body { font: 15px/1.5 "Segoe UI", sans-serif; margin: 24px; max-width: 760px; }
-    .bar { height: 18px; background: #e6e6e6; border-radius: 9px; overflow: hidden; }
-    .fill { height: 100%; background: #3d6b4f; width: 0; }
-    article { border-top: 1px solid #ddd; padding: 10px 0; }
-    h2 { font-size: 16px; margin: 18px 0 8px; }
+    :root {
+      --bg: #141610;
+      --line: #4a4030;
+      --line2: #8a7038;
+      --gold: #e8c670;
+      --gold2: #f0d998;
+      --ink: #e2d6b8;
+      --dim: #9a9078;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 28px 20px 40px;
+      background: radial-gradient(1200px 600px at 50% -180px, #262a20 0%, var(--bg) 60%);
+      color: var(--ink);
+      font: 13px/1.75 "Microsoft YaHei", "PingFang SC", sans-serif;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; }
+    header { border-bottom: 1px solid var(--line2); padding-bottom: 12px; margin-bottom: 18px; }
+    h1 { margin: 0 0 6px; font-size: 21px; letter-spacing: 3px; color: var(--gold2); font-weight: 600; }
+    .nav { margin-top: 8px; font-size: 12px; }
+    a { color: var(--gold); text-decoration: none; border-bottom: 1px dashed rgba(232, 198, 112, .5); }
+    a:hover { color: var(--gold2); border-bottom-color: var(--gold2); }
+    #band { color: var(--dim); font-size: 12px; margin: 0 0 8px; }
+    .bar {
+      height: 12px;
+      background: #0f110c;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      overflow: hidden;
+    }
+    .fill {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, #7a8f4a, #d8b45c);
+      box-shadow: 0 0 10px rgba(216, 180, 92, .45);
+      transition: width .4s ease;
+    }
+    h2 {
+      font-size: 14px;
+      letter-spacing: 2px;
+      color: var(--gold);
+      margin: 24px 0 10px;
+      padding-left: 8px;
+      border-left: 3px solid var(--line2);
+    }
+    article {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(60, 48, 24, .2), rgba(20, 22, 16, .5));
+      padding: 10px 14px;
+      margin: 0 0 10px;
+    }
+    article strong { color: var(--gold2); font-weight: 600; letter-spacing: 1px; }
+    article p { margin: 4px 0 0; font-size: 12px; color: var(--dim); }
+    article p b { color: var(--ink); font-weight: 400; }
+    .empty { color: var(--dim); font-size: 12px; }
   </style>
 </head>
 <body>
-  <h1>偏离与履历</h1>
-  <p><a href="/__slg/gm">回到 GM</a></p>
-  <p id="band">读取中</p>
-  <div class="bar"><div class="fill" id="fill"></div></div>
-  <h2>身故</h2>
-  <div id="list"></div>
+  <div class="wrap">
+    <header>
+      <h1>偏离与履历</h1>
+      <div class="nav"><a href="/__slg/gm">← 回到 GM</a></div>
+    </header>
+
+    <p id="band">读取中…</p>
+    <div class="bar"><div class="fill" id="fill"></div></div>
+
+    <h2>身故</h2>
+    <div id="list"><p class="empty">读取中…</p></div>
+  </div>
+
   <script>
-    const label = { canon: '旧史', shift: '偏移', rewrite: '改写' };
-    async function tick() {
-      const state = await fetch('/__slg/state').then((r) => r.json());
-      const score = state.drift?.score || 0;
-      const band = state.drift?.band || 'canon';
-      document.getElementById('band').textContent = `${label[band] || band} ${score}/100。天下仍按当前这一段走。`;
-      document.getElementById('fill').style.width = `${Math.max(0, Math.min(100, score))}%`;
-      const rows = state.chronicle || [];
-      document.getElementById('list').innerHTML = rows.length
-        ? rows.map((row) => `<article><strong>${row.name || '武将'} · 第 ${row.day} 日 · ${label[row.band] || ''}</strong><p>正史：${row.official}</p><p>本局：${row.played}</p></article>`).join('')
-        : '<p>还没有人死去。</p>';
+    var label = { canon: '旧史', shift: '偏移', rewrite: '改写' };
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c];
+      });
     }
-    tick();
-    setInterval(tick, 3000);
+    async function tick() {
+      var state = await fetch('/__slg/state').then(function (r) { return r.json(); });
+      var score = (state.drift && state.drift.score) || 0;
+      var band = (state.drift && state.drift.band) || 'canon';
+      document.getElementById('band').textContent =
+        (label[band] || band) + ' ' + score + '/100。天下仍按当前这一段走。';
+      document.getElementById('fill').style.width = Math.max(0, Math.min(100, score)) + '%';
+      var rows = state.chronicle || [];
+      document.getElementById('list').innerHTML = rows.length
+        ? rows.map(function (row) {
+          return '<article><strong>' + esc(row.name || '武将') + ' · 第 ' + esc(row.day) + ' 日 · '
+            + esc(label[row.band] || '') + '</strong>'
+            + '<p>正史：<b>' + esc(row.official) + '</b></p>'
+            + '<p>本局：<b>' + esc(row.played) + '</b></p></article>';
+        }).join('')
+        : '<p class="empty">还没有人死去。</p>';
+    }
+    tick().catch(function (err) {
+      document.getElementById('band').textContent = '读取失败：' + err.message;
+    });
+    setInterval(function () { tick().catch(function () {}); }, 3000);
   </script>
 </body>
 </html>

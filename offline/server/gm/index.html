@@ -2,110 +2,272 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
-  <title>序章 GM</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>序章 GM · 霜寒定九州</title>
   <style>
-    body { font: 15px/1.5 "Segoe UI", sans-serif; margin: 24px; max-width: 860px; }
-    h1 { font-size: 22px; }
-    fieldset { margin: 16px 0; }
-    label { display: block; margin: 8px 0; }
-    input, textarea { width: 100%; box-sizing: border-box; }
-    button { margin-right: 8px; }
-    #msg { min-height: 1.4em; }
+    :root {
+      --bg: #141610;
+      --bg2: #1b1d16;
+      --line: #4a4030;
+      --line2: #8a7038;
+      --gold: #e8c670;
+      --gold2: #f0d998;
+      --ink: #e2d6b8;
+      --dim: #9a9078;
+      --bad: #ff8a6b;
+      --ok: #8fd08a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 28px 20px 84px;
+      background: radial-gradient(1200px 600px at 50% -180px, #262a20 0%, var(--bg) 60%);
+      color: var(--ink);
+      font: 13px/1.75 "Microsoft YaHei", "PingFang SC", sans-serif;
+    }
+    .wrap { max-width: 880px; margin: 0 auto; }
+    header { border-bottom: 1px solid var(--line2); padding-bottom: 12px; margin-bottom: 18px; }
+    h1 {
+      margin: 0 0 6px;
+      font-size: 21px;
+      letter-spacing: 3px;
+      color: var(--gold2);
+      font-weight: 600;
+    }
+    .sub { color: var(--dim); font-size: 12px; }
+    .nav { margin-top: 8px; }
+    a { color: var(--gold); text-decoration: none; border-bottom: 1px dashed rgba(232, 198, 112, .5); }
+    a:hover { color: var(--gold2); border-bottom-color: var(--gold2); }
+    fieldset {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(60, 48, 24, .22), rgba(20, 22, 16, .5));
+      margin: 0 0 14px;
+      padding: 10px 16px 14px;
+    }
+    legend {
+      padding: 0 8px;
+      color: var(--gold);
+      font-size: 13px;
+      letter-spacing: 2px;
+    }
+    label { display: block; margin: 10px 0 0; }
+    label .hint { color: var(--dim); font-size: 11px; margin-left: 6px; }
+    input, textarea {
+      width: 100%;
+      margin-top: 4px;
+      padding: 6px 9px;
+      background: #0f110c;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      font: 12px/1.6 Consolas, "Courier New", monospace;
+      outline: none;
+    }
+    input:focus, textarea:focus { border-color: var(--line2); box-shadow: 0 0 0 2px rgba(138, 112, 56, .25); }
+    input.bad, textarea.bad { border-color: var(--bad); box-shadow: 0 0 0 2px rgba(255, 138, 107, .18); }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; }
+    .bar {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      background: rgba(16, 18, 13, .96);
+      border-top: 1px solid var(--line2);
+      backdrop-filter: blur(4px);
+    }
+    .bar .grow { flex: 1; min-width: 0; }
+    button {
+      padding: 6px 18px;
+      border-radius: 5px;
+      border: 1px solid var(--line2);
+      background: linear-gradient(180deg, #33291a, #221c12);
+      color: var(--gold2);
+      font: 13px "Microsoft YaHei", sans-serif;
+      letter-spacing: 1px;
+      cursor: pointer;
+    }
+    button:hover { border-color: var(--gold); color: #fff6dc; }
+    button.ghost { background: transparent; color: var(--dim); border-color: var(--line); }
+    #msg { font-size: 12px; white-space: pre-wrap; }
+    #msg.ok { color: var(--ok); }
+    #msg.bad { color: var(--bad); }
+    code { color: var(--gold); font-family: Consolas, monospace; }
   </style>
 </head>
 <body>
-  <h1>序章 GM</h1>
-  <p>只写覆盖层。原表 <code>conf/json/</code> 不动。保存后重开一局才作用到新城和设施；地块产量在下次读档时叠上去。</p>
-  <p><a href="/__slg/board">看偏离和履历</a></p>
-  <fieldset>
-    <legend>地块</legend>
-    <label>JSON 数组。每格可写 x、y、type、level、wood、iron、stone、grain。
-      <textarea id="tiles" rows="6"></textarea>
-    </label>
-  </fieldset>
-  <fieldset>
-    <legend>城池与设施</legend>
-    <label>主城 x <input id="cx" /></label>
-    <label>主城 y <input id="cy" /></label>
-    <label>主城名字 <input id="cname" /></label>
-    <label>设施 JSON。例如 [{"type":19,"level":1}]
-      <textarea id="facilities" rows="4"></textarea>
-    </label>
-  </fieldset>
-  <fieldset>
-    <legend>系数</legend>
-    <label>每兵每日军饷 <input id="upkeep" /></label>
-    <label>借粮扣多少 <input id="lend" /></label>
-    <label>一游戏日的真实毫秒 <input id="day" /></label>
-    <label>曲辕犁加成，填 0.2 表示两成 <input id="bonus" /></label>
-  </fieldset>
-  <fieldset>
-    <legend>第 20 日借粮文案</legend>
-    <label>借 <textarea id="lendText" rows="3"></textarea></label>
-    <label>不借 <textarea id="refuseText" rows="3"></textarea></label>
-  </fieldset>
-  <p>
-    <button id="save" type="button">保存覆盖层</button>
-    <button id="reload" type="button">重新读取</button>
-  </p>
-  <p id="msg"></p>
+  <div class="wrap">
+    <header>
+      <h1>序章 GM</h1>
+      <div class="sub">只写覆盖层 <code>conf/campaign/overrides.json</code>，原表 <code>conf/json/</code> 逐字节不动。</div>
+      <div class="sub">保存后重开一局才作用到新城和设施；地块产量在下次读档时叠上去。</div>
+      <div class="nav"><a href="/__slg/board">看偏离与履历 →</a></div>
+    </header>
+
+    <fieldset>
+      <legend>地块</legend>
+      <label>JSON 数组。每格可写 x、y、type、level、wood、iron、stone、grain。<span class="hint">最多 200 格</span>
+        <textarea id="tiles" rows="6" spellcheck="false"></textarea>
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>城池与设施</legend>
+      <div class="grid">
+        <label>主城 x <span class="hint">0 ~ 200</span><input id="cx" /></label>
+        <label>主城 y <span class="hint">0 ~ 200</span><input id="cy" /></label>
+      </div>
+      <label>主城名字 <span class="hint">最多 16 字</span><input id="cname" /></label>
+      <label>设施 JSON。例如 <code>[{"type":19,"level":1}]</code> <span class="hint">最多 40 项</span>
+        <textarea id="facilities" rows="4" spellcheck="false"></textarea>
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>系数</legend>
+      <div class="grid">
+        <label>每兵每日军饷 <span class="hint">0 ~ 100</span><input id="upkeep" inputmode="decimal" /></label>
+        <label>借粮扣多少 <span class="hint">0 ~ 100000</span><input id="lend" inputmode="decimal" /></label>
+        <label>一游戏日的真实毫秒 <span class="hint">1000 ~ 3600000（1 秒 ~ 1 小时）</span><input id="day" inputmode="decimal" /></label>
+        <label>曲辕犁加成 <span class="hint">0 ~ 10，0.2 表示两成</span><input id="bonus" inputmode="decimal" /></label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>第 20 日借粮文案</legend>
+      <label>借 <span class="hint">最多 200 字</span><textarea id="lendText" rows="3"></textarea></label>
+      <label>不借 <span class="hint">最多 200 字</span><textarea id="refuseText" rows="3"></textarea></label>
+    </fieldset>
+
+    <div class="bar">
+      <button id="save" type="button">保存覆盖层</button>
+      <button id="reload" type="button" class="ghost">重新读取</button>
+      <span id="msg" class="grow"></span>
+    </div>
+  </div>
+
   <script>
-    const $ = (id) => document.getElementById(id);
+    var $ = function (id) { return document.getElementById(id); };
+
+    // 与 server/gm/overrides.js 的 RULE_RANGES 保持一致
+    var RULES = {
+      upkeepPerSoldier: { min: 0, max: 100, label: '每兵每日军饷' },
+      lendGrain: { min: 0, max: 100000, label: '借粮扣多少' },
+      realMsPerDay: { min: 1000, max: 3600000, label: '一游戏日的真实毫秒' },
+      blueprintBonus: { min: 0, max: 10, label: '曲辕犁加成' },
+    };
+
+    function say(text, kind) {
+      var el = $('msg');
+      el.textContent = text;
+      el.className = 'grow ' + (kind || '');
+    }
+
     function fill(data) {
       $('tiles').value = JSON.stringify(data.tiles || [], null, 2);
       $('facilities').value = JSON.stringify(data.facilities || [], null, 2);
       $('cx').value = data.city && data.city.x != null ? data.city.x : '';
       $('cy').value = data.city && data.city.y != null ? data.city.y : '';
-      $('cname').value = data.city?.name || '';
-      $('upkeep').value = data.rules?.upkeepPerSoldier ?? '';
-      $('lend').value = data.rules?.lendGrain ?? '';
-      $('day').value = data.rules?.realMsPerDay ?? '';
-      $('bonus').value = data.rules?.blueprintBonus ?? '';
-      $('lendText').value = data.story?.lend || '';
-      $('refuseText').value = data.story?.refuse || '';
+      $('cname').value = (data.city && data.city.name) || '';
+      $('upkeep').value = data.rules && data.rules.upkeepPerSoldier != null ? data.rules.upkeepPerSoldier : '';
+      $('lend').value = data.rules && data.rules.lendGrain != null ? data.rules.lendGrain : '';
+      $('day').value = data.rules && data.rules.realMsPerDay != null ? data.rules.realMsPerDay : '';
+      $('bonus').value = data.rules && data.rules.blueprintBonus != null ? data.rules.blueprintBonus : '';
+      $('lendText').value = (data.story && data.story.lend) || '';
+      $('refuseText').value = (data.story && data.story.refuse) || '';
+      ['tiles', 'facilities', 'cx', 'cy', 'cname', 'upkeep', 'lend', 'day', 'bonus', 'lendText', 'refuseText']
+        .forEach(function (id) { $(id).classList.remove('bad'); });
     }
+
     async function reload() {
-      const res = await fetch('/__slg/gm/overrides');
+      var res = await fetch('/__slg/gm/overrides');
       fill(await res.json());
-      $('msg').textContent = '已读取';
+      say('已读取覆盖层', 'ok');
     }
-    $('reload').onclick = () => reload().catch((err) => { $('msg').textContent = err.message; });
-    $('save').onclick = async () => {
-      let tiles, facilities;
+    $('reload').onclick = function () { reload().catch(function (err) { say(err.message, 'bad'); }); };
+
+    // 数值范围校验：返回错误文案数组，同时给不合格的输入框打红边
+    function checkRules() {
+      var errs = [];
+      var out = {};
+      Object.keys(RULES).forEach(function (key) {
+        var el = $(key === 'upkeepPerSoldier' ? 'upkeep' : key === 'lendGrain' ? 'lend'
+          : key === 'realMsPerDay' ? 'day' : 'bonus');
+        var raw = el.value.trim();
+        el.classList.remove('bad');
+        if (raw === '') { out[key] = undefined; return; }
+        var n = Number(raw);
+        var rule = RULES[key];
+        if (!isFinite(n)) {
+          el.classList.add('bad');
+          errs.push(rule.label + ' 不是合法数字：' + raw);
+          return;
+        }
+        if (n < rule.min || n > rule.max) {
+          el.classList.add('bad');
+          errs.push(rule.label + ' 应在 ' + rule.min + ' ~ ' + rule.max + ' 之间（当前 ' + n + '）');
+          return;
+        }
+        out[key] = n;
+      });
+      return { errs: errs, rules: out };
+    }
+
+    $('save').onclick = async function () {
+      var tiles, facilities;
       try {
         tiles = JSON.parse($('tiles').value || '[]');
         facilities = JSON.parse($('facilities').value || '[]');
       } catch (err) {
-        $('msg').textContent = 'JSON 没有写对';
+        say('JSON 没有写对：' + err.message, 'bad');
         return;
       }
-      const num = (v) => v === '' || v == null ? undefined : Number(v);
-      const body = {
-        tiles,
-        facilities,
+      if (!Array.isArray(tiles) || !Array.isArray(facilities)) {
+        say('地块与设施都必须是 JSON 数组', 'bad');
+        return;
+      }
+      var checked = checkRules();
+      if (checked.errs.length) {
+        say('没有保存：\n· ' + checked.errs.join('\n· '), 'bad');
+        return;
+      }
+      var body = {
+        tiles: tiles,
+        facilities: facilities,
         city: {
-          x: num($('cx').value),
-          y: num($('cy').value),
+          x: $('cx').value.trim() === '' ? undefined : Number($('cx').value),
+          y: $('cy').value.trim() === '' ? undefined : Number($('cy').value),
           name: $('cname').value,
         },
-        rules: {
-          upkeepPerSoldier: num($('upkeep').value),
-          lendGrain: num($('lend').value),
-          realMsPerDay: num($('day').value),
-          blueprintBonus: num($('bonus').value),
-        },
+        rules: checked.rules,
         story: { lend: $('lendText').value, refuse: $('refuseText').value },
       };
-      const res = await fetch('/__slg/gm/overrides', {
+      // 覆盖层会改到所有新城与地块产量，保存前二次确认
+      var brief = '写入覆盖层？\n'
+        + '· 地块 ' + tiles.length + ' 格（上限 200）\n'
+        + '· 设施 ' + facilities.length + ' 项（上限 40）\n'
+        + '· 规则 ' + Object.keys(checked.rules).filter(function (k) { return checked.rules[k] != null; }).length + ' 项\n'
+        + '改动需重开一局或下次读档才生效。';
+      if (!window.confirm(brief)) { say('已取消，未写入', ''); return; }
+
+      say('写入中…', '');
+      var res = await fetch('/__slg/gm/overrides', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      const out = await res.json();
-      $('msg').textContent = out.ok ? '已写入覆盖层' : '没有保存';
-      if (out.overrides) fill(out.overrides);
+      var out = await res.json();
+      if (out.ok) {
+        say('已写入覆盖层', 'ok');
+        if (out.overrides) fill(out.overrides);
+      } else {
+        say('没有保存（服务端拒绝）', 'bad');
+      }
     };
-    reload();
+
+    reload().catch(function (err) { say(err.message, 'bad'); });
   </script>
 </body>
 </html>

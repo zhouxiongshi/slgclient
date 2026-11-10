@@ -1,0 +1,16 @@
+{
+  "note": "初版占位映射：八个有人格脑的诸侯按史实就近落州。可随意改动；没列出的州归汉廷，无脑。",
+  "turnDays": 10,
+  "playerHome": "相",
+  "factions": [
+    { "id": "sili", "name": "董卓", "persona": "董卓", "color": "#7f1d1d", "home": "长安" },
+    { "id": "yanzhou", "name": "曹操", "persona": "曹操", "color": "#1d4ed8", "home": "濮阳" },
+    { "id": "jizhou", "name": "袁绍", "persona": "袁绍", "color": "#6d28d9", "home": "邺" },
+    { "id": "youzhou", "name": "公孙瓒", "persona": "公孙瓒", "color": "#0f766e", "home": "蓟" },
+    { "id": "bingzhou", "name": "吕布", "persona": "吕布", "color": "#b45309", "home": "晋阳" },
+    { "id": "xuzhou", "name": "刘备", "persona": "刘备", "color": "#15803d", "home": "下邳" },
+    { "id": "yangzhou", "name": "孙权", "persona": "孙权", "color": "#be123c", "home": "南昌" },
+    { "id": "jingzhou", "name": "司马懿", "persona": "司马懿", "color": "#4338ca", "home": "临湘" }
+  ],
+  "neutral": { "id": "han", "name": "汉廷", "color": "#8a7a52" }
+}

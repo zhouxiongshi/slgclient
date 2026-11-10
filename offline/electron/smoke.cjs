@@ -435,6 +435,33 @@ async function runSmoke(win, server, app) {
       detail);
     // 详情截图已在探针成功瞬间完成（见上方轮询内逻辑）
 
+    // 战略层本城页：存档卡（三档位 + 导出/导入）必须在真实页面里渲染出来（试玩 P2-5）
+    const homePage = await wc.executeJavaScript(`(async function(){
+      try {
+        if (typeof window.__slgStrategyShow === 'function') window.__slgStrategyShow();
+        await new Promise(function(r){ setTimeout(r, 1200); });
+        if (typeof window.__slgHomeWindow === 'function') window.__slgHomeWindow();
+        else { var btn = document.getElementById('slgBtnHome'); if (btn) btn.click(); }
+        await new Promise(function(r){ setTimeout(r, 2500); });
+        var win = document.getElementById('slgCityWin');
+        var text = win ? (win.textContent || '') : (document.body.innerText || '');
+        var closeBtn = document.getElementById('slgStratClose');
+        if (closeBtn) closeBtn.click();
+        return {
+          ok: text.indexOf('存档') >= 0 && text.indexOf('导出存档文件') >= 0,
+          slotRows: (text.match(/号档/g) || []).length,
+          hasImport: text.indexOf('导入存档文件') >= 0,
+          hasWin: !!win,
+          winVisible: win ? win.offsetParent !== null : false,
+          len: text.length,
+        };
+      } catch (e) { return { ok: false, error: String(e) }; }
+    })()`, true);
+    report.homePage = homePage;
+    check('本城页存档卡渲染（三档位 + 导出/导入）',
+      homePage?.ok === true && (homePage.slotRows || 0) >= 3 && homePage.hasImport === true, homePage);
+    await sleep(400);
+
     report.pageErrors = await wc.executeJavaScript('window.__slgErrors || []', true);
     check('页面无未捕获异常（含战报详情渲染）', report.pageErrors.length === 0, report.pageErrors.slice(0, 6));
     check('无渲染进程 error 级控制台输出', report.consoleErrors.length === 0, report.consoleErrors.slice(0, 10));

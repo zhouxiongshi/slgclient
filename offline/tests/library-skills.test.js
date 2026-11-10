@@ -82,6 +82,13 @@ test('图鉴脚本补丁和武将自带战法号都在内存注入里，磁盘�
   assert.equal(js.body.includes('【" + typeName + "】'), false);
   assert.ok(js.body.includes('_ensureSkillTabs'));
   assert.ok(js.body.includes('__slgMountTabs'));
+  assert.ok(js.body.includes('__slgSend'));
+  assert.ok(js.body.includes('onCampaignPending'));
+  assert.ok(js.body.includes('slgStrategyBtn'));
+  assert.ok(js.body.includes('霜寒定九州 · 天下大势'));
+  assert.ok(js.body.includes('__slgCityWindow'));
+  assert.ok(js.body.includes('__slgStrategyShow'));
+  assert.ok(js.body.includes('酒馆'));
   assert.ok(js.body.includes('_applyCampTab'));
   assert.ok(js.body.includes('["全部", "汉", "群", "魏", "蜀", "吴"]'));
   assert.ok(js.body.includes('历史传记'));

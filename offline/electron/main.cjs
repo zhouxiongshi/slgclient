@@ -7,7 +7,7 @@
  * 不向页面注入任何脚本、不修改 index.html、不替换任何资源：
  * 呈现的就是原来那套地图 / 城池 / 建筑 / UI。
  */
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, screen } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 
@@ -41,12 +41,18 @@ async function bootServer() {
 }
 
 function createWindow() {
+  // ★ P2-3：窗口必须落在可用工作区内。旧实现固定 1280×720 且不居中，
+  //   在小屏/多显示器上右边界会超出屏幕，顶部「天下」按钮被裁掉。
+  const area = screen.getPrimaryDisplay().workAreaSize;
+  const width = Math.min(1280, area.width - 40);
+  const height = Math.min(720, area.height - 40);
   win = new BrowserWindow({
-    width: 1280,
-    height: 720,
-    minWidth: 1024,
-    minHeight: 576,
-    title: '三国策略 · 单机版',
+    width,
+    height,
+    minWidth: Math.min(1024, width),
+    minHeight: Math.min(576, height),
+    center: true,
+    title: '霜寒定九州',
     backgroundColor: '#14161a',
     autoHideMenuBar: true,
     show: false,
@@ -57,6 +63,9 @@ function createWindow() {
       webgl: true,
     },
   });
+
+  // ★ P2-1：页面自带的 <title>（Cocos Creator | SLG Demo）不许覆盖窗口标题
+  win.on('page-title-updated', (e) => { e.preventDefault(); });
 
   win.once('ready-to-show', () => {
     win.show();
@@ -105,6 +114,8 @@ if (!gotLock) {
 } else {
   app.on('second-instance', () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
   app.whenReady().then(async () => {
+    // ★ P2-2：去掉 Electron 默认 File/Edit/View 菜单（按 Alt 会弹出来，完全不像正式游戏）
+    Menu.setApplicationMenu(null);
     try {
       server = await bootServer();
       ipcMain.handle('app:status', () => server.status());

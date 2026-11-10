@@ -1,0 +1,521 @@
+{
+  "version": 1,
+  "nextId": 104,
+  "entries": {
+    "1": {
+      "ref": "C0069",
+      "name": "长安",
+      "removed": false
+    },
+    "2": {
+      "ref": "C0001",
+      "name": "雒阳",
+      "removed": false
+    },
+    "3": {
+      "ref": "C0755",
+      "name": "成都",
+      "removed": false
+    },
+    "4": {
+      "ref": "C1125",
+      "name": "番禺",
+      "removed": false
+    },
+    "5": {
+      "ref": "C1159",
+      "name": "龙编",
+      "removed": true
+    },
+    "6": {
+      "ref": "C0374",
+      "name": "定陶",
+      "removed": false
+    },
+    "7": {
+      "ref": "C0305",
+      "name": "陈留",
+      "removed": false
+    },
+    "8": {
+      "ref": "C0206",
+      "name": "邺",
+      "removed": false
+    },
+    "9": {
+      "ref": "C0894",
+      "name": "姑臧",
+      "removed": false
+    },
+    "10": {
+      "ref": "C0040",
+      "name": "安邑",
+      "removed": false
+    },
+    "11": {
+      "ref": "C0060",
+      "name": "弘农",
+      "removed": false
+    },
+    "12": {
+      "ref": "C0950",
+      "name": "晋阳",
+      "removed": false
+    },
+    "13": {
+      "ref": "C1042",
+      "name": "蓟",
+      "removed": false
+    },
+    "14": {
+      "ref": "C0411",
+      "name": "彭城",
+      "removed": false
+    },
+    "15": {
+      "ref": "C0687",
+      "name": "吴",
+      "removed": false
+    },
+    "16": {
+      "ref": "C0630",
+      "name": "寿春",
+      "removed": true
+    },
+    "17": {
+      "ref": "C0653",
+      "name": "秣陵",
+      "removed": true
+    },
+    "18": {
+      "ref": "C0721",
+      "name": "南郑",
+      "removed": false
+    },
+    "19": {
+      "ref": "C0730",
+      "name": "江州",
+      "removed": false
+    },
+    "20": {
+      "ref": "C0616",
+      "name": "临湘",
+      "removed": false
+    },
+    "21": {
+      "ref": "C0549",
+      "name": "江陵",
+      "removed": false
+    },
+    "22": {
+      "ref": "C0556",
+      "name": "襄阳",
+      "removed": true
+    },
+    "23": {
+      "ref": "C0117",
+      "name": "许",
+      "removed": true
+    },
+    "24": {
+      "ref": "C0176",
+      "name": "谯",
+      "removed": true
+    },
+    "25": {
+      "ref": "C0506",
+      "name": "临菑",
+      "removed": true
+    },
+    "26": {
+      "ref": "X016",
+      "name": "儋耳",
+      "removed": true
+    },
+    "27": {
+      "ref": "C1154",
+      "name": "合浦",
+      "removed": false
+    },
+    "28": {
+      "ref": "C1132",
+      "name": "广信",
+      "removed": false
+    },
+    "29": {
+      "ref": "X017",
+      "name": "徐闻",
+      "removed": true
+    },
+    "30": {
+      "ref": "X012",
+      "name": "揭阳",
+      "removed": true
+    },
+    "31": {
+      "ref": "X015",
+      "name": "朱崖洲",
+      "removed": true
+    },
+    "32": {
+      "ref": "X011",
+      "name": "龙川",
+      "removed": true
+    },
+    "33": {
+      "ref": "C0322",
+      "name": "濮阳",
+      "removed": false
+    },
+    "34": {
+      "ref": "C0262",
+      "name": "信都",
+      "removed": true
+    },
+    "35": {
+      "ref": "C0298",
+      "name": "南皮",
+      "removed": true
+    },
+    "36": {
+      "ref": "C0297",
+      "name": "脩",
+      "removed": true
+    },
+    "37": {
+      "ref": "C0870",
+      "name": "允吾",
+      "removed": false
+    },
+    "38": {
+      "ref": "C0850",
+      "name": "冀",
+      "removed": false
+    },
+    "39": {
+      "ref": "C0908",
+      "name": "觻得",
+      "removed": true
+    },
+    "40": {
+      "ref": "C0937",
+      "name": "长子",
+      "removed": false
+    },
+    "41": {
+      "ref": "C1015",
+      "name": "阴馆",
+      "removed": false
+    },
+    "42": {
+      "ref": "C1075",
+      "name": "土垠",
+      "removed": false
+    },
+    "43": {
+      "ref": "C1035",
+      "name": "涿",
+      "removed": false
+    },
+    "44": {
+      "ref": "C0430",
+      "name": "下邳",
+      "removed": false
+    },
+    "45": {
+      "ref": "C0419",
+      "name": "广陵",
+      "removed": false
+    },
+    "46": {
+      "ref": "C0398",
+      "name": "开阳",
+      "removed": false
+    },
+    "47": {
+      "ref": "X014",
+      "name": "亶洲",
+      "removed": true
+    },
+    "48": {
+      "ref": "X008",
+      "name": "侯官",
+      "removed": true
+    },
+    "49": {
+      "ref": "C0700",
+      "name": "南昌",
+      "removed": false
+    },
+    "50": {
+      "ref": "X013",
+      "name": "夷洲",
+      "removed": true
+    },
+    "51": {
+      "ref": "C0673",
+      "name": "山阴",
+      "removed": false
+    },
+    "52": {
+      "ref": "C9002",
+      "name": "庐陵",
+      "removed": false
+    },
+    "53": {
+      "ref": "C9001",
+      "name": "建安",
+      "removed": false
+    },
+    "54": {
+      "ref": "X003",
+      "name": "柴桑",
+      "removed": true
+    },
+    "55": {
+      "ref": "C9003",
+      "name": "永宁",
+      "removed": false
+    },
+    "56": {
+      "ref": "X009",
+      "name": "章安",
+      "removed": true
+    },
+    "57": {
+      "ref": "C0659",
+      "name": "舒",
+      "removed": true
+    },
+    "58": {
+      "ref": "X004",
+      "name": "鄱阳",
+      "removed": true
+    },
+    "59": {
+      "ref": "X006",
+      "name": "雩都",
+      "removed": true
+    },
+    "60": {
+      "ref": "C0749",
+      "name": "梓潼",
+      "removed": true
+    },
+    "61": {
+      "ref": "C0734",
+      "name": "鱼复",
+      "removed": true
+    },
+    "62": {
+      "ref": "C0604",
+      "name": "临沅",
+      "removed": false
+    },
+    "63": {
+      "ref": "C0566",
+      "name": "西陵",
+      "removed": true
+    },
+    "64": {
+      "ref": "C0124",
+      "name": "平舆",
+      "removed": true
+    },
+    "65": {
+      "ref": "C0475",
+      "name": "剧",
+      "removed": true
+    },
+    "66": {
+      "ref": "C0457",
+      "name": "平原",
+      "removed": false
+    },
+    "67": {
+      "ref": "C0493",
+      "name": "黄",
+      "removed": true
+    },
+    "68": {
+      "ref": "C0364",
+      "name": "昌邑",
+      "removed": false
+    },
+    "69": {
+      "ref": "C0079",
+      "name": "高陵",
+      "removed": false
+    },
+    "70": {
+      "ref": "C1084",
+      "name": "襄平",
+      "removed": false
+    },
+    "71": {
+      "ref": "C0385",
+      "name": "郯",
+      "removed": false
+    },
+    "72": {
+      "ref": "C0512",
+      "name": "宛",
+      "removed": false
+    },
+    "73": {
+      "ref": "C0347",
+      "name": "奉高",
+      "removed": false
+    },
+    "74": {
+      "ref": "C0274",
+      "name": "乐成",
+      "removed": false
+    },
+    "75": {
+      "ref": "C0249",
+      "name": "卢奴",
+      "removed": false
+    },
+    "76": {
+      "ref": "C0285",
+      "name": "甘陵",
+      "removed": false
+    },
+    "77": {
+      "ref": "C0292",
+      "name": "邯郸",
+      "removed": false
+    },
+    "78": {
+      "ref": "C0880",
+      "name": "临泾",
+      "removed": false
+    },
+    "79": {
+      "ref": "C0931",
+      "name": "候官",
+      "removed": false
+    },
+    "80": {
+      "ref": "C0888",
+      "name": "富平",
+      "removed": false
+    },
+    "81": {
+      "ref": "C0936",
+      "name": "居延",
+      "removed": false
+    },
+    "82": {
+      "ref": "C0925",
+      "name": "敦煌",
+      "removed": false
+    },
+    "83": {
+      "ref": "C0839",
+      "name": "狄道",
+      "removed": false
+    },
+    "84": {
+      "ref": "C0989",
+      "name": "九原",
+      "removed": false
+    },
+    "85": {
+      "ref": "C0999",
+      "name": "云中",
+      "removed": false
+    },
+    "86": {
+      "ref": "C1010",
+      "name": "善无",
+      "removed": false
+    },
+    "87": {
+      "ref": "C0976",
+      "name": "离石",
+      "removed": false
+    },
+    "88": {
+      "ref": "C1119",
+      "name": "昌辽",
+      "removed": false
+    },
+    "89": {
+      "ref": "C1101",
+      "name": "朝鲜",
+      "removed": false
+    },
+    "90": {
+      "ref": "C1095",
+      "name": "高句骊",
+      "removed": false
+    },
+    "91": {
+      "ref": "C1047",
+      "name": "高柳",
+      "removed": false
+    },
+    "92": {
+      "ref": "C0643",
+      "name": "宛陵",
+      "removed": false
+    },
+    "93": {
+      "ref": "C0837",
+      "name": "朱提",
+      "removed": false
+    },
+    "94": {
+      "ref": "C0766",
+      "name": "武阳",
+      "removed": false
+    },
+    "95": {
+      "ref": "C0833",
+      "name": "汉嘉",
+      "removed": false
+    },
+    "96": {
+      "ref": "C0805",
+      "name": "滇池",
+      "removed": false
+    },
+    "97": {
+      "ref": "C0791",
+      "name": "邛都",
+      "removed": false
+    },
+    "98": {
+      "ref": "C0830",
+      "name": "阴平道",
+      "removed": false
+    },
+    "99": {
+      "ref": "C0580",
+      "name": "泉陵",
+      "removed": false
+    },
+    "100": {
+      "ref": "C0593",
+      "name": "郴",
+      "removed": false
+    },
+    "101": {
+      "ref": "C0170",
+      "name": "相",
+      "removed": false
+    },
+    "102": {
+      "ref": "C0191",
+      "name": "陈",
+      "removed": false
+    },
+    "103": {
+      "ref": "C0447",
+      "name": "东平陵",
+      "removed": false
+    }
+  }
+}

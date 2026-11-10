@@ -30,24 +30,32 @@ function makeCtx(state) {
   };
 }
 
-test('army.dispose：新建队伍槽位不再抛异常，army 字段完整且不污染状态', () => {
+test('army.dispose：合法槽位不抛异常且字段完整；越界 order 不再凭空造第 4 支队伍', () => {
   const state = createWorld(cfg);
   const ctx = makeCtx(state);
   const before = state.armys.length;
-  const order = 1 + Math.max(...state.armys.map((a) => a.order));  // 一定是尚未创建的槽位
-  const r = handleRequest(ctx, req('army.dispose', { cityId: 1, order, position: 0, generalId: 1000 }));
+  // 试玩 P1-4：原版只有 3 支队伍，.order 越界必须拒绝（旧实现会新建第 4 支空队）
+  const bad = handleRequest(ctx, req('army.dispose', { cityId: 1, order: 4, position: 0, generalId: 1000 }));
+  assert.equal(bad.code, 1, 'order=4 应被拒绝');
+  assert.equal(state.armys.length, before, '不应新建队伍');
+  assert.equal(state.armys.some((a) => a.order === 4), false);
+
+  // 合法的第 2 军：新建后字段完整
+  const r = handleRequest(ctx, req('army.dispose', { cityId: 1, order: 2, position: 0, generalId: 1000 }));
   assert.equal(r.code, 0);
-  assert.equal(state.armys.length, before + 1);
-  const army = state.armys.find((a) => a.cityId === 1 && a.order === order);
-  assert.ok(army, '新队伍已创建');
+  const army = state.armys.find((a) => a.cityId === 1 && a.order === 2);
+  assert.ok(army, '第 2 军已创建');
   assert.deepEqual(army.generals, [1000, 0, 0]);
   assert.deepEqual(army.soldiers, [0, 0, 0]);
   assert.deepEqual(army.con_times, [0, 0, 0]);
   assert.equal(army.cmd, 0);
-  assert.equal(ctx.pushes.filter((p) => p.name === 'army.push').length, 1);
+  // 同一武将不能同时属于两支队伍：第 1 军里的 1000 必须被摘掉
+  const first = state.armys.find((a) => a.cityId === 1 && a.order === 1);
+  assert.equal(first.generals.includes(1000), false, '同一武将不能同时挂在两队');
   // 重复操作同一槽位不应再抛异常
-  assert.equal(handleRequest(ctx, req('army.dispose', { cityId: 1, order, position: 1, generalId: 1000 })).code, 0);
-  assert.equal(state.armys.length, before + 1);
+  assert.equal(handleRequest(ctx, req('army.dispose', { cityId: 1, order: 2, position: 1, generalId: 1000 })).code, 0);
+  assert.deepEqual(army.generals, [0, 1000, 0], '同一队内也只保留一个槽位');
+  assert.equal(ctx.pushes.filter((p) => p.name === 'army.push').length, 2);
 });
 
 test('协议入参清洗：NaN/null 坐标不会进入返回体或存档', () => {

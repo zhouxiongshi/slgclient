@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { loadConfig } from '../server/config.js';
 import { createWorld, normalizeWorld } from '../server/world.js';
 import { handleRequest } from '../server/handlers.js';
-import { chapterRules } from '../server/domain/campaign.js';
+import { chapterRules, onTileCleared, noticeRecruit } from '../server/domain/campaign.js';
 import { projectGrain } from '../server/domain/economy.js';
 import { recordDeath } from '../server/domain/chronicle.js';
 import { rewindDays } from '../server/clock.js';
@@ -81,7 +81,7 @@ test('跳到第 5 日刷出黄巾格，不打则第 12 日丢掉一块田', () =
   assert.equal(after, before - 1);
 });
 
-test('借粮会在第 20 日扣粮、发屯长、压低第二波；不选则按拒援', () => {
+test('借粮会扣粮、发屯长、压低第二波；不选则到点按拒援', () => {
   const lend = createWorld(cfg);
   const ctxL = makeCtx(lend);
   assert.equal(handleRequest(ctxL, req('campaign.choose', { option: 'lend' })).code, 0);
@@ -95,6 +95,7 @@ test('借粮会在第 20 日扣粮、发屯长、压低第二波；不选则按�
   assert.equal(lend.drift.band, 'canon');
   const spear = lend.generals.find((g) => g.id === lend.campaign.spearmanId);
   assert.ok(spear);
+  assert.equal(ctxL.pushes.some((p) => p.name === 'campaign.pending'), false, '已决定就不再推弹窗');
 
   rewindDays(lend, 8, rules);
   tick(ctxL);
@@ -112,6 +113,61 @@ test('借粮会在第 20 日扣粮、发屯长、压低第二波；不选则按�
   const waveR = refuse.garrisons.find((g) => g.name === '黄巾再至');
   assert.equal(waveR.soldiers, Math.round(rules.wave2.soldiers * rules.wave2.refuseFactor));
   assert.notEqual(wave.soldiers, waveR.soldiers);
+  assert.ok(refuse.chat.some((c) => c.msg.includes('拒援')), '超时应写明按拒援记');
+});
+
+test('第 20 日推弹窗，点选借粮立即生效', () => {
+  const state = createWorld(cfg);
+  const ctx = makeCtx(state);
+  rewindDays(state, 19, rules);
+  tick(ctx);
+  assert.equal(state.clock.day, 20);
+  assert.equal(state.campaign.choice, null);
+  const pending = ctx.pushes.find((p) => p.name === 'campaign.pending');
+  assert.ok(pending, '第 20 日应推送弹窗');
+  assert.ok(pending.msg.text.includes(String(rules.lendGrain)));
+  assert.ok(pending.msg.lend && pending.msg.refuse);
+
+  assert.equal(handleRequest(ctx, req('campaign.choose', { option: 'refuse' })).msg.ok, true);
+  assert.equal(state.campaign.choice, 'refuse');
+  assert.equal(state.campaign.waveFactor, rules.wave2.refuseFactor);
+  assert.equal(state.campaign.spearmanId, 0);
+  assert.ok(state.chat.some((c) => c.msg.includes('天机')));
+});
+
+test('序章后黄巾流寇按周期出现，太久不打会掠田', () => {
+  const state = createWorld(cfg);
+  const ctx = makeCtx(state);
+  const city = state.citys[0];
+  for (let i = 0; i < 5; i += 1) {
+    state.builds.push({
+      rid: state.role.rid, x: city.x + 4 + i, y: city.y, type: 52, level: 3,
+      wood: 0, iron: 0, stone: 0, grain: 100, op_level: 3,
+      curDurable: 10000, maxDurable: 10000,
+    });
+  }
+  rewindDays(state, 39, rules);
+  tick(ctx);
+  assert.equal(state.campaign.ending, 'held');
+
+  rewindDays(state, 6, rules);
+  tick(ctx);
+  assert.equal(state.clock.day, 46);
+  const patrol = state.garrisons.find((g) => g.patrol && !g.cleared);
+  assert.ok(patrol, '第 46 日应刷出流寇');
+  assert.equal(patrol.name, rules.patrol.name);
+  assert.equal(patrol.soldiers, rules.patrol.baseSoldiers + 6 * rules.patrol.growthPerDay);
+
+  const before = state.builds.filter((b) => b.rid === state.role.rid && b.type >= 52 && b.type <= 55).length;
+  rewindDays(state, 9, rules);
+  tick(ctx);
+  const after = state.builds.filter((b) => b.rid === state.role.rid && b.type >= 52 && b.type <= 55).length;
+  assert.equal(after, before - 1, '流寇超期应掠走一块田');
+
+  const drift0 = state.drift.score;
+  const g2 = onTileCleared(state, cfg, patrol.x, patrol.y);
+  assert.ok(g2);
+  assert.equal(state.drift.score, drift0 + rules.patrol.clearDrift, '清剿流寇的偏离奖励应低于波次');
 });
 
 test('第 40 日守住则磨坊吃到曲辕犁，偏离仍停在旧史', () => {
@@ -139,6 +195,17 @@ test('第 40 日守住则磨坊吃到曲辕犁，偏离仍停在旧史', () => {
   mill.up_time = 0;
   tick(ctx);
   assert.equal(state.roleRes.grain_yield, before + Math.floor(1000 * (1 + rules.blueprint.bonus)));
+});
+
+test('招募关羽，宿命链走到替身且只走一次', () => {
+  const state = createWorld(cfg);
+  const ctx = makeCtx(state);
+  const row = noticeRecruit(state, ctx, '关羽');
+  assert.ok(row && row.ok);
+  assert.equal(state.fates.guanyu, 'standin');
+  assert.ok(state.chat.some((c) => c.msg.includes('陆昭')));
+  assert.equal(noticeRecruit(state, ctx, '关羽'), null);
+  assert.equal(state.fates.guanyu, 'standin');
 });
 
 test('身故留下正史与本局两本轨迹', () => {

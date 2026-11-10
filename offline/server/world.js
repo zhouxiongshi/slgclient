@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { SKILLS, LEVEL_COUNT, skillById } from './skills.js';
 import { ensureTavern } from './domain/tavern.js';
 import { ensureFates } from './domain/fate.js';
+import { ensureStrategy } from './domain/strategy.js';
 import { loadOverrides, applyTileOverlay } from './gm/overrides.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -242,6 +243,7 @@ export function createWorld(cfg, options = {}) {
 
   const hero = makeGeneral(cfg, 1000, 880001, cityId, 1);
   hero.isProtagonist = true;
+  // 开局只有穿越者自带的那一个战法（其余槽位靠剧本与酒馆补），这是既定设定，不改
   hero.skills = [{ id: 19001, lv: 1, cfgId: 19001 }, null, null];
   const generals = [hero];
 
@@ -290,6 +292,7 @@ export function createWorld(cfg, options = {}) {
     campaign: {
       id: 'chapter1', fired: {}, choice: null, waveFactor: null,
       blueprints: [], ending: null, spearmanId: 0,
+      pendingDay: 0, lastPatrolDay: 0,
     },
     garrisons: [],
     chronicle: [],
@@ -356,6 +359,29 @@ export function normalizeWorld(state, cfg) {
   if (!state.garrisons) state.garrisons = [];
   if (!state.chronicle) state.chronicle = [];
   if (!state.chat) state.chat = [];
+  if (!Array.isArray(state.warReports)) state.warReports = [];
+  if (!state.counters) state.counters = {};
+  // ★ 试玩 P1-2：旧档里的兵种槽可能是 [100, null, null]（NaN 序列化）。
+  //   统一补成 3 个非负整数，客户端读 soldiers[1] 不再拿到 null。
+  for (const a of state.armys || []) {
+    for (const key of ['soldiers', 'con_times', 'con_cnts', 'generals']) {
+      const list = Array.isArray(a[key]) ? a[key] : [];
+      a[key] = [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(list[i]) || 0)));
+    }
+  }
+  // ★ 试玩 P0-4：结局后旧版本仍在按日写 campaign.fired（实测 day 276 有 267 个键）。
+  //   这里剪掉过老的键，只保留第 1 天与最近 60 天；它们都在过去，不会被重新触发。
+  if (state.campaign?.fired && typeof state.campaign.fired === 'object') {
+    const keys = Object.keys(state.campaign.fired)
+      .map((k) => Number(k)).filter((n) => Number.isFinite(n)).sort((a, b) => a - b);
+    if (keys.length > 80) {
+      const keep = new Set(['1', ...keys.slice(-60).map(String)]);
+      for (const k of Object.keys(state.campaign.fired)) {
+        if (!keep.has(k)) delete state.campaign.fired[k];
+      }
+    }
+  }
+  if (state.campaign && state.campaign.chapter == null) state.campaign.chapter = 1;
   for (const g of state.generals || []) {
     if (!Array.isArray(g.skills)) g.skills = [null, null, null];
     while (g.skills.length < 3) g.skills.push(null);
@@ -373,6 +399,7 @@ export function normalizeWorld(state, cfg) {
   }
   ensureTavern(state, cfg);
   ensureFates(state);
+  ensureStrategy(state);
   applyTileOverlay(state);
   state.version = SAVE_VERSION;
   return state;

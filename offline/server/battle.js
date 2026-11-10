@@ -100,8 +100,18 @@ function makeUnit(unitId, side, general, cfg, troops) {
   };
 }
 
-/** 依据地图格等级构造系统守军；守军同样装备新战法（等级随地块等级）。 */
-export function makeDefenders(cfg, state, x, y) {
+/** 依据地图格等级构造系统守军；守军同样装备新战法（等级随地块等级）。
+ *  override：战略层城战时由外部给定守军（武将/兵力/名号），跳过地块查表。 */
+export function makeDefenders(cfg, state, x, y, override = null) {
+  if (override) {
+    return {
+      generals: override.generals,
+      soldiers: [...override.soldiers],
+      level: override.level || 1,
+      name: override.name || '守军',
+      place: override.place || null,
+    };
+  }
   const [, level] = cfg.tileAt(x, y);
   const tier = cfg.npcArmy.armys?.[Math.max(0, (level || 1) - 1)] || cfg.npcArmy.armys?.[0];
   const layout = tier?.army?.[0] || { lvs: [1, 1, 1], cfgIds: [100002, 100003, 100004] };
@@ -225,10 +235,97 @@ function armySnapshot(army, soldiers) {
   return { ...army, soldiers: [...soldiers] };
 }
 
-/** 执行一场战斗，产出原版 WarReport + 战后兵力/经验。 */
-export function resolveBattle({ cfg, state, army, x, y, seed }) {
-  const attackers = army.generals.map((gid) => findGeneral(state, gid)).filter(Boolean);
-  const defense = makeDefenders(cfg, state, x, y);
+/** 把内核事件流编排成可播放的动画脚本（随战报推送，客户端覆盖层负责演出）。
+ *  attackers 为 [{slot, g}]：slot 是队伍里的兵种槽（0~2），动画里的 unit 序号
+ *  仍是内核的数组下标，两者不能混用（槽位可能有空将）。 */
+export function buildBattleAnim({ kernel, attackers, defense, army, beginSoldiers, state, cfg, x, y, resultCode, attackRemain, defenseRemain }) {
+  const byRound = new Map();
+  for (const ev of kernel.events) {
+    if (!byRound.has(ev.round)) byRound.set(ev.round, []);
+    byRound.get(ev.round).push(ev);
+  }
+  const unitOf = (uid) => ({ s: uid[0], i: Number(uid.slice(1)) });
+  const nameA = state.role?.nickName || '我军';
+  const garrison = (state.garrisons || []).find((g) => g.x === x && g.y === y && !g.cleared);
+  const nameD = defense.name || garrison?.name || '守军';
+  const place = defense.place || garrison?.name || `(${x},${y})`;
+  const rounds = [];
+  for (const [round, evs] of [...byRound.entries()].sort((a, b) => a[0] - b[0])) {
+    const acts = [];
+    const skillLoss = new Map();
+    for (const ev of evs) {
+      if (ev.kind !== 'damage') continue;
+      const key = `${ev.actor}|${String(ev.payload.skill ?? '')}`;
+      skillLoss.set(key, (skillLoss.get(key) || 0)
+        + Math.max(0, Math.round((ev.payload.applied ?? 0) * TROOP_SCALE)));
+    }
+    for (const ev of evs) {
+      const p = ev.payload || {};
+      if (ev.kind === 'skill_prepare') {
+        acts.push({ t: 'prepare', f: unitOf(ev.actor), skill: String(p.skill ?? '') });
+      } else if (ev.kind === 'skill_trigger') {
+        acts.push({
+          t: 'skill', f: unitOf(ev.actor), skill: String(p.skill ?? ''),
+          loss: skillLoss.get(`${ev.actor}|${String(p.skill ?? '')}`) || 0,
+        });
+      } else if (ev.kind === 'damage') {
+        acts.push({
+          t: 'hit', f: unitOf(ev.actor), to: unitOf(p.target ?? 'a0'),
+          loss: Math.max(0, Math.round((p.applied ?? 0) * TROOP_SCALE)),
+          skill: String(p.skill ?? '普通攻击'),
+        });
+      } else if (ev.kind === 'control') {
+        acts.push({ t: 'control', f: unitOf(ev.actor), to: unitOf(p.target ?? 'a0'), state: String(p.state ?? '') });
+      } else if (ev.kind === 'heal') {
+        acts.push({ t: 'heal', f: unitOf(ev.actor), to: unitOf(p.target ?? 'a0'), amount: Number(p.applied ?? p.amount ?? 0) * TROOP_SCALE });
+      } else if (ev.kind === 'unit_down') {
+        acts.push({ t: 'down', unit: unitOf(p.unit ?? 'a0') });
+      }
+    }
+    if (acts.length) rounds.push({ round, acts });
+  }
+  return {
+    id: state.battleLog.length + 1,
+    x, y,
+    place,
+    winner: resultCode,
+    a: {
+      name: nameA,
+      units: attackers.map(({ slot, g }, i) => ({
+        slot: i,
+        armySlot: slot,
+        name: cfg.generalByCfg.get(g.cfgId)?.name || `武将${g.cfgId}`,
+        troops: beginSoldiers[slot] ?? 0,
+        remain: attackRemain[slot] ?? 0,
+      })),
+    },
+    d: {
+      name: nameD,
+      units: defense.generals.map((g, i) => ({
+        slot: i,
+        name: cfg.generalByCfg.get(g.cfgId)?.name || `武将${g.cfgId}`,
+        troops: defense.soldiers[i] ?? 0,
+        remain: defenseRemain[i] ?? 0,
+      })),
+    },
+    rounds,
+  };
+}
+
+/** 执行一场战斗，产出原版 WarReport + 战后兵力/经验。
+ *  defenseOverride：战略层城战传入的外部守军（跳过地块守军查表）。
+ *
+ *  ★ 试玩 P1-2 根因：攻击方按「有武将的槽位」过滤后，旧代码直接把过滤后的
+ *    数组写回 army.soldiers，槽位 1/2 为空时返回值会从 3 个缩成 1 个，
+ *    之后再往 index 1 征兵就是 undefined + n = NaN → 存档 null。
+ *    现在始终按 3 槽对齐返回（endAttackSoldiers 长度恒为 3）。 */
+export function resolveBattle({ cfg, state, army, x, y, seed, defenseOverride = null }) {
+  const beginSoldiers = [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(army.soldiers?.[i]) || 0)));
+  // 有武将且有余兵的槽位才上阵；slot 保留原槽位号，序号 i 才是内核 unit id
+  const attackers = (army.generals || [])
+    .map((gid, slot) => ({ slot, g: gid ? findGeneral(state, gid) : null }))
+    .filter(({ slot, g }) => g && beginSoldiers[slot] > 0);
+  const defense = makeDefenders(cfg, state, x, y, defenseOverride);
   const defenders = defense.generals;
 
   const idMap = {};
@@ -241,10 +338,10 @@ export function resolveBattle({ cfg, state, army, x, y, seed }) {
     }).filter(([, v]) => v));
   };
 
-  attackers.forEach((g, i) => {
+  attackers.forEach(({ slot, g }, i) => {
     const uid = `a${i}`;
     idMap[uid] = g.id;
-    const unit = makeUnit(uid, 1, g, cfg, army.soldiers[i] ?? 0);
+    const unit = makeUnit(uid, 1, g, cfg, beginSoldiers[slot]);
     buildLookup(uid, unit);
     units.push(unit);
   });
@@ -260,8 +357,11 @@ export function resolveBattle({ cfg, state, army, x, y, seed }) {
   const battleSeed = seed ?? crc32Utf8(`${army.id}:${x}:${y}:${state.battleLog.length}`);
   const kernel = runBattle({ units, seed: battleSeed, config: battleConfig() });
 
-  const attackRemain = attackers.map((_, i) =>
-    Math.max(0, Math.round((kernel.final_troops[`a${i}`] ?? 0) * TROOP_SCALE)));
+  // 按槽位回填：没上阵的槽位余兵记 0（它们本来就没有兵）
+  const attackRemain = [0, 0, 0];
+  attackers.forEach(({ slot }, i) => {
+    attackRemain[slot] = Math.max(0, Math.round((kernel.final_troops[`a${i}`] ?? 0) * TROOP_SCALE));
+  });
   const defenseRemain = defenders.map((_, i) =>
     Math.max(0, Math.round((kernel.final_troops[`d${i}`] ?? 0) * TROOP_SCALE)));
 
@@ -272,7 +372,7 @@ export function resolveBattle({ cfg, state, army, x, y, seed }) {
   else if (kernel.winner === 2) resultCode = 0;
   else resultCode = aTotal > dTotal ? 2 : (aTotal < dTotal ? 0 : 1);
 
-  const begAttackArmy = armySnapshot(army, army.soldiers);
+  const begAttackArmy = armySnapshot(army, beginSoldiers);
   const endAttackArmy = armySnapshot(army, attackRemain);
   const begDefenseArmy = {
     id: -1, cityId: 0, union_id: 0, order: 0,
@@ -284,11 +384,13 @@ export function resolveBattle({ cfg, state, army, x, y, seed }) {
   };
   const endDefenseArmy = { ...begDefenseArmy, soldiers: defenseRemain };
 
-  const begA = attackers.map(generalToArray);
-  const endA = attackers.map((g, i) => generalToArray({
-    ...g,
-    exp: g.exp + Math.round((army.soldiers[i] - attackRemain[i]) * 0.5),
-  }));
+  const begA = attackers.map(({ g }) => generalToArray(g));
+  const expByGeneral = {};
+  const endA = attackers.map(({ slot, g }) => {
+    const exp = Math.max(0, Math.round((beginSoldiers[slot] - attackRemain[slot]) * 0.5));
+    expByGeneral[g.id] = exp;
+    return generalToArray({ ...g, exp: g.exp + exp });
+  });
   const begD = defenders.map(generalToArray);
   const endD = defenders.map(generalToArray);
   const rounds = kernelEventsToRounds(kernel, idMap, skillLookup);
@@ -308,6 +410,10 @@ export function resolveBattle({ cfg, state, army, x, y, seed }) {
     e_d_general: JSON.stringify(endD),
     result: resultCode,
     rounds: JSON.stringify(rounds),
+    anim: buildBattleAnim({
+      kernel, attackers, defense, army, beginSoldiers, state, cfg, x, y,
+      resultCode, attackRemain, defenseRemain,
+    }),
     a_is_read: false,
     d_is_read: false,
     destroy: resultCode === 2 ? 100 : 0,
@@ -315,11 +421,6 @@ export function resolveBattle({ cfg, state, army, x, y, seed }) {
     x, y,
     ctime: Date.now(),
   };
-
-  const expByGeneral = {};
-  attackers.forEach((g, i) => {
-    expByGeneral[g.id] = Math.max(0, Math.round((army.soldiers[i] - attackRemain[i]) * 0.5));
-  });
 
   /** 可复核记录：技能清单、事件指纹、seed 全部留档。 */
   const loadout = Object.entries(skillLookup).flatMap(([uid, m]) =>

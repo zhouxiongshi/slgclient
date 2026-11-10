@@ -12,6 +12,23 @@ const num = (v) => {
   return Number.isFinite(n) ? n : null;
 };
 
+/**
+ * 系数允许区间。GM 页与这里共用同一份口径（页面里有一份同样数值的副本），
+ * 超出区间一律夹到边界，避免手填 0 或 1e9 把一局玩废。
+ */
+export const RULE_RANGES = {
+  upkeepPerSoldier: { min: 0, max: 100, label: '每兵每日军饷' },
+  lendGrain: { min: 0, max: 100000, label: '借粮扣多少' },
+  realMsPerDay: { min: 1000, max: 3600000, label: '一游戏日的真实毫秒' },
+  blueprintBonus: { min: 0, max: 10, label: '曲辕犁加成' },
+};
+
+const clampRule = (key, n) => {
+  const r = RULE_RANGES[key];
+  if (!r) return n;
+  return Math.min(r.max, Math.max(r.min, n));
+};
+
 export function emptyOverrides() {
   return { tiles: [], facilities: [], city: null, rules: {}, story: {} };
 }
@@ -33,12 +50,16 @@ export function sanitizeOverrides(input) {
     level: num(f.level) ?? 0,
   }));
   const city = src.city && typeof src.city === 'object'
-    ? { x: num(src.city.x), y: num(src.city.y), name: String(src.city.name || '').slice(0, 16) }
+    ? {
+      x: num(src.city.x) == null ? null : Math.min(200, Math.max(0, num(src.city.x))),
+      y: num(src.city.y) == null ? null : Math.min(200, Math.max(0, num(src.city.y))),
+      name: String(src.city.name || '').slice(0, 16),
+    }
     : null;
   const rules = {};
   for (const key of ['upkeepPerSoldier', 'lendGrain', 'realMsPerDay', 'blueprintBonus']) {
     const n = num(src.rules?.[key]);
-    if (n != null) rules[key] = n;
+    if (n != null) rules[key] = clampRule(key, n);
   }
   const story = {};
   for (const key of ['lend', 'refuse']) {
