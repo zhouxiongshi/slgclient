@@ -12,9 +12,9 @@ const ROOT = resolve(import.meta.dirname, '..');
 const map = JSON.parse(readFileSync(resolve(ROOT, 'conf', 'campaign', 'strategy', 'map.json'), 'utf8'));
 const registry = JSON.parse(readFileSync(resolve(ROOT, 'conf', 'campaign', 'strategy', 'id-registry.json'), 'utf8'));
 
-test('东汉十三州模型图完整入册：73 城 / 13 州 / 118 条道路，ID 唯一', () => {
-  assert.equal(map.cities.length, 73);
-  assert.equal(map.routes.length, 118);
+test('东汉十三州模型图完整入册：72 城 / 13 州 / 117 条道路，ID 唯一', () => {
+  assert.equal(map.cities.length, 72);
+  assert.equal(map.routes.length, 117);
   const ids = map.cities.map((c) => c.id);
   assert.equal(new Set(ids).size, ids.length, '存在重复 ID');
   const states = new Set(map.cities.map((c) => c.province));
@@ -68,10 +68,17 @@ test('换版迁移：旧城留墓碑 ID 不复用，新城续号；视图与策�
   const reg23 = registry.entries['23'];
   assert.ok(reg23, '许 在注册表留痕');
   assert.ok(reg23.removed === true || reg23.name === '许');
-  // 新城从 68 起续号，不占用墓碑号
+  // 新城从旧号段之后续号，不占用墓碑号
   const maxId = Math.max(...map.cities.map((c) => c.id));
-  assert.equal(registry.nextId - 1, maxId, 'nextId 应紧贴最大已分配号');
+  const usedIds = Object.keys(registry.entries).map(Number);
+  assert.ok(registry.nextId > Math.max(...usedIds), 'nextId 必须越过所有已用号（含墓碑）');
+  assert.ok(registry.nextId > maxId, 'nextId 必须大于在册城最大号');
   assert.ok(maxId >= 68);
+  // 最新删掉的东平陵应留墓碑，且它的号不被在册城占用
+  const tomb = Object.entries(registry.entries).find(([, v]) => v.name === '东平陵');
+  assert.ok(tomb, '东平陵 应留墓碑');
+  assert.equal(tomb[1].removed, true);
+  assert.equal(map.cities.some((c) => c.id === Number(tomb[0])), false, '墓碑号不得被在册城复用');
 });
 
 test('换城名又换 ref：凭别名认领孤儿，不另立新人', () => {

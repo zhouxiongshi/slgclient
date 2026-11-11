@@ -630,6 +630,28 @@ export function patchClientBundle(source) {
         _proto.robLoginUI = function robLoginUI() {`,
     ],
     [
+      `        _proto.onEnterMap = function onEnterMap() {
+          var _this2 = this;
+
+          var dataList = [];`,
+      `        _proto.onEnterMap = function onEnterMap() {
+          var _this2 = this;
+          // 登录进图的第一时间就盖住本地地图，不等贴图加载完
+          if (typeof document !== 'undefined') {
+            var gameDiv = document.getElementById('GameDiv');
+            if (gameDiv) gameDiv.style.visibility = 'hidden';
+            var coverEarly = document.getElementById('slgLocalCover');
+            if (coverEarly) coverEarly.style.display = 'block';
+            var openStrategy = function () {
+              if (window.__slgStrategyShow) window.__slgStrategyShow();
+            };
+            openStrategy();
+            setTimeout(openStrategy, 60);
+          }
+
+          var dataList = [];`,
+    ],
+    [
       `            _this2.clearAllScene();
 
             _this2._mapScene = instantiate(_this2.mapScenePrefab);
@@ -644,11 +666,13 @@ export function patchClientBundle(source) {
             _this2._mapScene.parent = _this2.node;
             _this2._mapUIScene = instantiate(_this2.mapUIScenePrefab);
             _this2._mapUIScene.parent = _this2.node;
-            // 本地地图即刻遮蔽：场景一挂上树就盖住，玩家看不到一帧
+            // 本地地图挂上树之后再盖一次，避免加载完成时闪出来
             if (typeof document !== 'undefined') {
+              var gameDiv2 = document.getElementById('GameDiv');
+              if (gameDiv2) gameDiv2.style.visibility = 'hidden';
               var cover0 = document.getElementById('slgLocalCover');
               if (cover0) cover0.style.display = 'block';
-              if (window.__slgStrategyShow) setTimeout(function () { window.__slgStrategyShow(); }, 50);
+              if (window.__slgStrategyShow) window.__slgStrategyShow();
             }
 
             _this2.addLoadingNode();`,
@@ -666,26 +690,271 @@ export function patchClientBundle(source) {
 const STRATEGY_OVERLAY_SOURCE = `;(function () {
   if (typeof document === 'undefined') return;
   var MAP_W = 2400, MAP_H = 1350;
-  var overlay = null, canvas = null, timer = null, lastState = null, picked = null, mapImg = null;
+  var overlay = null, canvas = null, timer = null, lastState = null, picked = null, pickedPass = null;
+  var logPanel = null, logOpen = false, logTab = 'world';
+  // 关名锚点相对关隘中心（与预览图文字位置一致），不再使用带方底的城名贴图
+  var PASS_LABEL = {
+    '剑门关': [-18.5, 32.6], '阳平关': [-18.5, 32.0], '潼关': [-11.0, 32.6], '函谷关': [-58.6, 31.4],
+    '武关': [-11.0, 32.0], '雁门关': [-18.5, 32.0], '虎牢关': [-18.5, 32.6], '居庸关': [-18.5, 32.0]
+  };
+  var DETAIL = null, IMG = {};
+  // 分层渲染：底图 / 州名 / 路网 / 城池 / 关隘 / 城名，对应 tmx 的六层贴图
+  var LAYER = { base: true, zhou: true, road: true, city: true, pass: true, name: true };
+
+  function layerUrl(path) {
+    var p = String(path || '');
+    while (p.charAt(0) === '/') p = p.slice(1);
+    return '/__slg/strategy/' + p;
+  }
+
+  function ensureImg(key, src) {
+    if (!src) return null;
+    if (!IMG[key]) {
+      var im = new Image();
+      im.onload = function () { if (lastState) draw(lastState); };
+      im.src = src;
+      IMG[key] = im;
+    }
+    var cur = IMG[key];
+    return (cur.complete && cur.naturalWidth > 0) ? cur : null;
+  }
+
+  function loadDetail() {
+    fetch('/__slg/strategy/detail').then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || !d.cities) return;
+      DETAIL = d;
+      Object.keys(d.layers || {}).forEach(function (k) {
+        if (k === 'name') return;
+        ensureImg('layer:' + k, layerUrl(d.layers[k]));
+      });
+    }).catch(function () {});
+  }
+
+  function cityInfo(c) { return (DETAIL && DETAIL.cities && DETAIL.cities[c.id]) || null; }
+
+  /** 选中染色矩阵，与预览图 selTint / selTintPass 一致：城池偏朱红，关隘偏石青。 */
+  var TINT_CITY = [
+    1.30, 0.06, 0.02, 0, 0.03,
+    0.04, 0.90, 0.02, 0, 0,
+    0.02, 0.04, 0.64, 0, 0,
+    0, 0, 0, 1, 0
+  ];
+  var TINT_PASS = [
+    0.80, 0.02, 0.06, 0, 0,
+    0.02, 0.98, 0.08, 0, 0.01,
+    0.04, 0.10, 1.32, 0, 0.04,
+    0, 0, 0, 1, 0
+  ];
+
+  function roundRect(g, x, y, w, h, r) {
+    g.beginPath();
+    g.moveTo(x + r, y);
+    g.arcTo(x + w, y, x + w, y + h, r);
+    g.arcTo(x + w, y + h, x, y + h, r);
+    g.arcTo(x, y + h, x, y, r);
+    g.arcTo(x, y, x + w, y, r);
+    g.closePath();
+  }
+
+  /**
+   * 选中染色：只抠这一座城或这一处关的插画，按原图 alpha 做颜色矩阵。
+   * 不铺色块、不画边框，轮廓和羽化边留着，外面再加一圈柔光。
+   */
+  var tintCache = { key: '', canvas: null };
+  function tintCrop(layerImg, sx, sy, sw, sh, mode) {
+    var key = [mode, sx.toFixed(1), sy.toFixed(1), sw.toFixed(1), sh.toFixed(1)].join('|');
+    if (tintCache.key === key && tintCache.canvas) return tintCache.canvas;
+    var pw = Math.max(2, Math.round(sw * 2)), ph = Math.max(2, Math.round(sh * 2));
+    var off = document.createElement('canvas');
+    off.width = pw; off.height = ph;
+    var og = off.getContext('2d');
+    og.drawImage(layerImg, sx, sy, sw, sh, 0, 0, pw, ph);
+    var frame = og.getImageData(0, 0, pw, ph);
+    var px = frame.data;
+    var m = mode === 'pass' ? TINT_PASS : TINT_CITY;
+    var n = px.length;
+    for (var i = 0; i < n; i += 4) {
+      if (px[i + 3] < 6) continue;
+      var R = px[i] / 255, G = px[i + 1] / 255, B = px[i + 2] / 255, A = px[i + 3] / 255;
+      var r = m[0] * R + m[1] * G + m[2] * B + m[3] * A + m[4];
+      var gv = m[5] * R + m[6] * G + m[7] * B + m[8] * A + m[9];
+      var b = m[10] * R + m[11] * G + m[12] * B + m[13] * A + m[14];
+      var a = m[15] * R + m[16] * G + m[17] * B + m[18] * A + m[19];
+      px[i] = r < 0 ? 0 : (r > 1 ? 255 : (r * 255 + 0.5) | 0);
+      px[i + 1] = gv < 0 ? 0 : (gv > 1 ? 255 : (gv * 255 + 0.5) | 0);
+      px[i + 2] = b < 0 ? 0 : (b > 1 ? 255 : (b * 255 + 0.5) | 0);
+      px[i + 3] = a < 0 ? 0 : (a > 1 ? 255 : (a * 255 + 0.5) | 0);
+    }
+    og.putImageData(frame, 0, 0);
+    tintCache = { key: key, canvas: off };
+    return off;
+  }
+
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function cityLogHtml(c) {
+    var logs = (lastState && lastState.cityLogs && lastState.cityLogs[String(c.id)]) || [];
+    if (!logs.length) return '<div style="margin-top:6px;color:#9c9382;font-size:11.5px;">这座城还没有军报。</div>';
+    return '<div style="margin-top:6px;color:#9c9382;font-size:11.5px;">城池日志</div>'
+      + logs.slice().reverse().slice(0, 6).map(function (e) {
+        return '<div style="color:#e6dac0;font-size:12px;line-height:1.7;">第 ' + e.month + ' 月 ' + esc(e.text) + '</div>';
+      }).join('');
+  }
+
+  function buildLog() {
+    logPanel = document.createElement('div');
+    logPanel.id = 'slgLogPanel';
+    logPanel.style.cssText = 'position:absolute;top:52px;right:12px;bottom:12px;width:460px;z-index:6;display:none;'
+      + 'flex-direction:column;background:rgba(14,15,11,0.94);border:1px solid rgba(186,154,82,0.45);'
+      + 'border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.5);color:#e6dac0;'
+      + 'font:13px/1.7 "Microsoft YaHei",sans-serif;text-align:left;';
+    logPanel.innerHTML = '<div style="padding:8px 12px 0;color:#e8c670;font-weight:bold;letter-spacing:2px;">天下日志</div>'
+      + '<div id="slgLogTabs" style="display:flex;gap:4px;padding:6px 10px;flex-wrap:wrap;"></div>'
+      + '<div id="slgLogBody" style="flex:1;overflow:auto;padding:4px 12px 12px;"></div>';
+    overlay.appendChild(logPanel);
+    var tabs = [['world', '整体'], ['city', '城池'], ['time', '时序'], ['plan', '规划'], ['book', '财报']];
+    var bar = document.getElementById('slgLogTabs');
+    tabs.forEach(function (pair) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = pair[1];
+      b.dataset.tab = pair[0];
+      b.style.cssText = 'background:#2a2c30;color:#e8c670;border:1px solid #ba9a52;border-radius:4px;padding:2px 8px;cursor:pointer;';
+      b.onclick = function () {
+        logTab = pair[0];
+        if (lastState) { renderLog(lastState); draw(lastState); }
+      };
+      bar.appendChild(b);
+    });
+  }
+
+  function quietMonth(m) {
+    return !(m.moves || []).some(function (x) { return x.kind === '出征' || x.kind === '结盟'; });
+  }
+
+  function renderLog(s) {
+    var body = document.getElementById('slgLogBody');
+    if (!body || !logOpen) return;
+    var html = '';
+    if (logTab === 'world') html = renderWorld(s);
+    else if (logTab === 'city') html = renderCityLog(s);
+    else if (logTab === 'time') html = renderTimeline(s);
+    else if (logTab === 'plan') html = renderPlans(s);
+    else html = renderBooks(s);
+    body.innerHTML = html || '<div style="opacity:.6">还没有记录。先推演一月。</div>';
+  }
+
+  function renderWorld(s) {
+    var list = (s.chronicle || []).slice().reverse();
+    if (!list.length) return '';
+    var groups = [];
+    list.forEach(function (m) {
+      var quiet = quietMonth(m);
+      var prev = groups[groups.length - 1];
+      if (quiet && prev && prev.quiet && prev.end + 1 === m.month) {
+        prev.end = m.month;
+        prev.items.push(m);
+      } else groups.push({ quiet: quiet, start: m.month, end: m.month, items: [m] });
+    });
+    return groups.reverse().map(function (g) {
+      if (g.quiet && g.end > g.start) {
+        return '<div style="margin-bottom:10px;"><b style="color:#f0d998;">第 ' + g.start + ' 月到第 ' + g.end
+          + ' 月</b><div>邻城守军还厚，各家征兵，不出征。</div>'
+          + g.items.map(function (m) {
+            return '<div style="opacity:.78;font-size:12px;">' + esc(m.text) + '</div>';
+          }).join('') + '</div>';
+      }
+      return g.items.map(function (m) {
+        return '<div style="margin-bottom:10px;">' + esc(m.text) + '</div>';
+      }).join('');
+    }).join('');
+  }
+
+  function renderCityLog(s) {
+    if (!picked) return '<div style="opacity:.7">在地图上点一座城，这里列出它的出兵、来攻、征兵和易手。</div>';
+    var logs = (s.cityLogs && s.cityLogs[String(picked.id)]) || [];
+    var head = '<div style="color:#f0d998;font-weight:bold;margin-bottom:6px;">' + esc(picked.name) + ' · ' + esc(picked.ownerName) + '</div>';
+    if (!logs.length) return head + '<div style="opacity:.7">这座城还没有军报。</div>';
+    return head + logs.slice().reverse().map(function (e) {
+      return '<div style="margin-bottom:6px;">第 ' + e.month + ' 月 ' + esc(e.text) + '</div>';
+    }).join('');
+  }
+
+  function renderTimeline(s) {
+    var months = (s.chronicle || []).slice().reverse();
+    if (!months.length) return '';
+    var names = [];
+    var cell = {};
+    months.forEach(function (m) {
+      (m.moves || []).forEach(function (mv) {
+        if (!mv.who || mv.kind === '田赋' || mv.kind === '征兵' || mv.kind === '屯田') return;
+        if (names.indexOf(mv.who) < 0) names.push(mv.who);
+        var label = '按兵';
+        var color = '#9c9382';
+        if (mv.kind === '出征' && mv.result === '克') { label = '克' + (mv.toName || ''); color = '#e07060'; }
+        else if (mv.kind === '出征' && mv.result === '挫') { label = '挫' + (mv.toName || ''); color = '#c9a066'; }
+        else if (mv.kind === '出征') { label = '未发'; color = '#8a8070'; }
+        else if (mv.kind === '结盟') { label = '盟' + (mv.otherName || ''); color = '#7dcea0'; }
+        cell[mv.who + '@' + m.month] = { label: label, color: color };
+      });
+    });
+    var head = '<div style="display:flex;gap:4px;position:sticky;top:0;background:#14160f;padding-bottom:4px;">'
+      + '<div style="width:52px;flex:none;"></div>'
+      + months.map(function (m) { return '<div style="width:64px;flex:none;color:#e8c670;font-size:12px;">' + m.month + '月</div>'; }).join('')
+      + '</div>';
+    var rows = names.map(function (name) {
+      return '<div style="display:flex;gap:4px;margin-top:3px;"><div style="width:52px;flex:none;">' + esc(name) + '</div>'
+        + months.map(function (m) {
+          var hit = cell[name + '@' + m.month];
+          return '<div style="width:64px;flex:none;font-size:11px;line-height:1.4;color:' + (hit ? hit.color : '#5c564c') + ';">'
+            + esc(hit ? hit.label : '·') + '</div>';
+        }).join('') + '</div>';
+    }).join('');
+    return head + rows;
+  }
+
+  function renderPlans(s) {
+    var plans = s.plans || [];
+    if (!plans.length) return '';
+    return '<div style="opacity:.75;font-size:12px;margin-bottom:8px;">虚线标在地图上：从出发城指向本月目标。固守不画线。</div>'
+      + plans.map(function (p) {
+        var line = p.type === '固守'
+          ? ('按兵 ' + (p.fromName || '本境'))
+          : ((p.fromName || '出发') + ' → ' + (p.targetName || '目标'));
+        return '<div style="margin-bottom:8px;border-left:3px solid ' + (p.color || '#ba9a52') + ';padding-left:8px;">'
+          + '<b>' + esc(p.name) + '</b> · ' + esc(p.type)
+          + '<div>' + esc(line) + '</div>'
+          + '<div style="opacity:.8;">' + esc(p.reason) + '</div></div>';
+      }).join('');
+  }
+
+  function renderBooks(s) {
+    var books = s.books || [];
+    if (!books.length) return '';
+    return books.map(function (b) {
+      var rows = (b.rows || []).map(function (r) {
+        return '<tr><td>' + esc(r.name) + '</td><td>' + r.grainIn + '</td><td>' + r.goldIn
+          + '</td><td>' + r.grainRecruit + '</td><td>' + r.grainMarch + '</td><td>' + r.goldMarch
+          + '</td><td>' + r.horses + '</td><td>' + r.horseGrain + '</td><td>' + r.horseGold
+          + '</td><td>' + (r.grainEnd == null ? '—' : r.grainEnd) + '</td><td>' + (r.goldEnd == null ? '—' : r.goldEnd) + '</td></tr>';
+      }).join('');
+      return '<div style="margin-bottom:12px;"><b style="color:#f0d998;">第 ' + b.month + ' 月</b>'
+        + '<div style="overflow-x:auto;"><table style="border-collapse:collapse;font-size:12px;white-space:nowrap;">'
+        + '<tr style="color:#9c9382;"><td>势力</td><td>田赋粮</td><td>商税金</td><td>征兵粮</td><td>行军粮</td><td>军饷</td>'
+        + '<td>战马</td><td>马料</td><td>马金</td><td>余粮</td><td>余金</td></tr>' + rows + '</table></div></div>';
+    }).join('');
+  }
 
   function boot() {
-    if (document.getElementById('slgStrategyBtn')) return;
+    if (document.getElementById('slgStrategyOverlay')) return;
     // 本地地图遮罩：进图前不显示（登录首页要露出来），进图后才盖住 Cocos 场景
     var cover = document.createElement('div');
     cover.id = 'slgLocalCover';
-    cover.style.cssText = 'position:fixed;inset:0;z-index:99000;background:#0c0d10;cursor:pointer;display:none;';
-    cover.innerHTML = '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);'
-      + 'color:#3d4046;font:22px "Microsoft YaHei",sans-serif;letter-spacing:8px;">天下 · 点击进入</div>';
-    cover.onclick = function () { if (window.__slgStrategyShow) window.__slgStrategyShow(); };
+    cover.style.cssText = 'position:fixed;inset:0;z-index:99000;background:#e4d3c6;display:none;';
     document.body.appendChild(cover);
-    var btn = document.createElement('button');
-    btn.id = 'slgStrategyBtn';
-    btn.textContent = '天下';
-    btn.style.cssText = 'position:fixed;top:8px;right:10px;z-index:99999;padding:4px 14px;'
-      + 'background:#1a1c20;color:#e8c670;border:1px solid #ba9a52;border-radius:6px;'
-      + 'font:14px/1.6 "Microsoft YaHei",sans-serif;cursor:pointer;opacity:.85;';
-    btn.onclick = toggle;
-    document.body.appendChild(btn);
     overlay = document.createElement('div');
     overlay.id = 'slgStrategyOverlay';
     overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;display:none;'
@@ -693,10 +962,11 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     canvas = document.createElement('canvas');
     canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
     var btnCss = 'background:rgba(22,24,16,.88);color:#e8c670;border:1px solid #ba9a52;'
-      + 'border-radius:4px;padding:3px 10px;cursor:pointer;font:13px "Microsoft YaHei",sans-serif;';
+      + 'border-radius:4px;padding:3px 10px;cursor:pointer;font:13px/1.4 sans-serif;';
     var dock = document.createElement('div');
     dock.id = 'slgDock';
-    dock.style.cssText = 'position:absolute;top:12px;right:12px;z-index:4;display:flex;gap:6px;';
+    dock.style.cssText = 'position:absolute;top:12px;left:12px;z-index:4;display:flex;flex-wrap:wrap;gap:6px;'
+      + 'max-width:calc(100% - 780px);';
     dock.innerHTML = ''
       + '<button id="slgStratTick" style="' + btnCss + '">推演一月</button>'
       + '<button id="slgBtnHome" style="' + btnCss + '">本城</button>'
@@ -705,40 +975,49 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       + '<button id="slgBtnZoomIn" style="' + btnCss + '">放大</button>'
       + '<button id="slgBtnZoomOut" style="' + btnCss + '">缩小</button>'
       + '<button id="slgBtnFit" style="' + btnCss + '">全图</button>'
-      + '<button id="slgStratClose" style="' + btnCss + 'color:#c9c9c9;border-color:#666;">收起</button>';
-    var side = document.createElement('div');
-    side.id = 'slgSide';
-    side.style.cssText = 'position:absolute;left:12px;bottom:12px;width:340px;z-index:4;'
-      + 'display:flex;flex-direction:column;align-items:stretch;gap:8px;text-align:left;';
+      + '<button id="slgBtnLog" style="' + btnCss + '">天下日志</button>';
+    Array.prototype.forEach.call(dock.querySelectorAll('button'), function (b) {
+      b.style.fontFamily = '"Microsoft YaHei",sans-serif';
+    });
     var legend = document.createElement('div');
     legend.id = 'slgLegend';
-    legend.style.cssText = 'text-align:left;background:rgba(14,15,11,0.88);'
+    legend.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:100002;width:220px;display:none;'
+      + 'text-align:left;background:rgba(14,15,11,0.88);'
       + 'border:1px solid rgba(186,154,82,0.45);border-radius:8px;padding:8px 12px;'
       + 'color:#e2d6ba;font:13px/1.7 "Microsoft YaHei",sans-serif;'
       + 'box-shadow:0 6px 20px rgba(0,0,0,.45);';
     var foot = document.createElement('div');
-    foot.style.cssText = 'text-align:left;background:rgba(14,15,11,0.88);'
+    foot.id = 'slgStratFoot';
+    foot.style.cssText = 'position:absolute;left:12px;bottom:12px;z-index:4;width:340px;'
+      + 'text-align:left;background:rgba(14,15,11,0.88);'
       + 'border:1px solid rgba(186,154,82,0.45);border-radius:8px;'
       + 'box-shadow:0 6px 20px rgba(0,0,0,.45);overflow:hidden;';
     var footHead = document.createElement('div');
     footHead.style.cssText = 'padding:6px 12px 4px;color:#e8c670;font:bold 13px "Microsoft YaHei",sans-serif;'
       + 'letter-spacing:2px;text-align:left;border-bottom:1px solid rgba(186,154,82,0.25);';
-    footHead.innerHTML = '天下大势'
+    footHead.innerHTML = '霜寒定九州 · 天下大势'
       + '<div id="slgStratTurn" style="font-weight:normal;letter-spacing:0;opacity:.85;'
       + 'font-size:12px;margin-top:2px;text-align:left;"></div>'
-      + '<div id="slgAlert" style="color:#ffb27a;font:12px/1.5 "Microsoft YaHei",sans-serif;'
-      + 'font-weight:normal;letter-spacing:0;text-align:left;"></div>';
+      + '<div id="slgAlert" style="color:#ffb27a;font-weight:normal;letter-spacing:0;'
+      + 'font-size:12px;line-height:1.5;text-align:left;"></div>';
     var footList = document.createElement('div');
     footList.id = 'slgStratEvents';
     footList.style.cssText = 'max-height:150px;overflow-y:auto;padding:5px 12px 7px;text-align:left;'
       + 'color:#e6dac0;font:13px/1.85 "Microsoft YaHei",sans-serif;text-shadow:0 1px 2px rgba(0,0,0,.8);';
     foot.appendChild(footHead); foot.appendChild(footList);
-    side.appendChild(legend); side.appendChild(foot);
-    overlay.appendChild(canvas); overlay.appendChild(dock); overlay.appendChild(side);
+    overlay.appendChild(canvas); overlay.appendChild(dock); overlay.appendChild(foot);
     document.body.appendChild(overlay);
-    document.getElementById('slgStratClose').onclick = function () { toggle(); };
+    document.body.appendChild(legend);
+    buildSidebar();
+    buildIntro();
+    document.getElementById('slgBtnLog').onclick = function () {
+      logOpen = !logOpen;
+      if (logPanel) logPanel.style.display = logOpen ? 'flex' : 'none';
+      if (lastState) draw(lastState);
+    };
+    buildLog();
     document.getElementById('slgBtnFit').onclick = function () {
-      view.zoom = 1; view.px = 0; view.py = 0; picked = null;
+      view.zoom = 1; view.px = 0; view.py = 0; picked = null; pickedPass = null;
       if (lastState) draw(lastState);
     };
     document.getElementById('slgBtnZoomIn').onclick = function () { if (window.__slgZoom) window.__slgZoom(1); };
@@ -792,7 +1071,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     });
     window.addEventListener('mousemove', function (ev) {
       if (!drag) {
-        if (ev.target === canvas && lastState) canvas.style.cursor = cityAt(ev) ? 'pointer' : 'grab';
+        if (ev.target === canvas && lastState) canvas.style.cursor = hitTarget(ev) ? 'pointer' : 'grab';
         return;
       }
       var dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
@@ -812,25 +1091,22 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       canvas.style.cursor = 'grab';
       if (!moved && isOnCanvas) pickCity(ev);
     });
-    var img = new Image();
-    img.onload = function () { mapImg = img; if (lastState) draw(lastState); };
-    img.src = '/__slg/strategy/panorama.png';
+    loadDetail();
   }
 
-  function toggle() {
-    var ov = document.getElementById('slgStrategyOverlay');
-    var show = ov.style.display === 'none';
-    ov.style.display = show ? 'block' : 'none';
-    if (show) { refresh(); timer = setInterval(refresh, 5000); }
-    else if (timer) { clearInterval(timer); timer = null; }
-  }
-
-  window.__slgStrategyShow = function () {
+  function showMap() {
     var ov = document.getElementById('slgStrategyOverlay');
     if (!ov) return;
-    if (ov.style.display === 'none') toggle();
-    else refresh();
-  };
+    var legendEl = document.getElementById('slgLegend');
+    if (legendEl) legendEl.style.display = 'block';
+    if (ov.style.display === 'none') {
+      ov.style.display = 'block';
+      refresh();
+      if (!timer) timer = setInterval(refresh, 5000);
+    } else refresh();
+  }
+
+  window.__slgStrategyShow = showMap;
   window.__slgZoom = function (dir) {
     var rect = canvas.getBoundingClientRect();
     var zoom = Math.max(1, Math.min(4, view.zoom * (dir > 0 ? 1.25 : 0.8)));
@@ -869,28 +1145,256 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     return [(rect.width - MAP_W * s) / 2 + view.px, (rect.height - MAP_H * s) / 2 + view.py];
   }
 
-  function cityAt(ev) {
+  /**
+   * 命中按插画真实大小，不再把大都城的热区放大到盖住邻城和关隘。
+   * 点在关隘图标上时关隘优先；重叠处取更靠近自身中心的那个。
+   */
+  function hitTarget(ev) {
     if (!lastState || !canvas) return null;
     var rect = canvas.getBoundingClientRect();
     var scale = viewScale(rect);
     var org = origin(rect);
     var x = (ev.clientX - rect.left - org[0]) / scale;
     var y = (ev.clientY - rect.top - org[1]) / scale;
-    var hw = 42 / scale, hh = 28 / scale;
-    var best = null, bestD = Infinity;
+    var best = null, bestScore = Infinity;
+    function take(score, item) {
+      if (score < bestScore) { bestScore = score; best = item; }
+    }
     for (var i = 0; i < lastState.cities.length; i++) {
       var c = lastState.cities[i];
-      if (Math.abs(c.x - x) > hw || Math.abs(c.y - y) > hh) continue;
-      var d = Math.hypot(c.x - x, c.y - y);
-      if (d < bestD) { bestD = d; best = c; }
+      var info = cityInfo(c) || {};
+      var hw = (info.w || 52) / 2;
+      var hh = (info.h || 40) / 2;
+      if (hw < 1 || hh < 1) continue;
+      var nx = Math.abs(c.x - x) / hw;
+      var ny = Math.abs(c.y - y) / hh;
+      if (nx > 1 || ny > 1) continue;
+      take(Math.hypot(nx, ny), { kind: 'city', city: c });
+    }
+    if (LAYER.pass && DETAIL && DETAIL.passes) {
+      for (var j = 0; j < DETAIL.passes.length; j++) {
+        var p = DETAIL.passes[j];
+        var icon = (p.size || 31) / 2;
+        var r = icon + 6;
+        var d = Math.hypot(p.x - x, p.y - y);
+        if (d > r) continue;
+        take(d <= icon ? d / (icon * 2) : d / r, { kind: 'pass', pass: p });
+      }
     }
     return best;
   }
 
   function pickCity(ev) {
-    picked = cityAt(ev);
+    var hit = hitTarget(ev);
+    if (!hit) {
+      picked = null;
+      pickedPass = null;
+      if (lastState) draw(lastState);
+      showIntro(null);
+      return;
+    }
+    if (hit.kind === 'pass') {
+      showPassIntro(hit.pass);
+      if (lastState) draw(lastState);
+      return;
+    }
+    pickedPass = null;
+    picked = hit.city;
     if (lastState) draw(lastState);
-    if (picked && window.__slgCityWindow) window.__slgCityWindow(picked.id);
+    showIntro(hit.city);
+    if (window.__slgCityWindow) window.__slgCityWindow(hit.city.id);
+  }
+
+  function showPassIntro(p) {
+    pickedPass = p || null;
+    picked = null;
+    if (!introPanel || !p) return;
+    var status = (DETAIL.march && DETAIL.march.gateStatus && DETAIL.march.gateStatus[p.name]) || p.status || '通行';
+    var blocked = status === '封锁';
+    introPanel.style.display = 'block';
+    introPanel.innerHTML = '<div style="display:flex;align-items:baseline;gap:8px;">'
+      + '<b style="font:19px "KaiTi","STKaiti",serif;color:#f0d998;letter-spacing:2px;">' + p.name + '</b>'
+      + '<span style="color:' + (blocked ? '#ff6b5e' : '#8fb98a') + ';font-size:12px;">' + status + '</span>'
+      + '<span style="flex:1"></span>'
+      + '<span data-close="1" style="cursor:pointer;color:#8f8676;">✕</span></div>'
+      + '<div style="height:1px;background:rgba(186,154,82,.25);margin:6px 0 5px;"></div>'
+      + kvRow('形制', p.kind)
+      + kvRow('今地', p.today)
+      + kvRow('扼守', p.guard)
+      + kvRow('关联道路', p.road)
+      + kvRow('两端', (p.ends || []).join(' ↔ '))
+      + '<div style="margin-top:7px;color:#9c9382;font-size:11.5px;">沿革</div>'
+      + '<div style="color:#cfc2a6;line-height:1.85;">' + (p.evolution || p.guard || '此地无载。') + '</div>'
+      + '<div class="cost" style="margin-top:8px;color:#9c9382;line-height:1.75;">'
+      + (blocked ? '此关已封锁，前后两段同时禁行。' : '此关通行，行军须经其前后两段，不可绕越。')
+      + '</div>';
+    var closeBtn = introPanel.querySelector('[data-close]');
+    if (closeBtn) closeBtn.onclick = function () {
+      introPanel.style.display = 'none';
+      picked = null;
+      pickedPass = null;
+      if (lastState) draw(lastState);
+    };
+  }
+
+  var sidePanel = null, introPanel = null;
+
+  function buildSidebar() {
+    sidePanel = document.createElement('div');
+    sidePanel.id = 'slgStratSide';
+    sidePanel.style.cssText = 'position:absolute;left:12px;top:52px;z-index:4;width:212px;'
+      + 'background:rgba(14,15,11,0.9);border:1px solid rgba(186,154,82,0.45);border-radius:8px;'
+      + 'padding:9px 12px 11px;color:#e2d6ba;font:13px/1.7 "Microsoft YaHei",sans-serif;'
+      + 'box-shadow:0 6px 20px rgba(0,0,0,.45);text-align:left;';
+    var head = document.createElement('div');
+    head.style.cssText = 'color:#e8c670;font-weight:bold;letter-spacing:2px;text-align:left;'
+      + 'border-bottom:1px solid rgba(186,154,82,0.25);padding-bottom:5px;margin-bottom:6px;';
+    head.textContent = '图层与检索';
+    sidePanel.appendChild(head);
+
+    var LAYER_LABEL = [
+      ['base', '十三州水墨底图'], ['zhou', '十三州部古名'], ['road', '分级路网'],
+      ['city', '城池模型'], ['pass', '八处关隘'], ['name', '城名标注'],
+    ];
+    LAYER_LABEL.forEach(function (pair) {
+      var lab = document.createElement('label');
+      lab.style.cssText = 'display:block;cursor:pointer;line-height:2;text-align:left;color:#e2d6ba;';
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = !!LAYER[pair[0]];
+      cb.style.cssText = 'vertical-align:-2px;margin-right:7px;accent-color:#9c3a2c;';
+      cb.onchange = function () {
+        LAYER[pair[0]] = cb.checked;
+        if (lastState) draw(lastState);
+      };
+      lab.appendChild(cb);
+      lab.appendChild(document.createTextNode(pair[1]));
+      sidePanel.appendChild(lab);
+    });
+
+    var title2 = document.createElement('div');
+    title2.style.cssText = 'color:#e8c670;font-weight:bold;letter-spacing:2px;text-align:left;'
+      + 'border-bottom:1px solid rgba(186,154,82,0.25);padding:8px 0 5px;margin-bottom:6px;';
+    title2.textContent = '检索城池 / 关隘';
+    sidePanel.appendChild(title2);
+
+    var input = document.createElement('input');
+    input.id = 'slgStratFind';
+    input.type = 'search';
+    input.placeholder = '输入城名或关名，如 长安 / 武关';
+    input.setAttribute('list', 'slgStratCityList');
+    input.style.cssText = 'width:100%;padding:5px 8px;border:1px solid rgba(186,154,82,0.45);'
+      + 'border-radius:4px;background:#0f1109;color:#e6dac0;font:12.5px "Microsoft YaHei",sans-serif;';
+    var datalist = document.createElement('datalist');
+    datalist.id = 'slgStratCityList';
+    sidePanel.appendChild(input);
+    sidePanel.appendChild(datalist);
+
+    input.addEventListener('input', function () {
+      var key = String(input.value || '').trim();
+      if (!key || !lastState) return;
+      var hit = null;
+      for (var i = 0; i < lastState.cities.length; i++) {
+        var c = lastState.cities[i];
+        if (c.name === key) { hit = c; break; }
+        if (!hit && c.name.indexOf(key) >= 0) hit = c;
+      }
+      if (hit) { selectCity(hit); return; }
+      // 关隘也能检索：选中后居中并展开扼守说明
+      var passes = (DETAIL && DETAIL.passes) || [];
+      for (var j = 0; j < passes.length; j++) {
+        if (passes[j].name === key) {
+          picked = null;
+          focusOn(passes[j].x, passes[j].y, 2.2);
+          showPassIntro(passes[j]);
+          if (lastState) draw(lastState);
+          return;
+        }
+      }
+    });
+
+    var hint = document.createElement('div');
+    hint.style.cssText = 'font-size:11.5px;line-height:1.75;color:#9c9382;margin-top:7px;text-align:left;';
+    hint.innerHTML = '滚轮缩放 · 拖动平移 · 点城看介绍 · 点关隘看扼守';
+    sidePanel.appendChild(hint);
+
+    overlay.appendChild(sidePanel);
+  }
+
+  function selectCity(c) {
+    if (!c) return;
+    picked = c;
+    pickedPass = null;
+    focusOn(c.x, c.y, 2.2);
+    showIntro(c);
+    if (lastState) draw(lastState);
+  }
+
+  function focusOn(x, y, k) {
+    view.zoom = Math.max(1, Math.min(4, k || 1));
+    var rect = canvas.getBoundingClientRect();
+    var s = Math.min(rect.width / MAP_W, rect.height / MAP_H) * view.zoom;
+    view.px = (MAP_W / 2 - x) * s;
+    view.py = (MAP_H / 2 - y) * s;
+    clampPan(rect);
+  }
+
+  function buildIntro() {
+    introPanel = document.createElement('div');
+    introPanel.id = 'slgStratIntro';
+    introPanel.style.cssText = 'position:absolute;left:236px;top:52px;z-index:4;width:300px;display:none;'
+      + 'background:rgba(14,15,11,0.92);border:1px solid rgba(186,154,82,0.45);border-radius:8px;'
+      + 'padding:10px 13px 12px;color:#e2d6ba;font:12.5px/1.8 "Microsoft YaHei",sans-serif;'
+      + 'box-shadow:0 6px 20px rgba(0,0,0,.45);text-align:left;'
+      + 'max-height:calc(100vh - 330px);overflow-y:auto;';
+    overlay.appendChild(introPanel);
+  }
+
+  function kvRow(k, v) {
+    if (v == null || v === '') return '';
+    return '<div style="display:flex;gap:8px;text-align:left;border-bottom:1px dotted rgba(186,154,82,.2);padding:2px 0;">'
+      + '<span style="flex:0 0 62px;color:#9c9382;">' + k + '</span>'
+      + '<span style="flex:1;color:#e6dac0;">' + v + '</span></div>';
+  }
+
+  function showIntro(c) {
+    if (!introPanel) return;
+    if (!c) { introPanel.style.display = 'none'; return; }
+    pickedPass = null;
+    var info = cityInfo(c) || {};
+    introPanel.style.display = 'block';
+    introPanel.innerHTML = '<div style="display:flex;align-items:baseline;gap:8px;">'
+      + '<b style="font:19px "KaiTi","STKaiti",serif;color:#f0d998;letter-spacing:2px;">' + c.name + '</b>'
+      + '<span style="color:' + c.color + ';font-size:12px;">' + c.ownerName + '</span>'
+      + '<span style="flex:1"></span>'
+      + '<span data-close="1" style="cursor:pointer;color:#8f8676;">✕</span></div>'
+      + '<div style="height:1px;background:rgba(186,154,82,.25);margin:6px 0 5px;"></div>'
+      + kvRow('等级', 'Lv' + c.level + (c.adminLevel ? '　' + c.adminLevel : ''))
+      + kvRow('州郡', c.province + (info.jun ? ' · ' + info.jun : ''))
+      + kvRow('今地', info.today)
+      + kvRow('驻军', String(c.troops || 0))
+      + kvRow('人口', c.population ? String(c.population) : '')
+      + kvRow('地形', c.terrain)
+      + kvRow('特产', c.specialty)
+      + kvRow('主要兵种', c.arms)
+      + cityLogHtml(c)
+      + '<div style="margin-top:7px;color:#9c9382;font-size:11.5px;">史略</div>'
+      + '<div style="color:#cfc2a6;line-height:1.85;">' + (info.history || c.history || '此地无载。') + '</div>'
+      + '<div style="margin-top:9px;display:flex;gap:6px;">'
+      + '<button data-go="1" style="background:rgba(109,83,32,.9);color:#ffe9b0;border:1px solid #a8863e;'
+      + 'border-radius:4px;padding:3px 12px;cursor:pointer;font:12px "Microsoft YaHei",sans-serif;">城池详情</button>'
+      + '</div>';
+    var closeBtn = introPanel.querySelector('[data-close]');
+    if (closeBtn) closeBtn.onclick = function () {
+      introPanel.style.display = 'none';
+      picked = null;
+      pickedPass = null;
+      if (lastState) draw(lastState);
+    };
+    var goBtn = introPanel.querySelector('[data-go]');
+    if (goBtn) goBtn.onclick = function () {
+      if (window.__slgCityWindow) window.__slgCityWindow(c.id);
+    };
   }
 
   function draw(s) {
@@ -902,88 +1406,193 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     var org = origin(rect);
     var ox = org[0], oy = org[1];
     function P(p) { return [ox + p[0] * scale, oy + p[1] * scale]; }
-    g.fillStyle = '#12140f'; g.fillRect(0, 0, rect.width, rect.height);
-    var useImg = !!mapImg && mapImg.complete && mapImg.naturalWidth > 0;
-    if (useImg) {
-      // 你指定的那张图本图（霜寒定九州·五十四城版 全景合成），坐标同系 2400×1800
-      g.drawImage(mapImg, ox, oy, MAP_W * scale, MAP_H * scale);
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = 'high';
+    g.fillStyle = '#e4d3c6';
+    g.fillRect(0, 0, rect.width, rect.height);
+
+    // 底图只用水墨层。全景合成图里已经画了路，不能拿来当底，否则调色会把线路一起洗掉。
+    var hasLayers = !!(DETAIL && DETAIL.layers);
+    var baseImg = LAYER.base && hasLayers && DETAIL.layers.base
+      ? ensureImg('layer:base', layerUrl(DETAIL.layers.base)) : null;
+    if (baseImg) {
+      g.drawImage(baseImg, ox, oy, MAP_W * scale, MAP_H * scale);
     } else {
-      g.fillStyle = '#f0e4c8'; g.fillRect(ox, oy, MAP_W * scale, MAP_H * scale);
-      g.setLineDash([6, 5]); g.strokeStyle = 'rgba(60,110,130,0.55)'; g.lineWidth = 1.5;
-      for (var i = 0; i < s.routes.length; i++) {
-        var r = s.routes[i];
-        if (!r.sea || !r.points || r.points.length < 2) continue;
-        g.beginPath();
-        r.points.forEach(function (p, k) { var q = P(p); k ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); });
-        g.stroke();
-      }
-      g.setLineDash([]);
-      for (var i = 0; i < s.routes.length; i++) {
-        var r = s.routes[i];
-        if (r.sea || !r.points || r.points.length < 2) continue;
-        g.strokeStyle = 'rgba(120,90,50,0.4)'; g.lineWidth = 1.5;
-        g.beginPath();
-        r.points.forEach(function (p, k) { var q = P(p); k ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); });
-        g.stroke();
-      }
+      g.fillStyle = '#efe3cb';
+      g.fillRect(ox, oy, MAP_W * scale, MAP_H * scale);
     }
-    // 城池：图本已有城徽与城名，交互层只描归属环，不再盖住城池
-    g.textAlign = 'center';
-    for (var i = 0; i < s.cities.length; i++) {
-      var c = s.cities[i];
+
+    // 选中时只把底图调浅：路网、城池、关隘都还没画，染底色不会把线路卷进去。
+    var focus = picked || pickedPass;
+    if (focus && baseImg) {
+      g.save();
+      g.globalCompositeOperation = 'screen';
+      g.fillStyle = 'rgba(255, 246, 226, 0.30)';
+      g.fillRect(ox, oy, MAP_W * scale, MAP_H * scale);
+      g.restore();
+      var fq = P([focus.x, focus.y]);
+      var wash = g.createRadialGradient(fq[0], fq[1], 16 * scale, fq[0], fq[1], 420 * scale);
+      wash.addColorStop(0, 'rgba(255, 248, 230, 0.40)');
+      wash.addColorStop(0.45, 'rgba(247, 232, 204, 0.14)');
+      wash.addColorStop(1, 'rgba(247, 232, 204, 0)');
+      g.fillStyle = wash;
+      g.fillRect(ox, oy, MAP_W * scale, MAP_H * scale);
+    }
+    // 纸边轻轻沉一圈，仍然只压在底图上
+    var vcx = ox + MAP_W * scale / 2, vcy = oy + MAP_H * scale / 2;
+    var vr = Math.hypot(MAP_W, MAP_H) * scale * 0.52;
+    var vig = g.createRadialGradient(vcx, vcy, vr * 0.58, vcx, vcy, vr);
+    vig.addColorStop(0, 'rgba(92, 64, 40, 0)');
+    vig.addColorStop(1, 'rgba(92, 64, 40, 0.13)');
+    g.fillStyle = vig;
+    g.fillRect(ox, oy, MAP_W * scale, MAP_H * scale);
+
+    function drawLayer(key) {
+      var pth = LAYER[key] && hasLayers ? DETAIL.layers[key] : null;
+      if (!pth) return null;
+      var im = ensureImg('layer:' + key, layerUrl(pth));
+      if (im) g.drawImage(im, ox, oy, MAP_W * scale, MAP_H * scale);
+      return im;
+    }
+    function paintSelection(layerImg, sx, sy, sw, sh, mode) {
+      var iw = layerImg.naturalWidth, ih = layerImg.naturalHeight;
+      var x0 = Math.max(0, sx), y0 = Math.max(0, sy);
+      var x1 = Math.min(iw, sx + sw), y1 = Math.min(ih, sy + sh);
+      if (x1 - x0 < 2 || y1 - y0 < 2) return;
+      var tinted = tintCrop(layerImg, x0, y0, x1 - x0, y1 - y0, mode);
+      if (!tinted) return;
+      var q = P([x0, y0]);
+      var dw = (x1 - x0) * scale, dh = (y1 - y0) * scale;
+      g.save();
+      g.shadowColor = mode === 'pass' ? 'rgba(29,94,142,0.88)' : 'rgba(208,73,44,0.82)';
+      g.shadowBlur = Math.max(8, 14 * scale);
+      g.drawImage(tinted, q[0], q[1], dw, dh);
+      g.restore();
+      g.drawImage(tinted, q[0], q[1], dw, dh);
+    }
+
+    drawLayer('zhou');
+    drawLayer('road');
+
+    // 城池按原大贴上。选中只染这一座插画，裁剪不放大，免得把邻城一起染红。
+    var cityImg = drawLayer('city');
+    if (cityImg && picked) {
+      var selInfo = cityInfo(picked) || {};
+      var sw = (selInfo.w || 52) + 6, sh = (selInfo.h || 40) + 6;
+      paintSelection(cityImg, picked.x - sw / 2, picked.y - sh / 2, sw, sh, 'city');
+    }
+
+    // 本城金环贴在插画脚下，不框选
+    s.cities.forEach(function (c) {
+      if (s.playerCity !== c.id) return;
       var q = P([c.x, c.y]);
-      var rad = c.level === 3 ? 9 : c.level === 2 ? 8 : 7;
-      if (useImg) {
-        var isHome = s.playerCity === c.id;
-        var sel = picked && picked.id === c.id;
-        g.beginPath(); g.arc(q[0], q[1], rad, 0, 6.2832);
-        g.strokeStyle = c.color; g.lineWidth = sel ? 2.6 : 2; g.stroke();
-        if (isHome) {
-          g.beginPath(); g.arc(q[0], q[1], rad + 3.5, 0, 6.2832);
-          g.strokeStyle = '#e8c670'; g.lineWidth = 1.8; g.stroke();
-        }
-        if (sel) {
-          g.setLineDash([5, 4]);
-          g.beginPath(); g.arc(q[0], q[1], rad + 7, 0, 6.2832);
-          g.strokeStyle = '#ffe9b0'; g.lineWidth = 1.8; g.stroke();
-          g.setLineDash([]);
-        }
-      } else {
-        if (picked && picked.id === c.id) { rad += 3; }
-        g.beginPath(); g.arc(q[0], q[1], rad, 0, 6.2832);
-        g.fillStyle = c.color; g.fill();
-        g.lineWidth = 1.4; g.strokeStyle = '#2a2418'; g.stroke();
-        if (c.level === 3) {
-          g.beginPath(); g.arc(q[0], q[1], rad + 3.5, 0, 6.2832);
-          g.strokeStyle = c.color; g.lineWidth = 1.6; g.stroke();
-        }
-        g.fillStyle = '#3a2c1e';
-        g.font = (c.level >= 2 ? '13px' : '11px') + ' "Microsoft YaHei",sans-serif';
-        g.fillText(c.name, q[0], q[1] - rad - 4);
-      }
+      var bh = ((cityInfo(c) || {}).h || 40) * scale;
+      g.beginPath();
+      g.arc(q[0], q[1] + bh * 0.38, Math.max(3.5, 5.5 * scale), 0, 6.2832);
+      g.strokeStyle = 'rgba(232, 198, 112, 0.95)';
+      g.lineWidth = Math.max(1.25, 1.4 * scale);
+      g.stroke();
+    });
+
+    // 关隘贴图里地名带方底，只抠图标本身；地名改用描边文字
+    var passImg = (LAYER.pass && hasLayers && DETAIL.layers.pass)
+      ? ensureImg('layer:pass', layerUrl(DETAIL.layers.pass)) : null;
+    if (passImg && DETAIL.passes) {
+      DETAIL.passes.forEach(function (p) {
+        var s0 = p.size || 31;
+        var x0 = Math.max(0, p.x - s0 / 2), y0 = Math.max(0, p.y - s0 / 2);
+        var x1 = Math.min(passImg.naturalWidth, p.x + s0 / 2);
+        var y1 = Math.min(passImg.naturalHeight, p.y + s0 / 2);
+        if (x1 - x0 < 2 || y1 - y0 < 2) return;
+        var pq = P([x0, y0]);
+        g.drawImage(passImg, x0, y0, x1 - x0, y1 - y0, pq[0], pq[1], (x1 - x0) * scale, (y1 - y0) * scale);
+      });
     }
-    if (picked) {
-      g.fillStyle = 'rgba(20,18,10,0.85)';
-      g.fillRect(ox + 10, oy + 10, 210, 74);
-      g.fillStyle = '#e8c670'; g.textAlign = 'left';
-      g.font = '14px "Microsoft YaHei",sans-serif';
-      g.fillText(picked.name + '（' + picked.province + '）', ox + 22, oy + 34);
-      g.font = '12px "Microsoft YaHei",sans-serif'; g.fillStyle = '#c8b88a';
-      g.fillText('归属：' + picked.ownerName, ox + 22, oy + 56);
-      g.fillText('驻军：' + picked.troops, ox + 22, oy + 74);
+    if (passImg && pickedPass) {
+      var ps = pickedPass.size || 31;
+      paintSelection(passImg, pickedPass.x - ps / 2, pickedPass.y - ps / 2, ps, ps, 'pass');
     }
-    // 势力图例：DOM 固定层（右下角），不画进 canvas，不随地图拖动
+
+    function inkText(text, mx, my, opt) {
+      var q = P([mx, my]);
+      var px = (opt.size || 15) * scale;
+      g.font = (opt.bold ? '700 ' : '') + px.toFixed(1) + 'px "KaiTi","STKaiti","SimSun",serif';
+      g.textAlign = opt.align || 'left';
+      g.textBaseline = opt.baseline || 'alphabetic';
+      g.lineJoin = 'round';
+      g.miterLimit = 2;
+      g.lineWidth = Math.max(1, (opt.strokeWidth || 3) * scale);
+      g.strokeStyle = opt.stroke;
+      g.strokeText(text, q[0], q[1]);
+      g.fillStyle = opt.fill;
+      g.fillText(text, q[0], q[1]);
+    }
+    // 城名不再贴带方底的图层，按预览图用楷体描边；选中时字色加深
+    if (LAYER.name) {
+      s.cities.forEach(function (c) {
+        var info = cityInfo(c) || {};
+        var lf = c.level >= 3 ? 23 : (c.level === 2 ? 19 : 15);
+        var on = !!(picked && picked.id === c.id);
+        inkText(c.name, c.x, c.y + (info.h || 40) / 2 + 2, {
+          size: lf, align: 'center', baseline: 'top', bold: on,
+          fill: on ? '#c0392b' : (c.level >= 3 ? '#922c20' : (c.level === 2 ? '#704e26' : '#3a4c3a')),
+          stroke: on ? '#fff4dc' : '#f7efdb',
+          strokeWidth: on ? 4 : 3
+        });
+      });
+    }
+    if (logOpen && logTab === 'plan' && s.plans) {
+      s.plans.forEach(function (p) {
+        if (!p.from || !p.target || p.type === '固守') return;
+        var a = null, b = null, i;
+        for (i = 0; i < s.cities.length; i++) {
+          if (String(s.cities[i].id) === String(p.from)) a = s.cities[i];
+          if (String(s.cities[i].id) === String(p.target)) b = s.cities[i];
+        }
+        if (!a || !b) return;
+        var pa = P([a.x, a.y]), pb = P([b.x, b.y]);
+        g.save();
+        g.strokeStyle = p.color || '#c0392b';
+        g.lineWidth = Math.max(1.4, 1.8 * scale);
+        g.setLineDash([7 * scale, 5 * scale]);
+        g.beginPath();
+        g.moveTo(pa[0], pa[1]);
+        g.lineTo(pb[0], pb[1]);
+        g.stroke();
+        g.setLineDash([]);
+        g.fillStyle = p.color || '#c0392b';
+        g.beginPath();
+        g.arc(pb[0], pb[1], Math.max(3, 4 * scale), 0, 6.2832);
+        g.fill();
+        g.restore();
+      });
+    }
+    if (LAYER.pass && DETAIL && DETAIL.passes) {
+      DETAIL.passes.forEach(function (p) {
+        var off = PASS_LABEL[p.name] || [-18.5, 32];
+        var on = !!(pickedPass && pickedPass.name === p.name);
+        inkText(p.name, p.x + off[0], p.y + off[1], {
+          size: 15, align: 'left', baseline: 'alphabetic', bold: on,
+          fill: on ? '#16527e' : '#8d3126',
+          stroke: on ? '#f4f7fb' : '#f8f1df',
+          strokeWidth: on ? 4 : 3
+        });
+      });
+    }
+
+    // 势力图例固定在游戏窗口右下角，不随地图拖动；条目左对齐
     var legend = document.getElementById('slgLegend');
     if (legend) {
-      var html = '';
+      var html = '<div style="color:#e8c670;font-weight:bold;letter-spacing:2px;text-align:left;">势力</div>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;column-gap:14px;text-align:left;">';
       for (var i = 0; i < s.factions.length; i++) {
         var f = s.factions[i];
-        html += '<div><span style="display:inline-block;width:9px;height:9px;border-radius:50%;'
+        html += '<div style="text-align:left;"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;'
           + 'background:' + f.color + ';margin-right:6px;vertical-align:-1px;"></span>' + f.name + '</div>';
       }
-      html += '<div><span style="display:inline-block;width:9px;height:9px;border-radius:50%;'
+      html += '<div style="text-align:left;"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;'
         + 'background:' + s.neutral.color + ';margin-right:6px;vertical-align:-1px;"></span>' + s.neutral.name + '</div>';
-      html += '<div style="border-top:1px solid rgba(186,154,82,.25);margin-top:3px;padding-top:3px;">'
+      html += '</div><div style="border-top:1px solid rgba(186,154,82,.25);margin-top:3px;padding-top:3px;text-align:left;">'
         + '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;'
         + 'border:2px solid #e8c670;margin-right:5px;vertical-align:-1px;"></span>金环＝本城</div>';
       legend.innerHTML = html;
@@ -998,15 +1607,41 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     // ★ P1-6：来犯军必须在天下界面可见，否则本地地图被遮住后威胁等于不存在
     var alertEl = document.getElementById('slgAlert');
     if (alertEl) {
-      alertEl.textContent = (s.threats && s.threats.length) ? ('来犯 ' + s.threats.length + ' 支 · 本城可清剿') : '';
+      var alertTxt = (s.threats && s.threats.length) ? ('来犯 ' + s.threats.length + ' 支 · 本城可清剿') : '';
+      alertEl.textContent = alertTxt;
+      alertEl.style.display = alertTxt ? 'block' : 'none';
     }
     var ev = document.getElementById('slgStratEvents');
     if (ev) {
-      ev.innerHTML = s.events.length
-        ? s.events.map(function (e) {
-          return '<div>· 第' + (e.month || (e.turn || 0) + 1) + '月 ' + e.text + '</div>';
-        }).join('')
-        : '<div style="opacity:.6">天下尚无大事。</div>';
+      if (s.chronicle && s.chronicle.length) {
+        ev.innerHTML = s.chronicle.slice(0, 3).map(function (m) {
+          return '<div style="margin-bottom:6px;">' + esc(m.text) + '</div>';
+        }).join('');
+      } else {
+        ev.innerHTML = s.events.length
+          ? s.events.map(function (e) {
+            return '<div>· 第' + (e.month || (e.turn || 0) + 1) + '月 ' + esc(e.text) + '</div>';
+          }).join('')
+          : '<div style="opacity:.6">天下尚无大事。</div>';
+      }
+    }
+    renderLog(s);
+    var legendBox = document.getElementById('slgLegend');
+    if (legendBox) legendBox.style.display = logOpen ? 'none' : 'block';
+    var dl = document.getElementById('slgStratCityList');
+    if (dl && dl.childNodes.length !== s.cities.length + ((DETAIL && DETAIL.passes) || []).length) {
+      dl.innerHTML = '';
+      s.cities.slice().sort(function (a, b) { return a.name.localeCompare(b.name, 'zh'); })
+        .forEach(function (c) {
+          var o = document.createElement('option');
+          o.value = c.name;
+          dl.appendChild(o);
+        });
+      ((DETAIL && DETAIL.passes) || []).forEach(function (p) {
+        var o = document.createElement('option');
+        o.value = p.name;
+        dl.appendChild(o);
+      });
     }
   }
 
@@ -1290,7 +1925,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
   var STYLE = document.createElement('style');
   STYLE.textContent = [
     '#slgUIv2 *{box-sizing:border-box;margin:0;padding:0;}',
-    '#slgUIv2 .win{position:fixed;top:44px;right:10px;bottom:10px;width:560px;z-index:100000;'
+    '#slgUIv2 .win{position:fixed;top:12px;right:244px;bottom:12px;width:520px;z-index:100000;'
     + 'background:linear-gradient(180deg,#1b1d16,#141610);border:1px solid #8a7038;border-radius:10px;'
     + 'color:#e2d6b8;font:13px/1.8 "Microsoft YaHei",sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.7);display:none;}',
     '#slgUIv2 .win-head{position:relative;padding:12px 16px 8px;border-bottom:1px solid #4a4030;background:rgba(60,48,24,.35);}',
@@ -1498,24 +2133,53 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     var c = cityOf(s, currentCity);
     if (!c) { window.__slgCityClose(); return; }
     var isHome = s.playerCity === c.id;
-    var shownTab = tab;
-    if ((tab === 'home' || tab === 'army' || tab === 'tavern') && !isHome) shownTab = 'overview';
     var title = c.name + (c.level === 3 ? '<span class="badge cap">州治</span>' : '')
       + (isHome ? '<span class="badge home">本城</span>' : '');
     var body = makeWindow('slgCityWin', title,
       '<div class="sub">' + c.province + ' · <span style="color:' + c.color + '">' + c.ownerName
       + '</span> · 驻军 ' + fmt(c.troops) + '</div>',
-      [['overview', '概览'], ['home', '城内'], ['army', '征兵'], ['gens', '武将'], ['tavern', '酒馆'], ['reports', '战报']],
-      shownTab,
+      [['overview', '概览'], ['home', '内政'], ['army', '征兵'], ['gens', '武将'], ['tavern', '酒馆'], ['reports', '战报']],
+      tab,
       function (t) { tab = t; renderCity(s); },
       window.__slgCityClose);
     body.innerHTML = '';
-    if (shownTab === 'overview') tabOverview(s, c, body, isHome);
-    else if (shownTab === 'home') tabHome(body);
-    else if (shownTab === 'army') tabArmy(body);
-    else if (shownTab === 'gens') renderGensInto(body);
-    else if (shownTab === 'tavern') renderTavernInto(body);
-    else if (shownTab === 'reports') renderReportsInto(body);
+    if (tab === 'overview') tabOverview(s, c, body, isHome);
+    else if (tab === 'home') { if (isHome) tabHome(body); else tabInteriorView(c, body); }
+    else if (tab === 'army') { if (isHome) tabArmy(body); else tabConscriptView(c, body); }
+    else if (tab === 'gens') { if (isHome) renderGensInto(body); else tabGeneralView(c, body); }
+    else if (tab === 'tavern') { if (isHome) renderTavernInto(body); else tabTavernView(c, body); }
+    else if (tab === 'reports') renderReportsInto(body, c);
+  }
+
+  function tabInteriorView(c, body) {
+    body.appendChild(el('div', 'card', '<h4 style="margin-top:0">' + c.name + ' · 内政</h4><div class="grid">'
+      + kv('归属', c.ownerName)
+      + kv('行政', c.adminLevel || c.levelName || ('Lv' + c.level))
+      + kv('人口', fmt(c.population))
+      + kv('农业', c.agri) + kv('商业', c.commerce)
+      + kv('城防', c.cityDef) + kv('特产', c.specialty || '—')
+      + kv('地形', c.terrain || '—')
+      + '</div><div class="cost" style="margin-top:8px">设施升级与征收在本城办理。此城入版图后，内政并入本城府库。</div>'));
+  }
+
+  function tabConscriptView(c, body) {
+    body.appendChild(el('div', 'card', '<h4 style="margin-top:0">' + c.name + ' · 征兵</h4><div class="grid">'
+      + kv('驻军', fmt(c.troops))
+      + kv('主要兵种', c.arms || '—')
+      + kv('城防', c.cityDef)
+      + '</div><div class="cost" style="margin-top:8px">此城现属 ' + c.ownerName
+      + '。我军征兵在本城军营办理，攻下此城后驻军并入版图。</div>'));
+  }
+
+  function tabGeneralView(c, body) {
+    body.appendChild(el('div', 'card', '<h4 style="margin-top:0">' + c.name + ' · 武将</h4>'
+      + '<div class="grid">' + kv('守军', fmt(c.troops)) + kv('兵种', c.arms || '—') + '</div>'
+      + '<div class="cost" style="margin-top:8px">敌将名册尚未探明。帐下武将在本城「武将」页编组。</div>'));
+  }
+
+  function tabTavernView(c, body) {
+    body.appendChild(el('div', 'card', '<h4 style="margin-top:0">' + c.name + ' · 酒馆</h4>'
+      + '<div class="cost">' + c.name + ' 的酒馆未对你开放。招募在本城酒馆，按辰光来访。</div>'));
   }
 
   function tabOverview(s, c, body, isHome) {
@@ -1546,7 +2210,19 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     });
     body.appendChild(adjCard);
 
-    var canAttack = !isHome && (neighbors[s.playerCity] || []).indexOf(c.id) >= 0;
+    var canAttack = !isHome && ((s.marchable || []).indexOf(c.id) >= 0
+      || (neighbors[s.playerCity] || []).indexOf(c.id) >= 0);
+    // 行军校验：路网里没有直连行军段，或关隘封锁，都不能出征
+    var marchOk = (s.marchable || []).indexOf(c.id) >= 0;
+    if (!isHome && !marchOk && (neighbors[s.playerCity] || []).indexOf(c.id) >= 0) {
+      var gate = ((s.gates || []).find(function (g) { return g.status === '封锁'; }) || {}).name;
+      body.appendChild(el('div', 'card',
+        '<h4 style="margin-top:0">行军受阻</h4><div class="cost">'
+        + '此地与本城之间没有可通行军段'
+        + (gate ? ('，<b style="color:#ff6b5e">' + gate + '</b> 已封锁') : '')
+        + '。关隘是必经节点，须先解封或改走别路。</div>'));
+    }
+    if (canAttack && !marchOk) canAttack = false;
     if (canAttack) {
       var mine = (s.armies || []).reduce(function (sum, a) {
         return sum + (a.soldiers || []).reduce(function (x, y) { return x + (Number(y) || 0); }, 0);
@@ -1582,7 +2258,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
           '规模：' + (attackMode === 'all' ? '全军' : attackMode === 'half' ? '半军' : '三成')
             + '，约 ' + fmt(deploy) + ' 人',
           '<span class="cost">战败会损兵，并留下溃兵归营；战胜城池入版图。</span>',
-        ], '出征', function () {
+        ], '出征', '取消', function () {
           send('strategy.attack', {
             cityId: c.id,
             frac: ratio,
@@ -1762,7 +2438,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
               confirmBox('清剿来犯军', [
                 '目标：<b>' + t.name + '</b>（兵力约 ' + fmt(t.soldiers) + '）',
                 '<span class="cost">用当前最强的一支部队出战，战败不会清空家底。</span>',
-              ], '出战', function () {
+              ], '出战', '取消', function () {
                 send('strategy.clearThreat', { garrisonId: t.id }).then(function (rsp) {
                   if (rsp.msg && rsp.msg.ok) toast(rsp.msg.summary || '已清剿', rsp.msg.result === 2);
                   else toast('清剿失败：' + ((rsp.msg && rsp.msg.reason) || errText(rsp)), false);
@@ -1782,7 +2458,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
               + '<div class="cost">第 ' + (camp.endingDay || '?') + ' 日结算。'
               + '这局还能继续经营，也可以从头再来。</div>';
             endCard.appendChild(mkBtn('重开一局', 'ghost', function () {
-              confirmBox('重开一局', ['当前进度会被覆盖，确定重来？'], '重来', function () {
+              confirmBox('重开一局', ['当前进度会被覆盖，确定重来？'], '重来', '取消', function () {
                 fetch('/__slg/restart', { method: 'POST' })
                   .then(function (r) { return r.json(); })
                   .then(function (r) { if (r.ok) location.reload(); else toast('重开失败', false); })
@@ -1999,11 +2675,29 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     });
   }
 
-  function renderReportsInto(hostEl) {
+  function renderReportsInto(hostEl, city) {
     hostEl.innerHTML = '<div class="empty">读取中…</div>';
     send('war.report', {}).then(function (rsp) {
       hostEl.innerHTML = '';
-      var list = (rsp.msg.list || []).slice(0, 30);
+      var all = rsp.msg.list || [];
+      var list = all;
+      if (city) {
+        var related = all.filter(function (r) {
+          var place = (r.anim && r.anim.place) ? String(r.anim.place) : '';
+          return place.indexOf(city.name) >= 0;
+        });
+        var isHome = cache && cache.playerCity === city.id;
+        if (related.length) {
+          hostEl.appendChild(el('div', 'cost', '与「' + city.name + '」相关的战报'));
+          list = related;
+        } else if (isHome) {
+          list = all;
+        } else {
+          hostEl.appendChild(el('div', 'empty', city.name + ' 尚无战报。'));
+          return;
+        }
+      }
+      list = list.slice(0, 30);
       if (!list.length) { hostEl.appendChild(el('div', 'empty', '尚无战报。')); return; }
       list.forEach(function (r) {
         var tag = r.result === 2 ? ['胜', '#6fcf97'] : (r.result === 0 ? ['败', '#ff6b5e'] : ['平', '#c8b88a']);

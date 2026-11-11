@@ -10,6 +10,7 @@ import { SKILLS, LEVEL_COUNT, skillById } from './skills.js';
 import { ensureTavern } from './domain/tavern.js';
 import { ensureFates } from './domain/fate.js';
 import { ensureStrategy } from './domain/strategy.js';
+import { ensurePanels } from './domain/panels.js';
 import { loadOverrides, applyTileOverlay } from './gm/overrides.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -400,6 +401,7 @@ export function normalizeWorld(state, cfg) {
   ensureTavern(state, cfg);
   ensureFates(state);
   ensureStrategy(state);
+  ensurePanels(state, cfg);   // 六面板新字段兜底：11-08 之前无 strategy 的旧档也能开
   applyTileOverlay(state);
   state.version = SAVE_VERSION;
   return state;

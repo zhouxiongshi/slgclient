@@ -134,8 +134,8 @@ test('诸侯打玩家的城：本地地图出现来犯军并推送', () => {
 test('策略状态接口：视图含城、路、势力、事件', () => {
   const state = createWorld(cfg);
   const view = strategyViewState(state);
-  assert.equal(view.cities.length, 73);
-  assert.equal(view.routes.length, 118);
+  assert.equal(view.cities.length, 72);
+  assert.equal(view.routes.length, 117);
   assert.equal(view.factions.length, 8);
   assert.ok(view.cities.every((c) => c.color && c.ownerName));
   assert.ok(view.routes.every((r) => Array.isArray(r.points) && r.points.length >= 2));

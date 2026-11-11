@@ -28,6 +28,7 @@
 | **招贤 / 武将** | 招贤返回明确原因（`no_guest` / `not_enough_gold`）+ 今日名单时段状态；武将面板、战法装配、名将替身 |
 | **战法** | 31 条真实战法（`conf/skills.json`，数据源 battle-kit 原文片段，可溯源；版本串 `battle-kit/original-fragments/v3`），四类战法 + 10 级真实数值成长 |
 | **经济** | 产量三段合成（基础 + 设施 + 领地）、政令恢复、征收限额与 CD、集市转换、要塞建造/升级/拆除（有消耗有工期），满仓给出「已满仓」提示 |
+| **六面板（P0 原型）** | 右上角「六府」按钮坞：武将四页签 / 战略决策台 / 内政委任台 / 府库分类账 / 兵刃四槽 / 战法库全库＋配方；独立模块注入，`server/skills.js` 零改动 |
 | **事件史** | 保留 200 条（原 50 条滚动会丢历史），带 `day`，攻陷文案写作「自XX手中攻陷XX」 |
 
 ## 三、目录结构
@@ -62,11 +63,11 @@ offline/
 │   └── campaign/        章节、人物、命运、主角、战略层（strategy/map.json 73 城）
 ├── web/               原版客户端构建产物（web-desktop，磁盘逐字节不动）
 ├── electron/          Electron 壳（main.cjs + smoke.cjs 冒烟）
-├── tests/             单测 102 条（node --test）
+├── tests/             单测 135 条（node --test）
 ├── tools/             工具链
 │   ├── pack.js            打包 exe → build/SLG-Offline-win32-x64/
 │   ├── check-release.js   发行核查（70 项硬性验收，含画面指纹）
-│   ├── smoke.js           运行时冒烟（21 项，源码态 / --packaged 打包态）
+│   ├── smoke.js           运行时冒烟（23 项，源码态 / --packaged 打包态）
 │   ├── explore-bugs.mjs   协议穷举探测（71 handler × 5 payload）
 │   └── build-skills.js    战法表生成器（从 battle-kit 原文生成 skills.json）
 └── package.json
@@ -88,10 +89,10 @@ node electron/main.cjs        # 或直接跑 Electron 壳
 ### 打包 / 验证
 ```bash
 node tools/pack.js               # 打包 exe（自动拷贝 server/conf/web 进包，并校验画面指纹）
-node tools/smoke.js              # 源码态冒烟 21 项
-node tools/smoke.js --packaged   # 打包态冒烟 21 项
+node tools/smoke.js              # 源码态冒烟 23 项
+node tools/smoke.js --packaged   # 打包态冒烟 23 项
 node tools/check-release.js      # 发行核查 70 项
-node --test tests/*.test.js      # 单元测试 102 条
+node --test tests/*.test.js      # 单元测试 135 条
 node tools/explore-bugs.mjs      # 协议穷举探测
 ```
 
@@ -100,8 +101,8 @@ node tools/explore-bugs.mjs      # 协议穷举探测
 ## 五、当前验证状态
 
 - ✅ 画面指纹 `ee987ec2…` 与原版逐字节一致（`pack.json`：`byteIdentical: true`，1582 个文件）
-- ✅ 单元测试 **102/102**（含 `tests/playtest-fixes.test.js` 13 条实机试玩回归、`tests/save-slots.test.js` 6 条存档档位）
-- ✅ 运行时冒烟 **22/22**（源码态 `reports/smoke-original.json`、打包态 `reports/smoke-packaged.json`，含本城页存档卡渲染）
+- ✅ 单元测试 **135/135**（含 `tests/panels.test.js` 8 条六面板回归、`tests/playtest-fixes.test.js` 实机试玩回归、`tests/save-slots.test.js` 存档档位）
+- ✅ 运行时冒烟 **23/23**（源码态 `reports/smoke-original.json`、打包态 `reports/smoke-packaged.json`，含本城页存档卡 + 六面板逐一点开/零横向溢出/51 条战法获取途径）
 - ✅ 发行核查 **70/70**（含内核黄金向量、协议、画面指纹、工作区干净）
 - ✅ 协议穷举：71 handler × 5 = 355 用例，**0 抛异常**（35 条 "null 字段" 为设计空值：空战法槽、未解锁天赋、未选章节分支、无在店客人）
 - ✅ 战争闭环：出征 → 结算 → 战报入档 → 复盘（`[800,400,0]` 可下 1 级城，`[1000,600,600]` 可下 2 级城）
@@ -115,6 +116,7 @@ node tools/explore-bugs.mjs      # 协议穷举探测
 | `STRATEGY_OVERLAY_SOURCE`（`server/skills.js`） | 战略层全屏面板：天下沙盘、编队/征兵、招贤、战报、军情、序章 |
 | `BATTLE_ANIM_SOURCE` | 战斗过程动画与逐回合动作展示 |
 | `CITY_WINDOW_V2_IMPL` | 城池窗口 v2（内政/军务/征兵入口） |
+| `PANELS_UI_SOURCE`（`server/panels-ui.source.js`） | 六面板独立 UI，运行时以 `<script src="/__slg/panels/ui.js">` 挂进 index.html **响应**（磁盘文件不变） |
 
 改完只看服务端即可，不需要重新构建 Cocos 工程；如果哪天真要改客户端资源，必须重新用 Cocos Creator 构建 `web-desktop` 覆盖 `offline/web/`，并重新打包核对指纹（否则 `check-release` 会红）。
 
@@ -126,13 +128,13 @@ node tools/explore-bugs.mjs      # 协议穷举探测
 4. **`handlers.js` 只许变薄**——领域逻辑放 `server/domain/`，见 `docs/ARCHITECTURE.md`。
 5. 提交前必须 `npm test` 全绿；动到 UI/打包再跑 `smoke.js` 与 `check-release.js`。
 
-## 八、已知缺口（未完成项）
+## 八、已知缺口（六面板 P0 之后）
 
-- **存档**：单档 `save.json`（`%APPDATA%\霜寒定九州\saves\`），无多档位/导出/导入。
-- **GM 页**：`/__slg/gm`、`/__slg/board` 仍是白底调试页，与国风 UI 割裂，系数缺范围校验。
-- **架构**：`server/skills.js` 仍同时承担资源注入与三套 DOM UI（2000+ 行），待按 `docs/ARCHITECTURE.md` 拆分。
-- **接口开销**：`/__slg/strategy/state` 每次返回全部 73 城（含考据文本），前端 5 秒轮询，尚未做瘦身/增量。
-- **内容**：796 条战法全量还原需原版 `Tcfg_skill` 数据行；NPC 无动态 AI（仅 8 条人格轴 + 指令单）。
+- **P1 成长闭环**：师承 / 拾遗 / 传承 / 事件战法尚未接实际触发，当前只有「战功研习」与「锻造」可操作；战报残卷尚未按战果自动结算。
+- **P2 决策层**：内政三约束目前只显示、不驱动事件；战略台目标推演为估算，未接出征参数与盟约／背盟预警。
+- **P3 叙事与关系**：可逆传承、事件战法、关系网／战功簿／装备套装未接；天下日志仍是规则脚本（见 `../../docs/天下日志-推演实录.md`）。
+- **内容**：796 条战法全量还原需原版 `Tcfg_skill` 数据行；当前只接 51 条 battle-kit 原文。
+- **架构**：`server/skills.js` 仍承担资源注入与三套 DOM UI；六面板已拆到独立模块，其余待按 `docs/ARCHITECTURE.md` 逐步迁出。
 
 ## 九、设计文档
 
@@ -140,4 +142,6 @@ node tools/explore-bugs.mjs      # 协议穷举探测
 - `docs/DESIGN-loop.md` —— 设计基线：经济闭环、演义主线、名将替身、GM 覆盖层、序章 40 日
 - `docs/ARCHITECTURE.md` —— 模块分层与依赖方向
 - `docs/FEASIBILITY-v1.md` —— 一局完整流程的定义
+- `../../docs/体系设计方案-待确认.md` —— 六面板与战法六源的完整设计（8 项决策已按推荐采纳）
+- `../../docs/P0原型-验收说明.md` —— P0 可点原型的范围、入口、验收数字与后续阶段
 - 与 `docs/DESIGN-loop.md` 冲突时以该文件为准

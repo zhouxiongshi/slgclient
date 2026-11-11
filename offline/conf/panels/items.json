@@ -1,0 +1,474 @@
+{
+  "version": 1,
+  "redline": {
+    "perItemPct": 8,
+    "fullSetPct": 25,
+    "traitOnlyChanges": "时机/目标/条件，不改伤害率"
+  },
+  "slots": [
+    {
+      "id": "weapon",
+      "name": "兵刃"
+    },
+    {
+      "id": "armor",
+      "name": "护具"
+    },
+    {
+      "id": "mount",
+      "name": "坐骑"
+    },
+    {
+      "id": "tome",
+      "name": "兵书"
+    }
+  ],
+  "banned": [
+    "随机词条",
+    "强化失败",
+    "洗练",
+    "无视/免疫类词条",
+    "绑定不可卸",
+    "付费入口"
+  ],
+  "items": [
+    {
+      "id": 300001,
+      "name": "青龙偃月刀",
+      "slot": "weapon",
+      "slotName": "兵刃",
+      "tale": "典出关羽相关记载与演义。",
+      "trait": "先攻：首回合行动顺序提前",
+      "bonusPct": {
+        "force": 8
+      },
+      "set": "桃园",
+      "forge": {
+        "cost": {
+          "iron": 300,
+          "wood": 120,
+          "gold": 200
+        },
+        "drawing": "图·青龙偃月刀",
+        "success": 1,
+        "note": "100% 成功，词条固定可预览，不售卖图纸。"
+      }
+    },
+    {
+      "id": 300002,
+      "name": "丈八蛇矛",
+      "slot": "weapon",
+      "slotName": "兵刃",
+      "tale": "典出张飞相关记载与演义。",
+      "trait": "免准备：准备战法少待一回合",
+      "bonusPct": {
+        "force": 7,
+        "speed": 1
+      },
+      "set": "桃园",
+      "forge": {
+        "cost": {
+          "iron": 320,
+          "wood": 130,
+          "gold": 200
+        },
+        "drawing": "图·丈八蛇矛",
+        "success": 1,
+        "note": "100% 成功，词条固定可预览，不售卖图纸。"
+      }
+    },
+    {
+      "id": 300003,
+      "name": "方天画戟",
+      "slot": "weapon",
+      "slotName": "兵刃",
+      "tale": "典出吕布相关记载与演义。",
+      "trait": "对骑兵增伤（机制，不改伤害率）",
+      "bonusPct": {
+        "force": 8
+      },
+      "set": "无双",
+      "forge": {
+        "cost": {
+          "iron": 340,
+          "wood": 140,
+          "gold": 200
+        },
+        "drawing": "图·方天画戟",
+        "success": 1,
+        "note": "100% 成功，词条固定可预览，不售卖图纸。"
+      }
+    },
+    {
+      "id": 300004,
+      "name": "雌雄双股剑",
+      "slot": "weapon",
+      "slotName": "兵刃",
+      "tale": "典出刘备相关记载与演义。",
+      "trait": "守城时先手",
+      "bonusPct": {
+        "force": 5,
+        "strategy": 3
+      },
+      "set": "桃园",
+      "forge": {
+        "cost": {
+          "iron": 360,
+          "wood": 150,
+          "gold": 200
+        },
+        "drawing": "图·雌雄双股剑",
+        "success": 1,
+        "note": "100% 成功，词条固定可预览，不售卖图纸。"
+      }
+    },
+    {
+      "id": 300005,
+      "name": "古锭刀",
+      "slot": "weapon",
+      "slotName": "兵刃",
+      "tale": "典出孙坚相关记载与演义。",
+      "trait": "击败敌军后追击判定提前",
+      "bonusPct": {
+        "force": 6,
+        "destroy": 2
+      },
+      "set": "江东",
+      "forge": {
+        "cost": {
+          "iron": 380,
+          "wood": 160,
+          "gold": 200
+        },
+        "drawing": "图·古锭刀",
+        "success": 1,
+        "note": "100% 成功，词条固定可预览，不售卖图纸。"
+      }
+    },
+    {
+      "id": 300006,
+      "name": "诸葛连弩",
+      "slot": "weapon",
+      "slotName": "兵刃",
+      "tale": "典出诸葛亮相关记载与演义。",
+      "trait": "主动战法目标 +1（机制）",
+      "bonusPct": {
+        "strategy": 8
+      },
+      "set": "卧龙",
+      "forge": {
+        "cost": {
+          "iron": 400,
+          "wood": 170,
+          "gold": 200
+        },
+        "drawing": "图·诸葛连弩",
+        "success": 1,
+        "note": "100% 成功，词条固定可预览，不售卖图纸。"
+      }
+    },
+    {
+      "id": 300007,
+      "name": "玄铁甲",
+      "slot": "armor",
+      "slotName": "护具",
+      "tale": "典出典韦相关记载与演义。",
+      "trait": "受到突击战法时减伤判定提前",
+      "bonusPct": {
+        "defense": 8
+      },
+      "set": "虎卫",
+      "forge": {
+        "cost": {
+          "iron": 420,
+          "wood": 180,
+          "gold": 200
+        },
+        "drawing": "图·玄铁甲",
+        "success": 1,
+        "note": "100% 成功，词条固定可预览，不售卖图纸。"
+      }
+    },
+    {
+      "id": 300008,
+      "name": "鹤氅",
+      "slot": "armor",
+      "slotName": "护具",
+      "tale": "典出诸葛亮相关记载与演义。",
+      "trait": "计穷免疫改为「延后一回合结算」",
+      "bonusPct": {
+        "strategy": 6,
+        "defense": 2
+      },
+      "set": "卧龙",
+      "forge": {
+        "cost": {
+          "iron": 440,
+          "wood": 190,
+          "gold": 200
+        },
+        "drawing": "图·鹤氅",
+        "success": 1,
+        "note": "100% 成功，词条固定可预览，不售卖图纸。"
+      }
+    },
+    {
+      "id": 300009,
+      "name": "明光铠",
+      "slot": "armor",
+      "slotName": "护具",
+      "tale": "典出曹丕相关记载与演义。",
+      "trait": "守城时减伤（机制）",
+      "bonusPct": {
+        "defense": 7,
+        "force": 1
+      },
+      "set": "魏武",
+      "forge": {
+        "cost": {
+          "iron": 460,
+          "wood": 200,
+          "gold": 200
+        },
+        "drawing": "图·明光铠",
+        "success": 1,
+        "note": "100% 成功，词条固定可预览，不售卖图纸。"
+      }
+    },
+    {
+      "id": 300010,
+      "name": "藤甲",
+      "slot": "armor",
+      "slotName": "护具",
+      "tale": "典出孟获相关记载与演义。",
+      "trait": "对火攻伤害判定单独结算",
+      "bonusPct": {
+        "defense": 6,
+        "destroy": 2
+      },
+      "set": "南中",
+      "forge": {
+        "cost": {
+          "iron": 480,
+          "wood": 210,
+          "gold": 200
+        },
+        "drawing": "图·藤甲",
+        "success": 1,
+        "note": "100% 成功，词条固定可预览，不售卖图纸。"
+      }
+    },
+    {
+      "id": 300011,
+      "name": "赤兔",
+      "slot": "mount",
+      "slotName": "坐骑",
+      "tale": "典出吕布相关记载与演义。",
+      "trait": "行军 +1 格；先攻判定提前",
+      "bonusPct": {
+        "speed": 8
+      },
+      "set": "无双",
+      "forge": {
+        "cost": {
+          "iron": 500,
+          "wood": 220,
+          "gold": 200
+        },
+        "drawing": "图·赤兔",
+        "success": 1,
+        "note": "100% 成功，词条固定可预览，不售卖图纸。"
+      }
+    },
+    {
+      "id": 300012,
+      "name": "的卢",
+      "slot": "mount",
+      "slotName": "坐骑",
+      "tale": "典出刘备相关记载与演义。",
+      "trait": "撤退时保留 5% 溃兵",
+      "bonusPct": {
+        "speed": 6,
+        "defense": 2
+      },
+      "set": "桃园",
+      "forge": {
+        "cost": {
+          "iron": 520,
+          "wood": 230,
+          "gold": 200
+        },
+        "drawing": "图·的卢",
+        "success": 1,
+        "note": "100% 成功，词条固定可预览，不售卖图纸。"
+      }
+    },
+    {
+      "id": 300013,
+      "name": "绝影",
+      "slot": "mount",
+      "slotName": "坐骑",
+      "tale": "典出曹操相关记载与演义。",
+      "trait": "战败时溃兵归营 +5%",
+      "bonusPct": {
+        "speed": 6,
+        "strategy": 2
+      },
+      "set": "魏武",
+      "forge": {
+        "cost": {
+          "iron": 540,
+          "wood": 240,
+          "gold": 200
+        },
+        "drawing": "图·绝影",
+        "success": 1,
+        "note": "100% 成功，词条固定可预览，不售卖图纸。"
+      }
+    },
+    {
+      "id": 300014,
+      "name": "爪黄飞电",
+      "slot": "mount",
+      "slotName": "坐骑",
+      "tale": "典出曹操相关记载与演义。",
+      "trait": "内政巡视范围 +1 城",
+      "bonusPct": {
+        "speed": 5,
+        "strategy": 3
+      },
+      "set": "魏武",
+      "forge": {
+        "cost": {
+          "iron": 560,
+          "wood": 250,
+          "gold": 200
+        },
+        "drawing": "图·爪黄飞电",
+        "success": 1,
+        "note": "100% 成功，词条固定可预览，不售卖图纸。"
+      }
+    },
+    {
+      "id": 300015,
+      "name": "孙子兵法",
+      "slot": "tome",
+      "slotName": "兵书",
+      "tale": "典出孙武相关记载与演义。",
+      "trait": "内政：军备岗位产量 +3%",
+      "bonusPct": {
+        "strategy": 8
+      },
+      "set": "兵家",
+      "forge": {
+        "cost": {
+          "iron": 580,
+          "wood": 260,
+          "gold": 200
+        },
+        "drawing": "图·孙子兵法",
+        "success": 1,
+        "note": "100% 成功，词条固定可预览，不售卖图纸。"
+      }
+    },
+    {
+      "id": 300016,
+      "name": "六韬",
+      "slot": "tome",
+      "slotName": "兵书",
+      "tale": "典出姜尚相关记载与演义。",
+      "trait": "内政：农政岗位产量 +3%",
+      "bonusPct": {
+        "strategy": 5,
+        "defense": 3
+      },
+      "set": "兵家",
+      "forge": {
+        "cost": {
+          "iron": 600,
+          "wood": 270,
+          "gold": 200
+        },
+        "drawing": "图·六韬",
+        "success": 1,
+        "note": "100% 成功，词条固定可预览，不售卖图纸。"
+      }
+    },
+    {
+      "id": 300017,
+      "name": "孟德新书",
+      "slot": "tome",
+      "slotName": "兵书",
+      "tale": "典出曹操相关记载与演义。",
+      "trait": "战功研习进度 +10%",
+      "bonusPct": {
+        "strategy": 7,
+        "force": 1
+      },
+      "set": "魏武",
+      "forge": {
+        "cost": {
+          "iron": 620,
+          "wood": 280,
+          "gold": 200
+        },
+        "drawing": "图·孟德新书",
+        "success": 1,
+        "note": "100% 成功，词条固定可预览，不售卖图纸。"
+      }
+    },
+    {
+      "id": 300018,
+      "name": "太平要术",
+      "slot": "tome",
+      "slotName": "兵书",
+      "tale": "典出张角相关记载与演义。",
+      "trait": "恢复类战法目标 +1（机制）",
+      "bonusPct": {
+        "strategy": 6,
+        "defense": 2
+      },
+      "set": "黄天",
+      "forge": {
+        "cost": {
+          "iron": 640,
+          "wood": 290,
+          "gold": 200
+        },
+        "drawing": "图·太平要术",
+        "success": 1,
+        "note": "100% 成功，词条固定可预览，不售卖图纸。"
+      }
+    }
+  ],
+  "materials": [
+    {
+      "id": 400001,
+      "name": "兵书残卷",
+      "kind": "scroll",
+      "note": "战报结算产出，用于战功研习"
+    },
+    {
+      "id": 400002,
+      "name": "精铁",
+      "kind": "material",
+      "note": "锻造材料"
+    },
+    {
+      "id": 400003,
+      "name": "名匠图样",
+      "kind": "material",
+      "note": "攻陷名城拾遗"
+    },
+    {
+      "id": 400004,
+      "name": "州郡信物",
+      "kind": "relic",
+      "note": "剧情兑换，不加战力"
+    }
+  ],
+  "starterGift": [
+    300001,
+    300007
+  ]
+}

@@ -25,6 +25,8 @@ import { createSkillAssets } from './skills.js';
 import { loadOverrides, saveOverrides } from './gm/overrides.js';
 import { dossierFor } from './domain/dossier.js';
 import { strategyViewState } from './domain/strategy.js';
+import { panelState, panelAction, panelSelfCheck } from './domain/panels.js';
+import { PANELS_UI_SOURCE } from './panels-ui.js';
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -242,6 +244,12 @@ export async function startOfflineServer(options = {}) {
       res.writeHead(500); res.end('Internal error');
       return;
     }
+    // 六面板 UI：只在 HTTP 响应里追加一个 script 标签，磁盘 index.html 与打包产物一个字节都不改。
+    if (urlPath === '/index.html' && !body.includes(Buffer.from('/__slg/panels/ui.js'))) {
+      const html = body.toString('utf8');
+      const tag = '<script src="/__slg/panels/ui.js" charset="utf-8"></script>';
+      body = Buffer.from(/<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${tag}</body>`) : html + tag);
+    }
     res.writeHead(200, {
       'Content-Type': MIME[extname(target).toLowerCase()] || 'application/octet-stream',
       'Cache-Control': 'no-store',
@@ -265,6 +273,39 @@ export async function startOfflineServer(options = {}) {
       if (urlPath === '/account/resetpwd') { res.writeHead(200); res.end('resetPwd'); return; }
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({ code: 0 }));
+      return;
+    }
+
+    /* ---------------- 六面板：独立模块，不改 skills.js ---------------- */
+    if (urlPath === '/__slg/panels/ui.js') {
+      const buf = Buffer.from(PANELS_UI_SOURCE);
+      res.writeHead(200, {
+        'Content-Type': 'text/javascript; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'Content-Length': buf.length,
+      });
+      res.end(buf);
+      return;
+    }
+    if (urlPath === '/__slg/panels/selfcheck' && req.method === 'GET') {
+      json(res, 200, panelSelfCheck());
+      return;
+    }
+    if (urlPath === '/__slg/panels/state' && req.method === 'GET') {
+      try { sendJson(req, res, panelState(state, cfg)); }
+      catch (err) { log('error', `panels state: ${err.stack || err.message}`); json(res, 500, { ok: false, message: err.message }); }
+      return;
+    }
+    if (urlPath === '/__slg/panels/action' && req.method === 'POST') {
+      readJson(req, 65536, (action) => {
+        if (!action) { json(res, 400, { ok: false, message: '请求体无效' }); return; }
+        let result;
+        try { result = panelAction(state, cfg, action); }
+        catch (err) { log('error', `panels action: ${err.stack || err.message}`); result = { ok: false, message: err.message }; }
+        if (result.ok) save();
+        try { json(res, 200, { ...result, view: panelState(state, cfg) }); }
+        catch (err) { json(res, 200, { ...result, view: null, viewError: err.message }); }
+      });
       return;
     }
 
@@ -307,6 +348,39 @@ export async function startOfflineServer(options = {}) {
         res.end(img);
       } catch {
         res.writeHead(404); res.end('no panorama');
+      }
+      return;
+    }
+    if (urlPath === '/__slg/strategy/detail') {
+      try {
+        const raw = readFileSync(join(ROOT, 'conf', 'campaign', 'strategy', 'detail.json'), 'utf8');
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+        res.end(raw);
+      } catch {
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+        res.end('{}');
+      }
+      return;
+    }
+    if (urlPath.startsWith('/__slg/strategy/layers/')) {
+      // 图层只允许白名单文件名，避免拼路径读到别处
+      const name = urlPath.slice('/__slg/strategy/layers/'.length);
+      const MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg' };
+      const ext = name.split('.').pop().toLowerCase();
+      if (!/^[a-z0-9_]+\.(png|jpg|jpeg)$/.test(name) || !MIME[ext]) {
+        res.writeHead(404); res.end('bad layer');
+        return;
+      }
+      try {
+        const img = readFileSync(join(ROOT, 'conf', 'campaign', 'strategy', 'layers', name));
+        res.writeHead(200, {
+          'Content-Type': MIME[ext],
+          'Cache-Control': 'public, max-age=604800',
+          'Content-Length': img.length,
+        });
+        res.end(img);
+      } catch {
+        res.writeHead(404); res.end('no layer');
       }
       return;
     }

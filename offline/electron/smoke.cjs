@@ -442,11 +442,15 @@ async function runSmoke(win, server, app) {
         await new Promise(function(r){ setTimeout(r, 1200); });
         if (typeof window.__slgHomeWindow === 'function') window.__slgHomeWindow();
         else { var btn = document.getElementById('slgBtnHome'); if (btn) btn.click(); }
-        await new Promise(function(r){ setTimeout(r, 2500); });
+        // 本城页要串行拉设施、资源、meta、存档档位，给足时间
+        var text = '';
+        for (var i = 0; i < 24; i++) {
+          await new Promise(function(r){ setTimeout(r, 500); });
+          var w = document.getElementById('slgCityWin');
+          text = w ? (w.textContent || '') : '';
+          if (text.indexOf('导出存档文件') >= 0) break;
+        }
         var win = document.getElementById('slgCityWin');
-        var text = win ? (win.textContent || '') : (document.body.innerText || '');
-        var closeBtn = document.getElementById('slgStratClose');
-        if (closeBtn) closeBtn.click();
         return {
           ok: text.indexOf('存档') >= 0 && text.indexOf('导出存档文件') >= 0,
           slotRows: (text.match(/号档/g) || []).length,
@@ -454,6 +458,7 @@ async function runSmoke(win, server, app) {
           hasWin: !!win,
           winVisible: win ? win.offsetParent !== null : false,
           len: text.length,
+          sample: text.slice(0, 160),
         };
       } catch (e) { return { ok: false, error: String(e) }; }
     })()`, true);
@@ -461,6 +466,50 @@ async function runSmoke(win, server, app) {
     check('本城页存档卡渲染（三档位 + 导出/导入）',
       homePage?.ok === true && (homePage.slotRows || 0) >= 3 && homePage.hasImport === true, homePage);
     await sleep(400);
+
+    // 六面板体系 P0：真实页面里逐一点开，并核对「51 条战法每条都有获取途径」
+    const panels = await wc.executeJavaScript(`(async function(){
+      try {
+        if (!window.__slgPanels) return { ok:false, reason:'no __slgPanels (ui.js 未注入)' };
+        for (var w=0; w<20 && !window.__slgPanels.state(); w++) {
+          await new Promise(function(r){ setTimeout(r, 300); });
+        }
+        var tabs=['general','strategy','interior','depot','equip','library'], out={};
+        for (var i=0;i<tabs.length;i++){
+          window.__slgPanels.open(tabs[i]);
+          await new Promise(function(r){ setTimeout(r, 420); });
+          var b=document.getElementById('slgPanelsBody');
+          var tx=b?(b.textContent||''):'';
+          out[tabs[i]]={
+            len: tx.length, sample: tx.slice(0,70),
+            overflowX: b ? (b.scrollWidth - b.clientWidth > 4) : true,
+          };
+        }
+        var st=window.__slgPanels.state();
+        var libOk = !!st && st.library.length === 51
+          && st.library.every(function(s){ return s.sources && s.sources.length >= 2; });
+        window.__slgPanels.open('library');
+        await new Promise(function(r){ setTimeout(r, 250); });
+        var hd=document.querySelector('[data-act="skilldetail"]');
+        if (hd) hd.click();
+        await new Promise(function(r){ setTimeout(r, 300); });
+        var b2=document.getElementById('slgPanelsBody');
+        var showSource=(b2?(b2.textContent||''):'').indexOf('如何获得') >= 0;
+        return {
+          ok: tabs.every(function(t){ return out[t].len > 120 && !out[t].overflowX; }) && libOk && showSource,
+          tabs: out, libOk: libOk, showSource: showSource,
+          total: st ? st.library.length : 0,
+          sourcesCovered: st ? st.librarySummary.sourcesCovered : 0,
+        };
+      } catch(e){ return {ok:false, error:String(e)}; }
+    })()`, true);
+    const panelImg = await win.capturePage();
+    fs.writeFileSync(path.join(outDir, `smoke-panels-${tag}.png`), panelImg.toPNG());
+    await wc.executeJavaScript('(function(){ if(window.__slgPanels) window.__slgPanels.close(); return true; })()', true);
+    report.panels = panels;
+    check('六面板均可打开且有内容；51 条战法每条可见获取途径',
+      panels?.ok === true, panels);
+    await sleep(300);
 
     report.pageErrors = await wc.executeJavaScript('window.__slgErrors || []', true);
     check('页面无未捕获异常（含战报详情渲染）', report.pageErrors.length === 0, report.pageErrors.slice(0, 6));

@@ -130,11 +130,17 @@ test('P0-3 征兵到账不会写出 null / NaN，三个兵种槽恒为合法整�
 test('P0-3 战败不会把家底清零：溃兵归营', () => {
   const state = createWorld(cfg);
   const ctx = makeCtx(state);
-  const target = neighborCity(state, '定陶');   // 2 级城，守军远多于我军
-  state.armys[0].soldiers = [800, 0, 0];
+  // 挑一个相邻、守军明显多于我军的城（换图后邻接关系会变，按实际路网选）
+  const home = homeOf(state);
+  const target = neighborsOf(home.id)
+    .map((id) => map.cities.find((c) => c.id === id))
+    .filter((c) => c && garrisonOf(c) >= 900)
+    .sort((a, b) => garrisonOf(b) - garrisonOf(a))[0];
+  assert.ok(target, '玩家本城应有守军足够的邻城可打');
+  state.armys[0].soldiers = [400, 0, 0];
   const rsp = handleRequest(ctx, req('strategy.attack', { cityId: target.id, armyId: state.armys[0].id }));
   assert.equal(rsp.msg.ok, true);
-  assert.equal(rsp.msg.result, 0, '这一仗打不下来');
+  assert.equal(rsp.msg.result, 0, `这一仗打不下来（打 ${target.name}，守军 ${garrisonOf(target)}）`);
   const left = state.armys[0].soldiers.reduce((s, n) => s + n, 0);
   assert.ok(left > 0, `战败后应有溃兵归营，实际 ${left}`);
   assert.equal(state.armys[0].soldiers.length, 3);
@@ -143,7 +149,12 @@ test('P0-3 战败不会把家底清零：溃兵归营', () => {
 test('P0-3 首战可胜：两将 1200 兵能打下 1 级小城', () => {
   const state = createWorld(cfg);
   const ctx = makeCtx(state);
-  const target = neighborCity(state, '陈');       // 1 级城，守军约 1000
+  const home = homeOf(state);
+  const target = neighborsOf(home.id)
+    .map((id) => map.cities.find((c) => c.id === id))
+    .filter((c) => c && garrisonOf(c) < 1200)
+    .sort((a, b) => garrisonOf(a) - garrisonOf(b))[0];
+  assert.ok(target, '应有一个守军不足 1200 的邻城可打');
   assert.ok(garrisonOf(target) < 1200, '1 级城守军应落在玩家开局能挑战的区间');
   // 酒馆招一个将，编入第二槽（模拟真实动线）
   const g = makeGeneral(cfg, nextId(state, 'generalId'), [...cfg.generalByCfg.keys()][5], 1, 3);

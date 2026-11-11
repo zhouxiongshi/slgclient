@@ -11,7 +11,10 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { makeBuild, nextId, mainCity } from '../world.js';
 import { rngFor } from './strategy-rng.js';
+import { canMarchBetween, marchableNeighbors, marchGraph, isGateBlocked } from './march.js';
 import { resolveBattle } from '../battle.js';
+import { planCampaign, commitBrainGoal, noteBattleOutcome, noteCityLost } from './strategy-brain.js';
+import { quoteMarch, openMonth, closeMonth, noteMove, noteCity, booksOf } from './strategy-log.js';
 import { onTileCleared } from './campaign.js';
 import { SKILLS, LEVEL_COUNT } from '../skills.js';
 
@@ -92,6 +95,9 @@ export function ensureStrategy(state) {
       bindPlayerHome(state);
     }
     migrateGarrisons(state);
+    if (!st.memory) st.memory = {};
+    if (!st.chronicle) st.chronicle = [];
+    if (!st.cityLogs) st.cityLogs = {};
     return st;
   }
   const factionByState = new Map(conf.factions.map((f) => [f.id, f]));
@@ -113,6 +119,9 @@ export function ensureStrategy(state) {
     events: [],
     cities,
     relations: {},
+    memory: {},
+    chronicle: [],
+    cityLogs: {},
     resources: Object.fromEntries(conf.factions.map((f) => [f.id, { gold: 8000, grain: 12000 }])),
   };
   bindPlayerHome(state);
@@ -140,6 +149,17 @@ export function neighborsOf(cityId) {
   return [...set];
 }
 
+/**
+ * 可出征的邻城：同一条行军段直连，且关隘未封锁。
+ * 换图后同一条路线会在关隘处拆段，隔着关隘的城不再算直邻。
+ */
+export function marchableFrom(cityId) {
+  const graph = marchGraph();
+  const all = strategyMap().cities.map((c) => c.id);
+  if (!graph) return neighborsOf(cityId);
+  return marchableNeighbors(cityId, all);
+}
+
 export function strategySnapshot(state, factionId) {
   const map = strategyMap();
   const st = ensureStrategy(state);
@@ -165,27 +185,42 @@ export function strategySnapshot(state, factionId) {
       if (b === factionId) enemies.add(a);
     }
   }
+  const month = Math.max(1, st.turn || 1);
+  const season = ['春', '春', '春', '夏', '夏', '夏', '秋', '秋', '秋', '冬', '冬', '冬'][(month - 1) % 12];
+  let borderThreat = 0;
+  for (const id of mine) {
+    for (const nid of marchableFrom(id)) {
+      const row = st.cities[nid];
+      if (row && row.owner !== factionId) borderThreat += row.troops || 0;
+    }
+  }
+  const lords = Object.fromEntries(factionConf().factions.map((f) => [f.id, f.name]));
+  lords[factionConf().neutral.id] = factionConf().neutral.name;
+  const facts = (st.events || []).slice(-8).map((e) => e.text).filter(Boolean);
   return {
     turn: st.turn,
-    season: '春秋', // 占位：季节细节等真模型接入时再细化
+    season,
     seed: state.seed ?? 20261110,
     faction: factionId,
+    lords,
     own: {
       gold: res.gold, grain: res.grain, wood: 0, iron: 0,
       troops, cities: mine.length, mines: 0,
-      heroes: [], front_pressure: 0,
+      heroes: [], front_pressure: troops > 0 ? Math.round((borderThreat / troops) * 100) / 100 : 0,
     },
     cities: map.cities.map((c) => ({
       id: String(c.id), name: c.name, province: c.provinceId || '',
       is_capital: !!c.provinceCapital, owner: st.cities[c.id]?.owner || 'han',
       troops: st.cities[c.id]?.troops || 0,
       defense: st.cities[c.id]?.defense || 0.4,
+      arms: c.arms || '',
       confidence: 1,
     })),
     mines: [],
     neighbors: Object.fromEntries([...neighbors.entries()].map(([k, v]) => [String(k), [...v].map(String)])),
-    known_facts: [],
-    visible_events: [],
+    known_facts: facts,
+    visible_events: facts,
+    movements: st.movements || [],
     relations: Object.fromEntries(factionConf().factions
       .filter((f) => f.id !== factionId)
       .map((f) => [f.id, enemies.has(f.id) ? 'enemy' : (st.relations?.[`${factionId}|${f.id}`] || 'neutral')])),
@@ -201,104 +236,65 @@ export function strategyTick(state, cfg, ctx, now = Date.now()) {
   if (state.clock.day - st.lastTurnDay < turnDays) return null;
   st.lastTurnDay = state.clock.day;
   st.turn += 1;
+  openMonth(state);
 
   const results = [];
   for (const f of conf.factions) {
+    const tax = accrueFactionGrain(state, f.id);
+    noteMove(state, {
+      kind: '田赋', faction: f.id, who: f.name,
+      grain: tax.grain, gold: tax.gold,
+    });
     const snapshot = strategySnapshot(state, f.id);
     const sheet = state.brainRunner
       ? state.brainRunner(f, snapshot)
       : localBrain(f, snapshot, state);
+    if (sheet?.goal) {
+      commitBrainGoal(state, f.id, {
+        type: sheet.goal.type,
+        target: sheet.goal.target,
+        lockedUntil: sheet.goal.locked_until,
+        reason: Array.isArray(sheet.goal.reason) ? sheet.goal.reason[0] : sheet.goal.reason,
+        from: sheet.goal.from || '',
+        fromName: sheet.goal.fromName || '',
+        targetName: sheet.goal.targetName || '',
+      });
+    }
     const applied = applyOrders(state, cfg, ctx, f, sheet);
-    results.push({ faction: f.id, orders: sheet.strategy_orders?.length || 0, ...applied });
+    const res = st.resources[f.id];
+    const mine = (st.draft?.moves || []).filter((m) => m.faction === f.id);
+    const last = mine[mine.length - 1];
+    if (last && res) { last.grainEnd = res.grain; last.goldEnd = res.gold; }
+    results.push({ faction: f.id, sheet, orders: sheet.strategy_orders?.length || 0, ...applied });
   }
+  closeMonth(state);
   return { turn: st.turn, results };
 }
 
 /* ---------------------------------------------------------------- 决策脑
- * 与 slg-ai 同协议的首版实现：人格轴、确定性、难度档、IAUS 简化版。
- * 真 Python 模型接入后，把本函数替换为子进程桥即可（指令单结构不变）。
+ * 战役规划在 strategy-brain.js。这里只留同名入口，指令单协议不变。
+ * 外部若注入 state.brainRunner，仍可整段替换。
  */
-const PERSONA_AXES = {
-  曹操: { aggression: 0.65, economy: 0.60, risk: 0.50, tempo: 0.70, defense: 0.55 },
-  袁绍: { aggression: 0.35, economy: 0.90, risk: 0.30, tempo: 0.25, defense: 0.65 },
-  吕布: { aggression: 0.95, economy: 0.20, risk: 0.85, tempo: 0.90, defense: 0.20 },
-  孙权: { aggression: 0.30, economy: 0.70, risk: 0.25, tempo: 0.35, defense: 0.90 },
-  刘备: { aggression: 0.45, economy: 0.75, risk: 0.35, tempo: 0.45, defense: 0.60 },
-  司马懿: { aggression: 0.55, economy: 0.65, risk: 0.20, tempo: 0.20, defense: 0.85 },
-  董卓: { aggression: 0.80, economy: 0.25, risk: 0.75, tempo: 0.75, defense: 0.30 },
-  公孙瓒: { aggression: 0.85, economy: 0.35, risk: 0.70, tempo: 0.95, defense: 0.35 },
-};
-
-function mistakeRate(difficulty) {
-  return difficulty === 'easy' ? 0.2 : difficulty === 'hard' ? 0 : 0.06;
-}
-
 export function localBrain(faction, snapshot, state) {
   const conf = factionConf().factions.find((f) => f.id === faction.id) || faction;
-  const axes = PERSONA_AXES[conf.persona] || PERSONA_AXES.曹操;
-  const r = rngFor(state.seed ?? 20261110, snapshot.turn, `brain:${faction.id}`).random;
-  const own = snapshot.own;
-  const orders = [];
+  return planCampaign(conf, snapshot, state || {});
+}
 
-  // 内政：按经济轴征兵与屯田
-  const conscript = Math.round(300 + axes.economy * 700);
-  orders.push({
-    id: `I${snapshot.turn}-1`, type: '征兵', target: faction.id,
-    params: { count: conscript }, eta: 1, on_fail: '屯田',
-    expect: '兵力补充', explain: [['经济轴', axes.economy]],
-  });
-
-  // 战略：IAUS 简化——对每个邻接敌城打分，只挑分最高的一条
-  const candidates = [];
-  for (const cid of Object.keys(snapshot.neighbors)) {
-    const city = snapshot.cities.find((c) => c.id === cid);
-    if (!city || city.owner === faction.id) continue;
-    if (city.owner !== 'han' && snapshot.relations[city.owner] === 'ally') continue;
-    const isNeighbor = snapshot.neighbors[cid]?.some((nid) => {
-      const n = snapshot.cities.find((c) => c.id === nid);
-      return n && n.owner === faction.id;
-    });
-    if (!isNeighbor) continue;
-    const garrison = snapshot.cities.find((c) => c.id === cid);
-    const score = (1 - garrison.defense) * axes.aggression
-      + (1 / (1 + garrison.troops / 3000)) * 0.5
-      - (axes.defense * 0.3);
-    candidates.push({ city: garrison, score });
+/** 每月按城入账一笔田赋，经济轴才有粮可征。 */
+function accrueFactionGrain(state, factionId) {
+  const st = state.strategy;
+  const res = st.resources[factionId] || (st.resources[factionId] = { gold: 8000, grain: 12000 });
+  if (res.gold == null) res.gold = 8000;
+  let grain = 0;
+  let gold = 0;
+  for (const c of strategyMap().cities) {
+    if (st.cities[c.id]?.owner !== factionId) continue;
+    grain += 140 + Math.round((c.attrs?.农业 ?? 40) * 3);
+    gold += 60 + Math.round((c.attrs?.商业 ?? 40) * 1.2);
   }
-  candidates.sort((a, b) => b.score - a.score);
-  const top = candidates[0];
-  const mistakes = mistakeRate('normal');
-  const pick = (r() < mistakes && candidates.length > 1) ? candidates[1] : top;
-  if (pick && own.troops > 4000) {
-    orders.push({
-      id: `S${snapshot.turn}-1`, type: '出征', target: pick.city.id,
-      params: { troops: Math.min(own.troops - 2000, Math.round(own.troops * 0.4)) },
-      eta: 2, on_fail: '撤退',
-      expect: '取城', explain: [['目标城防', Math.round(1 - pick.city.defense, 3)]],
-    });
-  }
-
-  // 外交：低侵略者更倾向议和/结盟
-  if (r() < 0.3 && axes.aggression < 0.6) {
-    const others = factionConf().factions.filter((f) => f.id !== faction.id);
-    const other = others[Math.floor(r() * others.length)];
-    orders.push({
-      id: `S${snapshot.turn}-2`, type: '结盟', target: other.id,
-      params: {}, eta: 0, on_fail: '维持现状',
-      expect: '北境无虞', explain: [['侵略轴低', axes.aggression]],
-    });
-  }
-
-  return {
-    protocol: 'slg-ai-orders-v1',
-    turn: snapshot.turn, season: snapshot.season,
-    faction: faction.id, personality: conf.persona,
-    difficulty: 'normal', seed: snapshot.seed,
-    goal: { type: own.troops > 6000 ? '扩张' : '固守', target: '', locked_until: snapshot.turn + 3, reason: ['首版本地脑'] },
-    internal_orders: orders.filter((o) => o.id.startsWith('I')),
-    strategy_orders: orders.filter((o) => o.id.startsWith('S')),
-    explain: [['首版本地决策脑', 1]],
-  };
+  res.grain += grain;
+  res.gold += gold;
+  return { grain, gold };
 }
 
 /* ---------------------------------------------------------------- 执行层 */
@@ -306,7 +302,7 @@ export function localBrain(faction, snapshot, state) {
 function recordEvent(state, text) {
   const st = state.strategy;
   st.events.push({ turn: st.turn, text, day: state.clock?.day ?? 0 });
-  while (st.events.length > 200) st.events.shift();
+  while (st.events.length > 480) st.events.shift();
 }
 
 export function applyOrders(state, cfg, ctx, faction, sheet) {
@@ -315,55 +311,135 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
   const applied = { moved: [], captured: [], attacked_player: 0 };
   const r = rngFor(state.seed ?? 20261110, st.turn, `apply:${faction.id}`).random;
 
-  for (const order of [...(sheet.internal_orders || []), ...(sheet.strategy_orders || [])]) {
+  const queued = [...(sheet.internal_orders || []), ...(sheet.strategy_orders || [])];
+  const diploFirst = queued.filter((o) => o.type === '结盟' || o.type === '议和' || o.type === '背盟');
+  const afterDiplo = queued.filter((o) => o.type !== '结盟' && o.type !== '议和' && o.type !== '背盟');
+
+  for (const order of [...diploFirst, ...afterDiplo]) {
     if (order.type === '征兵') {
       const res = st.resources[faction.id] || (st.resources[faction.id] = { gold: 8000, grain: 12000 });
       const count = Math.max(0, Number(order.params?.count) || 0);
       const cost = count * 2;
-      if (res.grain >= cost) {
+      if (res.grain >= cost && count > 0) {
         res.grain -= cost;
         const own = Object.keys(st.cities).filter((id) => st.cities[id].owner === faction.id);
-        if (own.length) {
-          const home = own[0];
+        const want = order.params?.cityId != null ? String(order.params.cityId) : '';
+        const home = (want && st.cities[want]?.owner === faction.id) ? want : own.slice().sort((a, b) => st.cities[a].troops - st.cities[b].troops)[0];
+        if (home) {
           st.cities[home].troops += count;
+          noteMove(state, {
+            kind: '征兵', faction: faction.id, who: faction.name,
+            cityId: Number(home), cityName: map.cities.find((c) => String(c.id) === String(home))?.name || '',
+            count, grain: cost,
+          });
+          noteCity(state, home, {
+            kind: '征兵',
+            text: `${faction.name}于${map.cities.find((c) => String(c.id) === String(home))?.name || '此城'}征兵 ${count}，耗粮 ${cost}，守军增至 ${st.cities[home].troops}。`,
+          });
         }
       }
     } else if (order.type === '屯田') {
       const res = st.resources[faction.id];
       if (res) res.grain += 400;
+      noteMove(state, { kind: '屯田', faction: faction.id, who: faction.name, grain: -400 });
+      if (order.expect) recordEvent(state, `${faction.name}${order.expect}`);
+    } else if (order.type === '固守') {
+      if (order.expect) recordEvent(state, `${faction.name}${order.expect}`);
+      noteMove(state, {
+        kind: '固守', faction: faction.id, who: faction.name,
+        reason: order.expect || '',
+        cityId: Number(order.params?.cityId) || 0,
+        cityName: order.params?.cityName || '',
+      });
+      if (order.params?.cityId) {
+        noteCity(state, order.params.cityId, {
+          kind: '固守',
+          text: `${faction.name}${order.expect || '按兵'}。`,
+        });
+      }
     } else if (order.type === '出征') {
       const targetId = Number(order.target);
       const target = map.cities.find((c) => c.id === targetId);
       const tstate = st.cities[targetId];
       if (!target || !tstate) continue;
-      const troops = Math.max(1, Number(order.params?.troops) || 0);
       if (tstate.owner === faction.id) continue;
+      if (isAllied(st, faction.id, tstate.owner)) continue;
+      const hasFrom = order.params?.fromCity != null && order.params.fromCity !== '';
+      let quote = null;
+      if (hasFrom) {
+        const fromCity = map.cities.find((c) => c.id === Number(order.params.fromCity));
+        const purse = st.resources[faction.id] || { gold: 0, grain: 0 };
+        quote = quoteMarch(order.params.fromCity, targetId, order.params.troops, fromCity?.arms, purse);
+        if (!quote.ok) {
+          noteMove(state, {
+            kind: '出征', faction: faction.id, who: faction.name, result: '未发',
+            fromName: fromCity?.name || '', toName: target.name, reason: quote.reason || '粮饷不足',
+          });
+          recordEvent(state, `${faction.name}欲出兵${target.name}，${quote.reason || '粮饷不足'}，未发兵。`);
+          continue;
+        }
+        purse.grain = Math.max(0, (purse.grain || 0) - quote.totalGrain);
+        purse.gold = Math.max(0, (purse.gold || 0) - quote.totalGold);
+      }
+      const drawn = hasFrom ? drawMarchTroops(st, faction, order, targetId) : null;
+      if (hasFrom && !drawn) {
+        if (quote && quote.ok) {
+          const purse = st.resources[faction.id];
+          if (purse) {
+            purse.grain += quote.totalGrain;
+            purse.gold += quote.totalGold;
+          }
+        }
+        continue;
+      }
+      const troops = drawn ? drawn.sent : Math.max(1, Number(order.params?.troops) || 0);
+      if (!troops) continue;
       if (tstate.owner === state.role?.rid || tstate.owner === 'player') {
         // 打玩家的城：换算成本地地图来犯军，走既有战报
         spawnFactionAssault(state, cfg, ctx, faction, target, troops);
         applied.attacked_player += 1;
+        noteMarch(state, faction, order, target, tstate, quote, '来犯', 0, drawn);
         continue;
       }
       const defender = st.cities[targetId];
       const prevOwner = defender.owner;
-      const atk = troops * (0.8 + r() * 0.4);
+      const prevTroops = defender.troops;
+      const atk = troops * (0.86 + r() * 0.2);
       const def = defender.troops * (1 + defender.defense);
       if (atk > def) {
         defender.owner = faction.id;
-        defender.troops = Math.max(300, Math.round(garrisonOf(target) * 0.35));
+        // 留下能守住的兵，不再把新城抽成全图最软的目标
+        defender.troops = Math.max(420, Math.round(troops * 0.62));
         applied.captured.push(target.name);
-        // ★ P1-7：写清「从谁手里夺的」，避免同一回合两条攻陷信都像凭空发生
-        recordEvent(state, `${faction.name}自${ownerNameOf(state, prevOwner)}手中攻陷${target.name}（${target.province}）`);
+        noteBattleOutcome(state, faction.id, { cityId: targetId, ok: true });
+        noteCityLost(state, prevOwner, targetId, faction.id);
+        noteMarch(state, faction, order, target, { troops: prevTroops }, quote, '克', defender.troops, drawn);
+        const line = order.expect
+          ? `${faction.name}${order.expect}，遂克${target.name}。`
+          : `${faction.name}自${ownerNameOf(state, prevOwner)}手中攻陷${target.name}（${target.province}）`;
+        recordEvent(state, line);
         ctx.push?.('chat.push', { rid: 0, nickName: '系统', type: 0, msg: `【天下】${faction.name}自${ownerNameOf(state, prevOwner)}手中攻陷${target.name}。`, time: Date.now() });
       } else {
-        defender.troops = Math.max(200, Math.round(defender.troops * 0.85));
-        recordEvent(state, `${faction.name}攻${target.name}不利，折兵退走（守军尚存 ${defender.troops}）。`);
+        defender.troops = Math.max(200, Math.round(defender.troops * 0.88));
+        if (drawn) st.cities[drawn.fromId].troops += Math.round(drawn.sent * 0.72);
+        noteBattleOutcome(state, faction.id, { cityId: targetId, ok: false });
+        noteMarch(state, faction, order, target, { troops: prevTroops }, quote, '挫', defender.troops, drawn);
+        const line = order.expect
+          ? `${faction.name}${order.expect}，攻之不下，收兵。`
+          : `${faction.name}攻${target.name}不利，折兵退走（守军尚存 ${defender.troops}）。`;
+        recordEvent(state, line);
       }
     } else if (order.type === '结盟' || order.type === '议和') {
       const other = String(order.target);
       st.relations[`${faction.id}|${other}`] = 'ally';
       st.relations[`${other}|${faction.id}`] = 'ally';
-      recordEvent(state, `${faction.name}与${otherName(state, other)}结好。`);
+      const versusName = order.params?.versus ? otherName(state, order.params.versus) : '';
+      const versus = versusName ? `，以牵制${versusName}` : '';
+      recordEvent(state, `${faction.name}与${otherName(state, other)}结好${versus}。`);
+      noteMove(state, {
+        kind: '结盟', faction: faction.id, who: faction.name,
+        otherName: otherName(state, other), versusName,
+      });
     } else if (order.type === '背盟') {
       const other = String(order.target);
       st.relations[`${faction.id}|${other}`] = 'enemy';
@@ -373,6 +449,59 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
     // 其余类型首版忽略（驻守/侦察/挑拨/迁都…）：状态不变，可审计
   }
   return applied;
+}
+
+function noteMarch(state, faction, order, target, defender, quote, result, hold, drawn) {
+  const q = quote || {};
+  const fromId = drawn?.fromId || order.params?.fromCity;
+  const fromName = order.params?.fromName || '';
+  noteMove(state, {
+    kind: '出征', faction: faction.id, who: faction.name, result,
+    fromId: fromId ? Number(fromId) : 0, fromName,
+    toId: target.id, toName: target.name,
+    defender: defender?.troops || 0, hold: hold || 0,
+    km: q.km || 0, li: q.li || 0, days: q.days || 0,
+    grain: q.grain || 0, gold: q.gold || 0,
+    horses: q.horses || 0, horseGrain: q.horseGrain || 0, horseGold: q.horseGold || 0,
+    totalGrain: q.totalGrain || 0, totalGold: q.totalGold || 0,
+    mode: q.mode || '步', dismounted: !!q.dismounted,
+  });
+  const pay = q.ok ? `路程 ${q.li} 里、${q.days} 日，耗粮 ${q.totalGrain}、金 ${q.totalGold}`
+    + (q.horses ? `，战马 ${q.horses} 匹、马料 ${q.horseGrain}、马金 ${q.horseGold}` : (q.dismounted ? '，马匹粮饷不足改步卒' : ''))
+    : '';
+  if (fromId) {
+    noteCity(state, fromId, {
+      kind: '出征',
+      text: result === '克'
+        ? `${faction.name}自本城出兵 ${order.params?.troops || ''} 赴${target.name}，${pay}，城破，留兵 ${hold}。`
+        : `${faction.name}自本城出兵${target.name}，${pay}，${result === '挫' ? '攻之不下，残兵退回。' : '兵临城下。'}`,
+    });
+  }
+  noteCity(state, target.id, {
+    kind: '出征',
+    text: result === '克'
+      ? `${faction.name}自${fromName || '邻城'}来攻。守军 ${defender?.troops || 0} 不敌，城归${faction.name}，留兵 ${hold}。${pay}`
+      : `${faction.name}来攻，守军 ${defender?.troops || 0}，${result === '挫' ? '城未破。' : '战事转到本地。'}`,
+  });
+}
+
+function isAllied(st, a, b) {
+  if (!a || !b || a === b) return false;
+  return st.relations?.[`${a}|${b}`] === 'ally' || st.relations?.[`${b}|${a}`] === 'ally';
+}
+
+/** 从出发城实扣兵力。走不到、兵不够则整条出征作废。 */
+function drawMarchTroops(st, faction, order, targetId) {
+  const fromId = String(order.params.fromCity);
+  const row = st.cities[fromId];
+  if (!row || row.owner !== faction.id) return null;
+  if (!canMarchBetween(fromId, targetId).ok) return null;
+  const reserve = Math.max(0, Number(order.params?.reserve) || 0);
+  const want = Math.max(0, Number(order.params?.troops) || 0);
+  const sent = Math.min(want, row.troops - reserve);
+  if (sent < 400) return null;
+  row.troops -= sent;
+  return { sent, fromId };
 }
 
 function otherName(state, factionId) {
@@ -536,6 +665,13 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1 }) {
   const tstate = st.cities[id];
   if (!target || !tstate) return { ok: false, code: 1, reason: 'no_city' };
   if (tstate.owner === 'player') return { ok: false, code: 2, reason: 'own_city' };
+  // 行军校验：只能沿既有行军段推进，关隘封锁则过不去
+  const march = canMarchBetween(home, id);
+  if (march && march.ok === false) {
+    if (march.reason === 'gate_blocked') return { ok: false, code: 3, reason: 'gate_blocked', gate: march.gate };
+    if (march.reason === 'no_road') return { ok: false, code: 3, reason: 'not_adjacent' };
+    return { ok: false, code: 3, reason: 'not_adjacent' };
+  }
   if (!neighborsOf(home).includes(id)) return { ok: false, code: 3, reason: 'not_adjacent' };
   // ★ P0-3：界面只传 cityId，旧实现固定取 armys[0]，而那支可能正好是空队
   const army = pickArmy(state, armyId);
@@ -555,6 +691,7 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1 }) {
     tstate.owner = 'player';
     tstate.troops = Math.max(200, Math.round(defenseOverride.soldiers.reduce((s, n) => s + n, 0) * 0.3));
     recordEvent(state, `主公攻陷${target.name}（${target.province}），守军 ${fought.dTotal} 溃散。`);
+    noteCity(state, id, { kind: '出征', text: `主公攻陷${target.name}，守军 ${fought.dTotal} 溃散，城入我军。` });
     ctx.push?.('chat.push', {
       rid: 0, nickName: '系统', type: 0,
       msg: `【天下】我军攻陷${target.name}！此城已入版图。`,
@@ -572,8 +709,7 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1 }) {
   };
 }
 
-/** 清剿来犯军：本地地图被遮住后，玩家在天下界面也能看到并处理威胁。 */
-export function clearThreat(state, cfg, ctx, { garrisonId, armyId }) {
+/** 清剿来犯军：本地地图被遮住后，玩家在天下界面也能看到并处理威胁。 */export function clearThreat(state, cfg, ctx, { garrisonId, armyId }) {
   ensureStrategy(state);
   const g = (state.garrisons || []).find((x) => x.id === Number(garrisonId) && !x.cleared);
   if (!g) return { ok: false, reason: 'no_threat' };
@@ -671,10 +807,30 @@ export function strategyViewState(state, cfg = null) {
       troops: st.cities[c.id]?.troops || 0,
     })),
     playerCity: st.playerCity || 0,
+    // 可出征的城（已按行军校验过滤：关隘封锁即不可走）
+    marchable: marchableFrom(st.playerCity || 0),
+    gates: Object.entries((marchGraph() && marchGraph().gateStatus) || {})
+      .map(([name, status]) => ({ name, status })),
     routes: map.routes.map((r) => ({ id: r.id, from: r.from, to: r.to, points: r.points, sea: r.sea })),
     factions: conf.factions.map((f) => ({ id: f.id, name: f.name, color: f.color })),
     neutral: { id: conf.neutral.id, name: conf.neutral.name, color: conf.neutral.color },
     events: [...st.events].slice(-40).reverse()
       .map((e) => ({ ...e, month: (e.turn || 0) + 1 })),
+    chronicle: [...(st.chronicle || [])].reverse().slice(0, 36),
+    cityLogs: st.cityLogs || {},
+    plans: conf.factions.map((f) => {
+      const g = st.memory?.[f.id]?.goal;
+      if (!g) return null;
+      return {
+        id: f.id, name: f.name, color: f.color,
+        type: g.type, target: g.target || '', targetName: g.targetName || '',
+        from: g.from || '', fromName: g.fromName || '',
+        reason: g.reason || '', lockedUntil: g.lockedUntil || 0,
+      };
+    }).filter(Boolean),
+    books: (st.chronicle || []).slice(-6).reverse().map((m) => ({
+      month: m.month,
+      rows: booksOf(m.moves),
+    })),
   };
 }

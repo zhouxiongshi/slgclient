@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "redline": {
+    "maxBonusPct": 30,
+    "decayPerCity": 2,
+    "note": "岗位加成 ≤ 基础产出 30%，且随城池数递减，防后期滚雪球"
+  },
+  "posts": [
+    {
+      "id": "agri",
+      "name": "农政",
+      "stat": "政治",
+      "resource": "grain",
+      "desc": "屯田积谷，影响粮产与民心"
+    },
+    {
+      "id": "commerce",
+      "name": "商事",
+      "stat": "智力",
+      "resource": "gold",
+      "desc": "市易通商，影响金与商税"
+    },
+    {
+      "id": "military",
+      "name": "军备",
+      "stat": "统率",
+      "resource": "iron",
+      "desc": "冶铁造械，影响征兵工期与器械"
+    },
+    {
+      "id": "defense",
+      "name": "城防",
+      "stat": "武力",
+      "resource": "stone",
+      "desc": "缮甲筑城，影响守军与城防"
+    },
+    {
+      "id": "personnel",
+      "name": "人事",
+      "stat": "魅力",
+      "resource": "wood",
+      "desc": "招贤纳士，影响在野名士亲密度"
+    }
+  ],
+  "constraints": {
+    "morale": {
+      "init": 70,
+      "min": 0,
+      "max": 100,
+      "note": "民心过低触发减产"
+    },
+    "order": {
+      "init": 70,
+      "min": 0,
+      "max": 100,
+      "note": "治安过低触发流寇事件"
+    },
+    "corruption": {
+      "init": 5,
+      "min": 0,
+      "max": 100,
+      "note": "腐败随城数上升，人事岗位可压制"
+    }
+  },
+  "visibleRule": "出征中的武将，内政收益减半（明写在界面上，不做隐藏规则）。",
+  "proposals": [
+    {
+      "id": "levy",
+      "name": "急征",
+      "effect": "征兵工期 -20%",
+      "cost": "民心 -8、粮 -800",
+      "turns": 1
+    },
+    {
+      "id": "farm",
+      "name": "劝农",
+      "effect": "粮产 +25%",
+      "cost": "金 -600",
+      "turns": 2
+    },
+    {
+      "id": "repair",
+      "name": "修械",
+      "effect": "攻城伤害判定 +1 档",
+      "cost": "木 -800、铁 -400",
+      "turns": 1
+    },
+    {
+      "id": "amnesty",
+      "name": "安民",
+      "effect": "民心 +12、治安 +6",
+      "cost": "金 -500",
+      "turns": 1
+    },
+    {
+      "id": "audit",
+      "name": "整饬",
+      "effect": "腐败 -6",
+      "cost": "政令 -2",
+      "turns": 1
+    }
+  ]
+}

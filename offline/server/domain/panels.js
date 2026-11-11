@@ -1,0 +1,565 @@
+/**
+ * 六大面板的领域层（纯函数 + 确定性），不碰战斗内核、不碰磁盘 web/。
+ *
+ * 设计纪律（见 docs/体系设计方案-待确认.md）：
+ *  - 战法名称 / 类型 / 描述 / 数值一律读 conf/ 原文，本文件不改写任何一个字；
+ *  - 人物文本只从 conf/panels/generals-lore.json（构建期导出）读取，缺项写「史无明载」；
+ *  - 装备单件 ≤8%、全套 ≤25%，只改五维增量与机制型特性；
+ *  - 所有新存档字段由 ensurePanels 兜底，11-08 那份无 strategy 的旧档也能开；
+ *  - 无随机：本模块不调用 Math.random，需要随机处一律走 rngFor(seed, turn, tag)。
+ */
+import { readFileSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { slotBlock } from './slots.js';
+
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+const load = (p) => JSON.parse(readFileSync(resolve(ROOT, p), 'utf8'));
+
+export const PANEL_CONF = {
+  lore: load('conf/panels/generals-lore.json'),
+  recipes: load('conf/panels/skill-recipes.json'),
+  items: load('conf/panels/items.json'),
+  posts: load('conf/panels/posts.json'),
+  mainSkills: load('conf/skills.json').skills,
+  libSkills: load('conf/library-skills.json').skills,
+  map: (() => { try { return load('conf/campaign/strategy/map.json'); } catch { return { cities: [] }; } })(),
+  protagonist: (() => { try { return load('conf/campaign/protagonist.json').general; } catch { return null; } })(),
+};
+
+const SKILLS = [...PANEL_CONF.mainSkills, ...PANEL_CONF.libSkills];
+const SKILL_BY_ID = new Map(SKILLS.map((s) => [Number(s.cfgId), s]));
+const ITEM_BY_ID = new Map(PANEL_CONF.items.items.map((i) => [Number(i.id), i]));
+const RECIPE_BY_ID = new Map(PANEL_CONF.recipes.recipes.map((r) => [Number(r.cfgId), r]));
+const LORE_BY_CFG = new Map(PANEL_CONF.lore.list.map((r) => [Number(r.cfgId), r]));
+const EQUIP_KEYS = ['force', 'strategy', 'defense', 'speed', 'destroy'];
+const SLOT_IDS = PANEL_CONF.items.slots.map((s) => s.id);
+const RES_LABEL = { wood: '木', iron: '铁', stone: '石', grain: '粮', gold: '金', decree: '政令' };
+const STAT_LABEL = { force: '武力', strategy: '谋略', defense: '防御', speed: '速度', destroy: '攻城' };
+
+const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+const int = (v, def = 0) => { const n = Number(v); return Number.isFinite(n) ? Math.trunc(n) : def; };
+const round2 = (n) => Math.round(n * 100) / 100;
+
+/* -------------------------------------------------------------------------- */
+/* 存档兼容                                                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * 给新字段兜底。normalizeWorld() 每次启动都会调用，因此：
+ *  - 只补字段、不改既有值；
+ *  - 开局赠品用 panelBootstrapped 标记，保证旧档 / 重复读档不会无限刷物品。
+ */
+export function ensurePanels(state, cfg = {}) {
+  if (!Array.isArray(state.items)) state.items = [];
+  if (!state.equipment || typeof state.equipment !== 'object') state.equipment = {};
+  if (!state.panelBase || typeof state.panelBase !== 'object') state.panelBase = {};
+  if (!state.panelMerits || typeof state.panelMerits !== 'object') state.panelMerits = {};
+  if (!state.skillbook || typeof state.skillbook !== 'object') state.skillbook = {};
+  if (!state.skillbook.unlocked || typeof state.skillbook.unlocked !== 'object') state.skillbook.unlocked = {};
+  if (!state.skillbook.research || typeof state.skillbook.research !== 'object') state.skillbook.research = {};
+
+  const posts = {};
+  for (const p of PANEL_CONF.posts.posts) posts[p.id] = 0;
+  if (!state.interior || typeof state.interior !== 'object') state.interior = {};
+  if (!state.interior.posts || typeof state.interior.posts !== 'object') state.interior.posts = posts;
+  for (const p of PANEL_CONF.posts.posts) {
+    if (state.interior.posts[p.id] == null) state.interior.posts[p.id] = 0;
+  }
+  const c = PANEL_CONF.posts.constraints;
+  if (!Number.isFinite(state.interior.morale)) state.interior.morale = c.morale.init;
+  if (!Number.isFinite(state.interior.order)) state.interior.order = c.order.init;
+  if (!Number.isFinite(state.interior.corruption)) state.interior.corruption = c.corruption.init;
+  if (state.interior.appliedThisTurn == null) state.interior.appliedThisTurn = null;
+  if (!Number.isFinite(state.interior.appliedTurn)) state.interior.appliedTurn = -1;
+
+  for (const g of state.generals || []) {
+    const id = String(g.id);
+    if (!state.equipment[id]) state.equipment[id] = { weapon: 0, armor: 0, mount: 0, tome: 0 };
+    else for (const s of SLOT_IDS) if (state.equipment[id][s] == null) state.equipment[id][s] = 0;
+    if (!state.panelBase[id]) {
+      // 兼容「已有装备但缺基线」的旧档：先扣掉装备部分，再记录真实基线，
+      // 否则下一次穿脱会把同一份加成重复叠加。
+      const already = equipBonusFor(baseStats(cfg, g), state.equipment[id], state);
+      state.panelBase[id] = Object.fromEntries(
+        EQUIP_KEYS.map((k) => [k, (Number(g[`${k}_added`]) || 0) - (already[k] || 0)]),
+      );
+    }
+    if (!state.panelMerits[id]) state.panelMerits[id] = { battles: 0, merits: 0, defense: 0, upset: 0 };
+  }
+
+  if (!state.panelBootstrapped) {
+    const gift = PANEL_CONF.items.starterGift || [];
+    gift.forEach((cfgId, i) => {
+      state.items.push({
+        id: 500001 + i, cfgId, kind: 'equip', count: 1,
+        ownerGeneralId: 0, source: '开局', forgedAt: state.clock?.day || 1,
+      });
+    });
+    state.items.push({ id: 500010, cfgId: 400001, kind: 'scroll', count: 30, ownerGeneralId: 0, source: '开局', forgedAt: 1 });
+    state.items.push({ id: 500011, cfgId: 400003, kind: 'material', count: 2, ownerGeneralId: 0, source: '开局', forgedAt: 1 });
+    state.items.push({ id: 500012, cfgId: 400004, kind: 'relic', count: 1, ownerGeneralId: 0, source: '序章', forgedAt: 1 });
+    // 主角自带战法作为「已解锁」种子，其余走六源获取
+    for (const g of state.generals || []) {
+      const s = g.skills?.[0];
+      if (s?.cfgId) state.skillbook.unlocked[String(s.cfgId)] = { level: int(s.lv, 1), source: '自带' };
+    }
+    // 开局预置：两条已解锁、一条研习中，让「已解锁 / 研习中 / 未解锁」三色状态在原型里可验收。
+    // 这只是初始状态，之后全部靠六源推进，不额外赠送。
+    for (const id of [10001, 910000]) {
+      state.skillbook.unlocked[String(id)] = { level: 1, source: '开局旧藏' };
+    }
+    state.skillbook.research['10002'] = { progress: 12, need: 100 };
+    state.panelBootstrapped = true;
+  }
+  return state;
+}
+
+/* -------------------------------------------------------------------------- */
+/* 内部计算                                                                   */
+/* -------------------------------------------------------------------------- */
+
+function generalName(state, cfg, g) {
+  if (g.isProtagonist) return state.role?.nickName || '主公';
+  return cfg.generalByCfg?.get?.(g.cfgId)?.name || `武将${g.cfgId}`;
+}
+
+function baseStats(cfg, g) {
+  // 穿越者主公不在客户端名录里，基础五维取自 campaign/protagonist.json
+  const c = g.isProtagonist && PANEL_CONF.protagonist
+    ? PANEL_CONF.protagonist
+    : (cfg.generalByCfg?.get?.(g.cfgId) || {});
+  return Object.fromEntries(EQUIP_KEYS.map((k) => [k, Number(c[k]) || 0]));
+}
+
+/** 槽位里存的是物品实例 id，需先回查 conf 定义；单件 ≤8%、四件合计 ≤25%。 */
+function itemDefOf(state, instId) {
+  const inst = (state.items || []).find((i) => Number(i.id) === Number(instId));
+  return inst ? ITEM_BY_ID.get(Number(inst.cfgId)) : null;
+}
+
+/** 按「基础五维百分比」结算装备加成；单件 ≤8%、四件合计 ≤25%。 */
+function equipBonusFor(base, eq, state) {
+  const sum = Object.fromEntries(EQUIP_KEYS.map((k) => [k, 0]));
+  const red = PANEL_CONF.items.redline;
+  for (const slot of SLOT_IDS) {
+    const item = itemDefOf(state, eq?.[slot]);
+    if (!item) continue;
+    for (const k of EQUIP_KEYS) {
+      const pct = clamp(Number(item.bonusPct?.[k]) || 0, 0, red.perItemPct);
+      sum[k] += Math.round(base[k] * pct / 100);
+    }
+  }
+  for (const k of EQUIP_KEYS) sum[k] = Math.round(clamp(sum[k], 0, base[k] * red.fullSetPct / 100));
+  return sum;
+}
+
+function scrollCount(state) {
+  return (state.items || []).filter((i) => i.kind === 'scroll' && !i.ownerGeneralId)
+    .reduce((n, i) => n + (Number(i.count) || 0), 0);
+}
+
+function takeScrolls(state, n) {
+  let left = n;
+  for (const i of state.items || []) {
+    if (left <= 0) break;
+    if (i.kind !== 'scroll' || i.ownerGeneralId) continue;
+    const use = Math.min(left, Number(i.count) || 0);
+    i.count -= use; left -= use;
+  }
+  state.items = (state.items || []).filter((i) => i.count !== 0);
+  return n - left;
+}
+
+function ownedSkillIds(state) {
+  const ids = new Set(Object.keys(state.skillbook.unlocked || {}).map(Number));
+  for (const g of state.generals || []) for (const s of g.skills || []) if (s?.cfgId) ids.add(Number(s.cfgId));
+  return ids;
+}
+
+function equippedBy(state, cfgId) {
+  const out = [];
+  for (const g of state.generals || []) {
+    for (const s of g.skills || []) if (Number(s?.cfgId) === Number(cfgId)) { out.push(g.id); break; }
+  }
+  return out;
+}
+
+function isDeployed(state, gId) {
+  return (state.armys || []).some((a) => (a.generals || []).includes(Number(gId)));
+}
+
+function turnOf(state) { return int(state.strategy?.turn, 0); }
+
+/** 每回合三张提案：确定性（不用 Math.random），按回合号与固定标签洗牌。 */
+function proposalsFor(state) {
+  const all = PANEL_CONF.posts.proposals;
+  const t = turnOf(state);
+  const offset = (t * 3) % all.length;
+  return [0, 1, 2].map((i) => all[(offset + i) % all.length]);
+}
+
+function interiorOutput(state, cfg) {
+  const res = state.roleRes || {};
+  const bonusPct = {};
+  const c = PANEL_CONF.posts.redline;
+  const cityCount = Math.max(1, (state.citys || []).length || 1);
+  for (const p of PANEL_CONF.posts.posts) {
+    const gId = Number(state.interior.posts[p.id]) || 0;
+    if (!gId) { bonusPct[p.id] = 0; continue; }
+    const g = (state.generals || []).find((x) => x.id === gId);
+    if (!g) { bonusPct[p.id] = 0; continue; }
+    const lore = LORE_BY_CFG.get(Number(g.cfgId));
+    const stat = lore?.historyStats?.[p.stat] || 50;
+    let pct = Math.min(c.maxBonusPct, round2(stat / 100 * 30 - (cityCount - 1) * c.decayPerCity));
+    if (isDeployed(state, gId)) pct = round2(pct / 2);   // 出征中减半，明写在界面
+    bonusPct[p.id] = Math.max(0, pct);
+  }
+  return {
+    bonusPct,
+    resources: ['wood', 'iron', 'stone', 'grain', 'gold', 'decree'].map((k) => ({
+      key: k, label: RES_LABEL[k],
+      stock: Number(res[k]) || 0,
+      yield: Number(res[`${k}_yield`]) || 0,
+      capacity: k === 'decree' ? null : Number(res.depot_capacity) || 0,
+    })),
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* 面板聚合状态（GET /__slg/panels/state）                                    */
+/* -------------------------------------------------------------------------- */
+
+export function panelState(state, cfg) {
+  ensurePanels(state, cfg);
+  const owned = ownedSkillIds(state);
+
+  const generals = (state.generals || []).map((g) => {
+    const eq = state.equipment[String(g.id)] || {};
+    const base = baseStats(cfg, g);
+    const bonus = equipBonusFor(base, eq, state);
+    const lore = LORE_BY_CFG.get(Number(g.cfgId)) || null;
+    const slots = [0, 1, 2].map((pos) => {
+      const s = g.skills?.[pos];
+      const conf = s?.cfgId ? SKILL_BY_ID.get(Number(s.cfgId)) : null;
+      const block = slotBlock(g, pos, 'replace');
+      return {
+        pos,
+        locked: !!block,
+        lockText: block === 'innate_locked' ? '自带战法，不可替换'
+          : pos === 1 ? '需武将 Lv5 解锁' : '需 Lv20 且自带战法 10 级',
+        skill: conf ? {
+          cfgId: conf.cfgId,
+          name: conf.ui?.name ?? conf.name,
+          des: conf.ui?.des ?? '',
+          trigger: conf.trigger,
+          level: int(s.lv, 1),
+          probability: conf.ui?.levels?.[int(s.lv, 1) - 1]?.probability ?? null,
+        } : null,
+      };
+    });
+    return {
+      id: g.id, cfgId: g.cfgId, name: generalName(state, cfg, g),
+      isProtagonist: !!g.isProtagonist, level: int(g.level, 1), star: int(g.star, 0),
+      exp: int(g.exp, 0), physical: int(g.physical_power, 100),
+      state: isDeployed(state, g.id) ? '在编' : '闲置',
+      appointed: Object.entries(state.interior.posts || {}).filter(([, v]) => Number(v) === g.id).map(([k]) => k),
+      base, added: Object.fromEntries(EQUIP_KEYS.map((k) => [k, Number(g[`${k}_added`]) || 0])),
+      final: Object.fromEntries(EQUIP_KEYS.map((k) => [k, base[k] + (Number(g[`${k}_added`]) || 0)])),
+      equipBonus: bonus,
+      equipment: Object.fromEntries(SLOT_IDS.map((s) => {
+        const it = itemDefOf(state, eq[s]);
+        return [s, it ? { itemId: eq[s], cfgId: it.id, name: it.name, trait: it.trait, set: it.set, bonusPct: it.bonusPct } : null];
+      })),
+      slots,
+      lore,
+      merits: state.panelMerits[String(g.id)] || { battles: 0, merits: 0, defense: 0, upset: 0 },
+      relations: { sworn: [], rival: [], note: '关系网将在 P3 接入宿命链' },
+    };
+  });
+
+  const ownedCfgIds = new Set(generals.map((g) => Number(g.cfgId)));
+  const prospects = PANEL_CONF.lore.list
+    .filter((r) => !ownedCfgIds.has(Number(r.cfgId)))
+    .slice(0, 12)
+    .map((r) => ({ cfgId: r.cfgId, name: r.name, zi: r.zi, faction: r.faction, historyStats: r.historyStats, brief: r.brief }));
+
+  const items = (state.items || []).map((i) => {
+    const def = ITEM_BY_ID.get(Number(i.cfgId));
+    const mat = PANEL_CONF.items.materials.find((m) => Number(m.id) === Number(i.cfgId));
+    const owner = Number(i.ownerGeneralId) || 0;
+    const ownerName = owner ? (generals.find((g) => g.id === owner)?.name || '') : '';
+    return {
+      id: i.id, cfgId: i.cfgId, count: Number(i.count) || 0, kind: i.kind,
+      name: def?.name || mat?.name || `物品${i.cfgId}`,
+      slot: def?.slot || null, slotName: def?.slotName || null,
+      trait: def?.trait || '', tale: def?.tale || mat?.note || '',
+      bonusPct: def?.bonusPct || null, set: def?.set || null,
+      forge: def?.forge || null,
+      source: i.source || '—', ownerGeneralId: owner, ownerName,
+    };
+  });
+
+  const library = SKILLS.map((s) => {
+    const id = Number(s.cfgId);
+    const r = RECIPE_BY_ID.get(id) || { sources: [], trigger: `类型${s.trigger}`, tags: [] };
+    const unl = state.skillbook.unlocked[String(id)] || null;
+    const res = state.skillbook.research[String(id)] || null;
+    const by = equippedBy(state, id);
+    const status = unl || owned.has(id) ? 'unlocked' : res ? 'researching' : 'locked';
+    const lv = Object.assign({}, ...(s.ui?.levels || []).map((l, i) => ({ [i + 1]: { probability: l.probability, effect_value: l.effect_value } })));
+    return {
+      cfgId: id,
+      name: s.ui?.name ?? s.name,
+      des: s.ui?.des ?? '',
+      trigger: r.trigger, tags: r.tags, sourceGroup: r.sourceGroup,
+      target: s.ui?.target ?? null, arms: s.ui?.arms ?? [],
+      levels: lv, levelCount: (s.ui?.levels || []).length,
+      status, level: unl?.level || (owned.has(id) ? 1 : 0),
+      equippedBy: by, equipLimit: 2,
+      research: res ? { progress: res.progress, need: res.need } : null,
+      sources: r.sources || [],
+      guarantee: r.guarantee || '',
+    };
+  });
+
+  const st = state.strategy || {};
+  const cityMap = st.cities && typeof st.cities === 'object' ? Object.values(st.cities) : [];
+  const myCities = cityMap.filter((c) => c && (c.owner === 'player' || c.owner === 'self' || c.owner === 0));
+  const threats = Array.isArray(st.threats) ? st.threats : [];
+  const events = (Array.isArray(st.events) ? st.events : []).slice(-8).reverse();
+  const cityBrief = (PANEL_CONF.map.cities || []).slice(0, 40).map((c) => ({
+    id: c.id, name: c.name, province: c.province, level: c.level,
+    garrison: Math.round(480 + (Number(c.attrs?.兵源) || 50) * 5 + (Number(c.attrs?.城防) || 50) * 2),
+    agriculture: c.attrs?.农业 ?? null, commerce: c.attrs?.商业 ?? null, defense: c.attrs?.城防 ?? null,
+    note: '守军为估算值，实际以战斗内核裁定',
+  }));
+
+  return {
+    ok: true,
+    version: 1,
+    day: int(state.clock?.day, 1),
+    month: turnOf(state) + 1,
+    turn: turnOf(state),
+    roleName: state.role?.nickName || '主公',
+    generals,
+    prospects,
+    items,
+    scrolls: scrollCount(state),
+    library,
+    librarySummary: {
+      total: library.length,
+      unlocked: library.filter((x) => x.status === 'unlocked').length,
+      researching: library.filter((x) => x.status === 'researching').length,
+      sourcesCovered: library.filter((x) => x.sources.length >= 2).length,
+    },
+    slots: PANEL_CONF.items.slots,
+    statLabels: STAT_LABEL,
+    redline: PANEL_CONF.items.redline,
+    forgeCatalog: PANEL_CONF.items.items.map((i) => ({
+      id: i.id, name: i.name, slot: i.slot, slotName: i.slotName,
+      trait: i.trait, set: i.set, bonusPct: i.bonusPct, forge: i.forge,
+    })),
+    interior: {
+      posts: PANEL_CONF.posts.posts.map((p) => ({
+        ...p, generalId: Number(state.interior.posts[p.id]) || 0,
+        generalName: generals.find((g) => g.id === Number(state.interior.posts[p.id]))?.name || '',
+      })),
+      constraints: { ...PANEL_CONF.posts.constraints, morale: state.interior.morale, order: state.interior.order, corruption: state.interior.corruption },
+      visibleRule: PANEL_CONF.posts.visibleRule,
+      proposals: proposalsFor(state),
+      appliedThisTurn: state.interior.appliedTurn === turnOf(state) ? state.interior.appliedThisTurn : null,
+      output: interiorOutput(state, cfg),
+    },
+    strategy: {
+      chapter: int(state.campaign?.chapter, 1),
+      ending: state.campaign?.ending || null,
+      cityCount: myCities.length,
+      totalCities: cityMap.length,
+      soldiers: (state.armys || []).reduce((n, a) => n + (a.soldiers || []).reduce((m, x) => m + (Number(x) || 0), 0), 0),
+      threats, events, cities: cityBrief,
+      recentReports: (state.warReports || []).slice(-5).reverse(),
+      note: '决策台只给数据与推演，不替玩家决定；所有标「估算」的数字以战斗内核实际结果为准。',
+    },
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* 动作（POST /__slg/panels/action）                                          */
+/* -------------------------------------------------------------------------- */
+
+/** 把「非装备来源的原有增量 + 当前装备加成」写回 *_added，不污染既有强化数值。 */
+function recomputeEquip(state, g, bonus) {
+  const base = state.panelBase[String(g.id)] || {};
+  for (const k of EQUIP_KEYS) g[`${k}_added`] = (Number(base[k]) || 0) + (Number(bonus[k]) || 0);
+}
+
+function fail(message) { return { ok: false, message }; }
+function done(message, extra = {}) { return { ok: true, message, ...extra }; }
+
+/** 供 index.js 调用的写动作；全部显式改 state，调用方负责 save() 与回话。 */
+export function panelAction(state, cfg, action = {}) {
+  ensurePanels(state, cfg);
+  const type = String(action.type || '');
+  const gId = int(action.gId, 0);
+  const g = (state.generals || []).find((x) => x.id === gId) || null;
+  const needGeneral = () => { if (!g) throw new Error('找不到该武将'); };
+  const base = g ? baseStats(cfg, g) : Object.fromEntries(EQUIP_KEYS.map((k) => [k, 0]));
+  const applyEquip = () => {
+    const bonus = equipBonusFor(base, state.equipment[String(gId)], state);
+    recomputeEquip(state, g, bonus);
+    return bonus;
+  };
+
+  try {
+    if (type === 'equip') {
+      needGeneral();
+      const slot = String(action.slot || '');
+      if (!SLOT_IDS.includes(slot)) return fail('未知装备槽');
+      const row = (state.items || []).find((i) => Number(i.id) === int(action.itemId, -1));
+      if (!row) return fail('府库里没有这件物品');
+      const def = ITEM_BY_ID.get(Number(row.cfgId));
+      if (!def || def.slot !== slot) return fail('这件物品不能装在该槽位');
+      for (const [id, eq] of Object.entries(state.equipment)) {
+        if (Number(id) !== gId && Number(eq[slot]) === Number(row.id)) return fail('该物品已由其他武将佩戴');
+      }
+      const old = state.equipment[String(gId)][slot];
+      if (old) { const prev = (state.items || []).find((i) => Number(i.id) === Number(old)); if (prev) prev.ownerGeneralId = 0; }
+      state.equipment[String(gId)][slot] = row.id;
+      row.ownerGeneralId = gId;
+      const bonus = applyEquip();
+      return done(`${generalName(state, cfg, g)}装备了「${def.name}」`, { delta: bonus });
+    }
+
+    if (type === 'unequip') {
+      needGeneral();
+      const slot = String(action.slot || '');
+      if (!SLOT_IDS.includes(slot)) return fail('未知装备槽');
+      const old = Number(state.equipment[String(gId)][slot]) || 0;
+      if (!old) return fail('该槽位本来就是空的');
+      const row = (state.items || []).find((i) => Number(i.id) === old);
+      if (row) row.ownerGeneralId = 0;
+      state.equipment[String(gId)][slot] = 0;
+      const bonus = applyEquip();
+      return done('已卸下，无消耗', { delta: bonus });
+    }
+
+    if (type === 'forge') {
+      const def = ITEM_BY_ID.get(int(action.cfgId, -1));
+      if (!def) return fail('没有这张锻造配方');
+      const cost = def.forge.cost;
+      for (const [k, v] of Object.entries(cost)) {
+        if ((Number(state.roleRes?.[k]) || 0) < v) return fail(`${RES_LABEL[k] || k}不足，需 ${v}`);
+      }
+      for (const [k, v] of Object.entries(cost)) state.roleRes[k] = (Number(state.roleRes[k]) || 0) - v;
+      const id = Math.max(500000, ...(state.items || []).map((i) => Number(i.id) || 0)) + 1;
+      state.items.push({ id, cfgId: def.id, kind: 'equip', count: 1, ownerGeneralId: 0, source: `锻造·${def.forge.drawing}`, forgedAt: int(state.clock?.day, 1) });
+      return done(`「${def.name}」锻造完成（100% 成功，词条固定）`, { itemId: id });
+    }
+
+    if (type === 'dismantle') {
+      const idx = (state.items || []).findIndex((i) => Number(i.id) === int(action.itemId, -1));
+      if (idx < 0) return fail('物品不存在');
+      const row = state.items[idx];
+      if (row.ownerGeneralId) return fail('请先卸下再分解');
+      const def = ITEM_BY_ID.get(Number(row.cfgId));
+      const gain = def ? 120 : 20;
+      const iron = (state.items || []).find((i) => Number(i.cfgId) === 400002);
+      if (iron) iron.count = (Number(iron.count) || 0) + Math.ceil(gain / 40);
+      else state.items.push({ id: Date.now(), cfgId: 400002, kind: 'material', count: Math.ceil(gain / 40), ownerGeneralId: 0, source: '分解', forgedAt: int(state.clock?.day, 1) });
+      state.items.splice(idx, 1);
+      return done(`已分解「${def?.name || '物品'}」，返还精铁（分解不可逆，已二次确认）`);
+    }
+
+    if (type === 'research') {
+      const cfgId = int(action.cfgId, -1);
+      const s = SKILL_BY_ID.get(cfgId);
+      if (!s) return fail('战法不存在');
+      if (state.skillbook.unlocked[String(cfgId)]) return fail('该战法已解锁');
+      const rec = RECIPE_BY_ID.get(cfgId);
+      const need = int(rec?.sources.find((x) => x.type === 'research')?.progressNeed, 100);
+      const row = state.skillbook.research[String(cfgId)] || { progress: 0, need };
+      const want = Math.max(1, int(action.amount, 10));
+      const available = scrollCount(state);
+      if (available <= 0) return fail('兵书残卷不足：打胜仗、守城、斩将可获残卷');
+      const used = takeScrolls(state, Math.min(want, available));
+      row.progress += used; row.need = need;
+      state.skillbook.research[String(cfgId)] = row;
+      if (row.progress >= need) {
+        delete state.skillbook.research[String(cfgId)];
+        state.skillbook.unlocked[String(cfgId)] = { level: 1, source: '战功研习' };
+        return done(`「${s.ui?.name ?? s.name}」研习完成，已解锁`, { unlocked: true });
+      }
+      return done(`投入残卷 ${used}，研习进度 ${row.progress}/${need}`, { progress: row.progress, need });
+    }
+
+    if (type === 'learn') {
+      needGeneral();
+      const pos = int(action.pos, -1);
+      const cfgId = int(action.cfgId, -1);
+      const s = SKILL_BY_ID.get(cfgId);
+      if (!s) return fail('战法不存在');
+      const block = slotBlock(g, pos, 'replace');
+      if (block) return fail(pos === 0 ? '自带战法不可替换' : pos === 1 ? '需 Lv5 解锁该槽' : '需 Lv20 且自带战法 10 级');
+      if (!state.skillbook.unlocked[String(cfgId)]) return fail('该战法尚未解锁，请先到战法库查看获取途径');
+      const by = equippedBy(state, cfgId).filter((id) => id !== gId);
+      if (by.length >= 2) return fail('每条战法同时最多 2 人装配');
+      g.skills[pos] = { id: cfgId, cfgId, lv: 1 };
+      return done(`${generalName(state, cfg, g)}学会了「${s.ui?.name ?? s.name}」`);
+    }
+
+    if (type === 'appoint') {
+      const post = String(action.post || '');
+      const p = PANEL_CONF.posts.posts.find((x) => x.id === post);
+      if (!p) return fail('未知岗位');
+      const target = int(action.target, 0);
+      if (target && !(state.generals || []).some((x) => x.id === target)) return fail('找不到该武将');
+      state.interior.posts[post] = target;
+      return done(target ? `已委任 ${generalName(state, cfg, (state.generals || []).find((x) => x.id === target))} 掌${p.name}` : `已撤去${p.name}委任`, { output: interiorOutput(state, cfg) });
+    }
+
+    if (type === 'proposal') {
+      const id = String(action.id || '');
+      if (state.interior.appliedTurn === turnOf(state)) return fail('本回合已用过政令，下月再来');
+      const p = proposalsFor(state).find((x) => x.id === id);
+      if (!p) return fail('本回合没有这张提案');
+      // 提案代价里的「-X 资源」统一折算为金/粮/木/政令的确定性扣减；不产生随机
+      const cost = { amnesty: { gold: 500 }, farm: { gold: 600 }, levy: { grain: 800 }, repair: { wood: 800, iron: 400 }, audit: { decree: 2 } }[id] || {};
+      for (const [k, v] of Object.entries(cost)) {
+        if ((Number(state.roleRes?.[k]) || 0) < v) return fail(`${RES_LABEL[k] || k}不足，需 ${v}`);
+      }
+      for (const [k, v] of Object.entries(cost)) state.roleRes[k] -= v;
+      state.interior.appliedTurn = turnOf(state);
+      state.interior.appliedThisTurn = id;
+      if (id === 'levy') state.interior.morale = clamp(state.interior.morale - 8, 0, 100);
+      if (id === 'amnesty') { state.interior.morale = clamp(state.interior.morale + 12, 0, 100); state.interior.order = clamp(state.interior.order + 6, 0, 100); }
+      if (id === 'audit') state.interior.corruption = clamp(state.interior.corruption - 6, 0, 100);
+      return done(`已颁行「${p.name}」：${p.effect}（${p.cost}，持续 ${p.turns} 回合）`, { output: interiorOutput(state, cfg) });
+    }
+
+    return fail(`未知动作：${type}`);
+  } catch (err) {
+    return fail(err?.message || String(err));
+  }
+}
+
+/** 供单测与冒烟使用的只读自检：51 条战法是否都有 ≥2 条公开获取途径、且文本未被改写。 */
+export function panelSelfCheck() {
+  const conf = PANEL_CONF.recipes;
+  const missing = conf.recipes.filter((r) => (r.sources || []).length < 2
+    || !r.sources.some((s) => s.type === 'research')
+    || r.sources.some((s) => !s.where || !s.cost || !s.detail));
+  const mismatch = conf.recipes.filter((r) => {
+    const s = SKILL_BY_ID.get(Number(r.cfgId));
+    return !s || (s.ui?.name ?? s.name) !== r.name;
+  });
+  const overItem = PANEL_CONF.items.items.filter((i) =>
+    Object.values(i.bonusPct || {}).some((v) => v > PANEL_CONF.items.redline.perItemPct));
+  return {
+    skillCount: conf.recipes.length,
+    missing,
+    mismatch,
+    overItem,
+    ok: missing.length === 0 && mismatch.length === 0 && overItem.length === 0,
+  };
+}
