@@ -2001,10 +2001,18 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     if (rsp && rsp.msg && rsp.msg.reason) return String(rsp.msg.reason);
     return ERR_TEXT[rsp && rsp.code] || ('失败（' + ((rsp && rsp.code) || '?') + '）');
   }
-  function send(name, msg) {
-    if (!window.__slgSend) { toast('尚未连上游戏', false); return Promise.reject(new Error('not ready')); }
+  // silent：启动早期（客户端模块尚未执行完，__slgSend 还没挂上）的预取不要弹提示，
+  // 否则每次打开都会在登录页闪一条「尚未连上游戏」，看着像断线。
+  function send(name, msg, silent) {
+    if (!window.__slgSend) {
+      if (!silent) toast('还没进入游戏，先点「进入游戏」', false);
+      return Promise.reject(new Error('not ready'));
+    }
     return window.__slgSend(name, msg || {}).then(function (r) { return r.rsp; })
-      .catch(function () { toast('请求失败', false); throw new Error('send fail'); });
+      .catch(function () {
+        if (!silent) toast('请求失败', false);
+        throw new Error('send fail');
+      });
   }
   function mkBtn(label, cls, onClick) {
     var b = document.createElement('button');
@@ -2791,8 +2799,10 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       }).join('　') + '　<span>令 ' + fmt(res.decree) + '</span>';
     }).catch(function () {});
   };
-  // 预取 world.meta：此刻 WS 可能还没连上，失败是正常的，不要让 promise 未捕获
-  loadMeta().catch(function () {});
+  // 预取 world.meta：此刻客户端模块可能还没执行完，__slgSend 尚未挂上。
+  // 未就绪就跳过预热（各面板打开时会重新取，功能不受影响），
+  // 避免在登录页弹「尚未连上游戏」这种看着像断线的提示。
+  if (window.__slgSend) loadMeta().catch(function () {});
 })();`;
 
 
