@@ -11,7 +11,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { makeBuild, nextId, mainCity } from '../world.js';
 import { rngFor } from './strategy-rng.js';
-import { canMarchBetween, marchableNeighbors, marchGraph, isGateBlocked } from './march.js';
+import { canMarchBetween, marchableNeighbors, marchGraph } from './march.js';
 import { resolveBattle } from '../battle.js';
 import { planCampaign, commitBrainGoal, noteBattleOutcome, noteCityLost } from './strategy-brain.js';
 import { quoteMarch, openMonth, closeMonth, noteMove, noteCity, booksOf } from './strategy-log.js';

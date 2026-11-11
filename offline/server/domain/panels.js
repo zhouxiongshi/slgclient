@@ -12,6 +12,10 @@ import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { slotBlock } from './slots.js';
+/* 战略台以并行会话的战略层为唯一口径：行军可达/关隘取 march.js，出征账取 strategy-log.js。
+   刻意不 import strategy.js —— 它反向 import world.js，而 world.js 又 import 本文件，会成环。 */
+import { marchableNeighbors, marchGraph } from './march.js';
+import { booksOf } from './strategy-log.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const load = (p) => JSON.parse(readFileSync(resolve(ROOT, p), 'utf8'));
@@ -24,6 +28,7 @@ export const PANEL_CONF = {
   mainSkills: load('conf/skills.json').skills,
   libSkills: load('conf/library-skills.json').skills,
   map: (() => { try { return load('conf/campaign/strategy/map.json'); } catch { return { cities: [] }; } })(),
+  factions: (() => { try { return load('conf/campaign/strategy/factions.json'); } catch { return { factions: [] }; } })(),
   protagonist: (() => { try { return load('conf/campaign/protagonist.json').general; } catch { return null; } })(),
 };
 
@@ -323,17 +328,66 @@ export function panelState(state, cfg) {
     };
   });
 
+  /* 战略台数据源对齐（以并行会话的战略层为主，不再自己造估算值）：
+     - 城池 / 归属 / 实时驻军取 state.strategy.cities（strategyAttack 实际用的就是 troops）；
+     - 行军可达与关隘封锁取 march.js，与出征校验同一份规则；
+     - 诸侯战役意图取 strategy-brain 写入的 st.memory[*].goal；
+     - 拟人日志与出征账取 strategy-log 写入的 st.chronicle。 */
   const st = state.strategy || {};
-  const cityMap = st.cities && typeof st.cities === 'object' ? Object.values(st.cities) : [];
-  const myCities = cityMap.filter((c) => c && (c.owner === 'player' || c.owner === 'self' || c.owner === 0));
-  const threats = Array.isArray(st.threats) ? st.threats : [];
-  const events = (Array.isArray(st.events) ? st.events : []).slice(-8).reverse();
-  const cityBrief = (PANEL_CONF.map.cities || []).slice(0, 40).map((c) => ({
-    id: c.id, name: c.name, province: c.province, level: c.level,
-    garrison: Math.round(480 + (Number(c.attrs?.兵源) || 50) * 5 + (Number(c.attrs?.城防) || 50) * 2),
-    agriculture: c.attrs?.农业 ?? null, commerce: c.attrs?.商业 ?? null, defense: c.attrs?.城防 ?? null,
-    note: '守军为估算值，实际以战斗内核裁定',
-  }));
+  const cityRows = st.cities && typeof st.cities === 'object' ? st.cities : {};
+  const mapCities = PANEL_CONF.map.cities || [];
+  const myCities = mapCities.filter((c) => cityRows[c.id]?.owner === 'player');
+  let marchable = [];
+  let gates = [];
+  // 与 strategy.js 的 marchableFrom 同一实现：marchableNeighbors(home, 全图城 id)
+  try {
+    marchable = (marchableNeighbors(st.playerCity || 0, mapCities.map((c) => c.id)) || []).map(Number);
+  } catch { marchable = []; }
+  try {
+    gates = Object.entries(marchGraph()?.gateStatus || {})
+      .map(([name, status]) => ({ name, status }));
+  } catch { gates = []; }
+  const reachable = new Set(marchable);
+  const factionNames = Object.fromEntries((PANEL_CONF.factions?.factions || [])
+    .map((f) => [String(f.id), f.name]));
+  const nameOfFaction = (id) => factionNames[String(id)]
+    || (id === 'player' ? '我军' : PANEL_CONF.factions?.neutral?.name || id);
+  const threats = (Array.isArray(state.garrisons) ? state.garrisons : [])
+    .filter((g) => !g.cleared)
+    .map((g) => ({
+      id: g.id, name: g.name || '来犯军',
+      soldiers: Math.max(0, Math.round(Number(g.soldiers) || 0)),
+      faction: g.faction || '', patrol: !!g.patrol,
+    }));
+  const events = (Array.isArray(st.events) ? st.events : []).slice(-8).reverse()
+    .map((e) => ({ ...e, month: (e.turn || 0) + 1 }));
+  const cityBrief = mapCities.map((c) => {
+    const row = cityRows[c.id] || {};
+    const troops = Math.max(0, Math.round(Number(row.troops) || 0));
+    return {
+      id: c.id, name: c.name, province: c.province, level: c.level,
+      owner: row.owner || 'han', ownerName: nameOfFaction(row.owner || 'han'), troops,
+      garrison: troops, // 兼容旧 UI 字段：已改为实时驻军，不再是拍脑袋估算
+      agriculture: c.attrs?.农业 ?? null, commerce: c.attrs?.商业 ?? null,
+      cityDef: c.attrs?.城防 ?? null,
+      terrain: c.terrain || '', specialty: c.attrs?.特产 || '',
+      reachable: reachable.has(Number(c.id)),
+      note: '守军取天下沙盘实时数据；出征仍受行军路段与关隘封锁限制',
+    };
+  });
+  const chronicle = (Array.isArray(st.chronicle) ? st.chronicle : []).slice(-6).reverse();
+  let books = [];
+  try { books = chronicle.map((m) => ({ month: m.month, rows: booksOf(m.moves || []) })); }
+  catch { books = []; }
+  const plans = Object.entries(st.memory || {}).map(([fid, mem]) => {
+    const goal = mem?.goal;
+    if (!goal) return null;
+    return {
+      id: fid, name: factionNames[String(fid)] || fid,
+      type: goal.type || '', targetName: goal.targetName || goal.target || '',
+      reason: goal.reason || '', lockedUntil: goal.lockedUntil || 0,
+    };
+  }).filter(Boolean);
 
   return {
     ok: true,
@@ -375,11 +429,12 @@ export function panelState(state, cfg) {
       chapter: int(state.campaign?.chapter, 1),
       ending: state.campaign?.ending || null,
       cityCount: myCities.length,
-      totalCities: cityMap.length,
+      totalCities: mapCities.length,
       soldiers: (state.armys || []).reduce((n, a) => n + (a.soldiers || []).reduce((m, x) => m + (Number(x) || 0), 0), 0),
       threats, events, cities: cityBrief,
+      marchable, gates, plans, chronicle, books,
       recentReports: (state.warReports || []).slice(-5).reverse(),
-      note: '决策台只给数据与推演，不替玩家决定；所有标「估算」的数字以战斗内核实际结果为准。',
+      note: '决策台只给数据，不替玩家决定；城池、实时守军、行军可达、关隘与诸侯战役意图均取自天下沙盘（战略层）同一份数据。',
     },
   };
 }

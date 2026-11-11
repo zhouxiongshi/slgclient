@@ -9,7 +9,7 @@
  * 人格轴决定「敢不敢打、打输几次才换目标、愿不愿意结盟」，
  * 不决定所有人去打同一座分最高的城。
  */
-import { canMarchBetween, marchableNeighbors } from './march.js';
+import { marchableNeighbors } from './march.js';
 import { quoteMarch } from './strategy-log.js';
 
 export const PERSONA_AXES = {

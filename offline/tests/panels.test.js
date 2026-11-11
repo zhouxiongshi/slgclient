@@ -16,8 +16,8 @@ import { createWorld, normalizeWorld } from '../server/world.js';
 import {
   panelState, panelAction, panelSelfCheck, ensurePanels, PANEL_CONF,
 } from '../server/domain/panels.js';
-import { PANELS_UI_SOURCE } from '../server/panels-ui.js';
-import { startOfflineServer } from '../server/index.js';
+import { startOfflineServer, PANELS_UI_SOURCE } from '../server/index.js';
+import { strategyViewState } from '../server/domain/strategy.js';
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const cfg = loadConfig();
@@ -198,4 +198,50 @@ test('HTTP：index.html 运行时注入、ui.js 可下发、state/selfcheck/acti
     srv.close();
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+/* -------------------------------------------------------------------------- */
+/* 与并行会话战略层合并后的对齐断言：冲突一律以战略层的数据/层级为主             */
+/* -------------------------------------------------------------------------- */
+
+test('战略台口径与战略层一致：全图城池 / 实时守军 / 行军可达 / 关隘', () => {
+  const s = fresh();
+  const v = panelState(s, cfg);
+  const sv = strategyViewState(s, cfg);
+  assert.equal(v.strategy.cities.length, sv.cities.length, '不得再截断为 40 城');
+  assert.equal(v.strategy.totalCities, sv.cities.length);
+  assert.ok(v.strategy.cities.length >= 70);
+  for (const c of v.strategy.cities) {
+    const ref = sv.cities.find((x) => x.id === c.id);
+    assert.ok(ref, `城 ${c.id} 应存在于战略层`);
+    assert.equal(c.troops, Math.max(0, Math.round(Number(ref.troops) || 0)), `${c.name} 守军须为实时值`);
+    assert.equal(c.garrison, c.troops, '兼容字段不得再保留独立估算');
+    assert.equal(typeof c.reachable, 'boolean');
+  }
+  assert.deepEqual(v.strategy.marchable, sv.marchable, '行军可达须与出征校验同源');
+  assert.equal(v.strategy.cityCount, sv.cities.filter((c) => c.owner === 'player').length);
+  for (const key of ['gates', 'plans', 'chronicle', 'books']) {
+    assert.ok(Array.isArray(v.strategy[key]), `strategic.${key} 应存在（战略层新增情报）`);
+  }
+});
+
+test('边境威胁与 state.garrisons 同源，不再读不存在的 st.threats', () => {
+  const s = fresh();
+  s.garrisons = [
+    { id: 901, name: '并州来犯军', soldiers: 1234, faction: 'bingzhou', patrol: true, cleared: false },
+    { id: 902, name: '已清剿', soldiers: 500, cleared: true },
+  ];
+  const t = panelState(s, cfg).strategy;
+  assert.equal(t.threats.length, 1);
+  assert.equal(t.threats[0].soldiers, 1234);
+  assert.equal(t.threats[0].name, '并州来犯军');
+});
+
+test('六府入口层级让位：低于战略层所有弹层，面板自身仍是模态', () => {
+  const css = PANELS_UI_SOURCE;
+  const dock = Number(/#slgPanelsDock\{[^}]*z-index:(\d+)/.exec(css)?.[1]);
+  const mask = Number(/#slgPanelsMask\{[^}]*z-index:(\d+)/.exec(css)?.[1]);
+  assert.ok(dock > 99998, '入口需高于战略沙盘 overlay(99998) 才可点');
+  assert.ok(dock < 100000, '入口必须低于战略层城池窗/确认框/toast(100000~100003)');
+  assert.ok(mask > 100003, '面板打开时仍应模态覆盖');
 });

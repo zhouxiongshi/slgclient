@@ -6,10 +6,6 @@
  * 天赋：默认不开，只由剧情把 talentUnlocked 设为 true。
  */
 
-export function emptySlots() {
-  return [null, null, null];
-}
-
 export function slotBlock(g, pos, action) {
   if (pos < 0 || pos > 2) return 'slot_locked';
   if (pos === 0 && (action === 'replace' || action === 'remove')) return 'innate_locked';

@@ -36,22 +36,6 @@ export function chapterRules() {
   return cached;
 }
 
-export function blankCampaign() {
-  return {
-    id: 'chapter1',
-    chapter: 1,
-    fired: {},
-    choice: null,
-    waveFactor: null,
-    blueprints: [],
-    ending: null,
-    endingDay: null,
-    spearmanId: 0,
-    pendingDay: 0,
-    lastPatrolDay: 0,
-  };
-}
-
 function say(state, ctx, text) {
   const cm = {
     rid: 0,
@@ -379,6 +363,3 @@ export function onTileCleared(state, cfg, x, y) {
   return g;
 }
 
-export function garrisonAt(state, x, y) {
-  return (state.garrisons || []).find((g) => g.x === x && g.y === y && !g.cleared) || null;
-}

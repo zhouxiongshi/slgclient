@@ -25,7 +25,6 @@ export const LEGACY_UUIDS = {
   301: '686fb60f-714d-4b0e-8c7d-f489797dbc5c', // 重斩
   401: 'c80762ed-a4ac-4e5a-b178-2803de36d50a', // 锋矢
 };
-export const OUTLINE_UUID = 'cbb1460b-b029-4421-8608-0e852a81b4ef';
 
 const TABLE = JSON.parse(readFileSync(TABLE_PATH, 'utf8'));
 const AUTHORED = join(ROOT, 'conf', 'campaign', 'protagonist-skill.json');
@@ -42,14 +41,11 @@ if (existsSync(LIBRARY)) {
 }
 export const SKILLS = TABLE.skills;
 export const SKILL_BY_ID = new Map(SKILLS.map((s) => [s.cfgId, s]));
-export const SKILL_BY_NAME = new Map(SKILLS.map((s) => [s.name, s]));
 export const LEVEL_COUNT = TABLE.levelCount;
 export const SKILL_TABLE_VERSION = TABLE.version;
 export const SKILL_TABLE_SHA = TABLE.sourceSha256;
 
 export function skillById(cfgId) { return SKILL_BY_ID.get(Number(cfgId)) || null; }
-export function skillByName(name) { return SKILL_BY_NAME.get(String(name)) || null; }
-export function uiConf(cfgId) { return skillById(cfgId)?.ui ?? null; }
 
 /** 技能等级 → 内核 Effect 的真实数值（不再使用演示随机 pick）。 */
 export function kernelSkillAt(cfgId, lv) {

@@ -8,7 +8,6 @@
  *   - 从地图删掉的城在注册表里留墓碑，ID 不回收；
  *   - 道路在导入时解析成稳定 ID 端点，之后只认 ID。
  */
-import { readFileSync, existsSync } from 'node:fs';
 
 export const emptyRegistry = () => ({ version: 1, nextId: 1, entries: {} });
 
@@ -121,12 +120,3 @@ export function buildStrategyMap(incomingCities, routesRaw, registryIn) {
   return { registry, map: { cities, routes }, report: { added, renamed, removed, warnings } };
 }
 
-/** 游戏运行时读取规范化地图（进程内缓存）。 */
-let cache = null;
-export function loadStrategyMap(confDir) {
-  if (cache) return cache;
-  const path = `${confDir}/campaign/strategy/map.json`;
-  if (!existsSync(path)) return null;
-  cache = JSON.parse(readFileSync(path, 'utf8'));
-  return cache;
-}

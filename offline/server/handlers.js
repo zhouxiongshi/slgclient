@@ -8,8 +8,8 @@
  *     从自己的 resources 加载，本服务一个都不碰 —— 画面因此 100% 不变
  */
 import {
-  nextId, findGeneral, findArmy, findCity, mainCity, makeGeneral,
-  makeBuild, makeCity, makeArmy, generalToArray,
+  nextId, findGeneral, findArmy, mainCity, makeGeneral,
+  makeBuild, makeArmy,
 } from './world.js';
 import { resolveBattle } from './battle.js';
 import { skillById, LEVEL_COUNT } from './skills.js';

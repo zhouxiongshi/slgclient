@@ -12,7 +12,7 @@
  *   - 单机世界状态：JSON 存档；定时任务持久化，重启续跑
  */
 import http from 'node:http';
-import { createReadStream, existsSync, statSync, readFileSync, renameSync } from 'node:fs';
+import { existsSync, statSync, readFileSync, renameSync } from 'node:fs';
 import { resolve, extname, join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
@@ -26,9 +26,14 @@ import { loadOverrides, saveOverrides } from './gm/overrides.js';
 import { dossierFor } from './domain/dossier.js';
 import { strategyViewState } from './domain/strategy.js';
 import { panelState, panelAction, panelSelfCheck } from './domain/panels.js';
-import { PANELS_UI_SOURCE } from './panels-ui.js';
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
+
+/**
+ * 六面板浏览器端源码：单文件、原样下发，不经打包也不改动磁盘 web/。
+ * 直接读文本而非 import，保证该文件保持纯浏览器脚本（可单独 node --check）。
+ */
+export const PANELS_UI_SOURCE = readFileSync(resolve(ROOT, 'server/panels-ui.js'), 'utf8');
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',

@@ -467,6 +467,27 @@ async function runSmoke(win, server, app) {
       homePage?.ok === true && (homePage.slotRows || 0) >= 3 && homePage.hasImport === true, homePage);
     await sleep(400);
 
+    // 合并后检查：六府入口须让位于战略层弹层，且不与战略层左上按钮坞重叠
+    const dockState = await wc.executeJavaScript(`(function(){
+      try {
+        var d = document.getElementById('slgPanelsDock');
+        if (!d) return { ok:false, reason:'no dock' };
+        var z = Number(getComputedStyle(d).zIndex), r = d.getBoundingClientRect();
+        var other = document.getElementById('slgDock');
+        var or = other ? other.getBoundingClientRect() : null;
+        var overlap = !!or && or.width > 0 &&
+          !(r.right < or.left || r.left > or.right || r.bottom < or.top || r.top > or.bottom);
+        return {
+          ok: z > 99998 && z < 100000 && !overlap && r.width > 0 && r.width <= 140,
+          zIndex: z, overlapWithStrategyDock: overlap, width: r.width,
+          rect: { left:r.left, top:r.top, right:r.right, bottom:r.bottom },
+        };
+      } catch(e){ return { ok:false, error:String(e) }; }
+    })()`, true);
+    fs.writeFileSync(path.join(outDir, `smoke-dock-${tag}.png`), (await win.capturePage()).toPNG());
+    report.panelDock = dockState;
+    check('六府入口层级让位且与战略层按钮坞不重叠', dockState?.ok === true, dockState);
+
     // 六面板体系 P0：真实页面里逐一点开，并核对「51 条战法每条都有获取途径」
     const panels = await wc.executeJavaScript(`(async function(){
       try {
@@ -480,11 +501,14 @@ async function runSmoke(win, server, app) {
           await new Promise(function(r){ setTimeout(r, 420); });
           var b=document.getElementById('slgPanelsBody');
           var tx=b?(b.textContent||''):'';
+          var stratKeys=['关隘与行军','诸侯战役意图','出征账','守军（沙盘实时）','选择目标城（全'];
           out[tabs[i]]={
             len: tx.length, sample: tx.slice(0,70),
             overflowX: b ? (b.scrollWidth - b.clientWidth > 4) : true,
+            stratKeys: tabs[i]==='strategy' ? stratKeys.filter(function(k){ return tx.indexOf(k)>=0; }) : null,
           };
         }
+        var stratOk = !!out.strategy.stratKeys && out.strategy.stratKeys.length === 5;
         var st=window.__slgPanels.state();
         var libOk = !!st && st.library.length === 51
           && st.library.every(function(s){ return s.sources && s.sources.length >= 2; });
@@ -496,8 +520,9 @@ async function runSmoke(win, server, app) {
         var b2=document.getElementById('slgPanelsBody');
         var showSource=(b2?(b2.textContent||''):'').indexOf('如何获得') >= 0;
         return {
-          ok: tabs.every(function(t){ return out[t].len > 120 && !out[t].overflowX; }) && libOk && showSource,
-          tabs: out, libOk: libOk, showSource: showSource,
+          ok: tabs.every(function(t){ return out[t].len > 120 && !out[t].overflowX; })
+            && libOk && showSource && stratOk,
+          tabs: out, libOk: libOk, showSource: showSource, stratOk: stratOk,
           total: st ? st.library.length : 0,
           sourcesCovered: st ? st.librarySummary.sourcesCovered : 0,
         };
@@ -505,6 +530,10 @@ async function runSmoke(win, server, app) {
     })()`, true);
     const panelImg = await win.capturePage();
     fs.writeFileSync(path.join(outDir, `smoke-panels-${tag}.png`), panelImg.toPNG());
+    // 战略台单独留图：合并后新增关隘 / 诸侯意图 / 出征账三块，需肉眼确认版式
+    await wc.executeJavaScript('(function(){ if(window.__slgPanels) window.__slgPanels.open("strategy"); return true; })()', true);
+    await sleep(350);
+    fs.writeFileSync(path.join(outDir, `smoke-panels-strategy-${tag}.png`), (await win.capturePage()).toPNG());
     await wc.executeJavaScript('(function(){ if(window.__slgPanels) window.__slgPanels.close(); return true; })()', true);
     report.panels = panels;
     check('六面板均可打开且有内容；51 条战法每条可见获取途径',

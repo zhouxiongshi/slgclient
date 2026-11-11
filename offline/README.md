@@ -28,7 +28,7 @@
 | **招贤 / 武将** | 招贤返回明确原因（`no_guest` / `not_enough_gold`）+ 今日名单时段状态；武将面板、战法装配、名将替身 |
 | **战法** | 31 条真实战法（`conf/skills.json`，数据源 battle-kit 原文片段，可溯源；版本串 `battle-kit/original-fragments/v3`），四类战法 + 10 级真实数值成长 |
 | **经济** | 产量三段合成（基础 + 设施 + 领地）、政令恢复、征收限额与 CD、集市转换、要塞建造/升级/拆除（有消耗有工期），满仓给出「已满仓」提示 |
-| **六面板（P0 原型）** | 右上角「六府」按钮坞：武将四页签 / 战略决策台 / 内政委任台 / 府库分类账 / 兵刃四槽 / 战法库全库＋配方；独立模块注入，`server/skills.js` 零改动 |
+| **六面板（P0 原型）** | 右上角「六府」折叠按钮（默认收起，点开竖排六页）：武将四页签 / 战略决策台 / 内政委任台 / 府库分类账 / 兵刃四槽 / 战法库全库＋配方；独立模块注入，`server/skills.js` 零改动；战略台与战略层同源数据（72 城实时守军 / 行军可达 / 关隘 / 战役意图 / 出征账） |
 | **事件史** | 保留 200 条（原 50 条滚动会丢历史），带 `day`，攻陷文案写作「自XX手中攻陷XX」 |
 
 ## 三、目录结构
@@ -63,11 +63,11 @@ offline/
 │   └── campaign/        章节、人物、命运、主角、战略层（strategy/map.json 72 城）
 ├── web/               原版客户端构建产物（web-desktop，磁盘逐字节不动）
 ├── electron/          Electron 壳（main.cjs + smoke.cjs 冒烟）
-├── tests/             单测 135 条（node --test）
+├── tests/             单测 138 条（node --test）
 ├── tools/             工具链
 │   ├── pack.js            打包 exe → build/SLG-Offline-win32-x64/
 │   ├── check-release.js   发行核查（70 项硬性验收，含画面指纹）
-│   ├── smoke.js           运行时冒烟（23 项，源码态 / --packaged 打包态）
+│   ├── smoke.js           运行时冒烟（24 项，源码态 / --packaged 打包态）
 │   ├── explore-bugs.mjs   协议穷举探测（71 handler × 5 payload）
 │   └── build-skills.js    战法表生成器（从 battle-kit 原文生成 skills.json）
 └── package.json
@@ -89,10 +89,10 @@ node electron/main.cjs        # 或直接跑 Electron 壳
 ### 打包 / 验证
 ```bash
 node tools/pack.js               # 打包 exe（自动拷贝 server/conf/web 进包，并校验画面指纹）
-node tools/smoke.js              # 源码态冒烟 23 项
-node tools/smoke.js --packaged   # 打包态冒烟 23 项
+node tools/smoke.js              # 源码态冒烟 24 项
+node tools/smoke.js --packaged   # 打包态冒烟 24 项
 node tools/check-release.js      # 发行核查 70 项
-node --test tests/*.test.js      # 单元测试 135 条
+node --test tests/*.test.js      # 单元测试 138 条
 node tools/explore-bugs.mjs      # 协议穷举探测
 ```
 
@@ -101,8 +101,8 @@ node tools/explore-bugs.mjs      # 协议穷举探测
 ## 五、当前验证状态
 
 - ✅ 画面指纹 `ee987ec2…` 与原版逐字节一致（`pack.json`：`byteIdentical: true`，1582 个文件）
-- ✅ 单元测试 **135/135**（含 `tests/panels.test.js` 8 条六面板回归、`tests/playtest-fixes.test.js` 实机试玩回归、`tests/save-slots.test.js` 存档档位）
-- ✅ 运行时冒烟 **23/23**（源码态 `reports/smoke-original.json`、打包态 `reports/smoke-packaged.json`，含本城页存档卡 + 六面板逐一点开/零横向溢出/51 条战法获取途径）
+- ✅ 单元测试 **138/138**（含 `tests/panels.test.js` 11 条：六面板回归 + 与战略层的数据／层级对齐断言、`tests/playtest-fixes.test.js` 实机试玩回归、`tests/save-slots.test.js` 存档档位）
+- ✅ 运行时冒烟 **24/24**（源码态 `reports/smoke-original.json`、打包态 `reports/smoke-packaged.json`，含本城页存档卡 + 六面板逐一点开/零横向溢出/51 条战法获取途径 + 六府入口层级让位与不重叠 + 战略台情报卡可见）
 - ✅ 发行核查 **70/70**（含内核黄金向量、协议、画面指纹、工作区干净）
 - ✅ 协议穷举：71 handler × 5 = 355 用例，**0 抛异常**（35 条 "null 字段" 为设计空值：空战法槽、未解锁天赋、未选章节分支、无在店客人）
 - ✅ 战争闭环：出征 → 结算 → 战报入档 → 复盘（`[800,400,0]` 可下 1 级城，`[1000,600,600]` 可下 2 级城）
@@ -116,7 +116,7 @@ node tools/explore-bugs.mjs      # 协议穷举探测
 | `STRATEGY_OVERLAY_SOURCE`（`server/skills.js`） | 战略层全屏面板：天下沙盘、编队/征兵、招贤、战报、军情、序章 |
 | `BATTLE_ANIM_SOURCE` | 战斗过程动画与逐回合动作展示 |
 | `CITY_WINDOW_V2_IMPL` | 城池窗口 v2（内政/军务/征兵入口） |
-| `PANELS_UI_SOURCE`（`server/panels-ui.source.js`） | 六面板独立 UI，运行时以 `<script src="/__slg/panels/ui.js">` 挂进 index.html **响应**（磁盘文件不变） |
+| `PANELS_UI_SOURCE`（`server/panels-ui.js`） | 六面板独立 UI（唯一一份浏览器 IIFE），运行时以 `<script src="/__slg/panels/ui.js">` 挂进 index.html **响应**（磁盘文件不变） |
 
 改完只看服务端即可，不需要重新构建 Cocos 工程；如果哪天真要改客户端资源，必须重新用 Cocos Creator 构建 `web-desktop` 覆盖 `offline/web/`，并重新打包核对指纹（否则 `check-release` 会红）。
 
@@ -131,8 +131,8 @@ node tools/explore-bugs.mjs      # 协议穷举探测
 ## 八、已知缺口（六面板 P0 之后）
 
 - **P1 成长闭环**：师承 / 拾遗 / 传承 / 事件战法尚未接实际触发，当前只有「战功研习」与「锻造」可操作；战报残卷尚未按战果自动结算。
-- **P2 决策层**：内政三约束目前只显示、不驱动事件；战略台目标推演为估算，未接出征参数与盟约／背盟预警。
-- **P3 叙事与关系**：可逆传承、事件战法、关系网／战功簿／装备套装未接；天下日志仍是规则脚本（见 `../../docs/天下日志-推演实录.md`）。
+- **P2 决策层**：内政三约束目前只显示、不驱动事件；战略台已接战略层实时守军与行军可达，但尚未接出征参数、盟约／背盟预警。
+- **P3 叙事与关系**：可逆传承、事件战法、关系网／装备套装未接；天下日志已升级为战役规划脑 + 拟人月志 + 出征账（仍是确定性规则，非模型，见 `../../docs/天下日志-推演实录.md`）。
 - **内容**：796 条战法全量还原需原版 `Tcfg_skill` 数据行；当前只接 51 条 battle-kit 原文。
 - **架构**：`server/skills.js` 仍承担资源注入与三套 DOM UI；六面板已拆到独立模块，其余待按 `docs/ARCHITECTURE.md` 逐步迁出。
 
