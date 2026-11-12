@@ -22,6 +22,7 @@ import { slotBlock } from './domain/slots.js';
 import { ensureTavern, guestsNow, announceTavern, todaysGuests, dayFraction } from './domain/tavern.js';
 import {
   strategyTick, strategyAttack, strategyTurnDays, ensureStrategy, clearThreat,
+  strategyResolveMarches,
 } from './domain/strategy.js';
 import { noteIfGeneralDown } from './command.js';
 
@@ -245,6 +246,8 @@ export function settleWorld(ctx, now = Date.now()) {
   tickFacilities(state, cfg);
   totalYield(state, cfg);
   const settled = settleCampaign(state, cfg, ctx, now);
+  // ★ P2：行军到达结算（在诸侯推演之前，保证当天抵达当天开打；战报与播报由内部推）
+  strategyResolveMarches(state, cfg, ctx);
   strategyTick(state, cfg, ctx, now);
   ensureTavern(state, cfg);
   announceTavern(state, ctx, chapterRules().realMsPerDay);
@@ -1137,9 +1140,9 @@ export function handleRequest(ctx, req) {
       if (!result.ok) rsp.code = CODE.InvalidParam;
       else ctx.save();
       rsp.msg = {
-        ok: result.ok, result: result.result, reason: result.reason,
-        reportId: result.reportId, city: result.city, summary: result.summary,
-        aTotal: result.aTotal, dTotal: result.dTotal, recovered: result.recovered,
+        ok: result.ok, marching: result.marching || false, reason: result.reason,
+        marchId: result.marchId, arriveDay: result.arriveDay, need: result.need,
+        city: result.city, grainCost: result.grainCost,
       };
       break;
     }

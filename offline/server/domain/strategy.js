@@ -15,7 +15,9 @@ import { canMarchBetween, marchableNeighbors, marchGraph } from './march.js';
 import { resolveBattle } from '../battle.js';
 import { planCampaign, commitBrainGoal, noteBattleOutcome, noteCityLost } from './strategy-brain.js';
 import { quoteMarch, openMonth, closeMonth, noteMove, noteCity, booksOf } from './strategy-log.js';
-import { onTileCleared } from './campaign.js';
+import { onTileCleared, chapterRules } from './campaign.js';
+import { dayFraction } from './tavern.js';
+import { recordRes } from './economy.js';
 import { SKILLS, LEVEL_COUNT } from '../skills.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -543,13 +545,15 @@ function spawnFactionAssault(state, cfg, ctx, faction, targetCity, troops) {
   return garrison;
 }
 
-/** 选出征队伍：优先指定 armyId，否则挑兵力最多的那支（界面只传城时也能打）。 */
+/** 选出征队伍：优先指定 armyId，否则挑兵力最多的那支（界面只传城时也能打）。
+ *  ★ P2：行军中的队伍自动跳过，不能一队两用。 */
 function pickArmy(state, armyId) {
   const list = state.armys || [];
-  if (armyId) return list.find((a) => a.id === Number(armyId)) || null;
+  if (armyId) return list.find((a) => a.id === Number(armyId) && !a.marchId) || null;
   let best = null;
   let bestN = 0;
   for (const a of list) {
+    if (a.marchId) continue;
     const n = (a.soldiers || []).reduce((s, v) => s + Math.max(0, Number(v) || 0), 0);
     if (n > bestN) { bestN = n; best = a; }
   }
@@ -654,7 +658,13 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride }
   };
 }
 
-/** 战略层城战：从玩家本城出兵打一座邻接城，走真实内核，胜则城池易主。
+/** 行军耗时：相邻城 2 个游戏日（关隘路网均为邻接段；速度差异留到兵种分层后再调）。 */
+const MARCH_DAYS = 2;
+/** 行军粮：每兵每程 0.1 粮，出发一次扣清（远征有代价）。 */
+const GRAIN_PER_TROOP = 0.1;
+
+/** 战略层城战（P2 行军版）：出兵不再瞬时开打，而是生成行军队列，
+ *  扣行军粮、锁队，`strategyResolveMarches` 在到达日走真实内核结算。
  *  frac：出兵比例（1 全军 / 0.5 半军 / 0.34 三成）。 */
 export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1 }) {
   const st = ensureStrategy(state);
@@ -678,35 +688,93 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1 }) {
   if (!army) return { ok: false, code: 4, reason: 'no_army' };
   if ((army.generals || []).every((g) => !g)) return { ok: false, code: 4, reason: 'no_general' };
   if ((army.soldiers || []).every((n) => !(n > 0))) return { ok: false, code: 4, reason: 'no_troops' };
-
-  const level = Math.max(1, Math.min(3, target.level || 1));
-  const defenseOverride = defenseFor(cfg, id, target, tstate, level);
-  const fought = settleArmyBattle(state, cfg, ctx, {
-    army, frac, x: 8000 + id, y: 100 + level, defenseOverride,
-  });
-  if (!fought.ok) return { ok: false, code: 4, reason: fought.reason };
-
-  const win = fought.result === 2;
-  if (win) {
-    tstate.owner = 'player';
-    tstate.troops = Math.max(200, Math.round(defenseOverride.soldiers.reduce((s, n) => s + n, 0) * 0.3));
-    recordEvent(state, `主公攻陷${target.name}（${target.province}），守军 ${fought.dTotal} 溃散。`);
-    noteCity(state, id, { kind: '出征', text: `主公攻陷${target.name}，守军 ${fought.dTotal} 溃散，城入我军。` });
-    ctx.push?.('chat.push', {
-      rid: 0, nickName: '系统', type: 0,
-      msg: `【天下】我军攻陷${target.name}！此城已入版图。`,
-      time: Date.now(),
-    });
-  } else if (fought.result === 0) {
-    recordEvent(state, `攻${target.name}不利，败退（折损约 ${fought.aTotal - (fought.recovered || 0)}）。`);
-  } else {
-    recordEvent(state, `攻${target.name}相持不下，暂退。`);
+  // 行军粮：兵力 × 0.1/程，粮不够发不出兵
+  const troopsTotal = (army.soldiers || []).reduce((s, v) => s + Math.max(0, Number(v) || 0), 0);
+  const grainCost = Math.ceil(troopsTotal * GRAIN_PER_TROOP);
+  if ((Number(state.roleRes?.grain) || 0) < grainCost) {
+    return { ok: false, code: 5, reason: 'no_grain', need: grainCost };
   }
-  return {
-    ok: true, result: fought.result, reportId: fought.report.id, city: target.name,
-    summary: fought.summary, aTotal: fought.aTotal, dTotal: fought.dTotal,
-    recovered: fought.recovered,
+  state.roleRes.grain -= grainCost;
+  recordRes(state, 'grain', -grainCost, `行军粮草·征${target.name}`);
+
+  if (!Array.isArray(st.marches)) st.marches = [];
+  const departDay = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  const row = {
+    id: (st.marchSeq = (st.marchSeq || 0) + 1),
+    side: 'player', from: home, to: id,
+    departDay, arriveDay: departDay + MARCH_DAYS,
+    armyId: army.id, frac, grainCost,
   };
+  st.marches.push(row);
+  army.marchId = row.id;   // 锁队：到达前不能再出征/清剿
+  const fromName = map.cities.find((c) => c.id === home)?.name || '本城';
+  recordEvent(state, `大军自${fromName}开拔，出征${target.name}，预计第 ${row.arriveDay} 日抵城下（耗粮 ${grainCost}）。`);
+  ctx.push?.('chat.push', {
+    rid: 0, nickName: '系统', type: 0,
+    msg: `【天下】我军自${fromName}开拔，进军${target.name}，预计 ${MARCH_DAYS} 日后抵达。`,
+    time: Date.now(),
+  });
+  return {
+    ok: true, marching: true, marchId: row.id, arriveDay: row.arriveDay,
+    city: target.name, grainCost,
+  };
+}
+
+/** 行军到达结算：settleWorld 每次结算时调用；到达日的队伍走真实内核开打。 */
+export function strategyResolveMarches(state, cfg, ctx) {
+  const st = ensureStrategy(state);
+  if (!Array.isArray(st.marches) || !st.marches.length) return [];
+  const today = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  const map = strategyMap();
+  const results = [];
+  for (const mm of st.marches) {
+    if (mm.side !== 'player' || mm.resolved) continue;
+    if (today < mm.arriveDay) continue;
+    mm.resolved = true;
+    const army = (state.armys || []).find((a) => a.id === mm.armyId);
+    if (army) delete army.marchId;
+    const target = map.cities.find((c) => c.id === mm.to);
+    const tstate = st.cities[mm.to];
+    if (!target || !tstate) continue;
+    if (tstate.owner === 'player') {
+      recordEvent(state, `${target.name}已入我军版图，班师。`);
+      continue;
+    }
+    if (!army || (army.soldiers || []).every((n) => !(n > 0))) {
+      recordEvent(state, `出征${target.name}的队伍中途溃散，无果而返。`);
+      continue;
+    }
+    const level = Math.max(1, Math.min(3, target.level || 1));
+    const defenseOverride = defenseFor(cfg, mm.to, target, tstate, level);
+    const fought = settleArmyBattle(state, cfg, ctx, {
+      army, frac: mm.frac, x: 8000 + mm.to, y: 100 + level, defenseOverride,
+    });
+    if (!fought.ok) continue;
+    const win = fought.result === 2;
+    if (win) {
+      tstate.owner = 'player';
+      tstate.troops = Math.max(200, Math.round(defenseOverride.soldiers.reduce((s, n) => s + n, 0) * 0.3));
+      recordEvent(state, `主公攻陷${target.name}（${target.province}），守军 ${fought.dTotal} 溃散，城入我军。`);
+      noteCity(state, mm.to, { kind: '出征', text: `主公攻陷${target.name}，守军 ${fought.dTotal} 溃散，城入我军。` });
+      ctx.push?.('chat.push', {
+        rid: 0, nickName: '系统', type: 0,
+        msg: `【天下】我军攻陷${target.name}！此城已入版图。`,
+        time: Date.now(),
+      });
+    } else if (fought.result === 0) {
+      recordEvent(state, `攻${target.name}不利，败退（折损约 ${fought.aTotal - (fought.recovered || 0)}）。`);
+    } else {
+      recordEvent(state, `攻${target.name}相持不下，暂退。`);
+    }
+    results.push({
+      cityId: mm.to, city: target.name, result: fought.result,
+      reportId: fought.report.id, summary: fought.summary,
+      aTotal: fought.aTotal, dTotal: fought.dTotal, recovered: fought.recovered,
+    });
+  }
+  // 已结算且过期 3 日的行军记录清掉（客户端留了渲染窗口）
+  st.marches = st.marches.filter((mm) => !(mm.resolved && today - mm.arriveDay > 3));
+  return results;
 }
 
 /** 清剿来犯军：本地地图被遮住后，玩家在天下界面也能看到并处理威胁。 */export function clearThreat(state, cfg, ctx, { garrisonId, armyId }) {
@@ -809,6 +877,13 @@ export function strategyViewState(state, cfg = null) {
     playerCity: st.playerCity || 0,
     // 可出征的城（已按行军校验过滤：关隘封锁即不可走）
     marchable: marchableFrom(st.playerCity || 0),
+    // ★ P2：行军队列与日内进度（客户端据此画行军线与移动军标）
+    marches: (st.marches || []).map((mm) => ({
+      id: mm.id, side: mm.side, from: mm.from, to: mm.to,
+      departDay: mm.departDay, arriveDay: mm.arriveDay, resolved: !!mm.resolved,
+    })),
+    dayFrac: dayFraction(state, chapterRules().realMsPerDay),
+    msPerDay: Math.max(1000, Math.round(chapterRules().realMsPerDay / (state.clock?.scale || 1))),
     gates: Object.entries((marchGraph() && marchGraph().gateStatus) || {})
       .map(([name, status]) => ({ name, status })),
     routes: map.routes.map((r) => ({ id: r.id, from: r.from, to: r.to, points: r.points, sea: r.sea })),

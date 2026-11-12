@@ -9,6 +9,7 @@ import { handleRequest } from '../server/handlers.js';
 import {
   strategyMap, factionConf, ensureStrategy,
   strategyTick, applyOrders, strategyViewState, localBrain, neighborsOf,
+  strategyResolveMarches,
 } from '../server/domain/strategy.js';
 import { rewindDays } from '../server/clock.js';
 
@@ -161,9 +162,14 @@ test('城战：本城出兵打邻接城，胜则易主且动画随战报', () =>
   st.cities[targetId].defense = 0.1;
   const rsp = handleRequest(ctx, req('strategy.attack', { cityId: targetId, armyId: state.armys[0].id }));
   assert.equal(rsp.msg.ok, true, `城战应成功：${JSON.stringify(rsp.msg)}`);
-  assert.equal(rsp.msg.result, 2, '2000 兵打 10 兵守军应胜');
+  assert.equal(rsp.msg.marching, true, '出征先生成行军队列');
+  // ★ P2：行军到到达日再结算
+  state.clock.day = rsp.msg.arriveDay + 1;
+  const fought = strategyResolveMarches(state, cfg, ctx);
+  assert.equal(fought.length, 1);
+  assert.equal(fought[0].result, 2, '2000 兵打 10 兵守军应胜');
   assert.equal(st.cities[targetId].owner, 'player', '胜利后城池易主');
-  assert.equal(rsp.msg.city, target.name);
+  assert.equal(fought[0].city, target.name);
   const pushedReport = ctx.pushes.find((p) => p.name === 'warReport.push');
   assert.ok(pushedReport, '应推送战报');
   assert.equal(pushedReport.msg.anim.place, target.name, '动画应带城名');

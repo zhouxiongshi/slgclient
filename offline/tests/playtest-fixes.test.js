@@ -15,7 +15,7 @@ import { loadConfig } from '../server/config.js';
 import { createWorld, normalizeWorld, makeGeneral, nextId, makeArmy } from '../server/world.js';
 import { handleRequest, processTask, settleWorld, advanceToNextTurn } from '../server/handlers.js';
 import {
-  ensureStrategy, strategyMap, neighborsOf, garrisonOf,
+  ensureStrategy, strategyMap, neighborsOf, garrisonOf, strategyResolveMarches,
 } from '../server/domain/strategy.js';
 import { ensureTavern } from '../server/domain/tavern.js';
 
@@ -86,6 +86,11 @@ test('P0-2 城战战报写入存档，war.report 能读回来', () => {
   state.armys[0].soldiers = [1200, 0, 0];
   const rsp = handleRequest(ctx, req('strategy.attack', { cityId: target.id, armyId: state.armys[0].id }));
   assert.equal(rsp.code, 0);
+  // ★ P2：出征改为先行军 2 日，推进到到达日结算
+  assert.equal(rsp.msg.marching, true, '出征应先生成行军队列');
+  state.clock.day = rsp.msg.arriveDay + 1;
+  const fought = strategyResolveMarches(state, cfg, ctx);
+  assert.equal(fought.length, 1, '到达即开打');
   assert.equal(state.warReports.length, 1, '战报必须落存档，而不是只推给当前连接');
   const list = handleRequest(ctx, req('war.report', {})).msg.list;
   assert.equal(list.length, 1);
@@ -140,7 +145,11 @@ test('P0-3 战败不会把家底清零：溃兵归营', () => {
   state.armys[0].soldiers = [400, 0, 0];
   const rsp = handleRequest(ctx, req('strategy.attack', { cityId: target.id, armyId: state.armys[0].id }));
   assert.equal(rsp.msg.ok, true);
-  assert.equal(rsp.msg.result, 0, `这一仗打不下来（打 ${target.name}，守军 ${garrisonOf(target)}）`);
+  // ★ P2：行军到到达日再结算
+  state.clock.day = rsp.msg.arriveDay + 1;
+  const fought = strategyResolveMarches(state, cfg, ctx);
+  assert.equal(fought.length, 1);
+  assert.equal(fought[0].result, 0, `这一仗打不下来（打 ${target.name}，守军 ${garrisonOf(target)}）`);
   const left = state.armys[0].soldiers.reduce((s, n) => s + n, 0);
   assert.ok(left > 0, `战败后应有溃兵归营，实际 ${left}`);
   assert.equal(state.armys[0].soldiers.length, 3);
@@ -165,7 +174,12 @@ test('P0-3 首战可胜：两将 1200 兵能打下 1 级小城', () => {
   assert.equal(asg.code, 0);
   state.armys[0].soldiers = [800, 400, 0];
   const rsp = handleRequest(ctx, req('strategy.attack', { cityId: target.id, armyId: state.armys[0].id }));
-  assert.equal(rsp.msg.result, 2, `两将夹击应能拿下小城：${rsp.msg.summary}`);
+  assert.equal(rsp.msg.ok, true);
+  // ★ P2：行军到到达日再结算
+  state.clock.day = rsp.msg.arriveDay + 1;
+  const fought = strategyResolveMarches(state, cfg, ctx);
+  assert.equal(fought.length, 1);
+  assert.equal(fought[0].result, 2, `两将夹击应能拿下小城：${fought[0].summary}`);
   assert.equal(ensureStrategy(state).cities[target.id].owner, 'player');
 });
 

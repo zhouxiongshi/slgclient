@@ -1120,7 +1120,11 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     if (lastState) draw(lastState);
   };
 
+  var lastFetchAt = 0;   // ★ P2：动画与服务器时钟对齐（拉取时刻起本地外推）
+  var rafId = null;      // ★ P2：行军动画帧句柄
+  var lastRafAt = 0;
   function refresh() {
+    lastFetchAt = Date.now();
     fetch('/__slg/strategy/state').then(function (r) { return r.json(); }).then(function (s) {
       lastState = s; draw(s);
       if (window.__slgHudTick) window.__slgHudTick();
@@ -1583,6 +1587,88 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
         });
       });
     }
+    // ★ P2：行军线与移动军标——departDay/arriveDay + 日内进度插值，路径优先走既有道路折线
+    if (s.marches && s.marches.length) {
+      var byId = {};
+      s.cities.forEach(function (cc) { byId[cc.id] = cc; });
+      var msPerDay = s.msPerDay || 15000;
+      var dayNow = (s.day || 1) + (s.dayFrac || 0) + (Date.now() - lastFetchAt) / msPerDay;
+      s.marches.forEach(function (mm) {
+        var a = byId[mm.from], b = byId[mm.to];
+        if (!a || !b) return;
+        var span = Math.max(1, mm.arriveDay - mm.departDay);
+        var p = Math.max(0, Math.min(1, (dayNow - mm.departDay) / span));
+        var pts = [[a.x, a.y], [b.x, b.y]];
+        var rts = s.routes || [];
+        for (var ri = 0; ri < rts.length; ri++) {
+          var rt = rts[ri];
+          if ((rt.from === mm.from && rt.to === mm.to) || (rt.from === mm.to && rt.to === mm.from)) {
+            if (rt.points && rt.points.length >= 2) { pts = rt.points; }
+            break;
+          }
+        }
+        var segs = [], total = 0;
+        for (var i = 0; i < pts.length - 1; i++) {
+          var L = Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]);
+          segs.push(L); total += L;
+        }
+        var walked = p * total;
+        var cur = [pts[0][0], pts[0][1]];
+        var acc = 0, closed = false;
+        g.save();
+        // 已走部分：金色实线
+        g.strokeStyle = 'rgba(232,198,112,.9)';
+        g.lineWidth = Math.max(1.6, 2.2 * scale);
+        g.beginPath();
+        var q0 = P(pts[0]);
+        g.moveTo(q0[0], q0[1]);
+        for (var i = 0; i < segs.length; i++) {
+          var p0 = pts[i], p1 = pts[i + 1], L2 = segs[i];
+          if (acc + L2 <= walked) {
+            var q1 = P(p1);
+            g.lineTo(q1[0], q1[1]);
+            cur = [p1[0], p1[1]]; acc += L2;
+          } else {
+            var t = L2 > 0 ? (walked - acc) / L2 : 0;
+            cur = [p0[0] + (p1[0] - p0[0]) * t, p0[1] + (p1[1] - p0[1]) * t];
+            var qc = P(cur);
+            g.lineTo(qc[0], qc[1]);
+            g.stroke();
+            // 未走部分：同色虚线
+            g.setLineDash([6 * scale, 5 * scale]);
+            g.strokeStyle = 'rgba(232,198,112,.45)';
+            g.lineWidth = Math.max(1.2, 1.6 * scale);
+            g.beginPath();
+            g.moveTo(qc[0], qc[1]);
+            for (var j = i + 1; j < pts.length; j++) {
+              var qj = P(pts[j]);
+              g.lineTo(qj[0], qj[1]);
+            }
+            g.stroke();
+            closed = true;
+            break;
+          }
+        }
+        if (!closed) g.stroke();
+        g.setLineDash([]);
+        // 军标：小旗插在当前位置
+        var qm = P(cur);
+        g.fillStyle = 'rgba(20,16,8,.55)';
+        g.beginPath(); g.arc(qm[0], qm[1] + 2 * scale, Math.max(2.5, 3.5 * scale), 0, 6.2832); g.fill();
+        var fh2 = Math.max(7, 12 * scale), fw2 = fh2 * 1.1;
+        g.fillStyle = '#e8c670';
+        g.beginPath();
+        g.moveTo(qm[0], qm[1] - fh2);
+        g.lineTo(qm[0] + fw2, qm[1] - fh2 + fh2 * 0.3);
+        g.lineTo(qm[0], qm[1] - fh2 + fh2 * 0.62);
+        g.closePath();
+        g.fill();
+        g.strokeStyle = 'rgba(30,24,14,.8)'; g.lineWidth = Math.max(0.8, 1 * scale); g.stroke();
+        g.strokeStyle = '#e8c670';
+        g.beginPath(); g.moveTo(qm[0], qm[1] - fh2); g.lineTo(qm[0], qm[1]); g.stroke();
+        g.restore();
+      });
+    }
     if (logOpen && logTab === 'plan' && s.plans) {
       s.plans.forEach(function (p) {
         if (!p.from || !p.target || p.type === '固守') return;
@@ -1683,6 +1769,18 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
         var o = document.createElement('option');
         o.value = p.name;
         dl.appendChild(o);
+      });
+    }
+
+    // ★ P2：有队伍在行军时以 ~20fps 连续重绘，军标平滑移动；走完自动停
+    var marching = s.marches && s.marches.some(function (mm) { return !mm.resolved; });
+    if (marching && overlay && overlay.style.display !== 'none' && !rafId) {
+      rafId = requestAnimationFrame(function loop(ts) {
+        rafId = null;
+        if (!lastState || (overlay && overlay.style.display === 'none')) return;
+        if (ts - lastRafAt > 50) { lastRafAt = ts; draw(lastState); }
+        var still = lastState.marches && lastState.marches.some(function (mm) { return !mm.resolved; });
+        if (still) rafId = requestAnimationFrame(loop);
       });
     }
   }
@@ -2314,12 +2412,17 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
             frac: ratio,
           }).then(function (rsp) {
             if (rsp.msg && rsp.msg.ok) {
-              toast(rsp.msg.summary || '出兵！战况已展开。', rsp.msg.result === 2);
+              // ★ P2：出征现在先行军 2 游戏日再开打，给行军提示与到达日
+              toast(rsp.msg.marching
+                ? ('大军开拔，进军' + (rsp.msg.city || '') + '，预计第 ' + rsp.msg.arriveDay
+                  + ' 日抵达（行军粮 -' + rsp.msg.grainCost + '）。在天下沙盘可见行军线。')
+                : (rsp.msg.summary || '出兵！战况已展开。'), true);
               window.__slgCityClose();
             } else {
               var rs = (rsp.msg && rsp.msg.reason) || '';
               toast('出兵失败：' + (rs === 'no_troops' ? '没有可出战的兵' : rs === 'no_general' ? '该队还没有武将'
-                : rs === 'no_army' ? '没有队伍' : errText(rsp)), false);
+                : rs === 'no_army' ? '没有队伍' : rs === 'no_grain' ? '军粮不足，需 ' + (rsp.msg.need || 0) + ' 粮'
+                : errText(rsp)), false);
             }
             fetchState().then(function (s2) { cache = s2; buildNeighbors(s2); });
           });
