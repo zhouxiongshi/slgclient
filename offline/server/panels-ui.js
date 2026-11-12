@@ -559,9 +559,15 @@
     out += list.map(function (s) {
       var tag = s.status === 'unlocked' ? '<span class="tag ok">已解锁 Lv' + esc(s.level) + '</span>'
         : s.status === 'researching' ? '<span class="tag mid">研习中</span>' : '<span class="tag no">未解锁</span>';
+      // ★ P3：语义摘要——不展开就能看到「怎么触发、Lv10 发动率、效果值」
+      var lv10 = s.levels && s.levels[10];
+      var digest = lv10 ? ('Lv10 发动 ' + esc(lv10.probability) + '%'
+        + (lv10.effect_value && lv10.effect_value.length
+          ? ' · 效果 ' + esc(lv10.effect_value.join('/')) : '')) : '';
       var h = '<div class="skill"><div class="hd" data-act="skilldetail" data-cfg="' + s.cfgId + '">'
         + tag + '<b class="v">' + esc(s.name) + '</b><span class="muted">' + esc(s.trigger) + ' · '
         + esc(s.sourceGroup) + ' · ' + esc(s.tags.join('/')) + '</span>'
+        + (digest ? '<span class="muted" style="color:#c9b98c">' + digest + '</span>' : '')
         + '<span style="flex:1"></span><span class="muted">' + (ui.openSkill === s.cfgId ? '收起 ▲' : '展开获取途径 ▼') + '</span></div>';
       if (ui.openSkill === s.cfgId) {
         h += '<div class="dt"><div style="margin:8px 0">' + esc(s.des) + '</div>'

@@ -2897,6 +2897,32 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       body.appendChild(card);
     });
 
+    // ★ P3：技能发动统计——回答「我的战法到底发挥了几成」
+    var skillStat = {};
+    (anim.rounds || []).forEach(function (rd) {
+      (rd.acts || []).forEach(function (act) {
+        if (act.t === 'skill' && act.skill) {
+          var row = skillStat[act.skill] || (skillStat[act.skill] = { count: 0, loss: 0 });
+          row.count += 1;
+          row.loss += act.loss || 0;
+        }
+      });
+    });
+    var skeys = Object.keys(skillStat);
+    if (skeys.length) {
+      var totalLoss = skeys.reduce(function (a, k) { return a + skillStat[k].loss; }, 0) || 1;
+      var statCard = el('div', 'card');
+      statCard.innerHTML = '<h4 style="margin-top:0">技能发动统计</h4>'
+        + '<div class="muted">按确定性事件流汇总；伤害占比 = 该技能歼敌 / 双方技能总歼敌。</div>'
+        + skeys.map(function (k) {
+          var st0 = skillStat[k];
+          var pct = Math.round(st0.loss / totalLoss * 100);
+          return '<div class="kv"><span>「' + esc(k) + '」</span><span>发动 ' + st0.count
+            + ' 次 · 伤害占比 ' + pct + '%</span></div>';
+        }).join('');
+      body.appendChild(statCard);
+    }
+
     (anim.rounds || []).slice(0, 12).forEach(function (rd) {
       var card = el('div', 'card', '<h4 style="margin-top:0">第 ' + rd.round + ' 回合</h4>');
       (rd.acts || []).forEach(function (act) {
