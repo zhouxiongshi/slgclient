@@ -243,6 +243,45 @@ export function filledPostCount(state) {
   return Object.values(state.interior?.posts || {}).filter((v) => Number(v) > 0).length;
 }
 
+/* -------------------------------------------------------------------------- */
+/* 武将职业体系（P4）：五维自动判定四职业 + 岗位限制                          */
+/* -------------------------------------------------------------------------- */
+
+export const CAREER_NAMES = {
+  commander: '统帅', warrior: '猛将', strategist: '军师', civil: '政务官', generalist: '干才',
+};
+
+/** 每职业的适任岗位：出征主将 / 军师随军 / 内政委任。 */
+export const CAREER_FIT = {
+  commander: { leader: true, aide: true, civilPost: true, note: '可任主将、可掌内政' },
+  warrior: { leader: true, aide: false, civilPost: false, note: '可任主将冲锋，不宜掌内政' },
+  strategist: { leader: false, aide: true, civilPost: false, note: '随军军师，不宜领兵为帅' },
+  civil: { leader: false, aide: false, civilPost: true, note: '内政专才，不上战场' },
+  generalist: { leader: true, aide: true, civilPost: true, note: '什么都行，什么都不精' },
+};
+
+/**
+ * 职业判定（P4）：读 generals-lore 的历史五维（统率/武力/智力/政治/魅力），
+ * 主属性最高且 ≥80 归入对应职业；不足 80 或史无明载 → 干才。
+ * 主角等新面孔没有历史五维，按干才处理（什么都行），委任加成走默认值。
+ */
+export function careerOf(g) {
+  const lore = LORE_BY_CFG.get(Number(g?.cfgId));
+  const st = lore?.historyStats || null;
+  const dims = ['统率', '武力', '智力', '政治', '魅力'];
+  if (!st) return { career: 'generalist', top: null, topVal: 0 };
+  let top = null, topVal = -1;
+  for (const d of dims) {
+    const v = Number(st[d]) || 0;
+    if (v > topVal) { topVal = v; top = d; }
+  }
+  if (topVal < 80 || !top) return { career: 'generalist', top, topVal };
+  const career = top === '统率' ? 'commander'
+    : top === '武力' ? 'warrior'
+      : top === '智力' ? 'strategist' : 'civil';
+  return { career, top, topVal };
+}
+
 function interiorOutput(state, cfg) {
   const res = state.roleRes || {};
   const bonusPct = postBonusPct(state);
@@ -307,6 +346,9 @@ export function panelState(state, cfg) {
       isProtagonist: !!g.isProtagonist, level: int(g.level, 1), star: int(g.star, 0),
       exp: int(g.exp, 0), physical: int(g.physical_power, 100),
       state: isDeployed(state, g.id) ? '在编' : '闲置',
+      career: careerOf(g).career,
+      careerName: CAREER_NAMES[careerOf(g).career],
+      careerNote: CAREER_FIT[careerOf(g).career].note,
       appointed: Object.entries(state.interior.posts || {}).filter(([, v]) => Number(v) === g.id).map(([k]) => k),
       base, added: Object.fromEntries(EQUIP_KEYS.map((k) => [k, Number(g[`${k}_added`]) || 0])),
       final: Object.fromEntries(EQUIP_KEYS.map((k) => [k, base[k] + (Number(g[`${k}_added`]) || 0)])),
@@ -608,7 +650,15 @@ export function panelAction(state, cfg, action = {}) {
       const p = PANEL_CONF.posts.posts.find((x) => x.id === post);
       if (!p) return fail('未知岗位');
       const target = int(action.target, 0);
-      if (target && !(state.generals || []).some((x) => x.id === target)) return fail('找不到该武将');
+      if (target) {
+        const g = (state.generals || []).find((x) => x.id === target);
+        if (!g) return fail('找不到该武将');
+        // ★ P4：岗位限制——职业的意义在岗位限制。军师/猛将不上内政岗。
+        const fit = CAREER_FIT[careerOf(g).career];
+        if (!fit.civilPost) {
+          return fail(`${generalName(state, cfg, g)}是${CAREER_NAMES[careerOf(g).career]}（${careerOf(g).top}${careerOf(g).topVal}），${fit.note}，不宜掌${p.name}`);
+        }
+      }
       state.interior.posts[post] = target;
       return done(target ? `已委任 ${generalName(state, cfg, (state.generals || []).find((x) => x.id === target))} 掌${p.name}` : `已撤去${p.name}委任`, { output: interiorOutput(state, cfg) });
     }

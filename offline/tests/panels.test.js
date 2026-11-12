@@ -16,6 +16,7 @@ import { createWorld, normalizeWorld } from '../server/world.js';
 import {
   panelState, panelAction, panelSelfCheck, ensurePanels, PANEL_CONF,
   yieldBonusByResource as _yieldBonus, filledPostCount as _filledPosts,
+  careerOf,
 } from '../server/domain/panels.js';
 import { applyDays as _applyDays } from '../server/domain/economy.js';
 import { startOfflineServer, PANELS_UI_SOURCE } from '../server/index.js';
@@ -146,8 +147,7 @@ test('收支流水：锻造/政令扣费逐笔入账、带事由；面板输出�
   assert.ok(added.some((e) => e.reason === '军饷' && e.delta === -2400), '军饷入账（800 兵 × 3 日 × 1 粮）');
 });
 
-test('委任真实生效：岗位加成折算进日产；在岗武将每天发俸禄并入流水', () => {
-  const s = fresh();
+test('委任真实生效：岗位加成折算进日产；在岗武将每天发俸禄并入流水', () => {  const s = fresh();
   const g = s.generals[0];
   assert.equal(panelAction(s, cfg, { type: 'appoint', post: 'agri', target: g.id }).ok, true);
   const bonus = _yieldBonus(s);
@@ -297,4 +297,37 @@ test('六府入口层级让位：低于战略层所有弹层，面板自身仍�
   assert.ok(dock > 99998, '入口需高于战略沙盘 overlay(99998) 才可点');
   assert.ok(dock < 100000, '入口必须低于战略层城池窗/确认框/toast(100000~100003)');
   assert.ok(mask > 100003, '面板打开时仍应模态覆盖');
+});
+
+test('P4 职业体系：五维自动判定四职业；军师/猛将被内政委任拒绝并给理由', () => {
+  // 纯判定（只看 cfgId 的历史五维）
+  assert.equal(careerOf({ cfgId: 100023 }).career, 'commander', '曹操 统率98 → 统帅');
+  assert.equal(careerOf({ cfgId: 100017 }).career, 'strategist', '诸葛亮 智力100 → 军师');
+  assert.equal(careerOf({ cfgId: 100161 }).career, 'civil', '张昭 政治92 → 政务官');
+  assert.equal(careerOf({ cfgId: 999999 }).career, 'generalist', '史无明载 → 干才');
+
+  // 委任限制：军师被拒并带理由；统帅/干才可上岗
+  const s = fresh();
+  const lore = PANEL_CONF.lore.list;
+  const cao = lore.find((x) => x.name === '曹操');
+  const zhuge = lore.find((x) => x.name === '诸葛亮');
+  assert.ok(cao && zhuge);
+  const mk = (id, cfgId) => ({ id, cfgId, level: 10, skills: [null, null, null] });
+  s.generals.push(mk(9101, zhuge.cfgId), mk(9102, cao.cfgId));
+  const ref1 = panelAction(s, cfg, { type: 'appoint', post: 'agri', target: 9101 });
+  assert.equal(ref1.ok, false, '军师不得掌内政');
+  assert.ok(ref1.message.includes('军师'), `拒绝理由应报职业：${ref1.message}`);
+  const ref2 = panelAction(s, cfg, { type: 'appoint', post: 'agri', target: 9102 });
+  assert.equal(ref2.ok, true, '统帅可掌内政');
+  // 干才（主角）可上岗
+  const proto = s.generals.find((g) => g.isProtagonist) || s.generals[0];
+  assert.equal(careerOf(proto).career, 'generalist', '主角无历史五维 → 干才');
+  const ref3 = panelAction(s, cfg, { type: 'appoint', post: 'commerce', target: proto.id });
+  assert.equal(ref3.ok, true, '干才可上岗');
+  // 面板输出带职业徽章字段
+  const v = panelState(s, cfg);
+  const g9101 = v.generals.find((g) => g.id === 9101);
+  assert.equal(g9101.career, 'strategist');
+  assert.equal(g9101.careerName, '军师');
+  assert.ok(g9101.careerNote.length > 0);
 });

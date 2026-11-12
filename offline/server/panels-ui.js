@@ -181,7 +181,10 @@
       + ' · 势力 ' + esc(lore.faction) + ' · 分期 ' + esc(lore.era) + '</div>'
       + '<div style="margin-top:6px">' + esc(lore.brief) + '</div></div>'
       : '<div class="card muted">主公为本局穿越者，史无明载。五维取本局设定值。</div>';
-    return '<h3>属性 · ' + esc(g.name) + '</h3><div class="card"><table><thead><tr>'
+    return '<h3>属性 · ' + esc(g.name)
+      + ' <span class="tag mid">' + esc(g.careerName || '干才') + '</span>'
+      + '<span class="muted" style="font-weight:normal;font-size:12px;margin-left:8px">'
+      + esc(g.careerNote || '') + '</span></h3><div class="card"><table><thead><tr>'
       + '<th>维度</th><th>基础</th><th>＋装备</th><th>＋增量合计</th><th>最终</th><th>增幅</th>'
       + '</tr></thead><tbody>' + rows + '</tbody></table>'
       + '<div class="muted" style="margin-top:8px">装备单件 ≤8%、全套 ≤25%（当前武力增幅 '
@@ -434,8 +437,11 @@
         + '<div style="margin-top:8px"><select data-act="appoint" data-post="' + esc(p.id) + '">'
         + '<option value="0">— 撤任 —</option>'
         + data.generals.map(function (g) {
-          return '<option value="' + g.id + '"' + (g.id === p.generalId ? ' selected' : '') + '>'
-            + esc(g.name) + '（' + esc(g.state) + '，' + esc(p.stat) + '向）</option>';
+          // ★ P4：军师/猛将不上内政岗——下拉里直接禁用，选中也会被服务端拒绝
+          var unfit = g.career === 'warrior' || g.career === 'strategist';
+          return '<option value="' + g.id + '"' + (g.id === p.generalId ? ' selected' : '')
+            + (unfit ? ' disabled' : '') + '>'
+            + esc(g.name) + '（' + esc(g.careerName || '干才') + ' · ' + esc(g.state) + '）</option>';
         }).join('') + '</select></div>'
         + '<div class="muted" style="margin-top:6px">上限 30%，随城数递减；'
         + (now && now.state === '在编' ? '该武将出征中，收益已减半。' : '') + '</div></div>';
