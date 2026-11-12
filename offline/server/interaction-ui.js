@@ -277,7 +277,15 @@
     }
     hideTip(node); return true;
   }
-  function closeAll() { S.layers.slice().forEach(hideTip); }
+  function closeAll() {
+    S.layers.slice().forEach(function (n) {
+      /* 模态框（百科/快捷键/预览）必须真正移出 DOM，hideTip 只隐藏会累积节点 */
+      if (n && n.classList && n.classList.contains('slgIx-modal')) {
+        n.remove();
+        var i = S.layers.indexOf(n); if (i >= 0) S.layers.splice(i, 1);
+      } else hideTip(n);
+    });
+  }
   function makeDraggable(node) {
     var sx = 0, sy = 0, ox = 0, oy = 0, moving = false;
     function down(e) {

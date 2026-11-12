@@ -675,10 +675,32 @@ async function runSmoke(win, server, app) {
         var agendaDom = !!document.getElementById('slgIxAgenda');
         var queueDom = !!document.getElementById('slgIxQueue');
         var zeroStore = (st.cities || []).filter(function(c){ return !(c.store > 0); }).length;
+        /* 决策前预览：点「开垦农田」必须先弹预览，不允许直接提交 */
+        var previewOk = null;
+        if (typeof window.__slgCityWindow === 'function' && (st.cities || []).length) {
+          IX.closeAll();
+          Array.from(document.querySelectorAll('.slgIx-modal')).forEach(function(m){ m.remove(); });
+          window.__slgCityWindow(st.cities[0].id);
+          await new Promise(function(r){ setTimeout(r, 700); });
+          var tabs = Array.from(document.querySelectorAll('#slgCityWin .tabs button'));
+          var invTab = tabs.find(function(b){ return /内政/.test(b.textContent || ''); });
+          if (invTab) { invTab.click(); await new Promise(function(r){ setTimeout(r, 420); }); }
+          var act = Array.from(document.querySelectorAll('#slgCityWin button'))
+            .find(function(b){ return /开垦|招商|募兵|修筑|赈灾/.test(b.textContent || ''); });
+          if (act) {
+            act.click();
+            await new Promise(function(r){ setTimeout(r, 500); });
+            var vis = Array.from(document.querySelectorAll('.slgIx-modal'))
+              .filter(function(m){ return getComputedStyle(m).display !== 'none'; });
+            previewOk = vis.length > 0 && /决策前预览|消耗/.test(vis[0].textContent || '');
+            IX.closeAll();
+          }
+        }
         return {
-          ok: terms >= 60 && shown > 0 && lensOn && agendaDom && queueDom && zeroStore === 0,
+          ok: terms >= 60 && shown > 0 && lensOn && agendaDom && queueDom && zeroStore === 0
+            && previewOk !== false,
           terms: terms, tipsShown: shown, lensOn: lensOn,
-          agendaDom: agendaDom, queueDom: queueDom,
+          agendaDom: agendaDom, queueDom: queueDom, previewOk: previewOk,
           agenda: (st.agenda || []).length, cities: (st.cities || []).length,
           zeroStoreCities: zeroStore,
         };
