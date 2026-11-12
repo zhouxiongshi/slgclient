@@ -504,6 +504,29 @@ async function runSmoke(win, server, app) {
     check('战报入口常驻六府 dock 且红点端点可用',
       repBtn?.ok === true && repBtn?.visible === true && repBtn?.hasDot === true, repBtn);
 
+    // ★ P4-①：开局举义页 —— 新档必须弹举义页且择主/择都链路可用；旧档不得弹
+    const oathState = await wc.executeJavaScript(`(async function(){
+      try {
+        var v = await (await fetch('/__slg/oath/options', { cache:'no-store' })).json();
+        if (!v || !v.ok) return { ok:false, reason:'options endpoint failed' };
+        var overlay = document.getElementById('slgOath');
+        if (v.done) return { ok: !overlay, done:true, lords: (v.lords||[]).length, overlayShown: !!overlay };
+        if (!overlay) return { ok:false, reason:'new save but oath overlay missing' };
+        if ((v.lords||[]).length !== 8) return { ok:false, reason:'lords != 8' };
+        var f = v.lords[0];
+        if (!f.cities || !f.cities.length) return { ok:false, reason:'no candidate cities' };
+        var r = await (await fetch('/__slg/oath/choose', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ lord: f.id, city: f.cities[0].id }),
+        })).json();
+        if (!r || !r.ok) return { ok:false, reason:'choose failed: ' + JSON.stringify(r) };
+        await new Promise(function(res){ setTimeout(res, 2500); });
+        return { ok: !document.getElementById('slgOath'), done:false, lord: r.lordName, city: r.city, generals: r.generals };
+      } catch(e){ return { ok:false, error:String(e) }; }
+    })()`, true);
+    report.oath = oathState;
+    check('开局举义页（新档弹页且可择主定都 / 旧档不弹）', oathState?.ok === true, oathState);
+
     // 六面板体系 P0：真实页面里逐一点开，并核对「51 条战法每条都有获取途径」
     const panels = await wc.executeJavaScript(`(async function(){
       try {

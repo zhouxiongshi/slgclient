@@ -297,6 +297,9 @@ export function createWorld(cfg, options = {}) {
     },
     garrisons: [],
     chronicle: [],
+    // ★ P4-①：新档未举义——首次进入游戏先弹举义页（择主 + 择都）再开玩。
+    //   旧档没有这个字段，oath.js 一律视为已举义，绝不再弹页打断老玩家。
+    oath: { done: false },
   };
   state.skillVersion = 3;
   return state;

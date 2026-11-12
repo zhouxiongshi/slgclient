@@ -14,6 +14,7 @@ import { peopleById } from './people.js';
 import { chainDef, transitionFate } from './fate.js';
 import { loadOverrides, overridesMtime } from '../gm/overrides.js';
 import { makeBuild, makeGeneral, nextId, mainCity } from '../world.js';
+import { factionTraitOf } from './oath.js';
 
 const FILE = resolve(dirname(fileURLToPath(import.meta.url)), '../../conf/campaign/chapter1.json');
 
@@ -307,7 +308,13 @@ export function settleCampaign(state, cfg, ctx, now = Date.now()) {
   const rules = chapterRules();
   const from = state.clock.day;
   const { days } = advanceClock(state, now, rules);
-  if (days > 0) applyDays(state, cfg, days, { ...rules, resBonus: yieldBonusByResource(state) });
+  if (days > 0) {
+    // ★ P4-①：势力特技并入日产（yields）与军饷（upkeepPct），如曹操商税 +15%
+    const trait = factionTraitOf(state);
+    const resBonus = yieldBonusByResource(state);
+    for (const [k, v] of Object.entries(trait.yields || {})) resBonus[k] = (resBonus[k] || 0) + v;
+    applyDays(state, cfg, days, { ...rules, resBonus, upkeepPct: trait.upkeepPct });
+  }
   // 结局后连开篇文本都不再补推，fired 完全冻结
   if (!state.campaign.ending && !state.campaign.fired['1']) runDay(state, cfg, ctx, 1, rules);
   // ★ P0-4：章节一经结算就停止按日触发。旧实现每天仍写一次 fired，

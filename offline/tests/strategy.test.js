@@ -46,7 +46,9 @@ test('东汉十三州模型图按州入世：八家诸侯归州，其余归汉�
   const home = cityByName(conf.playerHome);
   assert.ok(home, `本城 ${conf.playerHome} 应在图中`);
   assert.equal(st.playerCity, home.id, '玩家本城应绑定');
-  assert.equal(st.cities[home.id].owner, 'player', '本城归属玩家');
+  // ★ P4-①：新档未举义时默认城只作锚点，归属等举义后由 chooseOath 划拨；
+  //   旧档（无 oath 字段）维持老行为：默认城直接归玩家
+  assert.notEqual(st.cities[home.id].owner, 'player', '新档未举义，默认城不应被夺走');
   assert.ok(neighborsOf(home.id).length >= 1, '本城应有邻接城可攻');
 });
 

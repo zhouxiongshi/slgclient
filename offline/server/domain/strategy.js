@@ -9,16 +9,17 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { makeBuild, nextId, mainCity } from '../world.js';
+import { makeBuild, makeGeneral, nextId, mainCity } from '../world.js';
 import { rngFor } from './strategy-rng.js';
 import { canMarchBetween, marchableNeighbors, marchGraph } from './march.js';
 import { resolveBattle } from '../battle.js';
 import { planCampaign, commitBrainGoal, noteBattleOutcome, noteCityLost } from './strategy-brain.js';
 import { quoteMarch, openMonth, closeMonth, noteMove, noteCity, booksOf } from './strategy-log.js';
-import { onTileCleared, chapterRules } from './campaign.js';
+import { onTileCleared, chapterRules, noticeRecruit } from './campaign.js';
 import { dayFraction } from './tavern.js';
 import { recordRes } from './economy.js';
-import { SKILLS, LEVEL_COUNT } from '../skills.js';
+import { SKILLS, LEVEL_COUNT, skillById } from '../skills.js';
+import { oathOf, oathPending, oathFactionOf, factionTraitOf } from './oath.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const MAP_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'map.json');
@@ -130,16 +131,149 @@ export function ensureStrategy(state) {
   return state.strategy;
 }
 
-/** 玩家本城：factions.json 的 playerHome（按城名解析），归属改为玩家。 */
+/**
+ * 玩家本城：factions.json 的 playerHome（按城名解析）。
+ * ★ P4-①：新档未举义时只把 playerCity 锚在默认城上（给地图一个观察点），
+ *   不夺城——玩家的地盘等他择主定都之后由 chooseOath 划拨。
+ *   旧档（视为已举义）维持老行为：默认城归属改玩家。
+ */
 export function bindPlayerHome(state) {
   const st = state.strategy;
   const conf = factionConf();
   const homeName = conf.playerHome || '相';
-  const home = strategyMap().cities.find((c) => c.name === homeName);
+  const home = strategyMap().cities.find((c) => c.name === homeName)
+    || strategyMap().cities[0];
   if (!home) return null;
   st.playerCity = home.id;
+  if (oathPending(state)) return home;
   st.cities[home.id].owner = 'player';
   return home;
+}
+
+/* -------------------------------------------------------------------------- */
+/* 开局举义（P4-①）：择主 8 诸侯卡 + 择都 3 候选城                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * 某诸侯名下的候选都城三型（对应三战出生地逻辑）：
+ *   沃野型 = 农业+商业最高；雄关型 = 城防最高；僻壤型 = 邻接敌军兵力最少。
+ * 三型取不同的城；该诸侯城太少时允许不满 3 个。
+ */
+function candidateCities(state, f) {
+  const st = state.strategy;
+  const rows = strategyMap().cities
+    .filter((c) => st.cities[c.id]?.owner === f.id)
+    .map((c) => {
+      let enemy = 0;
+      for (const nid of neighborsOf(c.id)) {
+        const row = st.cities[nid];
+        if (row && row.owner !== f.id && row.owner !== 'player') enemy += row.troops || 0;
+      }
+      return {
+        id: c.id, name: c.name, x: c.x, y: c.y, level: c.level || 1,
+        res: (c.attrs?.农业 ?? 0) + (c.attrs?.商业 ?? 0),
+        fort: c.attrs?.城防 ?? 0, enemy,
+      };
+    });
+  const pick = (key, dir, taken) => {
+    const sorted = [...rows].sort((a, b) => (dir === 'max' ? b[key] - a[key] : a[key] - b[key]));
+    return sorted.find((r) => !taken.has(r.id)) || null;
+  };
+  const out = [];
+  const taken = new Set();
+  const add = (r, type, note) => {
+    if (!r || taken.has(r.id)) return;
+    taken.add(r.id);
+    out.push({ id: r.id, name: r.name, x: r.x, y: r.y, level: r.level, type, note });
+  };
+  add(pick('res', 'max', taken), '沃野型', '田亩商埠俱全，钱粮自足');
+  add(pick('fort', 'max', taken), '雄关型', '城高池深，据守从容');
+  add(pick('enemy', 'min', taken), '僻壤型', '远隔强敌，积蓄待时');
+  return out;
+}
+
+/** 举义页全量选项：8 张诸侯卡（势力色 + 特技 + 初始武将团 + 3 候选都）。 */
+export function oathOptions(state) {
+  const conf = factionConf();
+  ensureStrategy(state);
+  return {
+    done: !oathPending(state),
+    lords: conf.factions.map((f) => ({
+      id: f.id, name: f.name, color: f.color, home: f.home,
+      blurb: f.blurb || '',
+      trait: { name: f.trait?.name || '', desc: f.trait?.desc || '' },
+      generals: (f.startGenerals || []).slice(0, 3),
+      cities: candidateCities(state, f),
+    })),
+  };
+}
+
+/**
+ * 择主定都：选中的诸侯名下城池全部易帜归 player，都城即玩家本城，
+ * 初始武将团 3 员入营，势力特技自此生效（oath.js 提供数值面）。
+ */
+export function chooseOath(state, cfg, ctx = {}, { lord, city } = {}) {
+  if (!oathPending(state)) return { ok: false, code: 1, reason: 'already_done' };
+  const conf = factionConf();
+  const f = conf.factions.find((x) => x.id === lord);
+  if (!f) return { ok: false, code: 2, reason: 'no_faction' };
+  const st = ensureStrategy(state);
+  const map = strategyMap();
+  const cid = Number(city);
+  const target = map.cities.find((c) => c.id === cid);
+  const tstate = st.cities[cid];
+  if (!target || !tstate || tstate.owner !== f.id) return { ok: false, code: 3, reason: 'bad_city' };
+
+  let transferred = 0;
+  for (const row of Object.values(st.cities)) {
+    if (row.owner === f.id) { row.owner = 'player'; transferred += 1; }
+  }
+  st.playerCity = cid;
+  const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  state.oath = { done: true, lord: f.id, city: cid, day };
+
+  // 初始武将团：按名字从配置解析（找不到的跳过），进主城、自带战法
+  const byName = new Map();
+  for (const gg of cfg?.generalByCfg?.values?.() || []) {
+    if (gg?.name && !byName.has(gg.name)) byName.set(gg.name, gg.cfgId);
+  }
+  const ownedCfg = new Set((state.generals || []).map((g) => Number(g.cfgId)));
+  const homeCity = state.citys?.[0]?.id || 1;
+  const added = [];
+  const newGenerals = [];
+  for (const name of f.startGenerals || []) {
+    const cfgId = Number(byName.get(name));
+    if (!cfgId || ownedCfg.has(cfgId)) continue;
+    const g = makeGeneral(cfg, nextId(state, 'generalId'), cfgId, homeCity, 5);
+    state.generals.push(g);
+    newGenerals.push(g);
+    ownedCfg.add(cfgId);
+    added.push(name);
+    noticeRecruit(state, ctx, name);
+  }
+  // 技能登记表增量更新（主角自带战法 19001 不在技能库配置里，不能全量重建）
+  const reg = new Map((state.skills || []).map((s) => [Number(s.cfgId), s]));
+  for (const g of newGenerals) {
+    const s = g.skills?.[0];
+    if (!s || !skillById(s.cfgId)) continue;
+    const row = reg.get(Number(s.cfgId)) || { id: s.cfgId, cfgId: s.cfgId, generals: [] };
+    if (!row.generals.includes(g.id)) row.generals.push(g.id);
+    reg.set(Number(s.cfgId), row);
+  }
+  state.skills = [...reg.values()];
+  if (state.tavern?.people) {
+    // 同名武将在 general.json 里可能有多条 cfgId，按名字同步才不会漏
+    const gotNames = new Set(added);
+    for (const p of state.tavern.people) if (gotNames.has(p.name)) p.recruited = true;
+  }
+
+  recordEvent(state, `第 ${day} 日，主公举义于${target.name}，承${f.name}之业，${transferred} 城易帜，${added.length} 员上将入营。`);
+  ctx.push?.('chat.push', {
+    rid: 0, nickName: '系统', type: 0,
+    msg: `【天下】${f.name}举义！定都${target.name}，麾下众将誓师北望。`,
+    time: Date.now(),
+  });
+  return { ok: true, lord: f.id, lordName: f.name, city: target.name, cities: transferred, generals: added };
 }
 
 export function neighborsOf(cityId) {
@@ -241,7 +375,12 @@ export function strategyTick(state, cfg, ctx, now = Date.now()) {
   openMonth(state);
 
   const results = [];
+  const mapTick = strategyMap();
   for (const f of conf.factions) {
+    // ★ P4-①：被玩家举义兼并的诸侯（城池全部易帜）不再有脑活动，
+    //   否则空壳势力月月决策、日志全是空转
+    const hasLand = mapTick.cities.some((c) => st.cities[c.id]?.owner === f.id);
+    if (!hasLand) continue;
     const tax = accrueFactionGrain(state, f.id);
     noteMove(state, {
       kind: '田赋', faction: f.id, who: f.name,
@@ -699,10 +838,12 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1 }) {
 
   if (!Array.isArray(st.marches)) st.marches = [];
   const departDay = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  // ★ P4-①：势力特技可缩行军（吕布·飞将 -1 日），夹到至少 1 日
+  const marchDays = Math.max(1, MARCH_DAYS + factionTraitOf(state).marchDelta);
   const row = {
     id: (st.marchSeq = (st.marchSeq || 0) + 1),
     side: 'player', from: home, to: id,
-    departDay, arriveDay: departDay + MARCH_DAYS,
+    departDay, arriveDay: departDay + marchDays,
     armyId: army.id, frac, grainCost,
   };
   st.marches.push(row);
@@ -711,7 +852,7 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1 }) {
   recordEvent(state, `大军自${fromName}开拔，出征${target.name}，预计第 ${row.arriveDay} 日抵城下（耗粮 ${grainCost}）。`);
   ctx.push?.('chat.push', {
     rid: 0, nickName: '系统', type: 0,
-    msg: `【天下】我军自${fromName}开拔，进军${target.name}，预计 ${MARCH_DAYS} 日后抵达。`,
+    msg: `【天下】我军自${fromName}开拔，进军${target.name}，预计 ${marchDays} 日后抵达。`,
     time: Date.now(),
   });
   return {
@@ -822,10 +963,15 @@ export function strategyViewState(state, cfg = null) {
   const st = ensureStrategy(state);
   const map = strategyMap();
   const conf = factionConf();
-  const nameOf = (id) => conf.factions.find((f) => f.id === id)?.name
-    || (id === conf.neutral.id ? conf.neutral.name : id);
-  const colorOf = (id) => conf.factions.find((f) => f.id === id)?.color
-    || conf.neutral.color;
+  // ★ P4-①：玩家城旗帜/命名继承所举义的诸侯（择曹操则玩家城就是曹旗蓝）
+  const oathF = oathFactionOf(state);
+  const nameOf = (id) => id === 'player'
+    ? '我军'
+    : (conf.factions.find((f) => f.id === id)?.name
+      || (id === conf.neutral.id ? conf.neutral.name : id));
+  const colorOf = (id) => id === 'player'
+    ? (oathF?.color || '#c9a227')
+    : (conf.factions.find((f) => f.id === id)?.color || conf.neutral.color);
   // ★ P1-6：本地地图被遮罩挡住，来犯军必须在天下界面可见、可清剿
   const threats = (state.garrisons || [])
     .filter((g) => !g.cleared)
@@ -875,6 +1021,12 @@ export function strategyViewState(state, cfg = null) {
       troops: st.cities[c.id]?.troops || 0,
     })),
     playerCity: st.playerCity || 0,
+    // ★ P4-①：举义状态随视图下发，客户端据此决定弹不弹举义页
+    oath: {
+      done: !oathPending(state),
+      lord: oathF?.id || null, lordName: oathF?.name || '', color: oathF?.color || '',
+      city: oathOf(state).city || 0,
+    },
     // 可出征的城（已按行军校验过滤：关隘封锁即不可走）
     marchable: marchableFrom(st.playerCity || 0),
     // ★ P2：行军队列与日内进度（客户端据此画行军线与移动军标）

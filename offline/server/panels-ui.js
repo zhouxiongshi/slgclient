@@ -42,6 +42,8 @@
         if (!ui.genId && v.generals.length) ui.genId = v.generals[0].id;
         if (!ui.selectedCity && v.strategy.cities.length) ui.selectedCity = v.strategy.cities[0].id;
         render(); if (cb) cb();
+        /* ★ P4-①：新档未举义 → 全屏举义页（旧档 done=true 永不弹） */
+        if (v.oath && v.oath.done === false) showOath();
       })
       .catch(function (e) { toast('读取面板数据失败：' + e.message, true); });
   }
@@ -715,6 +717,117 @@
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (v) { if (cb) cb(v); }).catch(function () {});
   }
+  /* ---------------- 开局举义页（P4-①）：择主 8 诸侯卡 + 择都 3 候选城 ---------------- */
+  var oathEl = null;
+  function showOath() {
+    if (oathEl) return;
+    oathEl = document.createElement('div');
+    oathEl.id = 'slgOath';
+    oathEl.style.cssText = 'position:fixed;inset:0;z-index:2147483646;display:flex;align-items:center;justify-content:center;'
+      + 'background:radial-gradient(120% 90% at 50% 0%, #1d1710 0%, #0e0c08 60%, #080704 100%);overflow-y:auto;';
+    oathEl.innerHTML = '<div id="slgOathBox" style="width:min(1060px,94vw);padding:26px 30px 30px;border:1px solid #ba9a52;border-radius:14px;'
+      + 'background:rgba(20,18,10,.92);box-shadow:0 18px 60px rgba(0,0,0,.7);color:#e6dac0;font:13px/1.7 "Microsoft YaHei",sans-serif;">'
+      + '<div style="text-align:center;font:bold 30px/1.4 KaiTi,STKaiti,serif;color:#f0d998;letter-spacing:8px;">举 义</div>'
+      + '<div style="text-align:center;color:#9c9382;margin:6px 0 18px;font-size:12.5px;">汉室倾颓，群雄并起 —— 择一主而事之，定一都而图天下</div>'
+      + '<div id="slgOathBody"><div style="text-align:center;color:#8a8070;padding:30px 0;">正召集诸侯……</div></div>'
+      + '</div>';
+    document.body.appendChild(oathEl);
+    // 服务端若已被举义（比如另一窗口完成选择），覆盖层自动收起，不把新档玩家锁死
+    var poll = setInterval(function () {
+      if (!oathEl) { clearInterval(poll); return; }
+      fetch('/__slg/oath/options', { cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(function (v) { if (v && v.ok && v.done) { clearInterval(poll); hideOath(); } })
+        .catch(function () {});
+    }, 1000);
+    fetch('/__slg/oath/options', { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (v) {
+        if (!v || !v.ok) throw new Error('无法读取诸侯名录');
+        if (v.done) { hideOath(); return; }
+        renderOathLords(v.lords || []);
+      })
+      .catch(function (e) {
+        var b = document.getElementById('slgOathBody');
+        if (b) b.innerHTML = '<div style="text-align:center;color:#ff9d7a;padding:30px 0;">诸侯名录读取失败：' + esc(e.message)
+          + '<br><button onclick="location.reload()" style="margin-top:10px;background:#2a2c30;color:#e8c670;border:1px solid #ba9a52;border-radius:6px;padding:6px 18px;cursor:pointer;">重试</button></div>';
+      });
+  }
+  function hideOath() {
+    if (!oathEl) return;
+    var el = oathEl; oathEl = null;
+    el.style.transition = 'opacity .5s'; el.style.opacity = '0';
+    setTimeout(function () { el.remove(); }, 520);
+  }
+  function renderOathLords(lords) {
+    var box = document.getElementById('slgOathBody');
+    if (!box) return;
+    box.innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">'
+      + lords.map(function (f) {
+        return '<div class="slgOathLord" data-lord="' + esc(f.id) + '" style="cursor:pointer;border:1px solid #3a3325;border-radius:10px;padding:0 0 10px;background:rgba(255,255,255,.03);transition:border-color .15s,transform .15s;">'
+          + '<div style="height:52px;border-radius:9px 9px 0 0;background:' + esc(f.color) + ';display:flex;align-items:center;justify-content:center;position:relative;">'
+          + '<span style="font:bold 24px KaiTi,STKaiti,serif;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);letter-spacing:3px;">' + esc(f.name) + '</span>'
+          + '</div>'
+          + '<div style="padding:8px 12px 0;">'
+          + '<div style="color:#e8c670;font-weight:bold;">特技 · ' + esc(f.trait.name) + '</div>'
+          + '<div style="color:#9c9382;font-size:12px;">' + esc(f.trait.desc) + '</div>'
+          + '<div style="margin-top:6px;color:#b9ac8f;font-size:12px;line-height:1.6;min-height:42px;">' + esc(f.blurb) + '</div>'
+          + '<div style="margin-top:6px;color:#8fb98a;font-size:12px;">初始武将团：' + f.generals.map(esc).join('、') + '</div>'
+          + '</div></div>';
+      }).join('')
+      + '</div>';
+    Array.prototype.forEach.call(box.querySelectorAll('.slgOathLord'), function (card) {
+      card.addEventListener('mouseenter', function () { card.style.borderColor = '#e8c670'; card.style.transform = 'translateY(-3px)'; });
+      card.addEventListener('mouseleave', function () { card.style.borderColor = '#3a3325'; card.style.transform = ''; });
+      card.addEventListener('click', function () {
+        var id = card.getAttribute('data-lord');
+        for (var i = 0; i < lords.length; i++) if (lords[i].id === id) { renderOathCities(lords[i]); return; }
+      });
+    });
+  }
+  function renderOathCities(f) {
+    var box = document.getElementById('slgOathBody');
+    if (!box) return;
+    var head = '<div style="display:flex;align-items:baseline;gap:12px;margin:4px 0 14px;">'
+      + '<button id="slgOathBack" style="background:#2a2c30;color:#e8c670;border:1px solid #ba9a52;border-radius:6px;padding:4px 14px;cursor:pointer;">‹ 另择明主</button>'
+      + '<span style="font:bold 22px KaiTi,STKaiti,serif;color:' + esc(f.color) + ';letter-spacing:4px;">事 ' + esc(f.name) + '</span>'
+      + '<span style="color:#9c9382;">特技 · ' + esc(f.trait.name) + '（' + esc(f.trait.desc) + '）</span>'
+      + '</div>';
+    var cards = (f.cities || []).map(function (c) {
+      return '<div class="slgOathCity" data-city="' + c.id + '" style="cursor:pointer;border:1px solid #3a3325;border-radius:10px;padding:14px 16px;background:rgba(255,255,255,.03);transition:border-color .15s,transform .15s;">'
+        + '<div style="display:flex;justify-content:space-between;align-items:baseline;">'
+        + '<span style="font:bold 19px KaiTi,STKaiti,serif;color:#f0d998;letter-spacing:2px;">' + esc(c.name) + '</span>'
+        + '<span style="color:#e8c670;font-size:12px;border:1px solid #ba9a52;border-radius:4px;padding:1px 8px;">' + esc(c.type) + '</span>'
+        + '</div>'
+        + '<div style="margin-top:6px;color:#9c9382;font-size:12px;">' + esc(c.note) + '</div>'
+        + '<div style="margin-top:10px;color:#b9ac8f;font-size:12px;">定都于此，' + esc(f.name) + '名下城池尽归主公，初始武将团即日入营。</div>'
+        + '</div>';
+    }).join('');
+    box.innerHTML = head + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">' + cards + '</div>';
+    document.getElementById('slgOathBack').addEventListener('click', function () { renderOathLords(lords); });
+    Array.prototype.forEach.call(box.querySelectorAll('.slgOathCity'), function (card) {
+      card.addEventListener('mouseenter', function () { card.style.borderColor = '#e8c670'; card.style.transform = 'translateY(-3px)'; });
+      card.addEventListener('mouseleave', function () { card.style.borderColor = '#3a3325'; card.style.transform = ''; });
+      card.addEventListener('click', function () {
+        var city = Number(card.getAttribute('data-city'));
+        card.style.pointerEvents = 'none';
+        fetch('/__slg/oath/choose', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lord: f.id, city: city }),
+        }).then(function (r) { return r.json(); }).then(function (r) {
+          if (!r || !r.ok) {
+            toast(r && r.reason === 'bad_city' ? '该城不可定都' : '举义失败', true);
+            card.style.pointerEvents = '';
+            return;
+          }
+          hideOath();
+          toast('已举义：承' + r.lordName + '之业，定都' + r.city + '，' + (r.generals || []).join('、') + '入营');
+          fetchState();
+        }).catch(function (e) { toast('举义失败：' + e.message, true); card.style.pointerEvents = ''; });
+      });
+    });
+  }
+
   function pollReports() {
     fetchReportsHead(function (v) {
       var dot = document.getElementById('slgRepDot');

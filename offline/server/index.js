@@ -24,7 +24,7 @@ import { attachWebSocketServer } from './wsserver.js';
 import { createSkillAssets } from './skills.js';
 import { loadOverrides, saveOverrides } from './gm/overrides.js';
 import { dossierFor } from './domain/dossier.js';
-import { strategyViewState } from './domain/strategy.js';
+import { strategyViewState, oathOptions, chooseOath } from './domain/strategy.js';
 import { panelState, panelAction, panelSelfCheck } from './domain/panels.js';
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -317,6 +317,23 @@ export async function startOfflineServer(options = {}) {
         if (result.ok) save();
         try { json(res, 200, { ...result, view: panelState(state, cfg) }); }
         catch (err) { json(res, 200, { ...result, view: null, viewError: err.message }); }
+      });
+      return;
+    }
+
+    // ★ P4-①：开局举义页 —— 择主 8 诸侯卡 + 择都 3 候选城
+    if (urlPath === '/__slg/oath/options' && req.method === 'GET') {
+      try { json(res, 200, { ok: true, ...oathOptions(state) }); }
+      catch (err) { log('error', `oath options: ${err.stack || err.message}`); json(res, 500, { ok: false, message: err.message }); }
+      return;
+    }
+    if (urlPath === '/__slg/oath/choose' && req.method === 'POST') {
+      readJson(req, 16384, (body) => {
+        try {
+          const r = chooseOath(state, cfg, ctx, body || {});
+          if (r.ok) save();
+          json(res, 200, r);
+        } catch (err) { log('error', `oath choose: ${err.stack || err.message}`); json(res, 500, { ok: false, message: err.message }); }
       });
       return;
     }

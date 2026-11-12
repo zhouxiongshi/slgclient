@@ -12,6 +12,9 @@ import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { slotBlock } from './slots.js';
+/* 刻意只 import oath.js（零依赖小模块）而不 import strategy.js ——
+   它反向 import world.js，而 world.js 又 import 本文件，会成环。 */
+import { oathOf, oathFactionOf, strategyCity, factionTraitOf } from './oath.js';
 /* 战略台以并行会话的战略层为唯一口径：行军可达/关隘取 march.js，出征账取 strategy-log.js。
    刻意不 import strategy.js —— 它反向 import world.js，而 world.js 又 import 本文件，会成环。 */
 import { marchableNeighbors, marchGraph } from './march.js';
@@ -235,6 +238,9 @@ export function yieldBonusByResource(state) {
     const pct = bonusPct[p.id] || 0;
     if (pct > 0 && p.resource) out[p.resource] = Math.max(0, out[p.resource] || 0) + pct;
   }
+  // ★ P4-①：势力特技计入同一张加成表（内政面板「委任加成」列随之如实显示）
+  const trait = factionTraitOf(state);
+  for (const [k, v] of Object.entries(trait.yields || {})) out[k] = (out[k] || 0) + v;
   return out;
 }
 
@@ -477,6 +483,18 @@ export function panelState(state, cfg) {
     month: turnOf(state) + 1,
     turn: turnOf(state),
     roleName: state.role?.nickName || '主公',
+    // ★ P4-①：举义状态随面板下发，客户端据此弹举义页 / 显示势力徽记
+    oath: (function () {
+      const o = oathOf(state);
+      const f = oathFactionOf(state);
+      const city = f ? strategyCity(o.city) : null;
+      return {
+        done: o.done !== false,
+        lord: f?.id || null, lordName: f?.name || '', color: f?.color || '',
+        traitName: f?.trait?.name || '', traitDesc: f?.trait?.desc || '',
+        cityName: city?.name || '',
+      };
+    })(),
     generals,
     prospects,
     items,

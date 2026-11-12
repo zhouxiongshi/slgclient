@@ -1,16 +1,56 @@
 {
-  "note": "初版占位映射：八个有人格脑的诸侯按史实就近落州。可随意改动；没列出的州归汉廷，无脑。",
+  "note": "初版占位映射：八个有人格脑的诸侯按史实就近落州。可随意改动；没列出的州归汉廷，无脑。trait.yields 单位为百分比（加到对应资源日产）；recruitPct 征兵花费百分比（负=省）；upkeepPct 军饷百分比（负=省）；marchDelta 行军天数增减。startGenerals 为开局举义赠的初始武将团（按名字在 general.json 解析，找不到就跳过）。",
   "turnDays": 10,
   "playerHome": "相",
   "factions": [
-    { "id": "sili", "name": "董卓", "persona": "董卓", "color": "#7f1d1d", "home": "长安" },
-    { "id": "yanzhou", "name": "曹操", "persona": "曹操", "color": "#1d4ed8", "home": "濮阳" },
-    { "id": "jizhou", "name": "袁绍", "persona": "袁绍", "color": "#6d28d9", "home": "邺" },
-    { "id": "youzhou", "name": "公孙瓒", "persona": "公孙瓒", "color": "#0f766e", "home": "蓟" },
-    { "id": "bingzhou", "name": "吕布", "persona": "吕布", "color": "#b45309", "home": "晋阳" },
-    { "id": "xuzhou", "name": "刘备", "persona": "刘备", "color": "#15803d", "home": "下邳" },
-    { "id": "yangzhou", "name": "孙权", "persona": "孙权", "color": "#be123c", "home": "南昌" },
-    { "id": "jingzhou", "name": "司马懿", "persona": "司马懿", "color": "#4338ca", "home": "临湘" }
+    {
+      "id": "sili", "name": "董卓", "persona": "董卓", "color": "#7f1d1d", "home": "长安",
+      "blurb": "废立天子，虎踞关中。西凉铁骑天下骇怕，兵多粮足而暴虐少谋。",
+      "trait": { "name": "西凉铁骑", "desc": "征兵花费 -15%，铁矿日产 +10%", "yields": { "iron": 10 }, "recruitPct": -15 },
+      "startGenerals": ["李儒", "华雄", "徐荣"]
+    },
+    {
+      "id": "yanzhou", "name": "曹操", "persona": "曹操", "color": "#1d4ed8", "home": "濮阳",
+      "blurb": "奉天子以令不臣，屯田足食，帐下谋臣武将如云。",
+      "trait": { "name": "挟天子", "desc": "商税金日产 +15%", "yields": { "gold": 15 } },
+      "startGenerals": ["夏侯惇", "夏侯渊", "曹仁"]
+    },
+    {
+      "id": "jizhou", "name": "袁绍", "persona": "袁绍", "color": "#6d28d9", "home": "邺",
+      "blurb": "四世三公，门生故吏遍天下，冀州带甲十万。",
+      "trait": { "name": "四世三公", "desc": "田赋粮日产 +15%", "yields": { "grain": 15 } },
+      "startGenerals": ["颜良", "文丑", "田丰"]
+    },
+    {
+      "id": "youzhou", "name": "公孙瓒", "persona": "公孙瓒", "color": "#0f766e", "home": "蓟",
+      "blurb": "白马义从纵横幽燕，北抗乌桓，义从部曲自备粮秣。",
+      "trait": { "name": "白马义从", "desc": "军饷开销 -20%", "upkeepPct": -20 },
+      "startGenerals": ["赵云", "田豫", "卢植"]
+    },
+    {
+      "id": "bingzhou", "name": "吕布", "persona": "吕布", "color": "#b45309", "home": "晋阳",
+      "blurb": "人中吕布，马中赤兔。勇冠三军，来去飘忽难制。",
+      "trait": { "name": "飞将", "desc": "行军快一日抵达", "marchDelta": -1 },
+      "startGenerals": ["张辽", "高顺", "陈宫"]
+    },
+    {
+      "id": "xuzhou", "name": "刘备", "persona": "刘备", "color": "#15803d", "home": "下邳",
+      "blurb": "织席贩履亦怀天下，桃园之义四海归心，从者如流。",
+      "trait": { "name": "仁德", "desc": "征兵花费 -10%，田赋粮 +10%", "yields": { "grain": 10 }, "recruitPct": -10 },
+      "startGenerals": ["关羽", "张飞", "糜竺"]
+    },
+    {
+      "id": "yangzhou", "name": "孙权", "persona": "孙权", "color": "#be123c", "home": "南昌",
+      "blurb": "据长江之险，父兄基业坐断东南，造船足用舟师冠绝。",
+      "trait": { "name": "长江天堑", "desc": "木料日产 +15%", "yields": { "wood": 15 } },
+      "startGenerals": ["周瑜", "黄盖", "韩当"]
+    },
+    {
+      "id": "jingzhou", "name": "司马懿", "persona": "司马懿", "color": "#4338ca", "home": "临湘",
+      "blurb": "鹰视狼顾，深谋远虑，隐忍待时，军械自足。",
+      "trait": { "name": "深谋隐忍", "desc": "石料日产 +15%", "yields": { "stone": 15 } },
+      "startGenerals": ["钟会", "邓艾", "郝昭"]
+    }
   ],
   "neutral": { "id": "han", "name": "汉廷", "color": "#8a7a52" }
 }

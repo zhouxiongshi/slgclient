@@ -25,6 +25,7 @@ import {
   strategyResolveMarches,
 } from './domain/strategy.js';
 import { noteIfGeneralDown } from './command.js';
+import { factionTraitOf } from './domain/oath.js';
 
 const OK = 0;
 const nowSec = () => Math.floor(Date.now() / 1000);
@@ -909,6 +910,13 @@ export function handleRequest(ctx, req) {
         wood: total * per.wood, iron: total * per.iron, stone: total * per.stone,
         grain: total * per.grain, gold: total * per.gold,
       };
+      // ★ P4-①：势力特技改征兵成本（董卓·西凉铁骑 -15%、刘备·仁德 -10%）
+      const trait = factionTraitOf(state);
+      if (trait.recruitPct) {
+        for (const k of Object.keys(need)) {
+          need[k] = Math.max(1, Math.round(need[k] * (1 + trait.recruitPct / 100)));
+        }
+      }
       // 槽位必须已有武将：内核按槽位取将，空槽位征兵等于白扣资源
       const emptySlot = cnts.findIndex((n, i) => n > 0 && !army.generals?.[i]);
       if (emptySlot >= 0) {

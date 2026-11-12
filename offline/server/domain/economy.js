@@ -47,7 +47,10 @@ export function applyDays(state, cfg, days, rules) {
   const cap = r.depot_capacity || 1000000;
   const limit = cfg.basic.role?.decree_limit ?? 20;
   const decreePerDay = rules.decreePerDay ?? 30;
-  const cost = Math.floor(countSoldiers(state) * (rules.upkeepPerSoldier ?? 0));
+  const cost = Math.floor(
+    countSoldiers(state) * (rules.upkeepPerSoldier ?? 0)
+    * (1 + (Number(rules.upkeepPct) || 0) / 100),
+  );
   const startDay = Math.floor(Number(state.clock?.day) || 1);
   // ★ P1：委任岗位真实生效——resBonus[k] 为该资源产量加成百分比（panels.js 计算，红线 ≤30%）
   const resBonus = rules.resBonus || {};

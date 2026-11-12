@@ -60,6 +60,15 @@ function main() {
   const defaultApp = join(OUT, 'resources', 'default_app.asar');
   if (existsSync(defaultApp)) rmSync(defaultApp, { force: true });
 
+  // 1.5) 语言包瘦身：单机版只面向中文玩家，保留简中/繁中/英文兜底，省 ~45MB
+  const localesDir = join(OUT, 'locales');
+  const KEEP_LOCALES = new Set(['zh-CN.pak', 'zh-TW.pak', 'en-US.pak', 'en-GB.pak']);
+  if (existsSync(localesDir)) {
+    for (const name of readdirSync(localesDir)) {
+      if (!KEEP_LOCALES.has(name)) rmSync(join(localesDir, name), { force: true });
+    }
+  }
+
   // 2) 应用代码（不含任何自定义 UI）
   for (const dir of ['server', 'kernel', 'conf', 'electron', 'tools']) {
     cpSync(join(ROOT, dir), join(APP, dir), { recursive: true, force: true });
