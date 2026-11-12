@@ -464,15 +464,16 @@ async function runSmoke(win, server, app) {
           slotRows: (text.match(/号档/g) || []).length,
           hasImport: text.indexOf('导入存档文件') >= 0,
           hasWin: !!win,
-          winVisible: win ? win.offsetParent !== null : false,
+          winVisible: win ? win.getBoundingClientRect().width > 100 : false,
           len: text.length,
           sample: text.slice(0, 160),
         };
       } catch (e) { return { ok: false, error: String(e) }; }
     })()`, true);
     report.homePage = homePage;
-    check('本城页存档卡渲染（三档位 + 导出/导入）',
-      homePage?.ok === true && (homePage.slotRows || 0) >= 3 && homePage.hasImport === true, homePage);
+    check('本城页存档卡渲染（三档位 + 导出/导入）且面板可见',
+      homePage?.ok === true && (homePage.slotRows || 0) >= 3 && homePage.hasImport === true
+      && homePage.winVisible === true, homePage);
     await sleep(400);
 
     // 合并后检查：六府入口须让位于战略层弹层，且不与战略层左上按钮坞重叠
@@ -545,6 +546,52 @@ async function runSmoke(win, server, app) {
     })()`, true);
     report.oath = oathState;
     check('开局举义页（新档弹页且可择主定都 / 旧档不弹）', oathState?.ok === true, oathState);
+
+    // ★ 出征面板：能打开、三块（出发城/可派队伍/可攻目标）齐全、能切到行军队列
+    const warPanel = await wc.executeJavaScript(`(async function(){
+      try {
+        if (typeof window.__slgWarWindow !== 'function') return { ok:false, reason:'no __slgWarWindow' };
+        window.__slgWarWindow({ tab:'go' });
+        var win = null;
+        for (var i = 0; i < 25; i++) {
+          await new Promise(function (r) { setTimeout(r, 200); });
+          win = document.getElementById('slgWarWin');
+          if (win && win.getBoundingClientRect().width > 100 && win.innerText.length > 40) break;
+        }
+        if (!win) return { ok:false, reason:'panel not shown' };
+        var txt = win.innerText || '';
+        var out = {
+          shown: win.getBoundingClientRect().width > 100,
+          hasFrom: txt.indexOf('出发城') >= 0,
+          hasArmy: txt.indexOf('可派队伍') >= 0,
+          hasTarget: txt.indexOf('可攻目标') >= 0,
+          buttons: win.querySelectorAll('button').length,
+          text: txt.slice(0, 300),
+        };
+        var tabs = win.querySelectorAll('.tabs button');
+        if (tabs.length >= 2) {
+          tabs[1].click();
+          await new Promise(function (r) { setTimeout(r, 300); });
+          var w2 = document.getElementById('slgWarWin');
+          out.queueText = w2 ? (w2.innerText || '').slice(0, 200) : '';
+          out.tabSwitch = !!w2 && out.queueText.indexOf('在途') >= 0;
+        }
+        out.ok = out.shown && out.hasFrom && out.hasArmy && out.hasTarget && out.tabSwitch === true;
+        return out;
+      } catch (e) { return { ok:false, error:String(e && e.stack || e) }; }
+    })()`, true);
+    report.warPanel = warPanel;
+    check('出征面板可操作（出发城 / 可派队伍 / 可攻目标 / 行军队列）', warPanel?.ok === true, warPanel);
+    // 截图留档：切回「出击」页再抓，供人工核对版面
+    try {
+      // 举义页遮罩 z-index 高于城池/出征面板，截图前先收起（真实玩家点卡片后本就会收起）
+      await wc.executeJavaScript("(function(){var o=document.getElementById('slgOath'); if(o) o.style.display='none';"
+        + " window.__slgWarWindow && window.__slgWarWindow({ tab:'go' }); return true;})()", true);
+      await sleep(900);
+      const warPng = await wc.capturePage();
+      fs.writeFileSync(path.join(outDir, `smoke-war-${tag}.png`), warPng.toPNG());
+      report.warScreenshot = `smoke-war-${tag}.png`;
+    } catch (e) { report.warScreenshot = 'failed: ' + String(e && e.message || e); }
 
     // 六面板体系 P0：真实页面里逐一点开，并核对「51 条战法每条都有获取途径」
     const panels = await wc.executeJavaScript(`(async function(){

@@ -26,7 +26,7 @@ import { loadOverrides, saveOverrides } from './gm/overrides.js';
 import { dossierFor } from './domain/dossier.js';
 import {
   strategyViewState, oathOptions, chooseOath, strategyFormup, strategyTransport,
-  rewardGeneral, strategyInvest, recruitCaptive,
+  rewardGeneral, strategyInvest, recruitCaptive, strategyAttack, strategyRecallMarch,
 } from './domain/strategy.js';
 import { panelState, panelAction, panelSelfCheck } from './domain/panels.js';
 
@@ -374,6 +374,7 @@ export async function startOfflineServer(options = {}) {
       return;
     }
     // ★ P0/P1/P3 编队·运输·赏赐统一动作口（formup / transport / reward）
+    // ★ 出征面板：attack / recall 也走这里，省一条新 WS 协议
     if (urlPath === '/__slg/strategy/action' && req.method === 'POST') {
       readJson(req, 16384, (body) => {
         const act = String(body?.action || '');
@@ -383,6 +384,15 @@ export async function startOfflineServer(options = {}) {
         else if (act === 'reward') result = rewardGeneral(state, cfg, ctx, body);
         else if (act === 'invest') result = strategyInvest(state, cfg, ctx, body);
         else if (act === 'captive') result = recruitCaptive(state, cfg, ctx, body);
+        else if (act === 'attack') {
+          const fracRaw = Number(body.frac);
+          result = strategyAttack(state, cfg, ctx, {
+            cityId: Number(body.cityId),
+            armyId: Number(body.armyId) || 0,
+            frac: Number.isFinite(fracRaw) && fracRaw > 0 && fracRaw <= 1 ? fracRaw : 1,
+            fromCityId: Number(body.fromCityId) || 0,
+          });
+        } else if (act === 'recall') result = strategyRecallMarch(state, cfg, ctx, { marchId: Number(body.marchId) });
         else result = { ok: false, reason: 'bad_action' };
         if (result.ok) save();
         sendJson(req, res, result);
@@ -609,7 +619,9 @@ export async function startOfflineServer(options = {}) {
       try { out = handleRequest(ctx, req); }
       catch (err) {
         log('error', `handler ${req.name}: ${err.stack || err.message}`);
-        out = { code: 0, msg: {} };
+        /* ★ 修 bug-20：handler 抛异常以前吞成 code 0，客户端表现为「点了没反应」，
+           日志之外没有任何线索。现在回 500 + reason，界面能提示、日志能定位。 */
+        out = { code: 500, msg: { reason: 'internal', message: String(err.message || err) } };
       }
       const body = {
         seq: out.seq ?? req.seq ?? 0,

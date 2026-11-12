@@ -9,13 +9,13 @@
  */
 import {
   nextId, findGeneral, findArmy, mainCity, makeGeneral,
-  makeBuild, makeArmy,
+  makeBuild, makeArmy, makeFacilityList,
 } from './world.js';
 import { resolveBattle } from './battle.js';
 import { skillById, LEVEL_COUNT } from './skills.js';
 import { marchMs, rewindDays } from './clock.js';
 import { facilityBonus, recordRes } from './domain/economy.js';
-import { cityLayer, ensureCityEcon, conscriptFactor } from './domain/city-econ.js';
+import { cityLayer, ensureCityEcon, conscriptFactor, cityYield, cityName } from './domain/city-econ.js';
 import {
   chapterRules, settleCampaign, chooseChapter, onTileCleared, applyChoice, noticeRecruit,
 } from './domain/campaign.js';
@@ -23,8 +23,9 @@ import { slotBlock } from './domain/slots.js';
 import { ensureTavern, guestsNow, announceTavern, todaysGuests, dayFraction, exploreTalent, cityNameOf } from './domain/tavern.js';
 import {
   strategyTick, strategyAttack, strategyTurnDays, ensureStrategy, clearThreat,
-  strategyResolveMarches, recordEvent,
+  strategyResolveMarches, strategyRecallMarch, recordEvent,
 } from './domain/strategy.js';
+import { createHash } from 'node:crypto';
 import { noteIfGeneralDown } from './command.js';
 import { factionTraitOf, protagonistStat } from './domain/oath.js';
 
@@ -32,6 +33,50 @@ const OK = 0;
 const nowSec = () => Math.floor(Date.now() / 1000);
 const clone = (v) => JSON.parse(JSON.stringify(v));
 const RES_KEYS = ['wood', 'iron', 'stone', 'grain'];
+
+/**
+ * ★ 抓 bug-1：城归属判定。
+ * 战略城以 owner === 'player' 为准；未举义时玩家只有本地主城（state.citys[0]），
+ * 那种情况下沿用旧档语义，但**只认这一座**，不会给任意 id 开口子。
+ */
+function isOwnCity(state, cityId) {
+  const cid = Number(cityId) || 0;
+  if (cid <= 0) return false;
+  const st = state.strategy || {};
+  if (st.cities?.[cid]?.owner === 'player') return true;
+  const local = (state.citys || [])[0];
+  if (!local) return false;
+  const localIds = [Number(local.cityId), Number(local.id)].filter((v) => v > 0);
+  if (!localIds.includes(cid)) return false;
+  return !Object.values(st.cities || {}).some((v) => v.owner === 'player');
+}
+
+/** 简单口令摘要：离线版不落明文（bug-19），只留不可逆摘要 + 首次登录标记。 */
+function passwordDigest(raw) {
+  return createHash('sha256').update(`shuanghan:${String(raw || '')}`).digest('hex').slice(0, 32);
+}
+
+/**
+ * ★ 修 bug-6/21：取某座城的设施表。
+ * 战略城用 `s<id>` 键（举义时批量建好、占新城后懒建），本地主城沿用数字键；
+ * 两者编号会撞（都为 1），所以战略城首次取用时把数字键那份旧进度迁过去，不丢升级。
+ */
+function ownFacilityList(state, cfg, cityId) {
+  const cid = Number(cityId) || 0;
+  if (!state.facilities) state.facilities = {};
+  const localId = Number((state.citys || [])[0]?.cityId) || 0;
+  const isStrategyCity = !!(state.strategy?.cities?.[cid]);
+  /* 本地主城的编号（通常是 1）与战略城会撞号：那座城就是同一座，继续用数字键，
+     免得把原版已升级的设施进度分叉成两份。其它战略城才走 s<id>。 */
+  const key = (isStrategyCity && cid !== localId) ? `s${cid}` : String(cid);
+  if (!Array.isArray(state.facilities[key])) {
+    const legacy = state.facilities[cid];
+    state.facilities[key] = Array.isArray(legacy) && key !== String(cid)
+      ? JSON.parse(JSON.stringify(legacy))
+      : makeFacilityList(cfg);
+  }
+  return state.facilities[key];
+}
 
 /**
  * 协议入参数值规范化（防 NaN / null 污染存档）。
@@ -421,11 +466,13 @@ export function handleRequest(ctx, req) {
 
     case 'account.login':
       state.account.username = m.username || state.account.username;
-      state.account.password = m.password || '';
+      /* ★ 修 bug-19：口令不再明文进存档、也不再回传客户端。
+         离线版存档会被复制/分享，留明文等于把口令写进可读 JSON。 */
+      if (m.password) state.account.passHash = passwordDigest(m.password);
+      delete state.account.password;
       ctx.save();
       rsp.msg = {
         username: state.account.username,
-        password: state.account.password,
         session: state.account.session,
         uid: state.account.uid,
       };
@@ -594,62 +641,135 @@ export function handleRequest(ctx, req) {
 
     /* ---------------- 城池设施 / 内政 ---------------- */
     case 'city.facilities': {
-      const cityId = Number(m.cityId ?? mainCity(state)?.cityId ?? 1);
-      const facilities = (state.facilities[cityId] || []).map((f) => ({
+      /* ★ 客户端 qryCityFacilities 不传参时 cityId=0，用 ?? 会让 0 漏过去，
+         结果回一个不存在的城、客户端 getMyCityById(0) 拿到 null 直接崩。0 视作未指定。 */
+      const cityId = Number(m.cityId) || mainCity(state)?.cityId || 1;
+      /* ★ 兜底：客户端只认自己 citys 里的 id，回一个不存在的城会让它 getMyCityById 返回 null */
+      const known = (state.citys || []).some((x) => Number(x.cityId) === cityId)
+        || !!state.strategy?.cities?.[cityId];
+      if (!known) {
+        rsp.code = CODE.InvalidParam;
+        rsp.msg = { reason: 'no_city', cityId };
+        break;
+      }
+      /* ★ 修 bug-6：设施按「战略城」各存一份（键 s<id>）。
+         realCityId 是「要看哪座战略城的设施」，cityId 仍是客户端自己的城 ——
+         原客户端拿 msg.cityId 去 getMyCityById，回战略城 id 会拿到 null 直接崩。 */
+      const realCid = Number(m.realCityId) || cityId;
+      const list = ownFacilityList(state, cfg, realCid);
+      const facilities = (list || []).map((f) => ({
         ...clone(f),
         maxLevel: cfg.facilityMaxLevel(f.type),
         nextNeed: cfg.facilityNeed(f.type, f.level + 1),
         nextTime: cfg.facilityTime(f.type, f.level + 1),
       }));
-      rsp.msg = { cityId, facilities };
+      rsp.msg = { cityId, realCityId: realCid, facilities };
       break;
     }
     case 'city.upFacility': {
       // 原版语义：校验 maxLevel / 未在升级中 / 按 facility_*.json 的 need 扣资源；
       // 升级有工期（up_time），到点后由 facilityGetLevel 被动完成
-      const cityId = Number(m.cityId ?? mainCity(state)?.cityId ?? 1);
+      /* ★ 客户端 qryCityFacilities 不传参时 cityId=0，用 ?? 会让 0 漏过去，
+         结果回一个不存在的城、客户端 getMyCityById(0) 拿到 null 直接崩。0 视作未指定。 */
+      const cityId = Number(m.cityId) || mainCity(state)?.cityId || 1;
+      const realCid = Number(m.realCityId) || cityId;
       const fType = Number(m.fType ?? 0);
-      const list = state.facilities[cityId] || (state.facilities[cityId] = []);
+      /* ★ 修 bug-7：旧实现不校验归属，能拿自己的资源给敌方城修磨坊。
+         只有在自己的城（或未举义时的本地主城）才能动设施。 */
+      if (!isOwnCity(state, realCid)) {
+        rsp.code = CODE.InvalidParam;
+        rsp.msg = { reason: 'not_own_city', cityId: realCid };
+        break;
+      }
+      const list = ownFacilityList(state, cfg, realCid);
       let f = list.find((x) => x.type === fType);
       if (!f) {
         // 原版 GetAndTryCreate：设施缺失时按 facility.json 补建
         const conf = (cfg.facility.list || []).find((x) => x.type === fType);
-        f = { name: conf?.name || '设施', level: 0, type: fType, up_time: 0 };
+        if (!conf) {
+          // ★ 修 bug-9：三处 UpError 以前都不带 msg，客户端只能弹通用报错
+          rsp.code = CODE.UpError;
+          rsp.msg = { reason: 'no_such_facility', fType };
+          break;
+        }
+        f = { name: conf.name || '设施', level: 0, type: fType, up_time: 0 };
         list.push(f);
       }
       const maxLv = cfg.facilityMaxLevel(fType);
-      if (maxLv <= 0 || f.level >= maxLv) { rsp.code = CODE.UpError; break; }
-      if (f.up_time > 0) { rsp.code = CODE.UpError; break; } // 正在升级中
+      if (maxLv <= 0 || f.level >= maxLv) {
+        rsp.code = CODE.UpError;
+        rsp.msg = { reason: 'max_level', level: f.level, maxLevel: maxLv };
+        break;
+      }
+      if (f.up_time > 0) {
+        rsp.code = CODE.UpError;
+        rsp.msg = { reason: 'upgrading', fType, level: f.level };
+        break;
+      } // 正在升级中
       const need = cfg.facilityNeed(fType, f.level + 1);
-      if (!need) { rsp.code = CODE.UpError; break; }
+      if (!need) {
+        rsp.code = CODE.UpError;
+        rsp.msg = { reason: 'no_cost_table', fType, nextLevel: f.level + 1 };
+        break;
+      }
       const code = tryUseNeed(state, need, `设施「${f.name}」升至 ${f.level + 1} 级`);
-      if (code !== OK) { rsp.code = code; break; }
+      if (code !== OK) {
+        rsp.code = code;
+        rsp.msg = { reason: 'res_not_enough', need, cost: need };
+        break;
+      }
       f.up_time = nowSec();
       ctx.push('roleRes.push', roleResOf(state));
       ctx.save();
-      rsp.msg = { cityId, facility: clone(f), role_res: roleResOf(state) };
+      rsp.msg = { cityId, realCityId: realCid, facility: clone(f), role_res: roleResOf(state) };
       break;
     }
     case 'interior.collect': {
       // 原版语义：按日重置次数 → 次数上限 → CD → 金币 = 税收产量（含设施加成）
+      /* ★ 修 bug-8：旧实现恒取 mainCity(state)，点哪座城征收都加同一份金。
+         现在按 m.cityId 取城，金产用该城 cityYield；次数与 CD 也按城独立记。 */
+      const wantCity = Number(m.cityId ?? 0);
+      const econ = ensureCityEcon(state)?.[wantCity];
+      const cityOwner = state.strategy?.cities?.[wantCity]?.owner;
+      const cityBased = !!(econ && cityOwner === 'player');
+      if (wantCity && !cityBased) {
+        rsp.code = CODE.InvalidParam;
+        rsp.msg = { reason: 'not_own_city', cityId: wantCity };
+        break;
+      }
+      const bucket = cityBased ? econ : state.roleAttr;
       const limit = cfg.basic.role?.collect_times_limit ?? 3;
       const interval = (cfg.basic.role?.collect_interval ?? 30) * 1000;
       const now = Date.now();
-      const last = state.roleAttr.lastCollectTime || 0;
+      const last = bucket.lastCollectTime || 0;
       const sameDay = last > 0 && new Date(last).toDateString() === new Date(now).toDateString();
-      if (!sameDay) state.roleAttr.collectTimes = 0;
-      if ((state.roleAttr.collectTimes || 0) >= limit) { rsp.code = CODE.OutCollectTimesLimit; break; }
-      if (sameDay && now - last < interval) { rsp.code = CODE.InCdCanNotOperate; break; }
+      if (!sameDay) bucket.collectTimes = 0;
+      if ((bucket.collectTimes || 0) >= limit) {
+        // ★ 修 bug-11：以前只回 code，玩家不知道是「次数用完」还是「冷却中」
+        rsp.code = CODE.OutCollectTimesLimit;
+        rsp.msg = { reason: 'times_limit', limit, cur_times: bucket.collectTimes, cityId: wantCity || 0 };
+        break;
+      }
+      if (sameDay && now - last < interval) {
+        rsp.code = CODE.InCdCanNotOperate;
+        rsp.msg = {
+          reason: 'cooldown', cityId: wantCity || 0,
+          next_time: last + interval, waitSec: Math.ceil((interval - (now - last)) / 1000),
+        };
+        break;
+      }
       const r = totalYield(state, cfg);
-      const gold = r.gold_yield || 1000;
+      const gold = cityBased
+        ? Math.max(200, Math.round((cityYield(state, wantCity)?.gold || 0) * 8))
+        : (r.gold_yield || 1000);
       state.roleRes.gold += gold;
-      recordRes(state, 'gold', gold, '税赋征收');
-      state.roleAttr.collectTimes = (state.roleAttr.collectTimes || 0) + 1;
-      state.roleAttr.lastCollectTime = now;
+      recordRes(state, 'gold', gold, cityBased ? `税赋征收·${cityName(wantCity)}` : '税赋征收');
+      bucket.collectTimes = (bucket.collectTimes || 0) + 1;
+      bucket.lastCollectTime = now;
       ctx.push('roleRes.push', roleResOf(state));
       ctx.save();
       let nextTime;
-      if (state.roleAttr.collectTimes >= limit) {
+      if (bucket.collectTimes >= limit) {
         const d = new Date(now);
         d.setHours(24, 0, 0, 0);          // 次日零点（原版语义）
         nextTime = d.getTime();
@@ -657,27 +777,36 @@ export function handleRequest(ctx, req) {
         nextTime = now + interval;
       }
       rsp.msg = {
-        gold, limit,
-        cur_times: state.roleAttr.collectTimes,
+        gold, limit, cityId: wantCity || 0,
+        cur_times: bucket.collectTimes,
         next_time: nextTime,
       };
       break;
     }
-    case 'interior.openCollect':
+    case 'interior.openCollect': {
+      const wantCity = Number(m.cityId ?? 0);
+      const e = wantCity ? ensureCityEcon(state)?.[wantCity] : null;
+      const bucket = (e && state.strategy?.cities?.[wantCity]?.owner === 'player') ? e : state.roleAttr;
       rsp.msg = {
         limit: cfg.basic.role?.collect_times_limit ?? 3,
-        cur_times: state.roleAttr.collectTimes || 0,
-        next_time: state.roleAttr.lastCollectTime
-          ? state.roleAttr.lastCollectTime + (cfg.basic.role?.collect_interval ?? 30) * 1000
+        cur_times: bucket.collectTimes || 0,
+        next_time: bucket.lastCollectTime
+          ? bucket.lastCollectTime + (cfg.basic.role?.collect_interval ?? 30) * 1000
           : 0,
       };
       break;
+    }
     case 'interior.transform': {
       // 原版语义：必须有集市（type 15）→ ret[i] = -From[i] 或 +To[i]（不同索引）→ 不可扣成负数
       const city = mainCity(state);
       const facilities = state.facilities[city?.cityId ?? 1] || [];
       const market = facilities.find((f) => f.type === 15);
-      if (!market || facilityGetLevel(cfg, market) <= 0) { rsp.code = CODE.NotHasJiShi; break; }
+      if (!market || facilityGetLevel(cfg, market) <= 0) {
+        // ★ 修 bug-10：以前只回 code 58，没有 msg，客户端只能弹通用错误
+        rsp.code = CODE.NotHasJiShi;
+        rsp.msg = { reason: 'no_market', hint: '需要先在本城建造并升级「集市」' };
+        break;
+      }
       const from = m.from || [0, 0, 0, 0];
       const to = m.to || [0, 0, 0, 0];
       const ret = [0, 0, 0, 0];
@@ -686,7 +815,11 @@ export function handleRequest(ctx, req) {
         else if (Number(to[i] || 0) > 0) ret[i] = Number(to[i]);
       }
       const r = state.roleRes;
-      if (!ret.every((v, i) => (r[RES_KEYS[i]] || 0) + v >= 0)) { rsp.code = CODE.InvalidParam; break; }
+      if (!ret.every((v, i) => (r[RES_KEYS[i]] || 0) + v >= 0)) {
+        rsp.code = CODE.InvalidParam;
+        rsp.msg = { reason: 'res_not_enough', need: ret };
+        break;
+      }
       for (let i = 0; i < 4; i += 1) r[RES_KEYS[i]] = (r[RES_KEYS[i]] || 0) + ret[i];
       ctx.push('roleRes.push', roleResOf(state));
       ctx.save();
@@ -869,7 +1002,26 @@ export function handleRequest(ctx, req) {
         rsp.msg = { reason: 'bad_pos', army: {} };
         break;
       }
+      /* ★ 试玩 bug-1/3：旧实现不校验城归属、不校验武将存在，
+         于是「给敌方城/不存在的城编队」「把武将塞进 999999 号槽」都能过。
+         城必须是我方城（或未举义时的唯一本地主城），武将要真实存在。 */
+      if (!isOwnCity(state, cityId)) {
+        rsp.code = CODE.InvalidParam;
+        rsp.msg = { reason: 'not_own_city', cityId };
+        break;
+      }
+      if (gid > 0 && !findGeneral(state, gid)) {
+        rsp.code = CODE.InvalidParam;
+        rsp.msg = { reason: 'bad_general', generalId: gid };
+        break;
+      }
       let army = state.armys.find((a) => a.cityId === cityId && a.order === order);
+      // ★ 试玩 bug-2：行军中的队伍不能改编制（否则等于边走边换将补兵）
+      if (army && army.marchId) {
+        rsp.code = CODE.InvalidParam;
+        rsp.msg = { reason: 'marching', army: clone(army) };
+        break;
+      }
       if (!army) {
         if (gid <= 0) { rsp.msg = { army: {} }; break; }   // 只是把空槽位清空，不建队
         // 新建队伍必须带完整字段，否则 army.generals[pos] 直接抛异常
@@ -902,6 +1054,8 @@ export function handleRequest(ctx, req) {
     case 'army.conscript': {
       const army = armyById(state, m.armyId);
       if (!army) { rsp.code = CODE.InvalidParam; rsp.msg = { reason: 'no_army' }; break; }
+      // ★ 试玩 bug-2：行军中不能征兵（否则路上补满兵再打）
+      if (army.marchId) { rsp.code = CODE.InvalidParam; rsp.msg = { reason: 'marching', army: clone(army) }; break; }
       const cnts = normalizeTriple(m.cnts);
       const total = cnts.reduce((s, n) => s + n, 0);
       if (total <= 0) { rsp.code = CODE.InvalidParam; rsp.msg = { reason: 'zero' }; break; }
@@ -1245,6 +1399,9 @@ export function handleRequest(ctx, req) {
         cityId: Number(m.cityId), armyId: Number(m.armyId), frac,
         fromCityId: Number(m.fromCityId) || 0,
       });
+      /* ★ 修 bug-14：旧实现失败时同时用 code≠0 与 msg.ok=false 两套语义，
+         客户端判 code 就刷新界面、判 ok 就弹 toast，出现「说失败但已刷新」。
+         现在统一：ok 是唯一判定，code 只作为协议层错误码同步（非 0 即失败）。 */
       if (!result.ok) rsp.code = CODE.InvalidParam;
       else ctx.save();
       rsp.msg = {
@@ -1252,7 +1409,17 @@ export function handleRequest(ctx, req) {
         marchId: result.marchId, arriveDay: result.arriveDay, need: result.need,
         city: result.city, grainCost: result.grainCost,
         marchDays: result.marchDays, km: result.km, speed: result.speed, from: result.from,
+        armyId: result.armyId || 0, troops: result.troops || 0,
+        deploy: result.deploy || 0, frac: result.frac ?? frac,
       };
+      break;
+    }
+    case 'strategy.recallMarch': {
+      // ★ 出征面板：撤回在途队伍（攻击队解锁归城、运输队粮车折返）
+      const result = strategyRecallMarch(state, cfg, ctx, { marchId: Number(m.marchId) });
+      if (!result.ok) rsp.code = CODE.InvalidParam;
+      else ctx.save();
+      rsp.msg = result;
       break;
     }
     case 'strategy.clearThreat': {
@@ -1266,9 +1433,11 @@ export function handleRequest(ctx, req) {
     }
 
     default:
-      // 未知消息一律给空对象 + code 0，客户端不会 toast，也不会卡住请求队列
+      /* ★ 修 bug-22：未知消息以前也回 code 0，客户端表现为「点了成功但什么也没发生」。
+         现在明确回 404，让版本不匹配能被看见。 */
       ctx.log('warn', `unhandled message: ${name}`);
-      rsp.msg = {};
+      rsp.code = 404;
+      rsp.msg = { reason: 'unknown_message', name };
   }
 
   // code 默认 0（OK）；玩法校验失败时按原版 constant/code.go 返回，客户端弹原版提示

@@ -132,7 +132,7 @@ test('探索人才：每城每日一次；成功登庸入营；重复探索被�
 
 /* ---------------- 城池内政任务 ---------------- */
 
-test('内政任务：开垦提开发度、修城加守军、每旬一次冷却', () => {
+test('内政任务：开垦提开发度、修城加守军、每项每旬一次冷却', () => {
   const state = freshCao();
   const ctx = makeCtx(state);
   const cityId = state.strategy.playerCity;
@@ -142,9 +142,12 @@ test('内政任务：开垦提开发度、修城加守军、每旬一次冷却',
   const troops0 = st0.troops;
   const r1 = strategyInvest(state, cfg, ctx, { cityId, kind: 'agri' });
   assert.ok(r1.ok, `开垦应成功: ${JSON.stringify(r1)}`);
+  /* ★ 修 bug-12：五项内政改为按项各自冷却，同旬换一项可以继续办 */
   const r2 = strategyInvest(state, cfg, ctx, { cityId, kind: 'trade' });
-  assert.equal(r2.ok, false, '同旬第二项应被冷却拒绝');
-  assert.equal(r2.reason, 'cooldown');
+  assert.ok(r2.ok, `换一项内政应可继续办: ${JSON.stringify(r2)}`);
+  const r2b = strategyInvest(state, cfg, ctx, { cityId, kind: 'agri' });
+  assert.equal(r2b.ok, false, '同一项同旬再办应被冷却拒绝');
+  assert.equal(r2b.reason, 'cooldown');
   // 推进 10 日后可再办
   state.clock.day += 10;
   const r3 = strategyInvest(state, cfg, ctx, { cityId, kind: 'defense' });

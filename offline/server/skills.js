@@ -1064,6 +1064,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       + 'max-width:calc(100% - 780px);';
     dock.innerHTML = ''
       + '<button id="slgStratTick" style="' + btnCss + '">推演一月</button>'
+      + '<button id="slgBtnWar" style="' + btnCss + '">出征</button>'
       + '<button id="slgBtnHome" style="' + btnCss + '">本城</button>'
       + '<button id="slgBtnGens" style="' + btnCss + '">武将</button>'
       + '<button id="slgBtnReps" style="' + btnCss + '">战报</button>'
@@ -1117,6 +1118,11 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     };
     document.getElementById('slgBtnZoomIn').onclick = function () { if (window.__slgZoom) window.__slgZoom(1); };
     document.getElementById('slgBtnZoomOut').onclick = function () { if (window.__slgZoom) window.__slgZoom(-1); };
+    document.getElementById('slgBtnWar').onclick = function () {
+      /* ★ 出征面板：沙盘顶部常驻入口，不用先点城再滚到底 */
+      if (typeof window.__slgWarWindow === 'function') window.__slgWarWindow({ tab: 'go' });
+      else if (window.__slgToast) window.__slgToast('出征面板尚未就绪，请稍候', false);
+    };
     document.getElementById('slgBtnHome').onclick = function () {
       if (window.__slgHomeWindow && lastState) window.__slgHomeWindow();
     };
@@ -1473,7 +1479,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       + kvRow('等级', 'Lv' + c.level + (c.adminLevel ? '　' + c.adminLevel : ''))
       + kvRow('州郡', c.province + (info.jun ? ' · ' + info.jun : ''))
       + kvRow('今地', info.today)
-      + kvRow('驻军', String(c.troops || 0))
+      + kvRow(c.owner === 'player' ? '驻城兵' : '守军', String(c.owner === 'player' ? (c.troopSum || 0) : (c.troops || 0)))
       + kvRow('人口', c.population ? String(c.population) : '')
       + kvRow('地形', c.terrain)
       + kvRow('特产', c.specialty)
@@ -2160,9 +2166,9 @@ const BATTLE_ANIM_SOURCE = `;(function () {
 /** 城池面板 v2：完整实现（样式/布局/六页/全局面板/HUD/抉择弹窗） */
 const CITY_WINDOW_V2_IMPL = `;(function () {
   if (typeof document === 'undefined') return;
-  var cache = null, tab = 'overview', currentCity = 0, neighbors = {}, attackMode = 'all';
-  /* ★ P7：每座目标城各自记住玩家选的出发城（切换城池不串） */
-  var attackFrom = {};
+  var cache = null, tab = 'overview', currentCity = 0, neighbors = {};
+  /* ★ 出征面板状态：出发城 / 目标城 / 队伍 / 比例 / 页签。玩家在面板里选一次就记住。 */
+  var war = { from: 0, target: 0, armyId: 0, frac: 1, tab: 'go' };
   var host = null;
 
   var STYLE = document.createElement('style');
@@ -2243,6 +2249,13 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
   window.__slgToast = toast;
 
   function fmt(n) { n = Math.floor(Number(n) || 0); return n >= 10000 ? (n / 10000).toFixed(1) + '万' : String(n); }
+  /* ★ 本 IIFE 原先没有 esc —— 城池面板里一堆 esc(...) 会抛 ReferenceError，
+     整个页签渲染中断（概览页的出征块因此干脆不出现，看着就像「没有出征入口」）。 */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
   var ERR_TEXT = { 1: '资源不足', 12: '已达最高等级', 16: '资源不足', 53: '此处不可操作', 55: '今日次数已用完', 56: '冷却中', 58: '需要先建集市' };
   function errText(rsp) {
     if (rsp && rsp.msg && rsp.msg.reason) return String(rsp.msg.reason);
@@ -2337,6 +2350,10 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     }
     var body = el('div', 'body');
     win.appendChild(body);
+    /* ★ 关键修复：样式表里 .win 默认 display:none（本来指望调用方打开），
+       但没有任何调用方设过 display —— 城池面板一直是「存在但不可见」，
+       玩家点城池只看到左上角浮层，自然觉得「没有内政/出征面板」。 */
+    win.style.display = 'block';
     host.appendChild(win);
     return body;
   }
@@ -2360,6 +2377,11 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     for (var i = 0; i < s.cities.length; i++) if (s.cities[i].id === Number(id)) return s.cities[i];
     return null;
   }
+  /* 原客户端只认 state.citys 里的城 id（本地主城，通常 1）。
+     城池设施协议要「双 id」：cityId 给客户端查城，realCityId 才是要操作的战略城。 */
+  function clientCityId() {
+    return (cache && cache.citys && cache.citys[0] && cache.citys[0].cityId) || 1;
+  }
   function buildNeighbors(s) {
     neighbors = {};
     s.routes.forEach(function (r) {
@@ -2368,9 +2390,9 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     });
   }
 
-  window.__slgCityWindow = function (cityId) {
+  window.__slgCityWindow = function (cityId, tabId) {
     currentCity = Number(cityId);
-    tab = 'overview';
+    tab = tabId || 'overview';
     fetchState().then(function (s) {
       cache = s; buildNeighbors(s);
       renderCity(s);
@@ -2380,6 +2402,353 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     var w = document.getElementById('slgCityWin');
     if (w) w.remove();
   };
+
+  /* ================= ★ 出征面板 =================
+     以前「出征」只是城池概览页底部一块：要先把城点开、再滚到底，只能按整城比例出兵，
+     选不了队伍、看不到在途、也不能撤回。这里做成独立作战面板：
+       出击（选出发城 → 选队伍 → 选目标）／行军队列（撤回）／战报。 */
+  var WAR_REASON = {
+    no_city: '目标城不存在', own_city: '那是自己的城，不用打',
+    not_own_city: '出发城不是你的', no_army: '该城没有可用队伍',
+    no_general: '该队还没有武将', no_troops: '该队没有兵',
+    no_grain: '军粮不足', not_adjacent: '两城之间没有可通行军段',
+    gate_blocked: '关隘封锁，出不去', marching: '该队正在行军',
+    no_march: '这支队已不在途中', already_arrived: '已到城下，来不及撤了',
+    bad_action: '未知操作', res_not_enough: '资源不足',
+    cooldown: '冷却中', no_gold: '金不足', no_disaster: '眼下无灾可赈',
+  };
+  function warReason(rs) { return WAR_REASON[rs] || rs || '未知原因'; }
+  function warTroops(a) {
+    return (a && a.soldiers || []).reduce(function (n, v) { return n + Math.max(0, Number(v) || 0); }, 0);
+  }
+  /* 与 strategy.js 的 marchDaysBy 同口径：日 = ceil(km ÷ (55 × 速度/100))，夹 1~40 */
+  function warDays(km, spd) {
+    var v = Math.max(20, Number(spd) || 100);
+    return Math.max(1, Math.min(40, Math.ceil((Number(km) || 0) / (55 * (v / 100)))));
+  }
+  function warOwnCities(s) {
+    return (s.cities || []).filter(function (c) { return c.owner === 'player'; });
+  }
+  function warIdleArmies(s, cityId) {
+    return (s.armies || []).filter(function (a) {
+      if (Number(a.cityId) !== Number(cityId) || a.marching) return false;
+      return (a.generals || []).some(function (g) { return !!g; }) && warTroops(a) > 0;
+    });
+  }
+  function warGenLine(a) {
+    return (a.generals || []).map(function (g) {
+      return g ? esc(g.name) + '<span class="cost">（' + esc(g.arms || '') + '适性 ' + g.apt + '%）</span>' : '';
+    }).filter(Boolean).join('、') || '<span class="cost">无武将</span>';
+  }
+  function warRefresh(s) {
+    fetchState().then(function (s2) { cache = s2; buildNeighbors(s2); renderWar(s2); })
+      .catch(function () { renderWar(s); });
+  }
+
+  window.__slgWarWindow = function (opts) {
+    opts = opts || {};
+    if (opts.from) war.from = Number(opts.from);
+    if (opts.cityId) war.target = Number(opts.cityId);
+    if (opts.tab) war.tab = opts.tab;
+    fetchState().then(function (s) {
+      cache = s; buildNeighbors(s);
+      if (!war.from || !warOwnCities(s).some(function (c) { return c.id === war.from; })) {
+        war.from = s.playerCity;
+      }
+      renderWar(s);
+    }).catch(function (e) {
+      /* 渲染异常不再静默：否则面板只画一半，玩家以为「没这个功能」 */
+      if (window.console) console.error('[slg] 出征面板渲染失败', (e && e.stack) || e);
+      toast('出征面板渲染失败，请刷新重试', false);
+    });
+  };
+
+  function renderWar(s) {
+    var own = warOwnCities(s);
+    if (!own.length) {
+      var empty = makeWindow('slgWarWin', '出征', '<div class="sub">尚未举义</div>', [], 'go',
+        function () {}, function () { var w = document.getElementById('slgWarWin'); if (w) w.remove(); });
+      empty.appendChild(el('div', 'empty', '先在天下沙盘择主举义，有了自己的城才能出兵。'));
+      return;
+    }
+    if (!war.from || !own.some(function (c) { return c.id === war.from; })) {
+      war.from = own.some(function (c) { return c.id === s.playerCity; }) ? s.playerCity : own[0].id;
+    }
+    var fromCity = cityOf(s, war.from);
+    var idle = warIdleArmies(s, war.from);
+    if (!idle.some(function (a) { return a.id === war.armyId; })) {
+      war.armyId = idle.length ? idle[0].id : 0;
+    }
+    var queue = (s.marches || []).filter(function (m) { return m.side === 'player' && !m.resolved; });
+    var tabs = [
+      ['go', '出击'],
+      ['queue', '行军队列' + (queue.length ? '（' + queue.length + '）' : '')],
+      ['log', '战报'],
+    ];
+    var body = makeWindow('slgWarWin', '出征',
+      '<div class="sub">第 ' + s.day + ' 日 · 我军 ' + own.length + ' 城 · 在途 ' + queue.length + ' 支</div>',
+      tabs, war.tab,
+      function (t) { war.tab = t; renderWar(cache || s); },
+      function () { var w = document.getElementById('slgWarWin'); if (w) w.remove(); });
+    body.innerHTML = '';
+    if (war.tab === 'go') warGoPanel(s, fromCity, idle, body);
+    else if (war.tab === 'queue') warQueuePanel(s, queue, body);
+    else warLogPanel(s, body);
+  }
+
+  function warGoPanel(s, fromCity, idle, body) {
+    var own = warOwnCities(s);
+    var fromCard = el('div', 'card', '<h4 style="margin-top:0">出发城</h4>');
+    if (own.length > 1) {
+      var selFrom = document.createElement('select');
+      selFrom.style.cssText = 'background:#101208;color:#e2d6b8;border:1px solid #4a4436;'
+        + 'border-radius:4px;padding:3px 8px;font:12px "Microsoft YaHei",sans-serif;';
+      own.forEach(function (o) {
+        var op = document.createElement('option');
+        op.value = String(o.id);
+        op.textContent = o.name + '（' + (o.armsCount || 0) + ' 队 / ' + fmt(o.troopSum || 0)
+          + ' 兵 · 粮 ' + fmt(o.store || 0) + '）';
+        if (o.id === war.from) op.selected = true;
+        selFrom.appendChild(op);
+      });
+      selFrom.onchange = function () {
+        war.from = Number(selFrom.value) || 0;
+        war.armyId = 0;
+        renderWar(cache);
+      };
+      var fromRow = el('div', 'row', '<span>自哪座城发兵</span>');
+      fromRow.appendChild(selFrom);
+      fromCard.appendChild(fromRow);
+    } else {
+      fromCard.appendChild(el('div', 'cost', '唯一据点：<b style="color:#f0d998">' + esc(fromCity.name) + '</b>'));
+    }
+    fromCard.appendChild(el('div', 'cost',
+      '驻城兵力 ' + fmt(fromCity.troopSum || 0) + ' · 城防守军 ' + fmt(fromCity.troops || 0)
+      + ' · 城库存粮 ' + fmt(fromCity.store || 0) + ' · 可派队伍 ' + idle.length + ' 支'));
+    body.appendChild(fromCard);
+
+    var armyCard = el('div', 'card', '<h4 style="margin-top:0">可派队伍</h4>');
+    if (!idle.length) {
+      armyCard.appendChild(el('div', 'empty',
+        '本城没有可出征的队伍（须有武将带兵，行军中不算）。先到「征兵」页配将征募。'));
+      /* ★ 别让玩家卡在「这座城没兵」：把其它城的可用队伍列出来，一键切过去 */
+      var elsewhere = [];
+      own.forEach(function (o) {
+        if (o.id === war.from) return;
+        warIdleArmies(s, o.id).forEach(function (a) { elsewhere.push({ city: o, army: a }); });
+      });
+      if (elsewhere.length) {
+        armyCard.appendChild(el('div', 'cost', '这些城还有可派队伍，点一下就切过去：'));
+        elsewhere.slice(0, 6).forEach(function (it) {
+          var row = el('div', 'row', '<span>' + esc(it.city.name) + ' · 队伍#' + it.army.order
+            + '<span class="cost">　' + fmt(warTroops(it.army)) + ' 兵 · 队速 '
+            + Math.round(it.army.speed || 100) + '</span></span>');
+          row.appendChild(mkBtn('以此为出发城', 'ghost', function () {
+            war.from = it.city.id;
+            war.armyId = it.army.id;
+            renderWar(cache);
+          }));
+          armyCard.appendChild(row);
+        });
+      } else {
+        armyCard.appendChild(el('div', 'cost', '全军都在行军或没有兵——先去「征兵」页配将征募。'));
+        armyCard.appendChild(mkBtn('去本城征兵', '', function () {
+          var w = document.getElementById('slgWarWin');
+          if (w) w.remove();
+          if (window.__slgCityWindow) window.__slgCityWindow(war.from, 'army');
+        }));
+      }
+    }
+    idle.forEach(function (a) {
+      var on = a.id === war.armyId;
+      var row = el('div', 'row');
+      row.style.cssText = 'cursor:pointer;padding:8px;border-radius:5px;'
+        + (on ? 'background:rgba(240,217,152,.10);border:1px solid #8a7038;' : 'border:1px solid #33302a;');
+      row.innerHTML = '<span><b style="color:' + (on ? '#ffe9b0' : '#e2d6b8') + '">队伍#' + a.order + '</b>'
+        + '<span class="cost">　盾 ' + fmt(a.soldiers[0]) + ' / 弓 ' + fmt(a.soldiers[1])
+        + ' / 骑 ' + fmt(a.soldiers[2]) + '　合计 <b style="color:#f0d998">' + fmt(warTroops(a))
+        + '</b> 兵 · 队速 ' + Math.round(a.speed || 100) + '</span>'
+        + '<div class="cost">' + warGenLine(a) + '</div></span>';
+      row.appendChild(el('span', 'chip', on ? '已选' : '点选'));
+      row.onclick = function () { war.armyId = a.id; renderWar(cache); };
+      armyCard.appendChild(row);
+    });
+    body.appendChild(armyCard);
+
+    var army = idle.filter(function (a) { return a.id === war.armyId; })[0] || null;
+    var routes = (fromCity.marchRoutes || []).filter(function (r) {
+      var t = cityOf(s, r.id);
+      return t && t.owner !== 'player';
+    });
+    if (war.target && !routes.some(function (r) { return Number(r.id) === Number(war.target); })) {
+      war.target = 0;
+    }
+    if (!war.target && routes.length) war.target = routes[0].id;
+
+    var tgtCard = el('div', 'card', '<h4 style="margin-top:0">可攻目标</h4>');
+    if (!routes.length) {
+      tgtCard.appendChild(el('div', 'empty', '此城周边没有可通行又能打的邻城（关隘封锁或已被我军占据）。'));
+    }
+    routes.forEach(function (r) {
+      var t = cityOf(s, r.id);
+      if (!t) return;
+      var days = warDays(r.km, army ? army.speed : 100);
+      var mine = army ? Math.round(warTroops(army) * war.frac) : 0;
+      var their = Number(t.troops) || 0;
+      var on = Number(t.id) === Number(war.target);
+      var odds = !army ? '<span class="cost">未选队伍</span>'
+        : mine >= their * 1.25 ? '<span style="color:#a9e2a0">兵力占优</span>'
+          : mine >= their * 0.9 ? '<span style="color:#e0c56a">胜负参半</span>'
+            : '<span style="color:#ff6b5e">兵力偏少</span>';
+      var row = el('div', 'row');
+      row.style.cssText = 'cursor:pointer;padding:8px;border-radius:5px;'
+        + (on ? 'background:rgba(240,217,152,.10);border:1px solid #8a7038;' : 'border:1px solid #33302a;');
+      row.innerHTML = '<span><span class="dot" style="background:' + t.color + '"></span>'
+        + '<b style="color:' + (on ? '#ffe9b0' : '#e2d6b8') + '">' + esc(t.name) + '</b>'
+        + '<span class="cost">　' + esc(t.province) + '·' + esc(t.ownerName) + '·守军约 ' + fmt(their) + '</span>'
+        + '<div class="cost">程 ' + fmt(r.km) + ' 里 · 预计 ' + days + ' 日 · ' + odds + '</div></span>';
+      row.appendChild(el('span', 'chip', on ? '已选' : '点选'));
+      row.onclick = function () { war.target = t.id; renderWar(cache); };
+      tgtCard.appendChild(row);
+    });
+    body.appendChild(tgtCard);
+
+    var target = war.target ? cityOf(s, war.target) : null;
+    var route = target ? routes.filter(function (r) { return Number(r.id) === Number(target.id); })[0] : null;
+    if (!army || !target || !route) {
+      body.appendChild(el('div', 'card', '<div class="cost">'
+        + (army ? '先选一座目标城。' : '先征兵整备一支能出战的队伍。') + '</div>'));
+      return;
+    }
+    var total = warTroops(army);
+    var deploy = Math.max(1, Math.round(total * war.frac));
+    var days = warDays(route.km, army.speed);
+    var grain = Math.ceil(deploy * 0.1);
+    var sum = el('div', 'card', '<h4 style="margin-top:0">出兵概览</h4>');
+
+    sum.appendChild(el('div', 'cost',
+      '队伍#' + army.order + ' 共 <b style="color:#f0d998">' + fmt(total) + '</b> 兵，本役实出 '
+      + '<b style="color:#f0d998">' + fmt(deploy) + '</b> 兵，留守 ' + fmt(total - deploy) + '。'));
+
+    var seg = el('div', 'seg');
+    [['all', '全军', 1], ['half', '半军', 0.5], ['third', '三成', 0.34]].forEach(function (m) {
+      var b = document.createElement('button');
+      b.textContent = m[1];
+      if (Math.abs(war.frac - m[2]) < 0.001) b.className = 'on';
+      b.onclick = function () { war.frac = m[2]; renderWar(cache); };
+      seg.appendChild(b);
+    });
+    var segRow = el('div', 'row', '<span>出兵比例</span>');
+    segRow.appendChild(seg);
+    sum.appendChild(segRow);
+
+    sum.appendChild(el('div', 'cost',
+      '行军：程 <b style="color:#f0d998">' + fmt(route.km) + '</b> 里 · 队速 ' + Math.round(army.speed)
+      + ' · 预计 <b style="color:#f0d998">' + days + '</b> 日抵达（约第 ' + (s.day + days) + ' 日）'
+      + ' · 行军粮 ' + fmt(grain)
+      + (days >= 10 ? '　<span class="cost">长途：途中需 ' + Math.floor(days / 10) + ' 次休整</span>' : '')));
+    var theirs = Number(target.troops) || 0;
+    sum.appendChild(el('div', 'cost',
+      '目标守军约 ' + fmt(theirs) + '　'
+      + (deploy >= theirs * 1.25 ? '<span style="color:#a9e2a0">兵力占优</span>'
+        : deploy >= theirs * 0.9 ? '<span style="color:#e0c56a">胜负参半，看武将与兵种</span>'
+          : '<span style="color:#ff6b5e">兵力偏少，建议先增兵或换小城</span>')));
+
+    sum.appendChild(mkBtn('出征 ' + target.name, '', function () {
+      warConfirmAttack(s, fromCity, army, target, route);
+    }));
+    body.appendChild(sum);
+  }
+
+  function warConfirmAttack(s, fromCity, army, target, route) {
+    var total = warTroops(army);
+    var deploy = Math.max(1, Math.round(total * war.frac));
+    var days = warDays(route.km, army.speed);
+    var label = war.frac >= 1 ? '全军' : (war.frac === 0.5 ? '半军' : '三成');
+    confirmBox('出兵确认', [
+      '出发：<b>' + esc(fromCity.name) + '</b> → 目标：<b>' + esc(target.name) + '</b>'
+        + '（' + esc(target.ownerName) + '·守军约 ' + fmt(target.troops) + '）',
+      '队伍：<b>#' + army.order + '</b>　' + warGenLine(army),
+      '规模：' + label + '，实出 <b>' + fmt(deploy) + '</b> 人（该队共 ' + fmt(total) + '）',
+      '行军：程 ' + fmt(route.km) + ' 里 · 队速 ' + Math.round(army.speed) + ' · 预计第 ' + (s.day + days)
+        + ' 日抵达 · 耗粮 ' + fmt(Math.ceil(deploy * 0.1)),
+      '<span class="cost">到达日自动开战；战败折损、溃兵归营。出征后可在「行军队列」页撤回。</span>',
+    ], '出征', '取消', function () {
+      postJSON('/__slg/strategy/action', {
+        action: 'attack', cityId: target.id, armyId: army.id,
+        frac: war.frac, fromCityId: fromCity.id,
+      }).then(function (rs) {
+        if (rs && rs.ok) {
+          toast('大军自' + (rs.from || fromCity.name) + '开拔，程 ' + Math.round(rs.km || route.km)
+            + ' 里，预计第 ' + rs.arriveDay + ' 日抵城下（耗粮 ' + fmt(rs.grainCost) + '）', true);
+          war.tab = 'queue';
+          warRefresh(s);
+        } else {
+          toast('出兵失败：' + warReason(rs && rs.reason), false);
+        }
+      }).catch(function () { toast('出兵失败：服务端无响应', false); });
+    });
+  }
+
+  function warQueuePanel(s, queue, body) {
+    var card = el('div', 'card', '<h4 style="margin-top:0">在途 ' + queue.length + ' 支</h4>');
+    if (!queue.length) card.appendChild(el('div', 'empty', '当前没有行军中的队伍。'));
+    queue.forEach(function (m) {
+      var left = Math.max(0, m.remainDays != null ? m.remainDays : (m.arriveDay - s.day));
+      var pct = Math.round((m.progress || 0) * 100);
+      var row = el('div', 'row');
+      row.innerHTML = '<span><b style="color:#f0d998">'
+        + (m.kind === 'transport' ? '辎重队' : ('队伍#' + (m.armyId || '?'))) + '</b>'
+        + '<span class="cost">　' + esc(m.fromName || m.from) + ' → ' + esc(m.toName || m.to) + '</span>'
+        + '<div class="cost">程 ' + fmt(m.km) + ' 里 · 第 ' + m.departDay + ' 日发 → 第 ' + m.arriveDay + ' 日到 · '
+        + (left > 0 ? ('余 <b style="color:#f0d998">' + left + '</b> 日（' + pct + '%）') : '<b style="color:#ff9d6b">已抵城下</b>')
+        + (m.kind === 'transport'
+          ? '　粮 ' + fmt(m.grain)
+          : '　兵 ' + fmt(m.troops) + ' · 耗粮 ' + fmt(m.grainCost))
+        + '</div></span>';
+      var btn = mkBtn('撤回', 'ghost', function () {
+        confirmBox('撤回行军', [
+          '<b>' + esc(m.fromName || m.from) + ' → ' + esc(m.toName || m.to) + '</b>',
+          '<span class="cost">' + (m.kind === 'transport'
+            ? '粮车折返，八成粮回府库（两成路上损耗）。'
+            : '队伍回到出发城并解锁，行军粮退回一半。') + '</span>',
+        ], '撤回', '继续行军', function () {
+          postJSON('/__slg/strategy/action', { action: 'recall', marchId: m.id }).then(function (rs) {
+            if (rs && rs.ok) {
+              toast('已撤回' + rs.from + '，退回粮 ' + fmt(rs.refund), true);
+              warRefresh(s);
+            } else toast('撤回失败：' + warReason(rs && rs.reason), false);
+          }).catch(function () { toast('撤回失败：服务端无响应', false); });
+        });
+      });
+      btn.style.margin = '0';
+      row.appendChild(btn);
+      card.appendChild(row);
+    });
+    body.appendChild(card);
+    body.appendChild(el('div', 'cost',
+      '行军日数 = 里程 ÷（55 × 队速/100），队速取队内最慢武将，长途最多 40 日。'
+      + '已抵城下的队伍当天就会结算，撤不回来。'));
+  }
+
+  function warLogPanel(s, body) {
+    var events = (s.events || []).filter(function (e) {
+      var t = String(e.text || '');
+      return t.indexOf('攻') >= 0 || t.indexOf('陷') >= 0 || t.indexOf('出征') >= 0
+        || t.indexOf('军') >= 0 || t.indexOf('折返') >= 0;
+    }).slice(0, 24);
+    var card = el('div', 'card', '<h4 style="margin-top:0">近期军报</h4>');
+    if (!events.length) card.appendChild(el('div', 'empty', '暂无军报。'));
+    events.forEach(function (e) {
+      card.appendChild(el('div', 'cost', '第 ' + (e.month != null ? e.month : '?') + ' 月　' + esc(e.text)));
+    });
+    body.appendChild(card);
+    if (s.captives && s.captives.length) {
+      body.appendChild(el('div', 'cost',
+        '阵前被俘 ' + s.captives.length + ' 人，可在六府「武将」页花 300 金招降。'));
+    }
+  }
+
   window.__slgHomeWindow = function () {
     fetchState().then(function (s) {
       cache = s; buildNeighbors(s);
@@ -2402,7 +2771,9 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       + (isHome ? '<span class="badge home">本城</span>' : '');
     var body = makeWindow('slgCityWin', title,
       '<div class="sub">' + c.province + ' · <span style="color:' + c.color + '">' + c.ownerName
-      + '</span> · 驻军 ' + fmt(c.troops) + '</div>',
+      + '</span>' + (c.owner === 'player'
+        ? ' · 驻城 ' + fmt(c.troopSum || 0) + ' 兵 · 城防 ' + fmt(c.troops)
+        : ' · 守军约 ' + fmt(c.troops)) + '</div>',
       tabs,
       tab,
       function (t) { tab = t; renderCity(s); },
@@ -2439,24 +2810,32 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       body.appendChild(card);
 
       var invCard = el('div', 'card', '<h4 style="margin-top:0">内政任务</h4>'
-        + '<div class="cost">每城每旬（10 日）可办一项；开发度直接提升该城日产与征兵效率。'
-        + '委任五职后，驻在本城的官员每旬自动推动对应开发。</div>');
+        + '<div class="cost">每城每项每旬（10 日）可办一次；同旬可把五项分别办一遍。'
+        + '开发度直接提升该城日产与征兵效率。委任五职后，驻在本城的官员每旬自动推动对应开发。</div>');
       var mkInv = function (label, kind, cost, note) {
-        var b = mkBtn(label + '（' + cost + ' 金）', '', function () {
-          fetch('/__slg/strategy/action', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'invest', cityId: c.id, kind: kind }),
-          }).then(function (r2) { return r2.json(); }).then(function (rs) {
-            if (rs.ok) {
-              toast(label + '完工：' + (rs.effectText || ''), true);
-              fetchState().then(function (s2) { cache = s2; renderCity(s2); });
-            } else if (rs.reason === 'cooldown') toast('本城本旬已办过内政，第 ' + rs.nextDay + ' 日可再办', false);
-            else if (rs.reason === 'no_gold') toast('金不足（需 ' + rs.cost + '）', false);
-            else if (rs.reason === 'no_disaster') toast('本城眼下无灾可赈', false);
-            else toast('无法办理：' + (rs.reason || '未知'), false);
+        /* ★ 修 bug-12：按项冷却 —— 只置灰刚办过的那一项，并写明哪天可再办 */
+        var today = Number((cache && cache.day) || 0);
+        var days = (c.investDays || {});
+        var legacy = Object.keys(days).length ? 0 : Number(c.lastInvestDay || 0);
+        var last = Number(days[kind] || legacy) || 0;
+        var cdDay = (last && today - last < 10) ? last + 10 : 0;
+        var b = mkBtn(cdDay ? ('第 ' + cdDay + ' 日可再办') : (label + '（' + cost + ' 金）'),
+          cdDay ? 'ghost' : '', function () {
+            fetch('/__slg/strategy/action', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'invest', cityId: c.id, kind: kind }),
+            }).then(function (r2) { return r2.json(); }).then(function (rs) {
+              if (rs.ok) {
+                toast(label + '完工：' + (rs.effectText || ''), true);
+                fetchState().then(function (s2) { cache = s2; renderCity(s2); });
+              } else if (rs.reason === 'cooldown') toast('这项内政本旬办过了，第 ' + rs.nextDay + ' 日可再办', false);
+              else if (rs.reason === 'no_gold') toast('金不足（需 ' + rs.cost + '）', false);
+              else if (rs.reason === 'no_disaster') toast('本城眼下无灾可赈', false);
+              else toast('无法办理：' + (rs.reason || '未知'), false);
+            });
           });
-        });
         b.style.margin = '0';
+        if (cdDay) b.disabled = true;
         var row = el('div', 'row', '<span>' + label + '<span class="cost">　' + note + '</span></span>');
         row.appendChild(b);
         invCard.appendChild(row);
@@ -2470,6 +2849,45 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       body.appendChild(el('div', 'cost',
         '民心的作用：影响人口增长（+2%~6%/月）与粮金产量（×0.85~1.10）。'
         + '治安越高灾害越少。开发度到 100 以上收益递减，别把一座城堆到顶。'));
+
+      /* ★ 修 bug-6：分城也有自己的一套设施（举义时逐城建立），在此可查看与升级 */
+      var facCard = el('div', 'card', '<h4 style="margin-top:0">' + c.name + ' · 设施</h4>'
+        + '<div class="empty">读取中…</div>');
+      body.appendChild(facCard);
+      send('city.facilities', { cityId: clientCityId(), realCityId: c.id }, true).then(function (rsp) {
+        var list2 = (rsp.msg && rsp.msg.facilities) || [];
+        facCard.innerHTML = '<h4 style="margin-top:0">' + c.name + ' · 设施</h4>';
+        if (!list2.length) { facCard.appendChild(el('div', 'empty', '本城暂无设施数据。')); return; }
+        var COST = [['wood', '木'], ['iron', '铁'], ['stone', '石'], ['grain', '粮'], ['gold', '金'], ['decree', '令']];
+        list2.forEach(function (f) {
+          var row = el('div', 'row');
+          var chips = f.level >= f.maxLevel ? '已满级' : COST.filter(function (k) {
+            return f.nextNeed && f.nextNeed[k[0]];
+          }).map(function (k) {
+            return k[1] + ' ' + fmt(f.nextNeed[k[0]]);
+          }).join(' · ') + (f.nextTime ? '　工期 ' + f.nextTime + 's' : '');
+          row.innerHTML = '<span><b style="color:#f0d998">' + esc(f.name) + '</b> '
+            + '<span class="winTag">Lv' + f.level + '/' + f.maxLevel + '</span>'
+            + '<div class="cost">' + chips + '</div></span>';
+          if (f.up_time > 0) {
+            row.appendChild(el('span', 'cost', '升级中…'));
+          } else if (f.level >= f.maxLevel) {
+            row.appendChild(el('span', 'cost', '—'));
+          } else {
+            row.appendChild(mkBtn('升级', '', function () {
+              send('city.upFacility', { cityId: clientCityId(), realCityId: c.id, fType: f.type }).then(function (r2) {
+                if (r2.code === 0) toast(f.name + ' 开始升级', true);
+                else toast('升级失败：' + errText(r2), false);
+                fetchState().then(function (s2) { cache = s2; renderCity(s2); });
+              });
+            }));
+          }
+          facCard.appendChild(row);
+        });
+      }).catch(function () {
+        facCard.innerHTML = '<h4 style="margin-top:0">' + c.name + ' · 设施</h4>'
+          + '<div class="cost">设施读取失败，稍后再试。</div>';
+      });
       return;
     }
     body.appendChild(el('div', 'card', '<h4 style="margin-top:0">' + c.name + ' · 内政</h4><div class="grid">'
@@ -2606,12 +3024,20 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     var adjCard = el('div', 'card', '<h4 style="margin-top:0">相邻城池</h4>');
     var list = neighbors[c.id] || [];
     if (!list.length) adjCard.appendChild(el('div', 'empty', '此地孤悬。'));
+    /* ★ 修 bug-15：「相邻」用路网，但能否进军要过 marchable（关隘封锁会拆段）。
+       两处口径必须一致，否则会出现「相邻可前往、出征却说行军受阻」。 */
+    var canGo = c.marchable || [];
     list.forEach(function (id) {
       var n = cityOf(s, id);
       if (!n) return;
+      var passable = canGo.indexOf(n.id) >= 0;
+      var troopText = n.owner === 'player'
+        ? '驻城 ' + fmt(n.troopSum || 0) : '守军 ' + fmt(n.troops);
       var row = el('div', 'row');
       row.innerHTML = '<span><span class="dot" style="background:' + n.color + '"></span>'
-        + n.name + ' <span class="winTag">（' + n.province + '·' + n.ownerName + '·驻' + fmt(n.troops) + '）</span></span>';
+        + n.name + ' <span class="winTag">（' + n.province + '·' + n.ownerName + '·' + troopText + '）</span>'
+        + (passable ? '' : ' <span class="chip" style="color:#ff9d6b;border-color:#7a4038">行军受阻</span>')
+        + '</span>';
       var open = mkBtn('前往', 'ghost', function () { window.__slgCityWindow(n.id); });
       open.style.padding = '1px 10px';
       row.appendChild(open);
@@ -2619,119 +3045,44 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     });
     body.appendChild(adjCard);
 
-    /* ★ P7 出征：从「任意己方城」出兵，不再只能从首都打。
-       P6 及以前 strategy.attack 恒用 playerCity，分城的邻城根本打不了。 */
+    /* ★ 出征入口：真正的操作搬到独立「出征」面板（选队伍/选目标/在途撤回），
+       概览页只留情报与一键入口 —— 避免「界面说一套、服务端做一套」。 */
     var ownCities = (s.cities || []).filter(function (x) { return x.owner === 'player' && x.id !== c.id; });
     var origins = ownCities.filter(function (x) { return (x.marchable || []).indexOf(c.id) >= 0; });
     var adjacentOwn = ownCities.filter(function (x) { return (neighbors[x.id] || []).indexOf(c.id) >= 0; });
-    if (origins.length) {
-      var fromId = attackFrom[c.id];
-      if (!fromId || !origins.some(function (x) { return x.id === fromId; })) {
-        fromId = ((origins.filter(function (x) { return x.id === s.playerCity; })[0]) || origins[0]).id;
-        attackFrom[c.id] = fromId;
-      }
-      var fromCity = origins.filter(function (x) { return x.id === fromId; })[0] || origins[0];
-      var route = (fromCity.marchRoutes || []).filter(function (r2) { return r2.id === c.id; })[0] || {};
-      var km = Math.round(route.km || 0);
-      var cityArmies = (s.armies || []).filter(function (a) {
-        return Number(a.cityId) === fromId && !a.marching;
-      });
-      var mine = cityArmies.reduce(function (sum, a) {
-        return sum + (a.soldiers || []).reduce(function (x, y) { return x + (Number(y) || 0); }, 0);
-      }, 0);
-      var spd = cityArmies.length
-        ? Math.min.apply(null, cityArmies.map(function (a) { return a.speed || 100; })) : 100;
-      var eta = Math.max(1, Math.ceil(km / (55 * (spd / 100))));
-      var ratio = attackMode === 'all' ? 1 : (attackMode === 'half' ? 0.5 : 0.34);
-      var deploy = Math.round(mine * ratio);
-      var box = el('div', 'card', '<h4 style="margin-top:0">出征 ' + c.name + '</h4>');
-
-      // 出发城：多城时可选，单城时只报名字
-      if (origins.length > 1) {
-        var fromRow = el('div', 'row', '<span>出发城<span class="cost">　自哪座城发兵</span></span>');
-        var selFrom = document.createElement('select');
-        selFrom.style.cssText = 'background:#101208;color:#e2d6b8;border:1px solid #4a4436;'
-          + 'border-radius:4px;padding:3px 8px;font:12px "Microsoft YaHei",sans-serif;';
-        origins.forEach(function (o) {
-          var op = document.createElement('option');
-          op.value = String(o.id);
-          var rr = (o.marchRoutes || []).filter(function (r2) { return r2.id === c.id; })[0] || {};
-          op.textContent = o.name + '（程 ' + Math.round(rr.km || 0) + ' 里）';
-          if (o.id === fromId) op.selected = true;
-          selFrom.appendChild(op);
-        });
-        selFrom.onchange = function () {
-          attackFrom[c.id] = Number(selFrom.value) || 0;
-          if (cache) renderCity(cache);
-        };
-        fromRow.appendChild(selFrom);
-        box.appendChild(fromRow);
-      } else {
-        box.appendChild(el('div', 'cost', '出发城：<b style="color:#f0d998">' + esc(fromCity.name) + '</b>'));
-      }
-
-      box.appendChild(el('div', '', '出兵规模：'));
-      var seg = el('div', 'seg');
-      [['all', '全军'], ['half', '半军'], ['third', '三成']].forEach(function (m) {
-        var b = document.createElement('button');
-        b.textContent = m[1];
-        if (attackMode === m[0]) b.className = 'on';
-        b.onclick = function () {
-          attackMode = m[0];
-          Array.prototype.forEach.call(seg.children, function (x) { x.className = ''; });
-          b.className = 'on';
-          if (cache) renderCity(cache);
-        };
-        seg.appendChild(b);
-      });
-      box.appendChild(seg);
-      // ★ P0-3：给出双方兵力与胜算提示，别让玩家拿 800 去打 1800
-      var enough = deploy >= c.troops * 1.25;
+    if (c.owner === 'player') {
+      var mineBox = el('div', 'card', '<h4 style="margin-top:0">' + c.name + ' · 军事</h4>'
+        + '<div class="grid">'
+        + kv('驻城兵力', fmt(c.troopSum || 0) + ' 兵 / ' + (c.armsCount || 0) + ' 队')
+        + kv('城防守军', fmt(c.troops || 0))
+        + kv('城库存粮', fmt(c.store || 0))
+        + kv('可出征邻城', (c.marchable || []).length + ' 座')
+        + '</div>');
+      mineBox.appendChild(el('div', 'cost', '征兵与配将在「征兵」页；出兵、撤军、看行军在出征面板。'));
+      mineBox.appendChild(mkBtn('自本城出征', '', function () {
+        window.__slgCityClose();
+        window.__slgWarWindow({ from: c.id, tab: 'go' });
+      }));
+      body.appendChild(mineBox);
+    } else if (origins.length) {
+      var best = origins.map(function (o) {
+        var rr = (o.marchRoutes || []).filter(function (r2) { return r2.id === c.id; })[0] || {};
+        return { city: o, km: Math.round(rr.km || 0) };
+      }).sort(function (a, b) { return a.km - b.km; })[0];
+      var box = el('div', 'card', '<h4 style="margin-top:0">出征 ' + c.name + '</h4>'
+        + '<div class="grid">'
+        + kv('目标守军', fmt(c.troops))
+        + kv('归属', c.ownerName)
+        + kv('最近出发城', best.city.name + '（' + fmt(best.km) + ' 里）')
+        + kv('可出兵城', origins.length + ' 座')
+        + '</div>');
       box.appendChild(el('div', 'cost',
-        '本城可出 ' + fmt(deploy) + ' · 敌军驻军约 ' + fmt(c.troops) + '　'
-        + (enough ? '<span style="color:#a9e2a0">兵力占优</span>'
-          : '<span style="color:#ff6b5e">兵力偏少，建议先打小城或增兵</span>')
-        + (ratio < 1 ? '　（按比例出击，其余留守）' : '')));
-      // ★ P7 行军：里程与队速都摆出来，玩家能算这一趟要几天
-      box.appendChild(el('div', 'cost',
-        '行军：程 <b style="color:#f0d998">' + fmt(km) + '</b> 里 · 队速 ' + Math.round(spd)
-        + '（取队内最慢武将）· 预计 <b style="color:#f0d998">' + eta + '</b> 游戏日抵达'
-        + (cityArmies.length ? '' : '　<span style="color:#ff6b5e">（本城无可用队伍，先去征兵）</span>')));
-      var atkBtn = mkBtn('自' + fromCity.name + '出兵攻打 ' + c.name, '', function () {
-        confirmBox('出兵确认', [
-          '出发：<b>' + fromCity.name + '</b> → 目标：<b>' + c.name + '</b>（' + c.ownerName + '·驻军约 ' + fmt(c.troops) + '）',
-          '规模：' + (attackMode === 'all' ? '全军' : attackMode === 'half' ? '半军' : '三成')
-            + '，约 ' + fmt(deploy) + ' 人',
-          '行军：程 ' + fmt(km) + ' 里，预计 ' + eta + ' 日抵达',
-          '<span class="cost">战败会损兵，并留下溃兵归营；战胜城池入版图。</span>',
-        ], '出征', '取消', function () {
-          send('strategy.attack', {
-            cityId: c.id,
-            frac: ratio,
-            fromCityId: fromId,
-          }).then(function (rsp) {
-            if (rsp.msg && rsp.msg.ok) {
-              toast(rsp.msg.marching
-                ? ('大军自' + (rsp.msg.from || fromCity.name) + '开拔，进军' + (rsp.msg.city || '')
-                  + '，程 ' + Math.round(rsp.msg.km || km) + ' 里，预计第 ' + rsp.msg.arriveDay
-                  + ' 日抵达（行军粮 -' + rsp.msg.grainCost + '）。在天下沙盘可见行军线。')
-                : (rsp.msg.summary || '出兵！战况已展开。'), true);
-              window.__slgCityClose();
-            } else {
-              var rs = (rsp.msg && rsp.msg.reason) || '';
-              toast('出兵失败：' + (rs === 'no_troops' ? '该城没有可出战的兵'
-                : rs === 'no_general' ? '该队还没有武将' : rs === 'no_army' ? '该城没有驻军队伍'
-                : rs === 'not_own_city' ? '出发城不是你的城'
-                : rs === 'no_grain' ? '军粮不足，需 ' + (rsp.msg.need || 0) + ' 粮'
-                : rs === 'not_adjacent' ? '与出发城之间没有可通行军段'
-                : errText(rsp)), false);
-            }
-            fetchState().then(function (s2) { cache = s2; buildNeighbors(s2); });
-          });
-        });
-      });
-      if (!cityArmies.length) atkBtn.disabled = true;
-      box.appendChild(atkBtn);
+        '可自 ' + origins.map(function (o) { return o.name; }).join('、')
+        + ' 出兵。出征面板里能挑具体队伍、看实出人数与行军日数，出发后还能撤回。'));
+      box.appendChild(mkBtn('打开出征面板', '', function () {
+        window.__slgCityClose();
+        window.__slgWarWindow({ cityId: c.id, from: best.city.id, tab: 'go' });
+      }));
       body.appendChild(box);
     } else if (adjacentOwn.length) {
       // 相邻但没有可通行军段（关隘封锁）
@@ -2748,9 +3099,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     /* ★ P7：兵营/设施属于「本地主城」（原客户端 cityId），不是战略城的 id；
        两者是两套编号。队伍归属才用战略城 id（tabArmy 的 cid）。 */
     var cid = (c && c.id) || (cache && cache.playerCity) || 1;
-    var localCid = (cache && cache.citys && cache.citys[0] && cache.citys[0].cityId) || 1;
     body.innerHTML = '<div class="empty">读取中…</div>';
-    Promise.all([send('city.facilities', { cityId: localCid }), send('role.myRoleRes', {}), loadMeta()])
+    Promise.all([send('city.facilities', { cityId: clientCityId(), realCityId: cid }), send('role.myRoleRes', {}), loadMeta()])
       .then(function (rs) {
         body.innerHTML = '';
         var res = (rs[1].msg && rs[1].msg.role_res) || {};
@@ -2768,7 +3118,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         var collect = el('div', '');
         collect.style.marginTop = '8px';
         collect.appendChild(mkBtn('征收金币（' + meta.collectIntervalSec + ' 秒一次，每日 ' + meta.collectLimit + ' 次）', '', function () {
-          send('interior.collect', {}).then(function (rsp) {
+          send('interior.collect', { cityId: cid }).then(function (rsp) {
             if (rsp.code === 0) toast('征得 ' + fmt(rsp.msg.gold) + ' 金', true);
             else toast('征收失败：' + errText(rsp), false);
             tabHome(body, c);
@@ -2802,7 +3152,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
             row.appendChild(el('span', 'cost', '—'));
           } else {
             row.appendChild(mkBtn('升级', '', function () {
-              send('city.upFacility', { cityId: localCid, fType: f.type }).then(function (rsp) {
+              send('city.upFacility', { cityId: clientCityId(), realCityId: cid, fType: f.type }).then(function (rsp) {
                 if (rsp.code === 0) toast(f.name + ' 开始升级', true);
                 else toast('升级失败：' + errText(rsp), false);
                 tabHome(body, c);
@@ -2965,7 +3315,9 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
 
         body.appendChild(el('div', 'card',
           '<b style="color:#f0d998">' + esc((c && c.name) || '本城') + ' · 编队与征兵</b>　'
-          + '<span class="winTag">人口 ' + fmt((c && c.pop) || 0) + ' · 驻军 ' + fmt((c && c.troops) || 0) + '</span>'
+          + '<span class="winTag">人口 ' + fmt((c && c.pop) || 0) + ' · '
+          + (c && c.owner === 'player' ? '驻城兵 ' + fmt(c.troopSum || 0) + ' · 城防 ' : '守军 ')
+          + fmt((c && c.troops) || 0) + '</span>'
           + '<div class="cost" style="margin-top:4px">一支队伍最多三将，'
           + '<b style="color:#f0d998">一将只能带一槽</b>：先配将，再征兵。'
           + '每兵吃 1 人口，由名下各城分摊；人口不足则征不满。'

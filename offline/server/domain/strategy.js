@@ -9,7 +9,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { makeBuild, makeGeneral, nextId, mainCity } from '../world.js';
+import { makeBuild, makeGeneral, makeFacilityList, nextId, mainCity } from '../world.js';
 import { rngFor } from './strategy-rng.js';
 import { canMarchBetween, marchableNeighbors, marchGraph } from './march.js';
 import { resolveBattle } from '../battle.js';
@@ -235,6 +235,14 @@ export function chooseOath(state, cfg, ctx = {}, { lord, city } = {}) {
     if (row.owner === f.id) { row.owner = 'player'; transferred += 1; }
   }
   st.playerCity = cid;
+  /* ★ 修 bug-6/21：举义时给拿到的每座城各建一套设施（键 s<战略城id>），
+     分城从此有设施可升；本地主城那份键仍是数字 id，两套编号互不覆盖。 */
+  state.facilities = state.facilities || {};
+  for (const [id, row] of Object.entries(st.cities || {})) {
+    if (row.owner !== 'player') continue;
+    const key = `s${id}`;
+    if (!Array.isArray(state.facilities[key])) state.facilities[key] = makeFacilityList(cfg);
+  }
   const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
   state.oath = { done: true, lord: f.id, city: cid, day };
 
@@ -299,12 +307,16 @@ export function neighborsOf(cityId) {
 /**
  * 可出征的邻城：同一条行军段直连，且关隘未封锁。
  * 换图后同一条路线会在关隘处拆段，隔着关隘的城不再算直邻。
+ * ★ 修 bug-4：传 state 时过滤掉己方城 —— 旧实现把自家城也当「可出征目标」，
+ *   城池概览会摆出「自弘农出兵攻打长安（我军）」这种必然失败的按钮。
  */
-export function marchableFrom(cityId) {
+export function marchableFrom(cityId, state = null) {
   const graph = marchGraph();
   const all = strategyMap().cities.map((c) => c.id);
-  if (!graph) return neighborsOf(cityId);
-  return marchableNeighbors(cityId, all);
+  const list = graph ? marchableNeighbors(cityId, all) : neighborsOf(cityId);
+  if (!state) return list;
+  const st = state.strategy;
+  return list.filter((id) => Number(id) !== Number(cityId) && st?.cities?.[id]?.owner !== 'player');
 }
 
 export function strategySnapshot(state, factionId) {
@@ -889,7 +901,10 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride }
  */
 const MARCH_KM_BASE = 55;      // 速度 100 时每日推进的里程（km/日）
 const MARCH_DAYS_MIN = 1;
-const MARCH_DAYS_MAX = 12;
+/* ★ 修 bug-17：旧上限 12 日把长途抹平（900km 与 2000km 都是 12 日）。
+   率土/三战里跨州远征本来就是十几到几十日，这里放宽到 40 日，
+   并由 marchSupplyStops 给出「途中休整」提示，长线不再和邻城一个耗时。 */
+const MARCH_DAYS_MAX = 40;
 const GRAIN_PER_TROOP = 0.1;
 /** 辎重队速度固定：车马慢，比最慢的步卒还慢一截。 */
 const TRANSPORT_SPEED = 70;
@@ -973,10 +988,12 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
   if (!army.cityId) army.cityId = home;   // 旧队补驻城，后续驻城逻辑才有依据
   if ((army.generals || []).every((g) => !g)) return { ok: false, code: 4, reason: 'no_general' };
   if ((army.soldiers || []).every((n) => !(n > 0))) return { ok: false, code: 4, reason: 'no_troops' };
-  // 行军粮：兵力 × 0.1/程；优先从出发城城库扣（前线囤粮，三国志14 补给线口径），
-  //   城库不足吃全局池并 +25% 损耗
+  // 行军粮：按**实际出战**兵力 × 0.1/程（bug-5：旧实现按整队算粮，界面又说按比例出兵）
+  // 优先从出发城城库扣（前线囤粮，三国志14 补给线口径），城库不足吃全局池并 +25% 损耗
   const troopsTotal = (army.soldiers || []).reduce((s, v) => s + Math.max(0, Number(v) || 0), 0);
-  const grainCost = Math.ceil(troopsTotal * GRAIN_PER_TROOP);
+  const ratio = Math.max(0.01, Math.min(1, Number(frac) || 1));
+  const deploy = Math.max(1, Math.round(troopsTotal * ratio));
+  const grainCost = Math.ceil(deploy * GRAIN_PER_TROOP);
   const pay = consumeMarchGrain(state, home, grainCost);
   if (!pay.enough) {
     return { ok: false, code: 5, reason: 'no_grain', need: grainCost };
@@ -991,7 +1008,7 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
     id: (st.marchSeq = (st.marchSeq || 0) + 1),
     side: 'player', from: home, to: id,
     departDay, arriveDay: departDay + marchDays,
-    armyId: army.id, frac, grainCost,
+    armyId: army.id, frac: ratio, grainCost, troops: deploy,
     km: plan.km, speed: plan.speed,
   };
   st.marches.push(row);
@@ -1007,6 +1024,9 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
   return {
     ok: true, marching: true, marchId: row.id, arriveDay: row.arriveDay,
     city: target.name, grainCost, marchDays, km: plan.km, speed: plan.speed, from: fromName,
+    // ★ 出征面板：把「哪支队 / 实出多少 / 留守多少」原样回给界面，UI 不再自己猜
+    armyId: army.id, troops: troopsTotal, deploy, frac: ratio,
+    supplyStops: Math.max(0, Math.floor(marchDays / 10)),
   };
 }
 
@@ -1100,6 +1120,53 @@ export function strategyResolveMarches(state, cfg, ctx) {
   // 已结算且过期 3 日的行军记录清掉（客户端留了渲染窗口）
   st.marches = st.marches.filter((mm) => !(mm.resolved && today - mm.arriveDay > 3));
   return results;
+}
+
+/**
+ * ★ 出征面板：撤回在途队伍。
+ *  - 攻击队：解锁队伍、退回出发城，行军粮只退一半（走出去的粮吃掉了）
+ *  - 运输队：粮车折返，退八成入库（两成路上损耗）
+ *  - 已到城下的不能再撤（当天就会结算），避免「撤回」抢在结算前洗掉战斗结果
+ */
+export function strategyRecallMarch(state, cfg, ctx, { marchId }) {
+  const st = ensureStrategy(state);
+  const id = Number(marchId);
+  const mm = (st.marches || []).find((x) => x.id === id && x.side === 'player' && !x.resolved);
+  if (!mm) return { ok: false, reason: 'no_march' };
+  const today = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  if (today >= Number(mm.arriveDay)) return { ok: false, reason: 'already_arrived', arriveDay: mm.arriveDay };
+  let refund = 0;
+  const r = state.roleRes;
+  if (mm.kind === 'transport') {
+    refund = Math.round((Number(mm.grain) || 0) * 0.8);
+    if (refund > 0) {
+      r.grain = Math.min(r.depot_capacity || 1000000, (r.grain || 0) + refund);
+      recordRes(state, 'grain', refund, `运输队折返·${cityName(mm.from)}`, today);
+    }
+  } else {
+    const army = (state.armys || []).find((a) => a.id === mm.armyId);
+    if (army) {
+      delete army.marchId;
+      army.cityId = Number(mm.from) || st.playerCity;
+    }
+    refund = Math.round((Number(mm.grainCost) || 0) * 0.5);
+    if (refund > 0) {
+      r.grain = Math.min(r.depot_capacity || 1000000, (r.grain || 0) + refund);
+      recordRes(state, 'grain', refund, `撤军归营·${cityName(mm.from)}`, today);
+    }
+  }
+  mm.resolved = true;
+  mm.recalled = true;
+  st.marches = st.marches.filter((x) => x !== mm);
+  const fromName = cityName(mm.from);
+  const toName = cityName(mm.to);
+  recordEvent(state, mm.kind === 'transport'
+    ? `运输队自${toName}道折返${fromName}，粮 ${refund} 回库。`
+    : `大军自${toName}城下折返${fromName}，行军粮退回 ${refund}。`);
+  return {
+    ok: true, marchId: id, kind: mm.kind || 'attack',
+    refund, from: fromName, to: toName,
+  };
 }
 
 /** 清剿来犯军：本地地图被遮住后，玩家在天下界面也能看到并处理威胁。 */export function clearThreat(state, cfg, ctx, { garrisonId, armyId }) {
@@ -1248,8 +1315,13 @@ export function strategyInvest(state, cfg, ctx, { cityId, kind }) {
   const e = econ?.[id];
   if (!tstate || tstate.owner !== 'player' || !e) return { ok: false, reason: 'not_own_city' };
   const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
-  if (e.lastInvestDay && day - e.lastInvestDay < 10) {
-    return { ok: false, reason: 'cooldown', nextDay: e.lastInvestDay + 10 };
+  /* ★ 修 bug-12：五项内政共用 lastInvestDay 一个闸门，点完开垦后招商/募兵/修城/赈灾
+     全部报 cooldown。改为**按项目分别记冷却**（每项各自每旬一次），旧档用 lastInvestDay 兜底。 */
+  if (!e.investDays) e.investDays = {};
+  const legacy = Object.keys(e.investDays).length === 0 ? Number(e.lastInvestDay) || 0 : 0;
+  const last = Number(e.investDays[kind]) || legacy;
+  if (last && day - last < 10) {
+    return { ok: false, reason: 'cooldown', kind, nextDay: last + 10 };
   }
   const r = state.roleRes;
   const KINDS = {
@@ -1295,7 +1367,8 @@ export function strategyInvest(state, cfg, ctx, { cityId, kind }) {
   if ((Number(r.gold) || 0) < K.cost) return { ok: false, reason: 'no_gold', cost: K.cost };
   if (kind === 'relief' && !e.mod && !e.disaster) return { ok: false, reason: 'no_disaster' };
   r.gold -= K.cost;
-  e.lastInvestDay = day;
+  e.investDays[kind] = day;
+  e.lastInvestDay = day;   // 兼容旧档读取
   K.apply();
   recordRes(state, 'gold', -K.cost, `${K.label}·${cityName(id)}`, day);
   const effectText = K.text();
@@ -1413,6 +1486,9 @@ export function strategyViewState(state, cfg = null) {
   const st = ensureStrategy(state);
   const map = strategyMap();
   const conf = factionConf();
+  /* ★ 修 bug-18：人口曾有两套字段同时下发（地图静态 population / 经济层动态 pop），
+     几个月后概览与内政页会显示两个不同的数。统一以经济层为准，只留一个来源。 */
+  const econAll = ensureCityEcon(state) || {};
   // ★ P4-①：玩家城旗帜/命名继承所举义的诸侯（择曹操则玩家城就是曹旗蓝）
   const oathF = oathFactionOf(state);
   const nameOf = (id) => id === 'player'
@@ -1471,7 +1547,8 @@ export function strategyViewState(state, cfg = null) {
       x: c.x, y: c.y, level: c.level, levelName: c.levelName || '', adminLevel: c.adminLevel || '',
       terrain: c.terrain || '', specialty: c.attrs?.特产 || '',
       arms: c.attrs?.主要兵种 || '',
-      population: c.population || 0,
+      // ★ 修 bug-18：人口只有经济层一个来源（民心/灾害/征兵都会改它）
+      population: econAll[c.id]?.pop ?? (c.population || 0),
       agri: c.attrs?.农业 ?? 0, commerce: c.attrs?.商业 ?? 0,
       cityDef: c.attrs?.城防 ?? 0,
       history: (c.history || '').slice(0, 160),
@@ -1481,7 +1558,7 @@ export function strategyViewState(state, cfg = null) {
       troops: st.cities[c.id]?.troops || 0,
       // ★ P2/P3 城市经营摘要（仅玩家城给数值，其余城省流量）
       ...(st.cities[c.id]?.owner === 'player' ? (() => {
-        const e = ensureCityEcon(state)?.[c.id];
+        const e = econAll[c.id];
         if (!e) return {};
         const y = cityYield(state, c.id);
         const mod = e.mod && Number(state.clock?.day) <= e.mod.until ? e.mod : null;
@@ -1508,10 +1585,15 @@ export function strategyViewState(state, cfg = null) {
           lvAgri: y?.lvAgri ?? 1, lvTrade: y?.lvTrade ?? 1,
           lvArms: y?.lvArms ?? 1, lvDef: y?.lvDef ?? 1,
           stationed,
-          // ★ P7：该城能打哪些邻城（关隘封锁已过滤）——分城出征的选项来源
-          marchable: marchableFrom(c.id),
+          // ★ 修 bug-16：驻城部队兵力另给一份，和「城防守军 troops」分开显示
+          troopSum: stationed.reduce((n, a) => n + (a.soldiers || []).reduce((x, v) => x + (Number(v) || 0), 0), 0),
+          armsCount: stationed.length,
+          // ★ 修 bug-12：逐城内政冷却（按项目），界面据此置灰并显示可再办日
+          investDays: e.investDays || {}, lastInvestDay: e.lastInvestDay || 0,
+          // ★ 修 bug-4：该城能打哪些邻城（关隘封锁已过滤，修 bug-4 后己方城也已剔除）
+          marchable: marchableFrom(c.id, state),
           // 带里程，界面出兵前就能显示「程 208 里」
-          marchRoutes: marchableFrom(c.id).map((nid) => ({
+          marchRoutes: marchableFrom(c.id, state).map((nid) => ({
             id: nid, km: marchKmBetween(c.id, nid),
             name: map.cities.find((x) => x.id === nid)?.name || '',
           })),
@@ -1532,15 +1614,29 @@ export function strategyViewState(state, cfg = null) {
       loyal: c.loyal, days: c.days,
       rate: Math.min(95, Math.round((0.45 + (c.days || 0) * 0.05 + protagonistStat(state, '政治') * 0.002) * 100)),
     })),
-    // 可出征的城（已按行军校验过滤：关隘封锁即不可走）
-    marchable: marchableFrom(st.playerCity || 0),
+    // 可出征的城（已按行军校验过滤：关隘封锁即不可走；己方城不再算目标）
+    marchable: marchableFrom(st.playerCity || 0, state),
     // ★ P2：行军队列与日内进度（客户端据此画行军线与移动军标）
     // ★ P7：带 km/speed，客户端按「剩余里程 ÷ 剩余日」画，远近军标速度才一致
-    marches: (st.marches || []).map((mm) => ({
-      id: mm.id, side: mm.side, kind: mm.kind || 'attack', from: mm.from, to: mm.to,
-      departDay: mm.departDay, arriveDay: mm.arriveDay, resolved: !!mm.resolved,
-      km: mm.km || 0, speed: mm.speed || 0, grain: mm.grain || 0,
-    })),
+    // ★ 出征面板：带 armyId / 兵力 / 两端城名 / 剩余日，行军队列可直接操作撤回
+    marches: (st.marches || []).map((mm) => {
+      const a = (state.armys || []).find((x) => x.id === mm.armyId);
+      const today = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+      return {
+        id: mm.id, side: mm.side, kind: mm.kind || 'attack', from: mm.from, to: mm.to,
+        fromName: map.cities.find((x) => x.id === Number(mm.from))?.name || cityName(mm.from),
+        toName: map.cities.find((x) => x.id === Number(mm.to))?.name || cityName(mm.to),
+        departDay: mm.departDay, arriveDay: mm.arriveDay, resolved: !!mm.resolved,
+        recalled: !!mm.recalled,
+        armyId: mm.armyId || 0, frac: mm.frac ?? 1,
+        troops: a ? (a.soldiers || []).reduce((s, v) => s + Math.max(0, Number(v) || 0), 0) : 0,
+        km: mm.km || 0, speed: mm.speed || 0, grain: mm.grain || 0,
+        grainCost: mm.grainCost || 0,
+        remainDays: Math.max(0, Number(mm.arriveDay) - today),
+        progress: Math.max(0, Math.min(1, (today - Number(mm.departDay))
+          / Math.max(1, Number(mm.arriveDay) - Number(mm.departDay)))),
+      };
+    }),
     dayFrac: dayFraction(state, chapterRules().realMsPerDay),
     msPerDay: Math.max(1000, Math.round(chapterRules().realMsPerDay / (state.clock?.scale || 1))),
     gates: Object.entries((marchGraph() && marchGraph().gateStatus) || {})

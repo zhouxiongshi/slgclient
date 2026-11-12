@@ -122,6 +122,45 @@
     });
   }
 
+  /* ★ 修 bug-13：运输起点可选 —— 旧实现 from 写死首都，只能从首都一条线调粮。
+     这里给一个起点下拉 + 数量输入的小弹窗，走 strategyTransport 的 fromCityId。 */
+  function openTransport(tCity) {
+    var own = (data.strategy.cities || []).filter(function (c) {
+      return c.owner === 'player' && c.id !== tCity.id;
+    });
+    if (!own.length) { toast('没有别的城可以调粮', false); return; }
+    var mask = document.createElement('div');
+    mask.id = 'slgTransportBox';
+    mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:100004;display:flex;'
+      + 'align-items:center;justify-content:center;';
+    var selStyle = 'background:#2a2617;border:1px solid #ba9a52;color:#fff;padding:4px 6px;border-radius:4px;'
+      + 'font:13px "Microsoft YaHei",sans-serif;';
+    mask.innerHTML = '<div style="background:#1d1a12;border:1px solid #ba9a52;border-radius:8px;'
+      + 'padding:18px 22px;min-width:400px;color:#e8dfc8;font:13px \'Microsoft YaHei\',sans-serif">'
+      + '<h3 style="margin:0 0 8px;color:#ffdf9a">运粮到 ' + esc(tCity.name) + '</h3>'
+      + '<div class="muted" style="margin-bottom:12px">粮从起点城城库出，按里程算天数（辎重队速度固定 70）。'
+      + '前线囤粮可省掉府库 25% 的途中损耗。</div>'
+      + '<label style="display:block;margin-bottom:10px">起点城 '
+      + '<select id="slgTrFrom" style="' + selStyle + '">'
+      + own.map(function (c) {
+        return '<option value="' + c.id + '">' + esc(c.name) + '（城库 ' + fmt(c.store || 0) + '）</option>';
+      }).join('') + '</select></label>'
+      + '<label style="display:block;margin-bottom:14px">运多少粮 '
+      + '<input id="slgTrAmt" type="number" min="1" step="100" value="2000" style="' + selStyle + 'width:110px"></label>'
+      + '<div style="text-align:right"><button id="slgTrCancel" style="background:none;border:1px solid #777;'
+      + 'color:#ccc;padding:5px 14px;border-radius:4px;cursor:pointer">取消</button> '
+      + '<button id="slgTrOk" style="background:#7a5c1e;border:1px solid #ba9a52;color:#ffe9b0;'
+      + 'padding:5px 18px;border-radius:4px;cursor:pointer">起运</button></div></div>';
+    document.body.appendChild(mask);
+    mask.querySelector('#slgTrCancel').onclick = function () { mask.remove(); };
+    mask.querySelector('#slgTrOk').onclick = function () {
+      var from = Number(mask.querySelector('#slgTrFrom').value) || 0;
+      var grain = Math.max(1, Math.floor(Number(mask.querySelector('#slgTrAmt').value) || 0));
+      mask.remove();
+      strategyAction({ action: 'transport', cityId: tCity.id, fromCityId: from, grain: grain });
+    };
+  }
+
   /* ---------------- 样式 ---------------- */
   var CSS = [
     /* 层级让位：对方的城池窗/确认框/toast 是 100000~100003，六府入口压在它们上面会挡住按钮。
@@ -200,6 +239,7 @@
 
   var NAV = [
     ['general', '武将', '帐下与在野'], ['strategy', '战略', '国势与推演'],
+    ['war', '出征', '选城选队列兵'],
     ['interior', '内政', '委任与政令'], ['depot', '府库', '分类账'],
     ['equip', '兵刃', '四槽穿戴与锻造'], ['library', '战法库', '全库与配方'],
   ];
@@ -413,7 +453,9 @@
         + esc(c.terrain || '—') + ' / ' + esc(c.specialty || '—') + '</div></div></div>'
         + '<div class="muted" style="margin-top:8px">' + esc(c.note) + '。实际胜负由确定性战斗内核裁定。</div>';
     }
-    out += '<div style="margin-top:10px"><button class="btn" data-act="gotostrategy">打开天下沙盘出征</button></div></div>';
+    out += '<div style="margin-top:10px">'
+      + '<button class="btn" data-act="openwar">打开出征面板</button> '
+      + '<button class="btn" data-act="gotostrategy">打开天下沙盘</button></div></div>';
 
     // ★ P2/P3 城池经营：人口/逐城产出/城库/灾害 + 运粮入口
     var mineCities = (s.cities || []).filter(function (c) { return c.owner === 'player'; });
@@ -440,7 +482,8 @@
         + '<div>' + gs + '</div><div class="muted">兵力 ' + (a.soldiers || []).join(' / ') + '（盾步/弓兵/骑兵）</div>'
         + (a.marching ? '' : '<button class="btn" data-act="formup" data-id="' + a.id + '">整编</button>') + '</div>';
     }).join('')
-      + '<div class="muted">出征走天下沙盘；出征粮草自动按「出发城城库 → 府库+25%损耗」顺序扣。</div></div>';
+      + '<div class="muted">出征走「出征」面板（沙盘顶部 / 六府·出征）：可选出发城、具体队伍与目标，'
+      + '出兵前能看到实出人数与行军日数，出发后还能撤回。粮草按「出发城城库 → 府库+25%损耗」顺序扣。</div></div>';
 
     // 关隘与行军：直接复用战略层的 march.js 结果，和「出征」按钮走的是同一份校验
     var gates = s.gates || [];
@@ -757,7 +800,16 @@
     var act = t.getAttribute('data-act'), id = t.getAttribute('data-id');
     if (act === 'close') return close();
     if (act === 'refresh') return fetchState();
-    if (act === 'tab') return open(id);
+    if (act === 'tab') {
+      /* ★ 出征是独立作战面板（出击/行军队列/战报），不在六府这套 DOM 里渲染 */
+      if (id === 'war') {
+        close();
+        if (typeof window.__slgWarWindow === 'function') window.__slgWarWindow({ tab: 'go' });
+        else toast('出征面板尚未就绪，请稍候', false);
+        return;
+      }
+      return open(id);
+    }
     if (act === 'gen') { ui.genId = Number(t.getAttribute('data-id')); return render(); }
     if (act === 'prospect') { ui.genId = -Number(t.getAttribute('data-i')) - 1; return render(); }
     if (act === 'gtab') { ui.genTab = id; return render(); }
@@ -789,8 +841,7 @@
     }
     if (act === 'transport') {
       var tCity = (data.strategy.cities || []).find(function (c) { return c.id === Number(id); });
-      var amt = window.prompt('运送多少粮草到 ' + (tCity ? tCity.name : '目标城') + ' 的城库？', '2000');
-      if (amt) strategyAction({ action: 'transport', cityId: Number(id), grain: Number(amt) });
+      if (tCity) openTransport(tCity);
       return;
     }
     if (act === 'reward') {
@@ -805,6 +856,12 @@
       if (window.confirm('招降「' + c0.name + '」？\n费用 300 金，成功率约 ' + c0.rate + '%。\n失败：忠诚 -10（降到 0 以下会越狱逃走）。')) {
         strategyAction({ action: 'captive', idx: c0.idx });
       }
+      return;
+    }
+    if (act === 'openwar') {
+      close();
+      if (typeof window.__slgWarWindow === 'function') window.__slgWarWindow({ tab: 'go' });
+      else toast('出征面板尚未就绪，请稍候', false);
       return;
     }
     if (act === 'gotostrategy') {      close();

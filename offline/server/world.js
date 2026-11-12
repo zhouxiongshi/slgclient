@@ -128,6 +128,19 @@ export function makeCity(cfg, { cityId, rid, x, y, isMain = 1 }) {
   };
 }
 
+/**
+ * ★ 修 bug-6/21：设施模板。举义拿到的每座战略城都按这份模板各建一套，
+ * 设施不再是「只有编号 1 的主城才有」。
+ */
+export function makeFacilityList(cfg) {
+  return (cfg?.facility?.list || []).map((f) => ({
+    name: f.name,
+    level: 0,
+    type: f.type,
+    up_time: 0,
+  }));
+}
+
 export function makeBuild(cfg, { rid, x, y, type, level = 1 }) {
   const conf = cfg.confs.find((c) => c.type === type && c.level === level)
     || cfg.confs.find((c) => c.type === type)
@@ -257,12 +270,7 @@ export function createWorld(cfg, options = {}) {
   }
 
   // 原版 GetAndTryCreate：所有设施初始 0 级，由玩家逐个升级
-  const facilities = (cfg.facility.list || []).map((f) => ({
-    name: f.name,
-    level: 0,
-    type: f.type,
-    up_time: 0,
-  }));
+  const facilities = makeFacilityList(cfg);
   for (const extra of over.facilities || []) {
     const row = facilities.find((f) => f.type === extra.type);
     if (row && Number.isFinite(extra.level)) row.level = extra.level;

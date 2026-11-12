@@ -79,12 +79,13 @@ test('P7 分城出征：出发城不是自己的城必须拒绝', () => {
 /* 2. 里程驱动行军                                                             */
 /* -------------------------------------------------------------------------- */
 
-test('P7 行军按里程与队速算：越远越慢、越快越早，日数夹在 1~12', () => {
+test('P7 行军按里程与队速算：越远越慢、越快越早，日数夹在 1~40', () => {
   assert.equal(marchDaysBy(55, 100), 1, '55 里 + 速度 100 = 1 日');
   assert.equal(marchDaysBy(110, 100), 2);
   assert.ok(marchDaysBy(330, 100) > marchDaysBy(110, 100), '越远日数越多');
   assert.ok(marchDaysBy(330, 150) < marchDaysBy(330, 100), '骑兵比步卒快');
-  assert.equal(marchDaysBy(99999, 20), 12, '上限 12 日');
+  assert.equal(marchDaysBy(99999, 20), 40, '上限 40 日（bug-17：旧上限 12 日抹平长途）');
+  assert.ok(marchDaysBy(1200, 100) > 14, '跨州远征应显著多于邻城');
   assert.equal(marchDaysBy(1, 200), 1, '下限 1 日');
 });
 
@@ -224,10 +225,12 @@ test('P7 内政任务：募兵提兵营、赈灾解减产并涨民心', () => {
   const r1 = strategyInvest(state, cfg, {}, { cityId: cid, kind: 'barracks' });
   assert.equal(r1.ok, true, JSON.stringify(r1));
   assert.ok(r1.devArms > 0 && r1.lvArms >= 1);
-  // 同旬再办 → 冷却
+  /* ★ 修 bug-12：按项冷却 —— 同旬可办别的项，但同一项要等下一旬 */
   const r2 = strategyInvest(state, cfg, {}, { cityId: cid, kind: 'agri' });
-  assert.equal(r2.ok, false);
-  assert.equal(r2.reason, 'cooldown');
+  assert.equal(r2.ok, true, '同旬换一项应可办');
+  const r2b = strategyInvest(state, cfg, {}, { cityId: cid, kind: 'barracks' });
+  assert.equal(r2b.ok, false);
+  assert.equal(r2b.reason, 'cooldown');
   // 推 10 天后赈灾
   state.clock.day += 10;
   econ[cid].mod = { grain: 0.5, until: state.clock.day + 10 };
