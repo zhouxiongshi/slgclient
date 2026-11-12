@@ -7,6 +7,9 @@
   if (window.__slgPanels) return;
 
   var API = '/__slg/panels';
+  /* 后端根路径。编队/运输/赏赐等走 /__slg/strategy/action，
+     绝不能拿 API 去拼（会得到 /__slg/panels/strategy/action → 404）。 */
+  var API_ROOT = API.replace(/\/panels$/, '');   // '/__slg'
   var data = null;
   var ui = {
     tab: 'general', genId: 0, genTab: 'attr',
@@ -65,9 +68,12 @@
   function confirmBox(text, onYes) {
     if (window.confirm(text)) onYes();
   }
-  /* ★ P0/P1/P3 编队/运输/赏赐：走 /__slg/strategy/action */
+  /* ★ P0/P1/P3 编队/运输/赏赐：走 /__slg/strategy/action。
+     修 U01：旧写法 fetch(API + '/strategy/action') 会拼成
+     /__slg/panels/strategy/action（服务端无此路由，404）。改用 API_ROOT。
+     这条路径与 skills.js 的出征面板一致，必须用绝对根路径。 */
   function strategyAction(body, cb) {
-    fetch(API + '/strategy/action', {
+    fetch(API_ROOT + '/strategy/action', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }).then(function (r) { return r.json(); }).then(function (r) {
@@ -888,7 +894,6 @@
   }
 
   /* ---------------- 战报红点（P0-2） ---------------- */
-  var API_ROOT = API.replace(/\/panels$/, '');   // '/__slg'
   function fetchReportsHead(cb) {
     fetch(API_ROOT + '/panels/reports-head', { cache: 'no-store' })
       .then(function (r) { return r.ok ? r.json() : null; })

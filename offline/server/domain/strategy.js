@@ -1545,8 +1545,10 @@ export function strategyViewState(state, cfg = null) {
     cities: map.cities.map((c) => ({
       id: c.id, name: c.name, province: c.province, provinceId: c.provinceId,
       x: c.x, y: c.y, level: c.level, levelName: c.levelName || '', adminLevel: c.adminLevel || '',
-      terrain: c.terrain || '', specialty: c.attrs?.特产 || '',
-      arms: c.attrs?.主要兵种 || '',
+      // 修 U06：map.json 的特产/主要兵种是顶层字段，attrs 里没有这两个键。
+      // 旧写法恒为空，导致战略台与六府「城池性格」整列显示 —。保留 attrs 作旧档回落。
+      terrain: c.terrain || '', specialty: c.specialty || c.attrs?.特产 || '',
+      arms: c.arms || c.attrs?.主要兵种 || '',
       // ★ 修 bug-18：人口只有经济层一个来源（民心/灾害/征兵都会改它）
       population: econAll[c.id]?.pop ?? (c.population || 0),
       agri: c.attrs?.农业 ?? 0, commerce: c.attrs?.商业 ?? 0,
