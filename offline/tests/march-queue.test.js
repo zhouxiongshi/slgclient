@@ -9,6 +9,7 @@ import { createWorld, normalizeWorld } from '../server/world.js';
 import {
   strategyAttack, strategyResolveMarches, ensureStrategy, strategyViewState,
 } from '../server/domain/strategy.js';
+import { ensureCityEcon } from '../server/domain/city-econ.js';
 
 const cfg = loadConfig();
 const fresh = () => normalizeWorld(createWorld(cfg), cfg);
@@ -24,12 +25,16 @@ test('行军系统：出征生成行军队列+扣行军粮+锁队；到达日结
   assert.ok(army, '新档必有一支带将带兵的队伍');
 
   const grainBefore = Number(s.roleRes.grain) || 0;
+  ensureCityEcon(s);
+  const storeBefore = s.strategy.cityEcon?.[st.playerCity]?.store ?? 0;
   const r = strategyAttack(s, cfg, {}, { cityId: targetId, armyId: army.id, frac: 1 });
   assert.equal(r.ok, true, JSON.stringify(r));
   assert.equal(r.marching, true, '出征改为先行军');
   assert.ok(r.grainCost > 0, '行军要扣粮');
-  assert.equal(Number(s.roleRes.grain) || 0, grainBefore - r.grainCost, '行军粮实扣');
-  assert.ok((s.resLedger || []).some((e) => e.reason.includes('行军粮草')), '行军粮入流水');
+  // ★ 城市经营：行军粮优先扣出发城城库（城库 2000 起步足够），池不动
+  const storeAfter = s.strategy.cityEcon?.[st.playerCity]?.store ?? 0;
+  assert.equal(storeBefore - storeAfter, r.grainCost, '行军粮优先扣城库');
+  assert.ok((s.resLedger || []).some((e) => e.reason.includes('行军粮')), '行军粮入流水');
   assert.equal(army.marchId, r.marchId, '队伍被锁');
   assert.equal(st.marches.length, 1);
   assert.equal(st.marches[0].arriveDay - st.marches[0].departDay, 2, '相邻城 2 游戏日');

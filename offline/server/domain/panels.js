@@ -15,6 +15,7 @@ import { slotBlock } from './slots.js';
 /* 刻意只 import oath.js（零依赖小模块）而不 import strategy.js ——
    它反向 import world.js，而 world.js 又 import 本文件，会成环。 */
 import { oathOf, oathFactionOf, strategyCity, factionTraitOf } from './oath.js';
+import { ensureCityEcon, cityYield, armsApt, ARMS_NAMES } from './city-econ.js';
 /* 战略台以并行会话的战略层为唯一口径：行军可达/关隘取 march.js，出征账取 strategy-log.js。
    刻意不 import strategy.js —— 它反向 import world.js，而 world.js 又 import 本文件，会成环。 */
 import { marchableNeighbors, marchGraph } from './march.js';
@@ -355,6 +356,8 @@ export function panelState(state, cfg) {
       career: careerOf(g).career,
       careerName: CAREER_NAMES[careerOf(g).career],
       careerNote: CAREER_FIT[careerOf(g).career].note,
+      loyal: Math.round(g.loyal ?? 88),        // ★ P1 忠诚度（旬结算/赏赐）
+      salaryPerXun: 20 * (Number(g.star) || 3), // ★ P1 旬俸
       appointed: Object.entries(state.interior.posts || {}).filter(([, v]) => Number(v) === g.id).map(([k]) => k),
       base, added: Object.fromEntries(EQUIP_KEYS.map((k) => [k, Number(g[`${k}_added`]) || 0])),
       final: Object.fromEntries(EQUIP_KEYS.map((k) => [k, base[k] + (Number(g[`${k}_added`]) || 0)])),
@@ -459,6 +462,19 @@ export function panelState(state, cfg) {
       cityDef: c.attrs?.城防 ?? null,
       terrain: c.terrain || '', specialty: c.attrs?.特产 || '',
       reachable: reachable.has(Number(c.id)),
+      // ★ P2/P3 城市经营（仅玩家城）：人口/城库/逐城日产/灾害状态
+      ...(row.owner === 'player' ? (() => {
+        const e = ensureCityEcon(state)?.[c.id];
+        if (!e) return {};
+        const y = cityYield(state, c.id);
+        const mod = e.mod && Number(state.clock?.day) <= e.mod.until ? e.mod : null;
+        return {
+          pop: e.pop, store: e.store,
+          yieldGrain: y?.grain || 0, yieldGold: y?.gold || 0,
+          disaster: e.disaster || null,
+          modLabel: mod ? (mod.grain < 1 ? '歉收中' : '丰产中') : '',
+        };
+      })() : {}),
       note: '守军取天下沙盘实时数据；出征仍受行军路段与关隘封锁限制',
     };
   });
@@ -531,6 +547,28 @@ export function panelState(state, cfg) {
       totalCities: mapCities.length,
       soldiers: (state.armys || []).reduce((n, a) => n + (a.soldiers || []).reduce((m, x) => m + (Number(x) || 0), 0), 0),
       threats, events, cities: cityBrief,
+      // ★ P0 编队：三槽=盾步/弓兵/骑兵，带武将名与适性（编队弹窗数据源）
+      armies: (state.armys || []).map((a) => ({
+        id: a.id, order: a.order, marching: !!a.marchId,
+        soldiers: (a.soldiers || []).map((v) => Math.max(0, Math.floor(Number(v) || 0))),
+        armsNames: [ARMS_NAMES[1], ARMS_NAMES[2], ARMS_NAMES[3]],
+        generals: (a.generals || []).map((gid, i) => {
+          const g = (state.generals || []).find((x) => x.id === gid);
+          if (!g) return null;
+          const gc = cfg.generalByCfg.get(Number(g.cfgId)) || {};
+          return {
+            id: g.id,
+            name: gc.name || `武将${g.id}`,
+            arms: ARMS_NAMES[i + 1] || '',
+            apt: Math.round(armsApt({ force: gc.force, strategy: gc.strategy, defense: gc.defense }, i + 1) * 100),
+            loyal: Math.round(g.loyal ?? 88),
+          };
+        }),
+      })),
+      allGenerals: (state.generals || []).map((g) => {
+        const gc = cfg.generalByCfg.get(Number(g.cfgId)) || {};
+        return { id: g.id, name: gc.name || `武将${g.id}` };
+      }),
       marchable, gates, plans, chronicle, books,
       recentReports: (state.warReports || []).slice(-5).reverse(),
       note: '决策台只给数据，不替玩家决定；城池、实时守军、行军可达、关隘与诸侯战役意图均取自天下沙盘（战略层）同一份数据。',

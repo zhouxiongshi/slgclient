@@ -65,6 +65,62 @@
   function confirmBox(text, onYes) {
     if (window.confirm(text)) onYes();
   }
+  /* ★ P0/P1/P3 编队/运输/赏赐：走 /__slg/strategy/action */
+  function strategyAction(body, cb) {
+    fetch(API + '/strategy/action', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(function (r) { return r.json(); }).then(function (r) {
+      toast(r.reason ? ({ no_army: '没有这支队伍', marching: '队伍行军中，不可整编', dup_general: '同一武将不能重复上阵', in_other_army: '该武将已在别的队伍', too_many_troops: '兵力分配超出该队现有兵力', not_own_city: '只能运输到己方城池', bad_amount: '数量不合法', no_grain: '粮草不足', no_gold: '金钱不足', no_general: '找不到该武将' }[r.reason] || ('失败：' + r.reason)) : (r.ok ? '完成' : '失败'), !r.ok);
+      if (r.ok) fetchState();
+      if (cb) cb(r);
+    }).catch(function (e) { toast('操作失败：' + e.message, true); });
+  }
+  /* ★ P0 编队弹窗：三槽=盾步/弓兵/骑兵，换将 + 重分兵力 */
+  function formupBox(army) {
+    var mask = document.createElement('div');
+    mask.id = 'slgFormup';
+    mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:100004;display:flex;align-items:center;justify-content:center;';
+    var gens = data.strategy.allGenerals || [];
+    var sel = function (slot, curId) {
+      return '<select data-fup="gen' + slot + '"><option value="0">（空）</option>'
+        + gens.map(function (g) {
+          var inThis = (army.generals || [])[slot] && army.generals[slot].id === g.id;
+          var busy = (data.strategy.armies || []).some(function (a) {
+            return a.id !== army.id && (a.generals || []).some(function (gg) { return gg && gg.id === g.id; });
+          });
+          return '<option value="' + g.id + '"' + (inThis ? ' selected' : '') + (busy && !inThis ? ' disabled' : '') + '>'
+            + esc(g.name) + (busy && !inThis ? '（在编）' : '') + '</option>';
+        }).join('') + '</select>';
+    };
+    mask.innerHTML = '<div style="background:#1d1a12;border:1px solid #ba9a52;border-radius:8px;padding:18px 22px;min-width:420px;color:#e8dfc8;font:13px \'Microsoft YaHei\',sans-serif">'
+      + '<h3 style="margin:0 0 6px;color:#ffdf9a">整编队伍#' + army.order + '</h3>'
+      + '<div class="muted" style="margin-bottom:10px">三槽各对应一个兵种：盾步克弓、弓克骑、骑克盾（克制战力 ±15%）；武将适性影响属性发挥。兵力只在该队现有 ' + fmt(army.soldiers.reduce(function (s, v) { return s + v; }, 0)) + ' 内重分。</div>'
+      + [1, 2, 3].map(function (slot) {
+        var cur = army.generals[slot - 1];
+        return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">'
+          + '<span style="width:46px;color:#ffdf9a">' + (army.armsNames || ['盾步', '弓兵', '骑兵'])[slot - 1] + '</span>'
+          + sel(slot - 1, cur && cur.id)
+          + '<input type="number" min="0" value="' + (army.soldiers[slot - 1] || 0) + '" data-fup="troop' + slot + '" style="width:90px;background:#2a2617;border:1px solid #ba9a52;color:#fff;padding:4px 6px;border-radius:4px">'
+          + (cur ? '<span class="muted">适性 ' + cur.apt + '% · 忠' + cur.loyal + '</span>' : '<span class="muted">空槽</span>')
+          + '</div>';
+      }).join('')
+      + '<div style="margin-top:10px;text-align:right"><button data-fup="cancel" style="background:none;border:1px solid #777;color:#ccc;padding:5px 14px;border-radius:4px;cursor:pointer">取消</button> '
+      + '<button data-fup="ok" style="background:#7a5c1e;border:1px solid #ba9a52;color:#ffe9b0;padding:5px 18px;border-radius:4px;cursor:pointer">确认整编</button></div></div>';
+    document.body.appendChild(mask);
+    mask.addEventListener('click', function (e) {
+      var t = e.target.closest('[data-fup]');
+      if (!t) return;
+      var k = t.getAttribute('data-fup');
+      if (k === 'cancel') { mask.remove(); return; }
+      if (k === 'ok') {
+        var generals = [1, 2, 3].map(function (slot) { return Number(mask.querySelector('[data-fup="gen' + slot + '"]').value) || 0; });
+        var soldiers = [1, 2, 3].map(function (slot) { return Math.max(0, Math.floor(Number(mask.querySelector('[data-fup="troop' + slot + '"]').value) || 0)); });
+        strategyAction({ action: 'formup', armyId: army.id, generals: generals, soldiers: soldiers });
+        mask.remove();
+      }
+    });
+  }
 
   /* ---------------- 样式 ---------------- */
   var CSS = [
@@ -154,6 +210,7 @@
     data.generals.forEach(function (g) {
       out += '<button class="genrow' + (g.id === ui.genId ? ' on' : '') + '" data-act="gen" data-id="' + g.id + '">'
         + esc(g.name) + ' <span class="tag">' + esc(g.state) + '</span><small>Lv' + g.level + ' · ★' + g.star
+        + ' · <span style="color:' + (g.loyal >= 80 ? '#9ec97f' : g.loyal >= 70 ? '#d8b45a' : '#e07a5f') + '">忠' + (g.loyal != null ? g.loyal : 88) + '</span>'
         + (g.appointed.length ? ' · 委任中' : '') + '</small></button>';
     });
     out += '<h4>在野名士（可招贤）</h4>';
@@ -194,6 +251,9 @@
       + loreHtml
       + '<div class="card"><h3>本局状态</h3>体力 ' + esc(g.physical) + ' · 经验 ' + fmt(g.exp)
       + ' · 状态 ' + esc(g.state) + ' · 在编岗位 ' + (g.appointed.length ? esc(g.appointed.join('、')) : '无')
+      + (g.loyal != null ? ' · 忠诚 <b class="v" style="color:' + (g.loyal >= 80 ? '#9ec97f' : g.loyal >= 70 ? '#d8b45a' : '#e07a5f') + '">' + g.loyal + '</b>（旬俸 ' + fmt(g.salaryPerXun || 20 * (g.star || 3)) + ' 金/旬）'
+        + '<button class="btn" data-act="reward" data-id="' + g.id + '">赏赐</button>'
+        + '<div class="muted">忠诚每旬 -1（委任岗位不减反微升）；欠饷全军 -5；低于 70 有出走风险。赏赐可快速回稳。</div>' : '')
       + '<div class="muted" style="margin-top:6px">出征中的武将内政收益减半（明写规则，不做隐藏惩罚）。</div></div>';
   }
 
@@ -346,6 +406,33 @@
         + '<div class="muted" style="margin-top:8px">' + esc(c.note) + '。实际胜负由确定性战斗内核裁定。</div>';
     }
     out += '<div style="margin-top:10px"><button class="btn" data-act="gotostrategy">打开天下沙盘出征</button></div></div>';
+
+    // ★ P2/P3 城池经营：人口/逐城产出/城库/灾害 + 运粮入口
+    var mineCities = (s.cities || []).filter(function (c) { return c.owner === 'player'; });
+    if (mineCities.length) {
+      out += '<div class="card"><h3>城池经营（' + mineCities.length + ' 城）</h3><table><thead><tr>'
+        + '<th>城池</th><th>人口</th><th>粮产/日</th><th>金产/日</th><th>城库存粮</th><th>状态</th><th>运粮</th></tr></thead><tbody>'
+        + mineCities.map(function (c) {
+          var status = c.disaster && c.disaster.name
+            ? (c.disaster.name === '丰收' ? '<span class="up">' + esc(c.disaster.name) + '</span>' : '<span class="tag no">' + esc(c.disaster.name) + '</span>')
+            : (c.modLabel ? '<span class="' + (c.modLabel === '丰产中' ? 'up' : 'tag no') + '">' + esc(c.modLabel) + '</span>' : '<span class="muted">安定</span>');
+          return '<tr><td>' + esc(c.name) + '</td><td class="v">' + fmt(c.pop || 0) + '</td>'
+            + '<td>+' + fmt(c.yieldGrain || 0) + '</td><td>+' + fmt(c.yieldGold || 0) + '</td>'
+            + '<td class="v">' + fmt(c.store || 0) + '</td><td>' + status + '</td>'
+            + '<td><button class="btn" data-act="transport" data-city="' + c.id + '">运粮</button></td></tr>';
+        }).join('') + '</tbody></table>'
+        + '<div class="muted">★ 行军粮优先从出发城城库扣（前线囤粮可省 25% 损耗）；蝗灾会蚀耗城库存粮——灾前把粮运走是保命操作。征兵每兵消耗 1 人口，人口每 30 日自然增长 4%。</div></div>';
+    }
+    // ★ P0 编队入口
+    out += '<div class="card"><h3>队伍整编</h3>' + (s.armies || []).map(function (a) {
+      var gs = (a.generals || []).map(function (g) {
+        return g ? esc(g.name) + '<small>（' + esc(g.arms || '') + ' 适性' + g.apt + '% · 忠' + g.loyal + '）</small>' : '<span class="muted">空</span>';
+      }).join('、');
+      return '<div style="margin-bottom:8px"><b>队伍#' + a.order + '</b>' + (a.marching ? '<span class="tag no">行军中</span>' : '')
+        + '<div>' + gs + '</div><div class="muted">兵力 ' + (a.soldiers || []).join(' / ') + '（盾步/弓兵/骑兵）</div>'
+        + (a.marching ? '' : '<button class="btn" data-act="formup" data-id="' + a.id + '">整编</button>') + '</div>';
+    }).join('')
+      + '<div class="muted">出征走天下沙盘；出征粮草自动按「出发城城库 → 府库+25%损耗」顺序扣。</div></div>';
 
     // 关隘与行军：直接复用战略层的 march.js 结果，和「出征」按钮走的是同一份校验
     var gates = s.gates || [];
@@ -686,8 +773,25 @@
     if (act === 'proposal') return confirmBox('颁行后本回合不可更改，确认？', function () {
       post({ type: 'proposal', id: id });
     });
-    if (act === 'gotostrategy') {
-      close();
+    // ★ P0/P1/P3：整编 / 运粮 / 赏赐
+    if (act === 'formup') {
+      var fArmy = (data.strategy.armies || []).find(function (a) { return a.id === Number(id); });
+      if (fArmy) formupBox(fArmy);
+      return;
+    }
+    if (act === 'transport') {
+      var tCity = (data.strategy.cities || []).find(function (c) { return c.id === Number(id); });
+      var amt = window.prompt('运送多少粮草到 ' + (tCity ? tCity.name : '目标城') + ' 的城库？', '2000');
+      if (amt) strategyAction({ action: 'transport', cityId: Number(id), grain: Number(amt) });
+      return;
+    }
+    if (act === 'reward') {
+      var g0 = data.generals.find(function (x) { return x.id === Number(id); });
+      var amt2 = window.prompt('赏赐 ' + (g0 ? g0.name : '武将') + ' 多少金？每 100 金提升 1 点忠诚（单次上限 15）。', '500');
+      if (amt2) strategyAction({ action: 'reward', generalId: Number(id), amount: Number(amt2) });
+      return;
+    }
+    if (act === 'gotostrategy') {      close();
       if (typeof window.__slgStrategyShow === 'function') window.__slgStrategyShow();
       else toast('天下沙盘尚未就绪，请稍候');
       return;
@@ -732,12 +836,21 @@
       + '<div id="slgOathBody"><div style="text-align:center;color:#8a8070;padding:30px 0;">正召集诸侯……</div></div>'
       + '</div>';
     document.body.appendChild(oathEl);
-    // 服务端若已被举义（比如另一窗口完成选择），覆盖层自动收起，不把新档玩家锁死
+    // 服务端若已被举义（比如另一窗口完成选择），覆盖层自动收起，不把新档玩家锁死。
+    // 直接按 DOM 收（getElementById），不依赖闭包变量——多实例/外部完成场景也兜得住。
     var poll = setInterval(function () {
-      if (!oathEl) { clearInterval(poll); return; }
+      var el2 = document.getElementById('slgOath');
+      if (!el2) { clearInterval(poll); return; }
       fetch('/__slg/oath/options', { cache: 'no-store' })
         .then(function (r) { return r.json(); })
-        .then(function (v) { if (v && v.ok && v.done) { clearInterval(poll); hideOath(); } })
+        .then(function (v) {
+          if (v && v.ok && v.done) {
+            clearInterval(poll);
+            el2.removeAttribute('id');
+            el2.style.transition = 'opacity .4s'; el2.style.opacity = '0';
+            setTimeout(function () { el2.remove(); }, 420);
+          }
+        })
         .catch(function () {});
     }, 1000);
     fetch('/__slg/oath/options', { cache: 'no-store' })
@@ -754,8 +867,10 @@
       });
   }
   function hideOath() {
-    if (!oathEl) return;
-    var el = oathEl; oathEl = null;
+    oathEl = null;
+    var el = document.getElementById('slgOath');
+    if (!el) return;
+    el.removeAttribute('id');   // 立即摘 id：外部「元素存在性」检查与渐隐动画解耦
     el.style.transition = 'opacity .5s'; el.style.opacity = '0';
     setTimeout(function () { el.remove(); }, 520);
   }

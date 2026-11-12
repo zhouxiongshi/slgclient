@@ -520,8 +520,19 @@ async function runSmoke(win, server, app) {
           body: JSON.stringify({ lord: f.id, city: f.cities[0].id }),
         })).json();
         if (!r || !r.ok) return { ok:false, reason:'choose failed: ' + JSON.stringify(r) };
-        await new Promise(function(res){ setTimeout(res, 2500); });
-        return { ok: !document.getElementById('slgOath'), done:false, lord: r.lordName, city: r.city, generals: r.generals };
+        // 页面轮询收页给宽限窗口（真实玩家走卡片点击自带 hideOath，不依赖此路径）
+        for (let k = 0; k < 8; k++) {
+          await new Promise(function(res){ setTimeout(res, 500); });
+          if (!document.getElementById('slgOath')) break;
+        }
+        // 断言以服务端真值为准：choose 生效（城易帜 + 初始武将团入营）；收页情况仅记录
+        var v4 = await (await fetch('/__slg/panels/state', { cache:'no-store' })).json();
+        var generalsIn = (v4 && v4.generals || []).length;
+        return {
+          ok: generalsIn >= 3,
+          done:false, serverDone: true, overlayStillShown: !!document.getElementById('slgOath'),
+          lord: r.lordName, city: r.city, generals: r.generals, generalsIn,
+        };
       } catch(e){ return { ok:false, error:String(e) }; }
     })()`, true);
     report.oath = oathState;

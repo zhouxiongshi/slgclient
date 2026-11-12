@@ -69,6 +69,7 @@ export function makeGeneral(cfg, id, cfgId, cityId, level = 10) {
     destroy_added: 0,
     star_lv: 0,
     star: g.star ?? 5,
+    loyal: 82 + (Number(g.star) || 3) % 11,   // ★ P1 忠诚 82~92（星级微调），旬结算与赏赐改这里
     parentId: 0,
     skills: [innateOf(cfg, cfgId), null, null],
     talent: null,

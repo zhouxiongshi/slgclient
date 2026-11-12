@@ -24,7 +24,7 @@ import { attachWebSocketServer } from './wsserver.js';
 import { createSkillAssets } from './skills.js';
 import { loadOverrides, saveOverrides } from './gm/overrides.js';
 import { dossierFor } from './domain/dossier.js';
-import { strategyViewState, oathOptions, chooseOath } from './domain/strategy.js';
+import { strategyViewState, oathOptions, chooseOath, strategyFormup, strategyTransport, rewardGeneral } from './domain/strategy.js';
 import { panelState, panelAction, panelSelfCheck } from './domain/panels.js';
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -368,6 +368,20 @@ export async function startOfflineServer(options = {}) {
     }
     if (urlPath === '/__slg/strategy/state') {
       sendJson(req, res, strategyViewState(state, cfg));
+      return;
+    }
+    // ★ P0/P1/P3 编队·运输·赏赐统一动作口（formup / transport / reward）
+    if (urlPath === '/__slg/strategy/action' && req.method === 'POST') {
+      readJson(req, 16384, (body) => {
+        const act = String(body?.action || '');
+        let result;
+        if (act === 'formup') result = strategyFormup(state, cfg, ctx, body);
+        else if (act === 'transport') result = strategyTransport(state, cfg, ctx, body);
+        else if (act === 'reward') result = rewardGeneral(state, cfg, ctx, body);
+        else result = { ok: false, reason: 'bad_action' };
+        if (result.ok) save();
+        sendJson(req, res, result);
+      });
       return;
     }
     if (urlPath === '/__slg/strategy/panorama.png') {

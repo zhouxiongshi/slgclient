@@ -15,6 +15,7 @@ import { resolveBattle } from './battle.js';
 import { skillById, LEVEL_COUNT } from './skills.js';
 import { marchMs, rewindDays } from './clock.js';
 import { facilityBonus, recordRes } from './domain/economy.js';
+import { cityLayer, ensureCityEcon } from './domain/city-econ.js';
 import {
   chapterRules, settleCampaign, chooseChapter, onTileCleared, applyChoice, noticeRecruit,
 } from './domain/campaign.js';
@@ -183,18 +184,21 @@ function buildYield(state) {
   return y;
 }
 
-/** 总产量 = 基础 + 设施 + 领地（复刻 GetYield），并同步回 role_res 供客户端界面显示。 */
+/** 总产量 = 基础 + 设施 + 领地（复刻 GetYield），并同步回 role_res 供客户端界面显示。
+ *  ★ P2 城市经营：叠加玩家名下城池的逐城加成层（农/商开发度 + 特产）。 */
 function totalYield(state, cfg) {
   const base = cfg.basic.role || {};
   const fa = facilityAdditions(state, cfg);
   const by = buildYield(state);
+  const cl = cityLayer(state);
   const r = state.roleRes;
-  r.wood_yield = (base.wood_yield ?? 1000) + fa.wood + by.wood;
-  r.iron_yield = (base.iron_yield ?? 1000) + fa.iron + by.iron;
-  r.stone_yield = (base.stone_yield ?? 1000) + fa.stone + by.stone;
-  r.grain_yield = (base.grain_yield ?? 1000) + fa.grain + by.grain;
-  r.gold_yield = (base.gold_yield ?? 1000) + fa.gold;
+  r.wood_yield = (base.wood_yield ?? 1000) + fa.wood + by.wood + (cl.wood || 0);
+  r.iron_yield = (base.iron_yield ?? 1000) + fa.iron + by.iron + (cl.iron || 0);
+  r.stone_yield = (base.stone_yield ?? 1000) + fa.stone + by.stone + (cl.stone || 0);
+  r.grain_yield = (base.grain_yield ?? 1000) + fa.grain + by.grain + (cl.grain || 0);
+  r.gold_yield = (base.gold_yield ?? 1000) + fa.gold + (cl.gold || 0);
   r.depot_capacity = (base.depot_capacity ?? 1000000) + fa.capacity;
+  r.city_layer = cl;   // 内政面板「城池加成」明细展示用
   return r;
 }
 
@@ -926,6 +930,29 @@ export function handleRequest(ctx, req) {
       }
       const code = tryUseNeed(state, need, `征兵 ${total} 人`);
       if (code !== OK) { rsp.code = code; rsp.msg = { reason: 'res_not_enough', need, per }; break; }
+      // ★ P2 人口：征兵每兵吃 1 人口（从玩家名下城按现有人口比例分摊，总量不足则拒绝）。
+      //   兼容：玩家名下无城（旧档/未举义）不启用人口限制，行为与旧版一致。
+      {
+        const econ = ensureCityEcon(state);
+        const st = state.strategy || {};
+        const own = Object.entries(st.cities || {}).filter(([, v]) => v.owner === 'player').map(([id]) => Number(id));
+        const popRows = own.map((id) => ({ id, pop: econ?.[id]?.pop || 0 }));
+        const popTotal = popRows.reduce((s, v) => s + v.pop, 0);
+        if (popRows.length > 0 && popTotal < total) {
+          rsp.code = CODE.InvalidParam;
+          rsp.msg = { reason: 'no_population', popTotal, need: total };
+          break;
+        }
+        let left = total;
+        popRows.sort((a, b) => b.pop - a.pop);
+        popRows.forEach((row, idx) => {
+          const share = idx === popRows.length - 1
+            ? left
+            : Math.min(row.pop, Math.floor(total * row.pop / Math.max(1, popTotal)));
+          left -= share;
+          if (econ[row.id]) econ[row.id].pop = Math.max(0, row.pop - share);
+        });
+      }
       const sec = conscriptSec(total, c.cost_time);
       army.soldiers = normalizeTriple(army.soldiers);
       army.con_times = normalizeTriple(army.con_times);

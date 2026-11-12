@@ -18,6 +18,10 @@ import { quoteMarch, openMonth, closeMonth, noteMove, noteCity, booksOf } from '
 import { onTileCleared, chapterRules, noticeRecruit } from './campaign.js';
 import { dayFraction } from './tavern.js';
 import { recordRes } from './economy.js';
+import {
+  ensureCityEcon, consumeMarchGrain, deliverGrain, cityEconTick, cityName,
+  cityYield, armsApt, armsCounter, ARMS_NAMES,
+} from './city-econ.js';
 import { SKILLS, LEVEL_COUNT, skillById } from '../skills.js';
 import { oathOf, oathPending, oathFactionOf, factionTraitOf } from './oath.js';
 
@@ -373,6 +377,8 @@ export function strategyTick(state, cfg, ctx, now = Date.now()) {
   st.lastTurnDay = state.clock.day;
   st.turn += 1;
   openMonth(state);
+  // ★ P2/P3 城市经营：旬灾害（蝗/瘟/丰收）+ 旬忠诚/俸禄/叛逃 + 30日人口增长
+  cityEconTick(state, cfg, ctx);
 
   const results = [];
   const mapTick = strategyMap();
@@ -743,8 +749,18 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride }
   const f = Math.min(1, Math.max(0.05, Number(frac) || 1));
   const commit = before.map((v) => Math.max(0, Math.round(v * f)));
   if (commit.reduce((s, n) => s + n, 0) <= 0) return { ok: false, reason: 'no_troops' };
+  // ★ P0 兵种克制（三战口径 ±15%，骑→盾→弓→骑）：以双方兵力最多的槽为主兵种，
+  //   克制方压制被克方——体现为守军兵力折算（不污染内核输入回填）。
+  const mainArms = (rows) => rows.indexOf(Math.max(...rows));
+  const atkArms = mainArms(commit) + 1;
+  const defRows = (defenseOverride?.soldiers || [0, 0, 0]).map((v) => Math.max(0, Number(v) || 0));
+  const defArms = mainArms(defRows) + 1;
+  const counter = armsCounter(atkArms, defArms);
+  const defense2 = defenseOverride
+    ? { ...defenseOverride, soldiers: defRows.map((v) => Math.round(v * (counter > 0 ? 0.87 : counter < 0 ? 1.15 : 1))) }
+    : defenseOverride;
   const battleArmy = { ...army, soldiers: commit };
-  const result = resolveBattle({ cfg, state, army: battleArmy, x, y, defenseOverride });
+  const result = resolveBattle({ cfg, state, army: battleArmy, x, y, defenseOverride: defense2 });
   const remain = result.endAttackSoldiers;
 
   // 全歼的槽位留一成溃兵归营：单机不该出现「一次败仗把家底清零」的死循环
@@ -773,12 +789,30 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride }
     ? `攻陷${place}：我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}，歼敌 ${dLoss}。`
     : `攻${place}不利：我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}，歼敌 ${dLoss}`
       + (rec > 0 ? `，溃兵 ${rec} 归营。` : '。');
+  const counterNote = counter > 0
+    ? `我军${ARMS_NAMES[atkArms]}克制守军${ARMS_NAMES[defArms]}（战力+15%）。`
+    : (counter < 0 ? `守军${ARMS_NAMES[defArms]}克制我军${ARMS_NAMES[atkArms]}（战力-15%）。` : '');
   // 额外字段：原客户端忽略，我们自己的战报面板读它做复盘
-  result.report.summary = summary;
+  result.report.summary = summary + counterNote;
   result.report.analysis = {
     aTotal, dTotal, aLoss, dLoss, recovered: rec, win,
     aBegin: commit, aRemain: remain,
+    counter, atkArms, defArms, counterNote,
   };
+
+  // ★ P3 战利品：胜则按歼敌数掠夺金粮（金=歼敌×0.5、粮=歼敌×1）
+  let loot = null;
+  if (win && dLoss > 0) {
+    const day = Math.floor(Number(state.clock?.day) || 1);
+    const lg = Math.round(dLoss * 0.5);
+    const lgr = Math.round(dLoss * 1);
+    const r = state.roleRes;
+    r.gold = Math.min(r.depot_capacity || 1000000, (r.gold || 0) + lg);
+    r.grain = Math.min(r.depot_capacity || 1000000, (r.grain || 0) + lgr);
+    recordRes(state, 'gold', lg, '战利品', day);
+    recordRes(state, 'grain', lgr, '战利品', day);
+    loot = { gold: lg, grain: lgr };
+  }
 
   state.warReports.unshift(result.report);
   if (state.warReports.length > 100) state.warReports.length = 100;
@@ -793,7 +827,7 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride }
 
   return {
     ok: true, result: result.report.result, report: result.report,
-    summary, aTotal, dTotal, recovered: rec, win,
+    summary, aTotal, dTotal, recovered: rec, win, loot,
   };
 }
 
@@ -827,14 +861,14 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1 }) {
   if (!army) return { ok: false, code: 4, reason: 'no_army' };
   if ((army.generals || []).every((g) => !g)) return { ok: false, code: 4, reason: 'no_general' };
   if ((army.soldiers || []).every((n) => !(n > 0))) return { ok: false, code: 4, reason: 'no_troops' };
-  // 行军粮：兵力 × 0.1/程，粮不够发不出兵
+  // 行军粮：兵力 × 0.1/程；优先从出发城城库扣（前线囤粮，三国志14 补给线口径），
+  //   城库不足吃全局池并 +25% 损耗
   const troopsTotal = (army.soldiers || []).reduce((s, v) => s + Math.max(0, Number(v) || 0), 0);
   const grainCost = Math.ceil(troopsTotal * GRAIN_PER_TROOP);
-  if ((Number(state.roleRes?.grain) || 0) < grainCost) {
+  const pay = consumeMarchGrain(state, home, grainCost);
+  if (!pay.enough) {
     return { ok: false, code: 5, reason: 'no_grain', need: grainCost };
   }
-  state.roleRes.grain -= grainCost;
-  recordRes(state, 'grain', -grainCost, `行军粮草·征${target.name}`);
 
   if (!Array.isArray(st.marches)) st.marches = [];
   const departDay = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
@@ -871,6 +905,17 @@ export function strategyResolveMarches(state, cfg, ctx) {
   for (const mm of st.marches) {
     if (mm.side !== 'player' || mm.resolved) continue;
     if (today < mm.arriveDay) continue;
+    // ★ P3 运输队：抵达即粮入城库，不走战斗
+    if (mm.kind === 'transport') {
+      mm.resolved = true;
+      const ok2 = deliverGrain(state, mm.to, mm.grain);
+      const tName = map.cities.find((c) => c.id === mm.to)?.name || cityName(mm.to);
+      recordEvent(state, ok2
+        ? `运输队抵达${tName}，粮 ${mm.grain} 已入库。`
+        : `运输队抵达${tName}，城池已非我所有，粮车折返。`);
+      results.push({ kind: 'transport', cityId: mm.to, city: tName, grain: ok2 ? mm.grain : 0 });
+      continue;
+    }
     mm.resolved = true;
     const army = (state.armys || []).find((a) => a.id === mm.armyId);
     if (army) delete army.marchId;
@@ -895,7 +940,24 @@ export function strategyResolveMarches(state, cfg, ctx) {
     if (win) {
       tstate.owner = 'player';
       tstate.troops = Math.max(200, Math.round(defenseOverride.soldiers.reduce((s, n) => s + n, 0) * 0.3));
-      recordEvent(state, `主公攻陷${target.name}（${target.province}），守军 ${fought.dTotal} 溃散，城入我军。`);
+      // ★ P2/P3 城破之殃：人口 -15%（兵源压力）；一次性掠夺入府库
+      const econ = ensureCityEcon(state);
+      const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+      let sackGold = 0;
+      let sackGrain = 0;
+      if (econ?.[mm.to]) {
+        const e = econ[mm.to];
+        sackGold = Math.round(e.pop * 0.15 * 0.08);
+        sackGrain = Math.round(e.store * 0.5);
+        e.pop = Math.round(e.pop * 0.85);
+        e.store = Math.round(e.store * 0.5);
+        const r = state.roleRes;
+        r.gold = Math.min(r.depot_capacity || 1000000, (r.gold || 0) + sackGold);
+        r.grain = Math.min(r.depot_capacity || 1000000, (r.grain || 0) + sackGrain);
+        recordRes(state, 'gold', sackGold, `破城掠夺·${target.name}`, day);
+        recordRes(state, 'grain', sackGrain, `破城掠夺·${target.name}`, day);
+      }
+      recordEvent(state, `主公攻陷${target.name}（${target.province}），守军 ${fought.dTotal} 溃散，城入我军${sackGold ? `，掠夺金 ${sackGold} 粮 ${sackGrain}` : ''}。`);
       noteCity(state, mm.to, { kind: '出征', text: `主公攻陷${target.name}，守军 ${fought.dTotal} 溃散，城入我军。` });
       ctx.push?.('chat.push', {
         rid: 0, nickName: '系统', type: 0,
@@ -958,6 +1020,92 @@ export function strategyResolveMarches(state, cfg, ctx) {
   };
 }
 
+/** ★ P0 编队（三战口径）：三槽 = 盾步/弓兵/骑兵，换将与重分兵力一次完成。
+ *  兵力只在该队现有兵内重分配（加兵走征兵）；行军中锁队。 */
+export function strategyFormup(state, cfg, ctx, { armyId, generals, soldiers }) {
+  const st = ensureStrategy(state);
+  const army = (state.armys || []).find((a) => a.id === Number(armyId));
+  if (!army) return { ok: false, reason: 'no_army' };
+  if (army.marchId) return { ok: false, reason: 'marching' };
+  const slots = [0, 1, 2].map((i) => Number(generals?.[i]) || 0);
+  const seen = new Set();
+  for (const gid of slots) {
+    if (!gid) continue;
+    const g = (state.generals || []).find((x) => x.id === gid);
+    if (!g) return { ok: false, reason: 'no_general', generalId: gid };
+    if (seen.has(gid)) return { ok: false, reason: 'dup_general', generalId: gid };
+    seen.add(gid);
+    const other = (state.armys || []).find((a) => a.id !== army.id && (a.generals || []).includes(gid));
+    if (other) return { ok: false, reason: 'in_other_army', generalId: gid, armyId: other.id };
+  }
+  const troops = [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(soldiers?.[i]) || 0)));
+  const cur = (army.soldiers || []).map((v) => Math.max(0, Math.floor(Number(v) || 0)));
+  if (troops.reduce((s, v) => s + v, 0) > cur.reduce((s, v) => s + v, 0)) {
+    return { ok: false, reason: 'too_many_troops', have: cur.reduce((s, v) => s + v, 0) };
+  }
+  // 兵力从该队现有兵重分：差额部分视为留在营（cur - troops）
+  army.generals = slots;
+  army.soldiers = troops;
+  army.con_times = [0, 0, 0];
+  army.con_cnts = [0, 0, 0];
+  const names = slots.map((gid) => {
+    const g = (state.generals || []).find((x) => x.id === gid);
+    return g ? (cfg?.generalByCfg?.get(g.cfgId)?.name || `武将${g.id}`) : '';
+  });
+  recordEvent(state, `整编队伍#${army.order}：${names.map((n, i) => n ? `${ARMS_NAMES[i + 1]}·${n}(${troops[i]})` : '').filter(Boolean).join('、') || '空编'}。`);
+  ctx.push?.('army.push', army);
+  return {
+    ok: true, army: { id: army.id, order: army.order, generals: names, soldiers: troops },
+    apt: slots.map((gid, i) => {
+      const g = (state.generals || []).find((x) => x.id === gid);
+      return g ? Math.round(armsApt(g, i + 1) * 100) : 0;
+    }),
+  };
+}
+
+/** ★ P3 运输队：把粮从府库运往指定己方城城库，走行军队列 2 日抵达。
+ *  蝗灾前把粮运出去是经典避险操作（三国志11）。 */
+export function strategyTransport(state, cfg, ctx, { cityId, grain }) {
+  const st = ensureStrategy(state);
+  ensureCityEcon(state);
+  const id = Number(cityId);
+  const tstate = st.cities[id];
+  if (!tstate || tstate.owner !== 'player') return { ok: false, reason: 'not_own_city' };
+  const amount = Math.floor(Number(grain) || 0);
+  if (amount <= 0) return { ok: false, reason: 'bad_amount' };
+  const r = state.roleRes;
+  if ((Number(r.grain) || 0) < amount) return { ok: false, reason: 'no_grain', have: Math.floor(r.grain || 0) };
+  r.grain -= amount;
+  const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  if (!Array.isArray(st.marches)) st.marches = [];
+  const row = {
+    id: (st.marchSeq = (st.marchSeq || 0) + 1),
+    side: 'player', kind: 'transport', from: st.playerCity || 0, to: id,
+    departDay: day, arriveDay: day + 2, grain: amount,
+  };
+  st.marches.push(row);
+  recordRes(state, 'grain', -amount, `运往${cityName(id)}城库`, day);
+  recordEvent(state, `运输队启程，运粮 ${amount} 前往${cityName(id)}，第 ${row.arriveDay} 日抵达。`);
+  ctx.push?.('chat.push', { rid: 0, nickName: '系统', type: 0, msg: `【天下】运输队启程，运粮 ${amount} 前往${cityName(id)}。`, time: Date.now() });
+  return { ok: true, marchId: row.id, arriveDay: row.arriveDay, city: cityName(id), grain: amount };
+}
+
+/** ★ P1 赏赐：金 +amount/100 忠诚（单次上限 +15，三国志11 口径）。 */
+export function rewardGeneral(state, cfg, ctx, { generalId, amount }) {
+  const g = (state.generals || []).find((x) => x.id === Number(generalId));
+  if (!g) return { ok: false, reason: 'no_general' };
+  const amt = Math.floor(Number(amount) || 0);
+  if (amt < 50 || amt > 1500) return { ok: false, reason: 'bad_amount' };
+  const r = state.roleRes;
+  if ((Number(r.gold) || 0) < amt) return { ok: false, reason: 'no_gold' };
+  r.gold -= amt;
+  g.loyal = Math.min(100, Math.round(((g.loyal ?? 88) + Math.min(15, amt / 100)) * 10) / 10);
+  const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  recordRes(state, 'gold', -amt, `赏赐·${cfg?.generalByCfg?.get(g.cfgId)?.name || `武将${g.id}`}`, day);
+  ctx.push?.('general.push', g);
+  return { ok: true, loyal: g.loyal, gold: Math.floor(r.gold) };
+}
+
 /** 供 /__slg/strategy/state 使用。cfg 可选：不给时武将只显示 #id。 */
 export function strategyViewState(state, cfg = null) {
   const st = ensureStrategy(state);
@@ -999,11 +1147,18 @@ export function strategyViewState(state, cfg = null) {
     armies: (state.armys || []).map((a) => ({
       id: a.id,
       order: a.order,
+      marching: !!a.marchId,
       soldiers: [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(a.soldiers?.[i]) || 0))),
-      generals: (a.generals || []).map((gid) => {
+      armsNames: [ARMS_NAMES[1], ARMS_NAMES[2], ARMS_NAMES[3]],
+      generals: (a.generals || []).map((gid, i) => {
         const g = (state.generals || []).find((x) => x.id === gid);
         if (!g) return null;
-        return { id: g.id, name: cfg?.generalByCfg?.get(g.cfgId)?.name || `武将${g.id}` };
+        return {
+          id: g.id, name: cfg?.generalByCfg?.get(g.cfgId)?.name || `武将${g.id}`,
+          arms: ARMS_NAMES[i + 1] || '',
+          apt: Math.round(armsApt(g, i + 1) * 100),
+          loyal: Math.round(g.loyal ?? 88),
+        };
       }),
     })),
     cities: map.cities.map((c) => ({
@@ -1019,6 +1174,19 @@ export function strategyViewState(state, cfg = null) {
       ownerName: nameOf(st.cities[c.id]?.owner || 'han'),
       color: colorOf(st.cities[c.id]?.owner || 'han'),
       troops: st.cities[c.id]?.troops || 0,
+      // ★ P2/P3 城市经营摘要（仅玩家城给数值，其余城省流量）
+      ...(st.cities[c.id]?.owner === 'player' ? (() => {
+        const e = ensureCityEcon(state)?.[c.id];
+        if (!e) return {};
+        const y = cityYield(state, c.id);
+        const mod = e.mod && Number(state.clock?.day) <= e.mod.until ? e.mod : null;
+        return {
+          pop: e.pop, store: e.store,
+          yieldGrain: y?.grain || 0, yieldGold: y?.gold || 0,
+          disaster: e.disaster || null,
+          modUntil: mod?.until || 0, modGrain: mod?.grain || 1,
+        };
+      })() : {}),
     })),
     playerCity: st.playerCity || 0,
     // ★ P4-①：举义状态随视图下发，客户端据此决定弹不弹举义页
