@@ -444,15 +444,24 @@ async function runSmoke(win, server, app) {
         else { var btn = document.getElementById('slgBtnHome'); if (btn) btn.click(); }
         await new Promise(function(r){ setTimeout(r, 1200); });
         /* ★ P7：府库/设施/存档从「内政」页拆到「府库」页（内政页改为逐城治理），
-           这里先切到府库页签再检查存档卡。 */
-        var tw = document.getElementById('slgCityWin');
-        var btns = tw ? tw.querySelectorAll('.tabs button') : [];
-        for (var k = 0; k < btns.length; k++) {
-          if ((btns[k].textContent || '').trim() === '府库') { btns[k].click(); break; }
+           这里先切到府库页签再检查存档卡。
+           ★ P8 修：切页签必须放进轮询里。__slgHomeWindow() 是异步渲染的，
+           固定 1200ms 后窗口可能还没建好，此时 tw 为 null、一次都点不到，
+           之后就在「概览」页空转到超时（表现为 slotRows:0 / hasImport:false）。
+           每轮重试点击，直到内容里出现存档卡为止。 */
+        function clickFuku() {
+          var _w = document.getElementById('slgCityWin');
+          if (!_w) return false;
+          var _b = _w.querySelectorAll('.tabs button');
+          for (var _k = 0; _k < _b.length; _k++) {
+            if ((_b[_k].textContent || '').trim() === '府库') { _b[_k].click(); return true; }
+          }
+          return false;
         }
         // 本城页要串行拉设施、资源、meta、存档档位，给足时间
         var text = '';
         for (var i = 0; i < 24; i++) {
+          clickFuku();
           await new Promise(function(r){ setTimeout(r, 500); });
           var w = document.getElementById('slgCityWin');
           text = w ? (w.textContent || '') : '';
