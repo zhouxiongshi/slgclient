@@ -16,6 +16,27 @@
     itemFilter: 'all', skillFilter: 'all', skillQuery: '', openSkill: 0,
     selectedCity: 0, dockOpen: false, // 默认折叠：战略层已有左上按钮坞，六府只留右上角一枚小按钮，不割裂分层地图
   };
+  /* ★ 验收 #18：六府面板的选中对象与未完成输入（页签/选中武将/搜索词/筛选/选中城）
+     跨切页、跨面板开关、跨刷新保持。白名单恢复——dockOpen 这类纯视觉开关不落盘。 */
+  var UI_KEY = 'slg.panels.ui';
+  var UI_KEEP = ['tab', 'genId', 'genTab', 'itemFilter', 'skillFilter', 'skillQuery', 'openSkill', 'selectedCity'];
+  (function restoreUI() {
+    try {
+      var v = JSON.parse(window.sessionStorage.getItem(UI_KEY) || 'null');
+      if (!v) return;
+      UI_KEEP.forEach(function (k) {
+        if (v[k] != null && typeof v[k] === typeof ui[k]) ui[k] = v[k];
+      });
+    } catch (e) { /* 隐私模式静默降级 */ }
+  })();
+  function persistUI() {
+    try {
+      var o = {};
+      UI_KEEP.forEach(function (k) { o[k] = ui[k]; });
+      window.sessionStorage.setItem(UI_KEY, JSON.stringify(o));
+    } catch (e) { /* 同上 */ }
+  }
+
   var dock = null, mask = null, toastEl = null;
 
   /* ---------------- 基础工具 ---------------- */
@@ -308,7 +329,39 @@
       + (g.loyal != null ? ' · 忠诚 <b class="v" style="color:' + (g.loyal >= 80 ? '#9ec97f' : g.loyal >= 70 ? '#d8b45a' : '#e07a5f') + '">' + g.loyal + '</b>（旬俸 ' + fmt(g.salaryPerXun || 20 * (g.star || 3)) + ' 金/旬）'
         + '<button class="btn" data-act="reward" data-id="' + g.id + '">赏赐</button>'
         + '<div class="muted">忠诚每旬 -1（委任岗位不减反微升）；欠饷全军 -5；低于 70 有出走风险。赏赐可快速回稳。</div>' : '')
-      + '<div class="muted" style="margin-top:6px">出征中的武将内政收益减半（明写规则，不做隐藏惩罚）。</div></div>';
+      + '<div class="muted" style="margin-top:6px">出征中的武将内政收益减半（明写规则，不做隐藏惩罚）。</div></div>'
+      + relationCardHtml(g);
+  }
+
+  /* ★ U15 相性与关系网：相性/义理是「本作设定」派生值，关系逐条标演义回目。
+     不用纯列表：亲爱/君臣/敌对分组 + 连线感的色带，悬停看注与出处。 */
+  function relationCardHtml(g) {
+    var r = g.relations || { sworn: [], lord: [], rival: [], note: '' };
+    var chip = function (b, tone) {
+      var color = tone === 'rival' ? '#e07a5f' : tone === 'lord' ? '#8fb3d9' : '#9ec97f';
+      return '<span title="' + esc(b.type + '：' + b.note + '（' + (b.source || '') + '）') + '" '
+        + 'style="display:inline-block;margin:2px 6px 2px 0;padding:1px 6px;border:1px solid ' + color
+        + ';border-radius:9px;font-size:12px;color:' + color + '">' + esc(b.name)
+        + '<span class="muted" style="color:#8a8f99"> ' + esc(b.type) + '</span></span>';
+    };
+    var group = function (label, list, tone) {
+      if (!list || !list.length) return '';
+      return '<div style="margin-top:6px"><span class="k">' + label + '</span><br>'
+        + list.map(function (b) { return chip(b, tone); }).join('') + '</div>';
+    };
+    var xxHtml = g.xiangxing != null
+      ? '<div class="grid" style="margin-bottom:6px">'
+        + '<div><span class="k">相性</span> <span class="v">' + esc(g.xiangxing) + '</span>'
+        + '<span class="muted"> / 149 环形 · 本作设定</span></div>'
+        + '<div><span class="k">义理</span> <span class="v">' + esc(g.yili) + '</span>'
+        + '<span class="muted"> / 100 · 由史载政治/魅力折算</span></div></div>'
+      : '';
+    return '<div class="card"><h3>相性与关系</h3>' + xxHtml
+      + group('亲爱 / 亲族 / 师徒', r.sworn, 'sworn')
+      + group('君臣', r.lord, 'lord')
+      + group('敌对 / 宿怨', r.rival, 'rival')
+      + '<div class="muted" style="margin-top:8px">' + esc(r.note || '')
+      + '相性影响登庸与忠诚判定，但不是唯一参数；数值来源为「势力锚点 + 编号散列」，不是史实。</div></div>';
   }
 
   function genSkillHtml(g) {
@@ -397,12 +450,20 @@
     var prospect = ui.genId < 0 ? data.prospects[-ui.genId - 1] : null;
     var body;
     if (prospect) {
+      var rateRows = (prospect.recruitParts || []).map(function (p) {
+        return '<tr><td>' + esc(p.label) + '</td><td class="v">' + (p.value > 0 ? '+' : '') + p.value + '%</td></tr>';
+      }).join('');
       body = '<h3>在野名士 · ' + esc(prospect.name) + '</h3><div class="card">'
         + '<div class="grid">' + ['统率', '武力', '智力', '政治', '魅力'].map(function (s) {
           return '<div><span class="k">' + s + '</span> <span class="v">' + esc(prospect.historyStats[s]) + '</span></div>';
         }).join('') + '</div><div style="margin-top:8px">字 ' + esc(prospect.zi) + ' · 势力 ' + esc(prospect.faction)
-        + '</div><div style="margin-top:6px">' + esc(prospect.brief) + '</div>'
-        + '<div class="muted" style="margin-top:10px">在野武将仅可预览；招贤请到酒馆。师承不需要把他招进帐下也能学战法。</div></div>';
+        + ' · 相性 ' + esc(prospect.xiangxing) + '（差 ' + esc(prospect.xiangxingGap) + '）· 义理 ' + esc(prospect.yili)
+        + '</div><div style="margin-top:6px">' + esc(prospect.brief) + '</div></div>'
+        + '<div class="card"><h3>登庸成功率构成（' + esc(prospect.recruitRate) + '%）</h3>'
+        + '<table><thead><tr><th>加成项</th><th>百分点</th></tr></thead><tbody>' + rateRows + '</tbody></table>'
+        + '<div class="muted">各项相加即为成功率；被拒后再次登门（三顾之礼）+12%/次。'
+        + '相性差越小越容易，义理越高越难挖——这就是「为什么这人挖不动」的答案。</div></div>'
+        + '<div class="muted">在野武将仅可预览；招贤请到酒馆。师承不需要把他招进帐下也能学战法。</div>';
     } else {
       var g = currentGeneral();
       if (!g) return '<div class="muted">暂无武将</div>';
@@ -792,6 +853,7 @@
     var scroll = body.scrollTop;
     body.innerHTML = (VIEWS[ui.tab] || viewGeneral)();
     body.scrollTop = scroll;
+    persistUI();
     Array.prototype.forEach.call(dock.querySelectorAll('.pb'), function (b) {
       b.classList.toggle('on', b.getAttribute('data-id') === ui.tab && mask.style.display === 'flex');
     });

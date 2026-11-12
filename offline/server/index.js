@@ -26,7 +26,8 @@ import { loadOverrides, saveOverrides } from './gm/overrides.js';
 import { dossierFor } from './domain/dossier.js';
 import {
   strategyViewState, oathOptions, chooseOath, strategyFormup, strategyTransport,
-  rewardGeneral, strategyInvest, recruitCaptive, strategyAttack, strategyRecallMarch,
+  rewardGeneral, strategyInvest, recruitCaptive, strategyAttack, strategyRecallMarch, cancelInvest,
+  previewAssault, strategyReorderMarch,
 } from './domain/strategy.js';
 import { panelState, panelAction, panelSelfCheck } from './domain/panels.js';
 /* 交互增强层：只读聚合（纯函数），不改 WS 协议与消息结构 */
@@ -414,6 +415,8 @@ export async function startOfflineServer(options = {}) {
         else if (act === 'transport') result = strategyTransport(state, cfg, ctx, body);
         else if (act === 'reward') result = rewardGeneral(state, cfg, ctx, body);
         else if (act === 'invest') result = strategyInvest(state, cfg, ctx, body);
+        /* ★ U14 撤销在施内政任务（已投入不退，界面必须写明） */
+        else if (act === 'cancelInvest') result = cancelInvest(state, ctx, { taskId: String(body?.taskId || '') });
         else if (act === 'captive') result = recruitCaptive(state, cfg, ctx, body);
         else if (act === 'attack') {
           const fracRaw = Number(body.frac);
@@ -424,8 +427,20 @@ export async function startOfflineServer(options = {}) {
             fromCityId: Number(body.fromCityId) || 0,
           });
         } else if (act === 'recall') result = strategyRecallMarch(state, cfg, ctx, { marchId: Number(body.marchId) });
+        /* ★ 验收 #10 战前推演：与正式结算同一 resolveBattle / defenseFor / battleSeedFor，
+           纯只读沙盒，可无限次回退重试；不能 save()，否则反复推演会把存档反复落盘。 */
+        /* ★ 验收 #23：行军队列重排（同日抵达按队列顺序结算，所以顺序是真决策） */
+        else if (act === 'reorder') result = strategyReorderMarch(state, ctx, {
+          marchId: Number(body.marchId), dir: Number(body.dir) || 1,
+        });
+        else if (act === 'preview') result = previewAssault(state, cfg, {
+          cityId: Number(body.cityId),
+          fromCityId: Number(body.fromCityId) || 0,
+          armyId: Number(body.armyId) || 0,
+          frac: Number(body.frac) || 1,
+        });
         else result = { ok: false, reason: 'bad_action' };
-        if (result.ok) save();
+        if (result.ok && act !== 'preview') save();
         sendJson(req, res, result);
       });
       return;

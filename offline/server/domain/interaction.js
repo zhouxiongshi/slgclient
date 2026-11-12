@@ -19,6 +19,9 @@ import { fileURLToPath } from 'node:url';
 import { captiveRecruitRate, captiveRateParts } from './captive-rules.js';
 // city-econ 只依赖 economy，不反向依赖本模块，不会形成环
 import { cityYield } from './city-econ.js';
+/* ★ U20 粮道（supply → march，不反向依赖本模块）；★ U14 内政任务状（interior-task → economy） */
+import { supplyMap } from './supply.js';
+import { interiorTaskView } from './interior-task.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const MAP_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'map.json');
@@ -67,6 +70,9 @@ export function interactionState(state, cfg) {
     .map((r) => ({ ...r, reason: r.loyal < 40 ? '忠诚 <40，叛逃风险 10%' : '忠诚 <70，叛逃风险 3%' }));
 
   /* ---------- 逐城城库 / 灾害风险 / 内政冷却 ---------- */
+  /* ★ U20 粮道：整图一次 BFS，逐城复用 */
+  const SUPPLY = supplyMap(state);
+  const TASKS = interiorTaskView(state);
   const cityRows = [];
   for (const id of ownIds) {
     const e = econ[id] || {};
@@ -87,6 +93,18 @@ export function interactionState(state, cfg) {
       disasterRisk: risk, disasterBasis: meta.disasterBasis || '按州估算（服务端未逐城下发依据）',
       supportDays: Math.floor(store / dailyUse),
       investReady: Object.keys(investDays).length === 0 || day - Math.max(...Object.values(investDays).map(num)) >= 1,
+      /* ★ U20 粮道连通（断粮城由 supplyTick 打上 supplyCut，界面据此变色） */
+      supply: (() => {
+        const s = SUPPLY.byCity[id] || { connected: false, hops: -1, km: -1, via: [] };
+        return {
+          connected: !!s.connected, hops: s.hops, km: s.km,
+          via: (s.via || []).map(cityNameOf),
+          cut: !!e.supplyCut, days: num(e.supplyDays, 0),
+        };
+      })(),
+      /* ★ U14 该城在施任务（进度百分比与完工日，界面直接画条） */
+      tasks: TASKS.filter((t) => t.cityId === id && t.status === 'active')
+        .map((t) => ({ id: t.id, label: t.label, officer: t.officer, pct: t.pct, endDay: t.endDay, perTick: t.perTick })),
     });
   }
   const lowGrain = cityRows.filter((c) => c.supportDays < 10);
@@ -100,6 +118,16 @@ export function interactionState(state, cfg) {
     source: a.source, confidence: a.confidence, jump: a.jump,
     detail: a.detail, action: a.action || '', ignore: false,
   });
+  /* ★ U20 粮道断绝：比缺粮更急（缺粮还能买，断路只能打或撤） */
+  const cutCities = cityRows.filter((c) => c.supply && c.supply.connected === false);
+  for (const c of cutCities.slice(0, 3)) {
+    push({
+      id: `supply:${c.id}`, title: `${c.name}粮道断绝（第 ${(c.supply && c.supply.days) || 10} 日）`,
+      urgency: 0, deadline: '每旬都在掉民心', source: 'supply.js 连通判定（精确）', confidence: '高',
+      jump: { kind: 'city', id: c.id }, action: '打通通路 / 放弃飞地 / 就地屯粮',
+      detail: '断粮每旬：民心 −3、治安 −1、守军逃散 2%、粮产 ×0.55。粮道 = 沿己方城与未封锁关隘能走到都城。',
+    });
+  }
   for (const c of lowGrain) {
     push({
       id: `grain:${c.id}`, title: `${c.name}存粮仅够 ${c.supportDays} 日`,
@@ -133,6 +161,16 @@ export function interactionState(state, cfg) {
       urgency: 4, deadline: '本回合', source: 'state.strategy.investDays（精确）', confidence: '高',
       jump: { kind: 'city', id: ready[0].id }, action: '开发农田 / 市集 / 兵营',
       detail: `优先 ${ready.slice(0, 3).map((c) => c.name).join('、')}；开发度反馈到逐城产量。`,
+    });
+  }
+  /* ★ U14 内政任务状：只剩最后一旬的提醒（不是「结果播报」，是仍可干预的窗口） */
+  const nearDone = TASKS.filter((t) => t.status === 'active' && t.daysLeft <= 10);
+  if (nearDone.length) {
+    push({
+      id: 'interior:near', title: `${nearDone.length} 项内政将在 ${TASKS.some((t) => t.daysLeft <= 0) ? '本回合' : '10 日内'}完工`,
+      urgency: 4, deadline: '本旬结算', source: 'interior-task.js（精确）', confidence: '高',
+      jump: { kind: 'city', id: nearDone[0].cityId }, action: '查看任务状 / 撤销重派',
+      detail: nearDone.slice(0, 3).map((t) => `${t.city}${t.label}（${t.officer}，剩 ${t.daysLeft} 日）`).join('；'),
     });
   }
   const marchable = Array.isArray(st.marchable) ? st.marchable : [];
@@ -170,10 +208,13 @@ export function interactionState(state, cfg) {
 
   /* ---------- 章节 K：服务端未提供 / 需前端降级的字段 ---------- */
   const fieldGaps = [
-    { field: '相性 / 义理 / 关系网', have: false, use: '登庸成功率构成条', fallback: '仅展示已实装的「政治 + 三顾之礼」，并明确标注「本作尚未实装相性」' },
-    { field: '粮道连通图 / 断粮状态', have: false, use: '出征前补给确认', fallback: '展示出发城城库与支撑回合数，标注「粮道连通性未提供」' },
+    /* ★ U15 已实装：相性（本作设定，势力锚点+编号散列）、义理（史载政治/魅力折算）、
+       演义关系网（conf/relations.json）、登庸成功率构成条（relation.talentRecruitRate）。
+       仍未实装的是「姻亲/义结金兰」这类玩家主动建立关系的操作。 */
+    { field: '关系网（玩家主动结亲/结义）', have: false, use: '外交与人情经营', fallback: '当前关系网只读（演义既有关系）；玩家侧只影响登庸成功率' },
+    /* ★ U20 已实装：supply.js 的连通判定、断粮惩罚、出征粮道预估（marchSupplyEstimate） */
     { field: '敌方侦察精确值', have: false, use: '战前对比卡', fallback: '按「估算」档展示，并给「派斥候」补情报动作' },
-    { field: '内政任务状', have: false, use: '城池三层面板', fallback: '展示当前开发度与冷却，标注「任务状待实装」' },
+    /* ★ U14 已实装：interior-task.js 的任务对象（执行武将/工期/每旬增量/状态/撤销） */
     { field: '逐将战前 delta', have: false, use: '决策预览', fallback: '按公开规则推算并标注「推算值」，不伪装成权威值' },
   ];
 
@@ -199,7 +240,13 @@ export function interactionState(state, cfg) {
       km: m.km, speed: m.speed, troops: m.troops,
       intel: m.intel || (m.side === 'faction' ? 'estimated' : 'precise'),
     })),
-    alerts: { lowLoyalty, lowGrain: lowGrain.map((c) => ({ id: c.id, name: c.name, store: c.store, supportDays: c.supportDays })), highRisk: highRisk.map((c) => ({ id: c.id, name: c.name, risk: c.disasterRisk })) },
+    alerts: {
+      lowLoyalty,
+      lowGrain: lowGrain.map((c) => ({ id: c.id, name: c.name, store: c.store, supportDays: c.supportDays })),
+      highRisk: highRisk.map((c) => ({ id: c.id, name: c.name, risk: c.disasterRisk })),
+      /* ★ U20 断粮告警（0 优先级，红条） */
+      supplyCut: cutCities.map((c) => ({ id: c.id, name: c.name, days: (c.supply && c.supply.days) || 10 })),
+    },
     agenda, turnPreview, fieldGaps,
   };
 }

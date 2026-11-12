@@ -270,6 +270,29 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
     JSON.stringify(r?.battle));
 }
 
+/* ---------------- 7.9 合规台账（U26） ---------------- */
+{
+  const compliancePath = join(REPORTS, 'compliance.json');
+  let compliance = readJson(compliancePath, null);
+  if (!compliance) {
+    spawnSync(process.execPath, [join(ROOT, 'tools', 'compliance-report.js')], { cwd: ROOT, stdio: 'ignore' });
+    compliance = readJson(compliancePath, null);
+  }
+  check('合规台账存在且覆盖全部第三方派生数据（conf/compliance/provenance.json）',
+    !!compliance && Number(compliance.asset_count) >= 8,
+    JSON.stringify({ asset_count: compliance?.asset_count, problems: compliance?.problems?.length }));
+  check('仓库与发行包内无 IL / 反汇编 / 原始二进制夹带',
+    !!compliance && Array.isArray(compliance.problems) &&
+    compliance.problems.filter((p) => /forbidden/.test(p.kind)).length === 0,
+    JSON.stringify((compliance?.problems || []).filter((p) => /forbidden/.test(p.kind))));
+  if (compliance?.unlicensed?.length) {
+    requiresUser.push({
+      name: '未授权第三方资产必须在发行前替换或取得授权',
+      detail: compliance.unlicensed.map((u) => `${u.path}（${u.kind}）：${u.action}`).join('；'),
+    });
+  }
+}
+
 /* ---------------- 8. 需用户处理（本机无法验证） ---------------- */
 requiresUser.push(
   { name: 'Steamworks 账号与 Steam Direct 上架费', detail: '每款应用 US$100，需本人注册与付款；我无法代办。' },

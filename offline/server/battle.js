@@ -324,6 +324,11 @@ export function buildBattleAnim({ kernel, attackers, defense, army, beginSoldier
  *    数组写回 army.soldiers，槽位 1/2 为空时返回值会从 3 个缩成 1 个，
  *    之后再往 index 1 征兵就是 undefined + n = NaN → 存档 null。
  *    现在始终按 3 槽对齐返回（endAttackSoldiers 长度恒为 3）。 */
+/** 战斗种子的唯一公式（预演与正式结算共用；改这里等于改所有战报）。 */
+export function battleSeedFor(armyId, x, y, day) {
+  return crc32Utf8(`${armyId}:${x}:${y}:${Math.max(1, Math.floor(Number(day) || 1))}`);
+}
+
 export function resolveBattle({ cfg, state, army, x, y, seed, defenseOverride = null }) {
   const beginSoldiers = [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(army.soldiers?.[i]) || 0)));
   // 有武将且有余兵的槽位才上阵；slot 保留原槽位号，序号 i 才是内核 unit id
@@ -359,7 +364,10 @@ export function resolveBattle({ cfg, state, army, x, y, seed, defenseOverride = 
   });
   idMap.system = 0;
 
-  const battleSeed = seed ?? crc32Utf8(`${army.id}:${x}:${y}:${state.battleLog.length}`);
+  /* ★ 验收 #10：战斗种子只依赖 (队伍, 坐标, 到达日)，与 battleLog 长度解耦。
+     这样「战前推演」可以算出与正式结算**逐位相同**的种子，预演结果才有意义。
+     旧口径含 battleLog.length，等于预演必错一档。 */
+  const battleSeed = seed ?? battleSeedFor(army.id, x, y, state.clock?.day ?? 1);
   const kernel = runBattle({ units, seed: battleSeed, config: battleConfig() });
 
   // 按槽位回填：没上阵的槽位余兵记 0（它们本来就没有兵）

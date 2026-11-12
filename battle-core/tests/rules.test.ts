@@ -54,7 +54,9 @@ function mkHero(partial: Record<string, number> = {}) {
 function mkUnit(id: string, speed: number, states: UnitState['states'] = []): UnitState {
   return {
     unit_id: id, side: 1, hero: mkHero() as UnitState['hero'],
-    troops: 1000, max_troops: 1000, speed, states, buffs: [], alive: true,
+    troops: 1000, max_troops: 1000, speed,
+    pos: 0, attack_range: 9,
+    states, buffs: [], alive: true,
   };
 }
 

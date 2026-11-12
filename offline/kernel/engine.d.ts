@@ -25,6 +25,17 @@ export declare class BattleEngine {
     constructor(options: BattleOptions);
     private emit;
     private enemies;
+    /** 敌我战位距离：跨阵营 pos 相加 +1（前锋→前锋 1，大营→大营 5）；同阵营取 |pos 差|。 */
+    private slotDist;
+    /**
+     * 普攻/追击目标：战位距离最近、且在攻击距离内的存活敌军。
+     * 超出 attack_range 返回 null —— 大营里的短手武将打不出普攻，站位与配将才有取舍。
+     *
+     * 同距并列时的取值口径（必须与 Python 参考实现一致，否则黄金向量会漂）：
+     *  - 'id'    ：普攻取 unit_id 字典序最小者（确定性、与旧实现一致）；
+     *  - 'order' ：追击取敌方阵列首位（= 旧实现 effectTargets 的 enemies.slice(0,1)）。
+     */
+    private nearestFoe;
     private effectTargets;
     private applyEffect;
     private cast;

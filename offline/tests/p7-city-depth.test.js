@@ -17,6 +17,7 @@ import {
 import { BattleEngine } from '../kernel/engine.js';
 import { rangeOf, attackDistanceOf, SKILLS } from '../server/skills.js';
 import { rngFor } from '../server/domain/strategy-rng.js';
+import { advanceInteriorTasks, interiorTaskView } from '../server/domain/interior-task.js';
 
 const cfg = loadConfig();
 
@@ -218,27 +219,36 @@ test('P7 委任收益递减：开发度 100 以上涨得慢', () => {
 /* 5. 内政任务与赈灾                                                           */
 /* -------------------------------------------------------------------------- */
 
-test('P7 内政任务：募兵提兵营、赈灾解减产并涨民心', () => {
+test('P7 内政任务状：募兵提兵营（旬界到账）、赈灾即时生效（U14）', () => {
   const { state, st } = oathWorld();
   const econ = ensureCityEcon(state);
   const cid = st.playerCity;
   state.roleRes.gold = 50000;
   const r1 = strategyInvest(state, cfg, {}, { cityId: cid, kind: 'barracks' });
   assert.equal(r1.ok, true, JSON.stringify(r1));
-  assert.ok(r1.devArms > 0 && r1.lvArms >= 1);
-  /* ★ 修 bug-12：按项冷却 —— 同旬可办别的项，但同一项要等下一旬 */
+  // 募兵整编现在是任务：先有任务对象，开发度要等旬界才涨
+  assert.equal(r1.task.status, 'active');
+  assert.ok(r1.task.perTick > 0, '必须有每旬增量');
+  const armsBefore = Number(econ[cid].devArms || 0);
+  assert.equal(Number(econ[cid].devArms || 0), armsBefore, '派单当时不该立刻改开发度');
+  /* 同旬可办别的项，同一项在施期不能重复派 */
   const r2 = strategyInvest(state, cfg, {}, { cityId: cid, kind: 'agri' });
   assert.equal(r2.ok, true, '同旬换一项应可办');
   const r2b = strategyInvest(state, cfg, {}, { cityId: cid, kind: 'barracks' });
   assert.equal(r2b.ok, false);
-  assert.equal(r2b.reason, 'cooldown');
-  // 推 10 天后赈灾
+  assert.equal(r2b.reason, 'busy');
+  // 推 10 天：兵营到账，民心同步小幅上升
   state.clock.day += 10;
+  advanceInteriorTasks(state, cfg, {});
+  assert.ok(Number(econ[cid].devArms || 0) > armsBefore, '旬界应推动兵营开发度');
+  assert.ok(interiorTaskView(state, cid).some((t) => t.kind === 'barracks' && t.progress > 0), '任务状应有进度');
+  // 赈灾是应急，仍然立即生效（等两旬会死人）
   econ[cid].mod = { grain: 0.5, until: state.clock.day + 10 };
   econ[cid].disaster = { type: 'locust', name: '蝗灾', day: state.clock.day };
   const moraleBefore = econ[cid].morale;
   const r3 = strategyInvest(state, cfg, {}, { cityId: cid, kind: 'relief' });
   assert.equal(r3.ok, true, JSON.stringify(r3));
+  assert.equal(r3.instant, true, '赈灾必须即时');
   assert.equal(econ[cid].mod, null, '赈灾应解除减产');
   assert.ok(econ[cid].morale > moraleBefore, '赈灾应涨民心');
 });

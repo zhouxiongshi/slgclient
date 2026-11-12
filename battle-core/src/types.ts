@@ -57,6 +57,11 @@ export interface Effect {
   attack_type: AttackType;
   /** 0 = 不限 */
   available_round: number;
+  /**
+   * 战法有效距离（战位口径）。缺省 = 9（无远弗届，旧战法与旧战报行为不变）。
+   * 战位距离：同阵营 |pos 差|；跨阵营 pos 相加 + 1（前锋→前锋 1，大营→大营 5）。
+   */
+  range?: number;
   condition?: string;
   control_state?: ControlState | null;
   control_probability: number;
@@ -110,6 +115,16 @@ export interface UnitInput {
   troops: number;
   max_troops: number;
   speed?: number;
+  /**
+   * 战位：0 = 前锋，1 = 中军，2 = 大营（clamp 0~4）。
+   * 缺省从 unit_id 末位数字推导（如 a0/d2），推不出则 0 —— 保证旧战报可复现。
+   */
+  pos?: number;
+  /**
+   * 普攻攻击距离（战位口径，1~9）。缺省 = 9 即不受限（旧用例行为不变）。
+   * 给了 1~5 才生效：距离不足者本回合无法普攻，只能靠战法输出。
+   */
+  attack_range?: number;
 }
 
 /** 引擎内部状态（深拷贝自 UnitInput，调用方对象不会被修改） */
@@ -120,6 +135,10 @@ export interface UnitState {
   troops: number;
   max_troops: number;
   speed: number;
+  /** 战位 0/1/2（见 UnitInput.pos） */
+  pos: number;
+  /** 普攻攻击距离，缺省 9 */
+  attack_range: number;
   states: ControlState[];
   buffs: BonusTerm[];
   alive: boolean;

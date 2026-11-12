@@ -685,8 +685,21 @@
     var d = S.data || {}, cities = d.cities || [], marches = d.marches || [];
     var lens = S.lens;
     if (lens === 'faction') return cities.map(function (c) { return '● ' + c.name + ' · ' + c.province; });
-    if (lens === 'supply') return cities.slice().sort(function (a, b) { return a.supportDays - b.supportDays; })
-      .map(function (c) { return (c.supportDays < 10 ? '▲ 断粮风险 ' : '● ') + c.name + ' 城库 ' + fmt(c.store) + ' · 撑 ' + c.supportDays + ' 日'; });
+    if (lens === 'supply') return cities.slice().sort(function (a, b) {
+      /* ★ U20 真正断粮的城排最前（supply.connected === false），其次才是城库见底 */
+      var ca = (a.supply && a.supply.connected === false) ? 0 : 1;
+      var cb = (b.supply && b.supply.connected === false) ? 0 : 1;
+      return ca - cb || a.supportDays - b.supportDays;
+    }).map(function (c) {
+      var sp = c.supply || {};
+      if (sp.connected === false) {
+        return '▲ 粮道断绝 ' + (sp.days || 0) + ' 日 · ' + c.name + '（民心 ' + fmt(c.morale)
+          + ' · 粮产五成 · 城库撑 ' + c.supportDays + ' 日）';
+      }
+      return (c.supportDays < 10 ? '▲ 缺粮 ' : '● ') + c.name + ' 粮道 ' + (sp.hops || 0) + ' 跳'
+        + (sp.via && sp.via.length ? '（经 ' + sp.via.join('→') + '）' : '')
+        + ' · 城库 ' + fmt(c.store) + ' · 撑 ' + c.supportDays + ' 日';
+    });
     if (lens === 'stock') return cities.slice().sort(function (a, b) { return b.pop - a.pop; })
       .map(function (c) { return '▣ ' + c.name + ' 人口 ' + fmt(c.pop) + ' · 粮 ' + fmt(c.store); });
     if (lens === 'general') return (d.generals || []).slice(0, 12).map(function (g) {

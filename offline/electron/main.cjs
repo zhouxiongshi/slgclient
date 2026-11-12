@@ -71,6 +71,8 @@ function createWindow() {
     win.show();
     if (process.env.SLG_SMOKE === '1') {
       require('./smoke.cjs').runSmoke(win, server, app).catch(logError);
+    } else if (process.env.SLG_AUDIT === '1') {
+      require('./ui-audit.cjs').runAudit(win, server, app).catch(logError);
     }
   });
 
@@ -102,10 +104,11 @@ function createWindow() {
 process.on('uncaughtException', logError);
 process.on('unhandledRejection', logError);
 
-// 冒烟时用隔离的临时 userData，保证每轮都是全新存档 / 空 localStorage，结果可复现
-if (process.env.SLG_SMOKE === '1') {
+// 冒烟/审计时用隔离的临时 userData，保证每轮都是全新存档 / 空 localStorage，结果可复现
+if (process.env.SLG_SMOKE === '1' || process.env.SLG_AUDIT === '1') {
   const os = require('node:os');
-  app.setPath('userData', path.join(os.tmpdir(), `slg-offline-smoke-${process.pid}`));
+  const kind = process.env.SLG_AUDIT === '1' ? 'audit' : 'smoke';
+  app.setPath('userData', path.join(os.tmpdir(), `slg-offline-${kind}-${process.pid}`));
 }
 
 const gotLock = app.requestSingleInstanceLock();

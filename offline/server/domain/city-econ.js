@@ -9,6 +9,10 @@ import { fileURLToPath } from 'node:url';
 import { recordRes } from './economy.js';
 /* 修 U21：灾害/叛逃改用确定性随机，同 seed + 回合可回放（strategy-rng 零内部依赖） */
 import { rngFor } from './strategy-rng.js';
+/* ★ U14 内政任务状：city-econ → interior-task 单向依赖（interior-task 不 import 回来，无环） */
+import { advanceInteriorTasks } from './interior-task.js';
+/* ★ U20 粮道连通与断粮：单向依赖 march（supply 不 import city-econ，无环） */
+import { supplyTick } from './supply.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const MAP_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'map.json');
@@ -104,7 +108,9 @@ export function cityYield(state, cityId) {
   const besieged = state.strategy?.cities?.[Number(cityId)]?.besieged ? 0.5 : 1;
   // 民心 0~100 → 产量 ×0.85~1.10；民心越低越怠耕
   const moraleMod = 0.85 + (Number(e.morale ?? 60) / 400);
-  const grain = Math.round(30 * (e.devAgri / 50) * grainMod * besieged * moraleMod);
+  /* ★ U20 断粮：陆上粮道断了，粮产 ×0.55（金产不受影响——商路走的是另一条线） */
+  const cut = e.supplyCut ? 0.55 : 1;
+  const grain = Math.round(30 * (e.devAgri / 50) * grainMod * besieged * moraleMod * cut);
   const gold = Math.round(20 * (e.devTrade / 50) * besieged * moraleMod);
   const extra = {};
   for (const sp of SPECIALTY_MAP) {
@@ -119,6 +125,7 @@ export function cityYield(state, cityId) {
     lvArms: devLevel(e.devArms), lvDef: devLevel(e.devDef),
     morale: Math.round(e.morale ?? 60), order: Math.round(e.order ?? 60),
     moraleMod, specialty: c.specialty || '', disaster: e.disaster,
+    supplyCut: !!e.supplyCut, supplyDays: Number(e.supplyDays) || 0,
   };
 }
 
@@ -336,7 +343,11 @@ export function loyaltyTick(state, cfg, ctx) {
 export function cityEconTick(state, cfg, ctx) {
   const day = Math.floor(Number(state.clock?.day) || 1);
   ensureCityEcon(state);
+  /* ★ U14 内政任务状每日推进：旬界到账、完工写归因事件（无任务时是一次空循环，开销可忽略） */
+  const tasks = advanceInteriorTasks(state, cfg, ctx);
   // ★ P7：旬结算先跑委任开发（官员推动驻城成长），再掷灾害
+  /* ★ U20 粮道：旬界先判连通性（断粮城本旬就吃惩罚），再跑委任开发 */
+  const supply = day % 10 === 0 ? supplyTick(state, cfg, ctx) : { isolated: [], recovered: [], hits: [] };
   const dev = day % 10 === 0 ? cityDevTick(state, cfg, ctx) : { gains: [], upsets: [] };
   const fired = day % 10 === 0 ? disasterTick(state, cfg, ctx) : [];
   const loyalty = day % 10 === 0 ? loyaltyTick(state, cfg, ctx) : null;
@@ -351,7 +362,7 @@ export function cityEconTick(state, cfg, ctx) {
       time: Date.now(),
     });
   }
-  return { fired, loyalty, dev };
+  return { fired, loyalty, dev, tasks, supply };
 }
 
 /** 出发行军粮：优先从出发城城库扣，不足部分吃全局池并加 25% 损耗。 */

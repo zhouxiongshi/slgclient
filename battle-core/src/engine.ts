@@ -64,6 +64,14 @@ function cloneUnits(inputs: readonly UnitInput[]): UnitState[] {
     if (u.troops > u.max_troops) throw new Error(`${u.unit_id} 当前兵力超过上限`);
     let speed = u.speed ?? 0;
     if (!(speed > 0)) speed = heroAttr(u.hero, 'speed') || 100.0;
+    // 战位：显式给值优先；否则从 unit_id 末位推导（a0/d2），推不出当 0。
+    // 旧战报无 pos 字段时靠这条回落，保证历史用例逐字节可复现。
+    const derivedPos = Math.max(0, Number(String(u.unit_id).slice(1)) || 0);
+    const pos = Number.isFinite(u.pos) ? Math.max(0, Math.min(4, Math.trunc(u.pos as number))) : derivedPos;
+    // 普攻攻击距离：缺省 9 = 不受限，旧用例行为不变。
+    const attack_range = Number.isFinite(u.attack_range)
+      ? Math.max(1, Math.min(9, Math.trunc(u.attack_range as number)))
+      : 9;
     return {
       unit_id: u.unit_id,
       side: u.side,
@@ -71,6 +79,8 @@ function cloneUnits(inputs: readonly UnitInput[]): UnitState[] {
       troops: u.troops,
       max_troops: u.max_troops,
       speed,
+      pos,
+      attack_range,
       states: [],
       buffs: [],
       alive: true,
@@ -114,13 +124,57 @@ export class BattleEngine {
     return this.units.filter((u) => u.side !== side && u.alive);
   }
 
+  /** 敌我战位距离：跨阵营 pos 相加 +1（前锋→前锋 1，大营→大营 5）；同阵营取 |pos 差|。 */
+  private slotDist(a: UnitState, b: UnitState): number {
+    if (a.side === b.side) return Math.abs((a.pos || 0) - (b.pos || 0));
+    return (a.pos || 0) + (b.pos || 0) + 1;
+  }
+
+  /**
+   * 普攻/追击目标：战位距离最近、且在攻击距离内的存活敌军。
+   * 超出 attack_range 返回 null —— 大营里的短手武将打不出普攻，站位与配将才有取舍。
+   *
+   * 同距并列时的取值口径（必须与 Python 参考实现一致，否则黄金向量会漂）：
+   *  - 'id'    ：普攻取 unit_id 字典序最小者（确定性、与旧实现一致）；
+   *  - 'order' ：追击取敌方阵列首位（= 旧实现 effectTargets 的 enemies.slice(0,1)）。
+   */
+  private nearestFoe(unit: UnitState, maxDist?: number, tie: 'id' | 'order' = 'id'): UnitState | null {
+    const limit = Number.isFinite(maxDist) ? (maxDist as number) : unit.attack_range ?? 9;
+    const foes = this.enemies(unit.side).filter((u) => this.slotDist(unit, u) <= limit);
+    if (!foes.length) return null;
+    if (tie === 'order') {
+      // 稳定排序：仅按距离，不改变同距者的原始阵列表序
+      const sorted = foes.slice().sort((a, b) => this.slotDist(unit, a) - this.slotDist(unit, b));
+      return sorted[0];
+    }
+    return foes
+      .slice()
+      .sort((a, b) => this.slotDist(unit, a) - this.slotDist(unit, b) || (a.unit_id < b.unit_id ? -1 : 1))[0];
+  }
+
   private effectTargets(effect: Effect, unit: UnitState): UnitState[] {
     const enemies = this.units.filter((u) => u.side !== unit.side && u.alive);
     const allies = this.units.filter((u) => u.side === unit.side && u.alive);
     const tt = effect.target_type;
+    // 射程：effect.range 缺省 9 = 无远弗届（旧战法数据兼容）。先按射程过滤，再截取前 N 个。
+    const range = Number.isFinite(effect.range) ? (effect.range as number) : 9;
+    const inRange = (u: UnitState): boolean => this.slotDist(unit, u) <= range;
+    const pickN = (list: UnitState[], n: number): UnitState[] => (n ? list.slice(0, n) : list);
     if (tt === 'self') return unit.alive ? [unit] : [];
-    if (tt.startsWith('ally')) return tt.endsWith('single') ? allies.slice(0, 1) : allies;
-    if (tt.startsWith('enemy')) return tt.endsWith('single') ? enemies.slice(0, 1) : enemies;
+    if (tt.startsWith('ally')) {
+      const pool = allies.filter(inRange);
+      if (tt.endsWith('single') || tt.endsWith('_one')) return pool.slice(0, 1);
+      if (tt.endsWith('_12')) return pickN(pool, 2);
+      if (tt.endsWith('_13')) return pickN(pool, 3);
+      return pool;
+    }
+    if (tt.startsWith('enemy')) {
+      const pool = enemies.filter(inRange);
+      if (tt.endsWith('single') || tt.endsWith('_one')) return pool.slice(0, 1);
+      if (tt.endsWith('_12')) return pickN(pool, 2);
+      if (tt.endsWith('_13')) return pickN(pool, 3);
+      return pool;
+    }
     return enemies.slice(0, 1);
   }
 
@@ -235,7 +289,12 @@ export class BattleEngine {
       probability,
     }, 'E2');
     for (const effect of skill.effects) {
-      for (const target of this.effectTargets(effect, unit)) {
+      // 追击战法（三战口径）：目标 = 该武将的普攻目标（战位最近敌军），不吃射程表
+      const targets =
+        skill.skill_class === '追击' && String(effect.target_type).startsWith('enemy')
+          ? [this.nearestFoe(unit, undefined, 'order')].filter((x): x is UnitState => Boolean(x))
+          : this.effectTargets(effect, unit);
+      for (const target of targets) {
         if (target.alive) this.applyEffect(effect, unit, target, skill.name, phase);
       }
     }
@@ -295,9 +354,11 @@ export class BattleEngine {
         if (!u.alive) continue;
         const foes = this.enemies(u.side);
         if (foes.length === 0) break;
-        const target = foes.slice().sort((a, b) => (a.unit_id < b.unit_id ? -1 : 1))[0];
+        // 普攻目标 = 攻击距离内最近的敌军（前锋顶前，溃败后依次补位）。
+        // 超出攻击距离则本回合无普攻（战法仍可越排释放），避免短手武将站大营白打。
+        const target = this.nearestFoe(u);
 
-        if (!hasControl(u, '怯战')) {
+        if (target && !hasControl(u, '怯战')) {
           this.applyEffect(this.normalAttackEffect(u), u, target, '普通攻击', 'action');
         }
         const active = u.hero.skills

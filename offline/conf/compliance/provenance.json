@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "updated": "2026-11-13",
+  "note": "第三方派生数据的唯一台账（U26）。凡是从外部项目/导出表复制进本仓库的数据文件都必须在此登记；tools/compliance-report.js 会做覆盖性核对，未登记的文件会被判为缺口。status 语义：own=本作原创；derived_unlicensed=复制自第三方、当前无授权、商业发行前必须替换或取得授权；derived_public_domain=史实/公有领域整理。",
+  "forbidden_artifacts": {
+    "extensions": [".dll", ".pdb", ".il", ".exe"],
+    "path_patterns": ["完整原始版", "/export/", "反汇编", "decompiled"],
+    "policy": "反汇编/IL/内部类结构与原始二进制一律不得进入本仓库与发行包；battle-core 只保留数值表与名录的移植，不保留原始二进制。"
+  },
+  "assets": [
+    {
+      "path": "offline/conf/skills.json",
+      "kind": "战法名录与数值",
+      "status": "derived_unlicensed",
+      "origin": "battle-kit 导出表（skill_names.csv / damage_rates.csv 及衍生整理）",
+      "count": 31,
+      "evidence": "battle-core/README.md「来源与保真度」；conf/campaign/skill-source.json 记录了 nameCount=796 的来源与缺失字段",
+      "action_before_release": "整体换名换数值，或取得授权；替换后需同步 conf/skills-range.json 与 battle-core/config/battle_config.json 的指纹说明",
+      "confidence": "高"
+    },
+    {
+      "path": "offline/conf/library-skills.json",
+      "kind": "战法图鉴（六府）",
+      "status": "derived_unlicensed",
+      "origin": "同上，按六府展示需要重排",
+      "count": 20,
+      "action_before_release": "随 skills.json 一并替换",
+      "confidence": "高"
+    },
+    {
+      "path": "offline/conf/skills-range.json",
+      "kind": "战法有效距离 / 普攻攻击距离",
+      "status": "own",
+      "origin": "本作设计（P7）：按效果类型推导 + 逐战法覆盖表",
+      "count": 51,
+      "action_before_release": "无需替换；换名后需复核 ranges 键名是否仍能命中",
+      "confidence": "高"
+    },
+    {
+      "path": "battle-core/config/battle_config.json",
+      "kind": "战斗数值表（83 伤害率 / 58 等级插值 / 188 术语）",
+      "status": "derived_unlicensed",
+      "origin": "battle-kit/kernel/config/battle_config.json 字节级复制（指纹 f186e15d0c1f266b）",
+      "count": 83,
+      "action_before_release": "换皮阶段整体重做数值；重做后必须重跑 npm run golden 并更新指纹声明",
+      "confidence": "高"
+    },
+    {
+      "path": "offline/conf/campaign/skill-source.json",
+      "kind": "战法来源审计记录",
+      "status": "own",
+      "origin": "本作审计脚本产出（记录 796 个战法名与缺失字段）",
+      "count": 796,
+      "action_before_release": "保留：它是「哪些名字来自第三方」的证据链，不要删",
+      "confidence": "高"
+    },
+    {
+      "path": "offline/conf/panels/generals-lore.json",
+      "kind": "武将史料（120 位：字/籍贯/势力/史载五维/事迹）",
+      "status": "derived_public_domain",
+      "origin": "史实整理（《三国志》《后汉书》及公有领域资料），本作重写文案",
+      "count": 120,
+      "action_before_release": "史实本身无版权；文案为本作重写，引用原文处需标注出处",
+      "confidence": "中"
+    },
+    {
+      "path": "offline/conf/relations.json",
+      "kind": "演义人物关系网",
+      "status": "derived_public_domain",
+      "origin": "《三国演义》可考情节整理，逐条标回目",
+      "count": 30,
+      "action_before_release": "演义为公有领域；若采用现代译注本措辞需另行核对",
+      "confidence": "高"
+    },
+    {
+      "path": "offline/conf/interaction/terms.json",
+      "kind": "术语表（67 条）",
+      "status": "own",
+      "origin": "本作术语整理（含与史实/演义的证据分级）",
+      "count": 67,
+      "action_before_release": "无需替换",
+      "confidence": "高"
+    },
+    {
+      "path": "offline/conf/campaign/strategy/map.json",
+      "kind": "72 城战略图（城名/坐标/属性/灾害风险）",
+      "status": "derived_public_domain",
+      "origin": "东汉永和五年《续汉书·郡国志》十三州/105 郡国/1180 县底图整理，本作投影与属性为设计值",
+      "count": 72,
+      "action_before_release": "地名属公有领域；属性数值为本作设定，无需替换",
+      "confidence": "高"
+    },
+    {
+      "path": "offline/web",
+      "kind": "原客户端 web-desktop 构建产物（画面/UI/地图/建筑）",
+      "status": "derived_unlicensed",
+      "origin": "学习用客户端原版构建产物，逐字节保留（指纹 ee987ec2…，1582 文件）",
+      "count": 1582,
+      "action_before_release": "**最高优先**：画面与 UI 资源必须整体替换或取得授权；当前仅用于原型验证，不可直接商业发行",
+      "confidence": "高"
+    }
+  ]
+}

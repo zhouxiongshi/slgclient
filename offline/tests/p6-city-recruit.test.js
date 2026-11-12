@@ -14,6 +14,7 @@ import { BattleEngine } from '../kernel/engine.js';
 import { ensureTavern, todaysGuests, exploreTalent } from '../server/domain/tavern.js';
 import { panelState } from '../server/domain/panels.js';
 import { rngFor } from '../server/domain/strategy-rng.js';
+import { advanceInteriorTasks, interiorTaskView } from '../server/domain/interior-task.js';
 
 const cfg = loadConfig();
 
@@ -133,7 +134,7 @@ test('探索人才：每城每日一次；成功登庸入营；重复探索被�
 
 /* ---------------- 城池内政任务 ---------------- */
 
-test('内政任务：开垦提开发度、修城加守军、每项每旬一次冷却', () => {
+test('内政任务状：派单有执行武将与工期、同项在施不能重复、旬界到账、修城加守军（U14）', () => {
   const state = freshCao();
   const ctx = makeCtx(state);
   const cityId = state.strategy.playerCity;
@@ -141,21 +142,46 @@ test('内政任务：开垦提开发度、修城加守军、每项每旬一次�
   const st0 = strategyViewState(state, cfg).cities.find((c) => c.id === cityId);
   const dev0 = st0.yieldGrain;
   const troops0 = st0.troops;
+
   const r1 = strategyInvest(state, cfg, ctx, { cityId, kind: 'agri' });
   assert.ok(r1.ok, `开垦应成功: ${JSON.stringify(r1)}`);
-  /* ★ 修 bug-12：五项内政改为按项各自冷却，同旬换一项可以继续办 */
+  // 任务对象九要素齐备：执行武将 / 目标城 / 开始日 / 预计完工 / 每旬增量 / 总产出 / 状态
+  assert.equal(r1.task.status, 'active');
+  assert.equal(r1.task.cityId, cityId);
+  assert.ok(r1.task.officer && r1.task.officer !== '无专员', '应派得出驻城武将');
+  assert.ok(r1.task.ticks >= 1 && r1.task.ticks <= 3, `工期 1~3 旬，实际 ${r1.task.ticks}`);
+  assert.equal(r1.task.startDay, state.clock.day);
+  assert.equal(r1.task.endDay, r1.task.startDay + r1.task.ticks * 10);
+  assert.ok(r1.task.perTick > 0);
+  assert.ok(r1.task.officerStat > 0);
+
+  /* 同旬换一项可以继续办 */
   const r2 = strategyInvest(state, cfg, ctx, { cityId, kind: 'trade' });
   assert.ok(r2.ok, `换一项内政应可继续办: ${JSON.stringify(r2)}`);
+  /* 同一项在施期不能再派（旧行为是 cooldown，现在是 busy —— 语义更准确） */
   const r2b = strategyInvest(state, cfg, ctx, { cityId, kind: 'agri' });
-  assert.equal(r2b.ok, false, '同一项同旬再办应被冷却拒绝');
-  assert.equal(r2b.reason, 'cooldown');
-  // 推进 10 日后可再办
+  assert.equal(r2b.ok, false, '同一项在施期再派应被拒绝');
+  assert.equal(r2b.reason, 'busy');
+  assert.ok(r2b.nextDay > state.clock.day, 'busy 必须告诉玩家哪天完工');
+
+  // 推进到该旬：增量只在旬界到账，且事件簿留有归因
   state.clock.day += 10;
+  const ticked = advanceInteriorTasks(state, cfg, ctx);
+  assert.ok(ticked.ticked.some((t) => t.kind === 'agri' && t.gain > 0), '旬界应到账开垦增量');
+  assert.ok(
+    (state.strategy.events || []).some((e) => /农田开发度 \+/.test(e.text) && /主公|武将/.test(e.text)),
+    '事件簿应写明「某城农田开发度 +X（执行武将）」',
+  );
+
+  // 修城仍在不同项目上可派；守军要等它到账才涨
   const r3 = strategyInvest(state, cfg, ctx, { cityId, kind: 'defense' });
   assert.ok(r3.ok, `修城应成功: ${JSON.stringify(r3)}`);
-  assert.ok(r3.troops > troops0, '修城应加守军');
+  state.clock.day += 20;
+  advanceInteriorTasks(state, cfg, ctx);
   const st1 = strategyViewState(state, cfg).cities.find((c) => c.id === cityId);
-  assert.ok(st1.yieldGrain > dev0, '开垦后粮产应上升');
+  assert.ok(st1.troops > troops0, '修城到账后守军应上升');
+  assert.ok(st1.yieldGrain > dev0, '开垦到账后粮产应上升');
+  assert.ok(interiorTaskView(state, cityId).length >= 2, '任务状应留存历史记录');
   // 流水
   assert.ok((state.resLedger || []).some((e) => e.reason.includes('开垦')), '开垦支出应入流水');
 });

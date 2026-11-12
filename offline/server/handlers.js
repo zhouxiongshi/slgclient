@@ -22,6 +22,8 @@ import {
 import { slotBlock } from './domain/slots.js';
 import { rngFor } from './domain/strategy-rng.js';
 import { ensureTavern, guestsNow, announceTavern, todaysGuests, dayFraction, exploreTalent, cityNameOf } from './domain/tavern.js';
+/* ★ U15 相性/义理/关系网：登庸成功率与面板构成条同源 */
+import { talentRecruitRate, xiangxingOf, yiliOf, relationSummary, relationGraph } from './domain/relation.js';
 import {
   strategyTick, strategyAttack, strategyTurnDays, ensureStrategy, clearThreat,
   strategyResolveMarches, strategyRecallMarch, recordEvent,
@@ -1220,15 +1222,24 @@ export function handleRequest(ctx, req) {
       const cityId = Number(m.cityId) || 0;
       const live = guestsNow(state, realMsPerDay, cityId || null);
       const now = live.map((g) => ({ cfgId: g.cfgId, name: g.name, when: g.when }));
-      const today = todaysGuests(state, undefined, cityId || null).map((g) => ({
-        cfgId: g.cfgId,
-        name: g.name,
-        when: g.when,
-        recruited: false,
-        birthCity: g.birthCity,
-        // ★ P1-3：让界面能区分「还没到时辰 / 此刻在店 / 已过时辰」
-        state: frac >= g.to ? 'passed' : (frac >= g.from ? 'now' : 'upcoming'),
-      }));
+      /* ★ U15 来访名单带上相性/义理与登庸预计成功率（与 general.explore 掷骰同源） */
+      const today = todaysGuests(state, undefined, cityId || null).map((g) => {
+        const calc = talentRecruitRate(state, cfg, g);
+        const camp = cfg?.generalByCfg?.get?.(Number(g.cfgId))?.camp ?? 1;
+        return {
+          cfgId: g.cfgId,
+          name: g.name,
+          when: g.when,
+          recruited: false,
+          birthCity: g.birthCity,
+          xiangxing: xiangxingOf(g.cfgId, camp),
+          yili: yiliOf(g.cfgId),
+          xiangxingGap: calc.gap,
+          recruitRate: calc.rate,
+          // ★ P1-3：让界面能区分「还没到时辰 / 此刻在店 / 已过时辰」
+          state: frac >= g.to ? 'passed' : (frac >= g.from ? 'now' : 'upcoming'),
+        };
+      });
       const nextAt = live.length
         ? null
         : today.find((g) => g.state === 'upcoming')?.when || '明日';
@@ -1255,12 +1266,12 @@ export function handleRequest(ctx, req) {
       }
       const exp = exploreTalent(state, cfg, cityId);
       if (!exp.ok) { rsp.code = 0; rsp.msg = { reason: exp.reason }; break; }
-      const pol = protagonistStat(state, '政治');
-      /* ★ P7 三顾之礼：同一个人被拒过一次，再次登门成功率 +12%（最多叠到 95%）。
-         三国志11 的登庸手感靠的就是「多跑几趟」，而不是一次赌脸。 */
+      /* ★ U15 三顾之礼 + 相性 + 义理：成功率构成条与掷骰同源（relation.talentRecruitRate）。
+         旧口径（55% + 政治×0.3%）只看政治，玩家无从判断「为什么这人挖不动」。 */
       state.tavern.favor = state.tavern.favor || {};
       const favorN = Number(state.tavern.favor[exp.target.cfgId] || 0);
-      const rate = Math.min(0.95, 0.55 + pol * 0.003 + favorN * 0.12);
+      const calc = talentRecruitRate(state, cfg, exp.target);
+      const rate = calc.rate / 100;
       /* 修 U21/U11：登庸掷骰改走确定性 rngFor（同 seed + 日 + 城 + 人 + 登门次数恒定）；
          费用只在成功登庸后扣，失败不收费（旧实现失败也扣 100 金且无补偿）。 */
       const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
@@ -1274,6 +1285,8 @@ export function handleRequest(ctx, req) {
         rsp.msg = {
           reason: 'not_found', rate: Math.round(rate * 100), cityId, name: exp.target.name,
           favor: favorN + 1, charged: 0,
+          /* ★ U15 构成条：逐项拆解（基础/政治/相性/义理/三顾），玩家能看出下次该改什么 */
+          parts: calc.parts, xiangxingGap: calc.gap, yili: calc.yili,
         };
         break;
       }
@@ -1294,6 +1307,7 @@ export function handleRequest(ctx, req) {
       rsp.msg = {
         general: withGeneralNames(state, cfg, clone([g]))[0],
         rate: Math.round(rate * 100),
+        parts: calc.parts,
         cityId,
       };
       recordEvent(state, `遣使探索${cityNameOf(cityId)}，登庸在野贤才「${person.name}」，即日入仕。`);

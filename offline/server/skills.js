@@ -1114,6 +1114,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     buildLog();
     document.getElementById('slgBtnFit').onclick = function () {
       view.zoom = 1; view.px = 0; view.py = 0; picked = null; pickedPass = null;
+      clearViewSaved();   /* ★ #18：复位是玩家主动清空上下文的唯一入口 */
       if (lastState) draw(lastState);
     };
     document.getElementById('slgBtnZoomIn').onclick = function () { if (window.__slgZoom) window.__slgZoom(1); };
@@ -1202,6 +1203,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     if (!ov) return;
     var legendEl = document.getElementById('slgLegend');
     if (legendEl) legendEl.style.display = 'block';
+    if (!viewRestored) { viewRestored = true; loadViewSaved(); }
     if (ov.style.display === 'none') {
       ov.style.display = 'block';
       refresh();
@@ -1210,6 +1212,27 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
   }
 
   window.__slgStrategyShow = showMap;
+  /* ★ 验收 #23：战报「回跳」——把战报里的地名找回成地图上的城，居中并选中。
+     战报的 place 是「襄陽城下」这类带后缀的字符串，所以按 id → 全名 → 包含 三级匹配。 */
+  window.__slgFocusCity = function (nameOrId) {
+    if (!lastState) return false;
+    var key = String(nameOrId == null ? '' : nameOrId);
+    if (!key) return false;
+    var hit = null, i;
+    for (i = 0; i < lastState.cities.length; i++) {
+      if (String(lastState.cities[i].id) === key) { hit = lastState.cities[i]; break; }
+    }
+    for (i = 0; !hit && i < lastState.cities.length; i++) {
+      if (lastState.cities[i].name === key) { hit = lastState.cities[i]; break; }
+    }
+    for (i = 0; !hit && i < lastState.cities.length; i++) {
+      if (key.indexOf(lastState.cities[i].name) >= 0) { hit = lastState.cities[i]; break; }
+    }
+    if (!hit) return false;
+    showMap();
+    selectCity(hit);
+    return true;
+  };
   window.__slgZoom = function (dir) {
     var rect = canvas.getBoundingClientRect();
     var zoom = Math.max(1, Math.min(4, view.zoom * (dir > 0 ? 1.25 : 0.8)));
@@ -1233,7 +1256,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
   function refresh() {
     lastFetchAt = Date.now();
     fetch('/__slg/strategy/state').then(function (r) { return r.json(); }).then(function (s) {
-      lastState = s; draw(s);
+      lastState = s; restorePick(); draw(s);
       if (window.__slgHudTick) window.__slgHudTick();
     }).catch(function () {});
   }
@@ -1250,6 +1273,64 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
   function origin(rect) {
     var s = viewScale(rect);
     return [(rect.width - MAP_W * s) / 2 + view.px, (rect.height - MAP_H * s) / 2 + view.py];
+  }
+
+  /* ★ 验收 #18：视口与选中对象跨「模式切换 / 面板开关 / 刷新页面」保持。
+     以前每次重开战略图都回到 fit 视图且选中清零，玩家放大到某郡再切出去一趟，
+     回来就得重新找城——这属于「模式切换丢上下文」。
+     口径：视口(zoom/px/py) + 选中城/关隘 存 sessionStorage（同标签页有效），
+     只有玩家主动点「复位」才清空；选中城在城池数据到位后再回填（数据是异步来的）。 */
+  var VIEW_KEY = 'slg.map.view';
+  var viewRestored = false;
+  var pendingPick = 0, pendingPass = '';
+  function loadViewSaved() {
+    try {
+      var v = JSON.parse(window.sessionStorage.getItem(VIEW_KEY) || 'null');
+      if (!v) return;
+      var z = Number(v.zoom);
+      if (z >= 1) {
+        view.zoom = Math.max(1, Math.min(4, z));
+        view.px = Number(v.px) || 0;
+        view.py = Number(v.py) || 0;
+        pendingPick = Number(v.cityId) || 0;
+        pendingPass = String(v.pass || '');
+      }
+    } catch (e) { /* 隐私模式禁 sessionStorage 时静默降级：不影响地图 */ }
+  }
+  var lastSavedView = '';
+  function saveView() {
+    /* 选中城还没回填时先别写，否则下一次刷新会把待恢复的城覆盖成 0 */
+    if (pendingPick || pendingPass) return;
+    var json = JSON.stringify({
+      zoom: Math.round(view.zoom * 1000) / 1000,
+      px: Math.round(view.px), py: Math.round(view.py),
+      cityId: picked ? picked.id : 0,
+      pass: pickedPass ? pickedPass.name : '',
+    });
+    /* 行军时 draw 会以 ~20fps 重绘，值没变就不落盘 */
+    if (json === lastSavedView) return;
+    lastSavedView = json;
+    try { window.sessionStorage.setItem(VIEW_KEY, json); } catch (e) { /* 同上 */ }
+  }
+  function clearViewSaved() {
+    pendingPick = 0; pendingPass = '';
+    try { window.sessionStorage.removeItem(VIEW_KEY); } catch (e) { /* 同上 */ }
+  }
+  /* 城池数据异步到：回填上次选中的城/关隘，并同步介绍面板 */
+  function restorePick() {
+    if (!lastState) return;
+    if (pendingPick) {
+      var id = pendingPick; pendingPick = 0;
+      var c = null;
+      for (var i = 0; i < lastState.cities.length; i++) {
+        if (lastState.cities[i].id === id) { c = lastState.cities[i]; break; }
+      }
+      if (c) { picked = c; pickedPass = null; showIntro(c); }
+    } else if (pendingPass) {
+      var nm = pendingPass; pendingPass = '';
+      var ps = (DETAIL && DETAIL.passes) || [];
+      for (var j = 0; j < ps.length; j++) if (ps[j].name === nm) { showPassIntro(ps[j]); break; }
+    }
   }
 
   /**
@@ -1422,7 +1503,8 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
 
     var hint = document.createElement('div');
     hint.style.cssText = 'font-size:11.5px;line-height:1.75;color:#9c9382;margin-top:7px;text-align:left;';
-    hint.innerHTML = '滚轮缩放 · 拖动平移 · 点城看介绍 · 点关隘看扼守';
+    hint.innerHTML = '滚轮缩放 · 拖动平移 · 点城看介绍 · 点关隘看扼守'
+      + '<br><span style="opacity:.75">放大后城名变多：1× 只标要城，1.8× 补郡治，2.8× 全标。</span>';
     sidePanel.appendChild(hint);
 
     overlay.appendChild(sidePanel);
@@ -1681,11 +1763,43 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       g.fillText(text, q[0], q[1]);
     }
     // 城名不再贴带方底的图层，按预览图用楷体描边；选中时字色加深
+    // ★ 验收 #22：城名密度随缩放分级——1× 只标要城与本城，1.8× 补中城，2.8× 全标；
+    //   同档内再按屏幕占位去重：重要的先占位，小城与已占位标签挤在一起就让位。
+    //   口径（哪座城算要城）由服务端 labelRank 给，客户端只管「当前缩放到第几档」。
     if (LAYER.name) {
+      var pol = s.labelPolicy || { tiers: [{ zoom: 1, rank: 1 }], minGap: 34 };
+      var tier = 1;
+      for (var ti = 0; ti < pol.tiers.length; ti++) {
+        if (view.zoom >= pol.tiers[ti].zoom - 1e-6) tier = pol.tiers[ti].rank;
+      }
+      var minGap = (pol.minGap || 34) * scale;
+      var lq = [];
       s.cities.forEach(function (c) {
+        var on0 = !!(picked && picked.id === c.id);
+        var home0 = s.playerCity === c.id;
+        var rk = c.labelRank || (c.level >= 3 ? 1 : (c.level === 2 ? 2 : 3));
+        if (!on0 && !home0 && rk > tier) return;
+        lq.push({ c: c, on: on0, rk: rk, pri: on0 ? 0 : (home0 ? 1 : rk) });
+      });
+      lq.sort(function (a, b) { return a.pri - b.pri; });
+      var placed = [];
+      lq.forEach(function (it) {
+        var c = it.c;
         var info = cityInfo(c) || {};
         var lf = c.level >= 3 ? 23 : (c.level === 2 ? 19 : 15);
-        var on = !!(picked && picked.id === c.id);
+        var q = P([c.x, c.y + (info.h || 40) / 2 + 2]);
+        var lw = String(c.name).length * lf * scale * 0.56;
+        var lh = lf * scale * 0.92;
+        // 选中 / 本城永不被挤掉，其余按占位避让
+        if (it.pri > 1) {
+          for (var pi = 0; pi < placed.length; pi++) {
+            var bp = placed[pi];
+            if (Math.abs(bp.x - q[0]) < Math.max(minGap, (bp.w + lw) / 2)
+              && Math.abs(bp.y - q[1]) < Math.max(minGap * 0.55, lh)) return;
+          }
+        }
+        placed.push({ x: q[0], y: q[1], w: lw });
+        var on = it.on;
         inkText(c.name, c.x, c.y + (info.h || 40) / 2 + 2, {
           size: lf, align: 'center', baseline: 'top', bold: on,
           fill: on ? '#c0392b' : (c.level >= 3 ? '#922c20' : (c.level === 2 ? '#704e26' : '#3a4c3a')),
@@ -1883,6 +1997,8 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
         dl.appendChild(o);
       });
     }
+    /* ★ #18：draw 是所有视口/选中变更的唯一收口，落盘放这里不会漏事件 */
+    saveView();
 
     // ★ P2：有队伍在行军时以 ~20fps 连续重绘，军标平滑移动；走完自动停
     var marching = s.marches && s.marches.some(function (mm) { return !mm.resolved; });
@@ -2174,6 +2290,28 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
   var cache = null, tab = 'overview', currentCity = 0, neighbors = {};
   /* ★ 出征面板状态：出发城 / 目标城 / 队伍 / 比例 / 页签。玩家在面板里选一次就记住。 */
   var war = { from: 0, target: 0, armyId: 0, frac: 1, tab: 'go' };
+  /* ★ 验收 #18：出征面板的「未完成输入」（出发城/目标城/队伍/出兵比例/页签）
+     跨面板开关与页面刷新保持——选到一半切去内政看粮，回来不必重选。 */
+  var WAR_KEY = 'slg.war.state';
+  (function restoreWar() {
+    try {
+      var v = JSON.parse(window.sessionStorage.getItem(WAR_KEY) || 'null');
+      if (!v) return;
+      if (v.from) war.from = Number(v.from) || 0;
+      if (v.target) war.target = Number(v.target) || 0;
+      if (v.armyId) war.armyId = Number(v.armyId) || 0;
+      var f = Number(v.frac);
+      if (f > 0 && f <= 1) war.frac = f;
+      if (v.tab) war.tab = String(v.tab);
+    } catch (e) { /* 隐私模式静默降级 */ }
+  })();
+  function saveWar() {
+    try {
+      window.sessionStorage.setItem(WAR_KEY, JSON.stringify({
+        from: war.from, target: war.target, armyId: war.armyId, frac: war.frac, tab: war.tab,
+      }));
+    } catch (e) { /* 同上 */ }
+  }
   var host = null;
 
   var STYLE = document.createElement('style');
@@ -2499,6 +2637,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     if (war.tab === 'go') warGoPanel(s, fromCity, idle, body);
     else if (war.tab === 'queue') warQueuePanel(s, queue, body);
     else warLogPanel(s, body);
+    /* ★ #18：面板每次重绘都把「选到一半的输入」落一次，切走再回来原样还在 */
+    saveWar();
   }
 
   function warGoPanel(s, fromCity, idle, body) {
@@ -2530,6 +2670,23 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     fromCard.appendChild(el('div', 'cost',
       '驻城兵力 ' + fmt(fromCity.troopSum || 0) + ' · 城防守军 ' + fmt(fromCity.troops || 0)
       + ' · 城库存粮 ' + fmt(fromCity.store || 0) + ' · 可派队伍 ' + idle.length + ' 支'));
+    /* ★ U20 粮道：出征前就把「补给怎么走、断没断、能撑几天」说清楚 */
+    var sup = fromCity.supply || null;
+    if (sup) {
+      var supOk = sup.connected !== false;
+      var daily = Math.max(1, (fromCity.troopSum || 0) * 0.1);
+      var hold = Math.floor((fromCity.store || 0) / daily);
+      fromCard.appendChild(el('div', 'cost',
+        '粮道：' + (supOk
+          ? '<span style="color:#9ec97f">通 · ' + sup.hops + ' 跳 · 约 ' + sup.km + ' 里</span>'
+            + (sup.via && sup.via.length ? '（经 ' + esc(sup.via.join(' → ')) + '）' : '（本城即都城）')
+          : '<span style="color:#e07a5f">断绝 ' + (sup.days || 0) + ' 日 · 粮产仅五成、民心每旬 −3</span>')
+        + '　城库可支撑约 ' + hold + ' 日'));
+      if (sup.cut) {
+        fromCard.appendChild(el('div', 'cost', '<span style="color:#e07a5f">'
+          + '此刻出征，回来可能连补给点都没了：先打通通路或放弃这座飞地。</span>'));
+      }
+    }
     body.appendChild(fromCard);
 
     var armyCard = el('div', 'card', '<h4 style="margin-top:0">可派队伍</h4>');
@@ -2663,6 +2820,60 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       warConfirmAttack(s, fromCity, army, target, route);
     }));
     body.appendChild(sum);
+    body.appendChild(warPreviewCard(s, fromCity, army, target));
+  }
+
+  /* ★ 验收 #10 战前推演：服务端 previewAssault 走 structuredClone 沙盒 + 与正式结算同一套
+     resolveBattle / defenseFor / battleSeedFor(…, arriveDay)，所以推演与真打逐位一致。
+     这里允许多次点：每次重掷都是同一结果（同种子），点「改比例」再推演才变——可无限次回退重试，
+     因为 preview 动作在 index.js 里被明确要求不 save()，绝不写存档。 */
+  function warPreviewCard(s, fromCity, army, target) {
+    var card = el('div', 'card', '<h4 style="margin-top:0">战前推演</h4>');
+    card.appendChild(el('div', 'cost',
+      '沙盒推演：与正式结算同一战斗内核、同一战斗种子，不耗粮、不动兵、不写存档；换出兵比例后可反复推演。'));
+    var out = el('div', '');
+    card.appendChild(out);
+    var btn = mkBtn('推演一次', 'ghost', function () {
+      btn.disabled = true; btn.textContent = '推演中…';
+      out.innerHTML = '<div class="cost">按现行比例于沙盒内演算一次…</div>';
+      postJSON('/__slg/strategy/action', {
+        action: 'preview', cityId: target.id, armyId: army.id,
+        frac: war.frac, fromCityId: fromCity.id,
+      }).then(function (rs) {
+        btn.disabled = false; btn.textContent = '再推演一次';
+        out.innerHTML = rs && rs.ok
+          ? warPreviewHtml(rs)
+          : '<div class="cost" style="color:#ff9d6b">推演失败：' + esc(warReason(rs && rs.reason)) + '</div>';
+      }).catch(function () {
+        btn.disabled = false; btn.textContent = '再推演一次';
+        out.innerHTML = '<div class="cost" style="color:#ff9d6b">推演失败：服务端无响应</div>';
+      });
+    });
+    btn.style.marginTop = '6px';
+    card.appendChild(btn);
+    return card;
+  }
+
+  function warSum3(a) {
+    return (a || []).reduce(function (n, v) { return n + Math.max(0, Number(v) || 0); }, 0);
+  }
+
+  function warPreviewHtml(r) {
+    var tone = r.win ? '#a9e2a0' : (r.draw ? '#e0c56a' : '#ff6b5e');
+    var tag = r.win ? '预计可下' : (r.draw ? '预计相持' : '预计难下');
+    var seedHex = (Number(r.seed) >>> 0).toString(16).toUpperCase();
+    return [
+      kv('判定', '<span style="color:' + tone + '">' + tag + '</span>　战报码 ' + r.code
+        + '　' + r.rounds + ' 回合'),
+      kv('投入兵力', '我军 ' + fmt(r.aTotal) + ' / 守军 ' + fmt(r.dTotal)),
+      kv('预计折损', '我军 −' + fmt(r.aLoss) + ' / 守军 −' + fmt(r.dLoss)),
+      kv('战后残余', '我军 ' + fmt(warSum3(r.remain)) + ' / 守军 ' + fmt(warSum3(r.dRemain))),
+      kv('抵达', '第 ' + r.arriveDay + ' 日（程 ' + fmt(r.km) + ' 里 · ' + r.days + ' 日行）'),
+      kv('兵种关系', esc(r.counterNote)),
+      kv('战斗种子', '0x' + seedHex + '（同种子必得同战报）'),
+      '<div style="margin-top:8px;color:#e8d9a8">归因：' + esc(r.attribution) + '</div>',
+      '<div class="cost" style="margin-top:4px;opacity:.75">' + esc(r.caveat) + '</div>',
+    ].join('');
   }
 
   function warConfirmAttack(s, fromCity, army, target, route) {
@@ -2695,45 +2906,139 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     });
   }
 
+  /* ★ 验收 #23：行军队列可重排 + 可批量撤回。
+     重排不是摆设——strategyResolveMarches 按数组顺序逐支结算，同日抵达同一座城时，
+     排在前面的那支面对原守军，后到的可能只看到已易主的城直接班师。
+     所以「谁先打」是玩家真决策：弱队先消耗、强队补刀，或强队先破城，都要能改顺序。 */
   function warQueuePanel(s, queue, body) {
-    var card = el('div', 'card', '<h4 style="margin-top:0">在途 ' + queue.length + ' 支</h4>');
-    if (!queue.length) card.appendChild(el('div', 'empty', '当前没有行军中的队伍。'));
-    queue.forEach(function (m) {
-      var left = Math.max(0, m.remainDays != null ? m.remainDays : (m.arriveDay - s.day));
-      var pct = Math.round((m.progress || 0) * 100);
-      var row = el('div', 'row');
-      row.innerHTML = '<span><b style="color:#f0d998">'
-        + (m.kind === 'transport' ? '辎重队' : ('队伍#' + (m.armyId || '?'))) + '</b>'
-        + '<span class="cost">　' + esc(m.fromName || m.from) + ' → ' + esc(m.toName || m.to) + '</span>'
-        + '<div class="cost">程 ' + fmt(m.km) + ' 里 · 第 ' + m.departDay + ' 日发 → 第 ' + m.arriveDay + ' 日到 · '
-        + (left > 0 ? ('余 <b style="color:#f0d998">' + left + '</b> 日（' + pct + '%）') : '<b style="color:#ff9d6b">已抵城下</b>')
-        + (m.kind === 'transport'
-          ? '　粮 ' + fmt(m.grain)
-          : '　兵 ' + fmt(m.troops) + ' · 耗粮 ' + fmt(m.grainCost))
-        + '</div></span>';
-      var btn = mkBtn('撤回', 'ghost', function () {
-        confirmBox('撤回行军', [
-          '<b>' + esc(m.fromName || m.from) + ' → ' + esc(m.toName || m.to) + '</b>',
-          '<span class="cost">' + (m.kind === 'transport'
-            ? '粮车折返，八成粮回府库（两成路上损耗）。'
-            : '队伍回到出发城并解锁，行军粮退回一半。') + '</span>',
-        ], '撤回', '继续行军', function () {
-          postJSON('/__slg/strategy/action', { action: 'recall', marchId: m.id }).then(function (rs) {
-            if (rs && rs.ok) {
-              toast('已撤回' + rs.from + '，退回粮 ' + fmt(rs.refund), true);
-              warRefresh(s);
-            } else toast('撤回失败：' + warReason(rs && rs.reason), false);
-          }).catch(function () { toast('撤回失败：服务端无响应', false); });
+    var sel = {};
+    var card = el('div', 'card', '<h4 style="margin-top:0">在途 ' + queue.length + ' 支'
+      + '<span class="cost" style="font-weight:normal">　顺序即同日结算顺序</span></h4>');
+    if (!queue.length) {
+      card.appendChild(el('div', 'empty', '当前没有行军中的队伍。'));
+      body.appendChild(card);
+      return;
+    }
+    card.appendChild(el('div', 'cost',
+      '同日抵达同一座城时，排在前面的先打；后到的若城已易主会直接班师。勾选可批量撤回。'));
+
+    var listBox = el('div', '');
+    var bar = el('div', 'row');
+    var cntEl = el('span', 'cost', '未选');
+    var paint = null;
+
+    var bAll = mkBtn('全选', 'ghost', function () { queue.forEach(function (m) { sel[m.id] = true; }); paint(); });
+    var bNone = mkBtn('清空', 'ghost', function () { sel = {}; paint(); });
+    var bDo = mkBtn('撤回选中', 'ghost', function () { warBatchRecall(s, queue.filter(function (m) { return sel[m.id]; })); });
+    bar.appendChild(cntEl); bar.appendChild(bAll); bar.appendChild(bNone); bar.appendChild(bDo);
+    card.appendChild(bar);
+    card.appendChild(listBox);
+
+    paint = function () {
+      var n = queue.filter(function (m) { return sel[m.id]; }).length;
+      cntEl.textContent = n ? ('已选 ' + n + ' 支') : '未选';
+      listBox.innerHTML = '';
+      queue.forEach(function (m, idx) {
+        var left = Math.max(0, m.remainDays != null ? m.remainDays : (m.arriveDay - s.day));
+        var pct = Math.round((m.progress || 0) * 100);
+        var row = el('div', 'row');
+
+        var ck = document.createElement('input');
+        ck.type = 'checkbox';
+        ck.checked = !!sel[m.id];
+        ck.style.cssText = 'margin:0 4px 0 0;vertical-align:-1px;cursor:pointer;';
+        ck.onchange = function () { if (ck.checked) sel[m.id] = true; else delete sel[m.id]; paint(); };
+
+        var head = el('span', '');
+        head.style.cursor = 'pointer';
+        head.innerHTML = '<b style="color:#f0d998">' + (idx + 1) + '. '
+          + (m.kind === 'transport' ? '辎重队' : ('队伍#' + (m.armyId || '?'))) + '</b>'
+          + '<span class="cost">　' + esc(m.fromName || m.from) + ' → ' + esc(m.toName || m.to) + '</span>'
+          + '<div class="cost">程 ' + fmt(m.km) + ' 里 · 第 ' + m.departDay + ' 日发 → 第 ' + m.arriveDay + ' 日到 · '
+          + (left > 0 ? ('余 <b style="color:#f0d998">' + left + '</b> 日（' + pct + '%）') : '<b style="color:#ff9d6b">已抵城下</b>')
+          + (m.kind === 'transport'
+            ? '　粮 ' + fmt(m.grain)
+            : '　兵 ' + fmt(m.troops) + ' · 耗粮 ' + fmt(m.grainCost))
+          + '</div>';
+        head.onclick = function () {
+          if (ck.checked) { ck.checked = false; delete sel[m.id]; } else { ck.checked = true; sel[m.id] = true; }
+          paint();
+        };
+
+        var ops = el('span', '');
+        ops.style.display = 'flex'; ops.style.gap = '4px';
+        var up = mkBtn('▲', 'ghost', function () { warReorder(s, m.id, -1); });
+        var dn = mkBtn('▼', 'ghost', function () { warReorder(s, m.id, 1); });
+        up.style.margin = '0'; dn.style.margin = '0';
+        if (idx === 0) up.disabled = true;
+        if (idx === queue.length - 1) dn.disabled = true;
+        var btn = mkBtn('撤回', 'ghost', function () {
+          confirmBox('撤回行军', [
+            '<b>' + esc(m.fromName || m.from) + ' → ' + esc(m.toName || m.to) + '</b>',
+            '<span class="cost">' + (m.kind === 'transport'
+              ? '粮车折返，八成粮回府库（两成路上损耗）。'
+              : '队伍回到出发城并解锁，行军粮退回一半。') + '</span>',
+          ], '撤回', '继续行军', function () {
+            postJSON('/__slg/strategy/action', { action: 'recall', marchId: m.id }).then(function (rs) {
+              if (rs && rs.ok) {
+                toast('已撤回' + rs.from + '，退回粮 ' + fmt(rs.refund), true);
+                warRefresh(s);
+              } else toast('撤回失败：' + warReason(rs && rs.reason), false);
+            }).catch(function () { toast('撤回失败：服务端无响应', false); });
+          });
         });
+        btn.style.margin = '0';
+        ops.appendChild(up); ops.appendChild(dn); ops.appendChild(btn);
+
+        row.appendChild(ck); row.appendChild(head); row.appendChild(ops);
+        listBox.appendChild(row);
       });
-      btn.style.margin = '0';
-      row.appendChild(btn);
-      card.appendChild(row);
-    });
+    };
+    paint();
+
     body.appendChild(card);
     body.appendChild(el('div', 'cost',
       '行军日数 = 里程 ÷（55 × 队速/100），队速取队内最慢武将，长途最多 40 日。'
       + '已抵城下的队伍当天就会结算，撤不回来。'));
+  }
+
+  function warReorder(s, marchId, dir) {
+    postJSON('/__slg/strategy/action', { action: 'reorder', marchId: marchId, dir: dir })
+      .then(function (rs) {
+        if (rs && rs.ok) {
+          toast('已' + (dir < 0 ? '前移' : '后移') + '，现居第 ' + rs.order + ' 位（同日先结算）', true);
+          warRefresh(s);
+        } else {
+          var why = { edge: '已经到头了', blocked: '相邻那支不是你的队伍（或已结算）', no_march: '该队已出发或已抵达' };
+          toast('调整失败：' + (why[rs && rs.reason] || '队列里找不到这支队'), false);
+        }
+      }).catch(function () { toast('调整失败：服务端无响应', false); });
+  }
+
+  /* 批量撤回：服务端只有单支撤回的动作口（撤回要退粮、要解锁队伍、要记归因），
+     这里顺序发 N 次请求，逐个汇报结果——不做「假批量」的前端乐观更新。 */
+  function warBatchRecall(s, picked) {
+    var ids = (picked || []).map(function (m) { return m.id; });
+    if (!ids.length) { toast('先勾选要撤回的队伍', false); return; }
+    confirmBox('批量撤回 ' + ids.length + ' 支', [
+      '撤回后队伍回到各自出发城并解锁，行军粮各退一半（辎重队退八成）。',
+      '<span class="cost">共 ' + ids.length + ' 支，逐支处理并汇总结果。</span>',
+    ], '全部撤回', '再想想', function () {
+      var left = ids.slice(), done = 0, failed = 0, refund = 0;
+      var step = function () {
+        if (!left.length) {
+          toast('已撤回 ' + done + ' 支，退回粮 ' + fmt(refund) + (failed ? ('；' + failed + ' 支未能撤回') : ''), !failed);
+          warRefresh(s);
+          return;
+        }
+        var id = left.shift();
+        postJSON('/__slg/strategy/action', { action: 'recall', marchId: id }).then(function (rs) {
+          if (rs && rs.ok) { done += 1; refund += Number(rs.refund) || 0; } else failed += 1;
+          step();
+        }).catch(function () { failed += 1; step(); });
+      };
+      step();
+    });
   }
 
   function warLogPanel(s, body) {
@@ -2811,12 +3116,55 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         + kv('城防', 'Lv' + (c.lvDef || 1) + ' · ' + (c.devDef || 0) + '/120')
         + kv('人口', fmt(c.pop))
         + kv('城库存粮', fmt(c.store))
+        + kv('粮道', (c.supply && c.supply.connected === false)
+          ? ('<span style="color:#e07a5f">断绝 ' + (c.supply.days || 0) + ' 日</span>')
+          : ('通 · ' + ((c.supply && c.supply.hops) || 0) + ' 跳'))
         + '</div>');
+      if (c.supply && c.supply.connected === false) {
+        card.appendChild(el('div', 'cost', '<span style="color:#e07a5f">'
+          + '粮道断绝：本城与都城之间没有己方通路。每旬民心 −3、治安 −1、守军逃散 2%、粮产仅五成。'
+          + '打通沿途城池，或集中兵力守住这里等援。</span>'));
+      }
       body.appendChild(card);
 
-      var invCard = el('div', 'card', '<h4 style="margin-top:0">内政任务</h4>'
-        + '<div class="cost">每城每项每旬（10 日）可办一次；同旬可把五项分别办一遍。'
-        + '开发度直接提升该城日产与征兵效率。委任五职后，驻在本城的官员每旬自动推动对应开发。</div>');
+      /* ★ U14 任务状：先列在施任务（进度/执行武将/每旬增量/撤销），再列可派的五项委派 */
+      var taskCard = el('div', 'card', '<h4 style="margin-top:0">内政任务状</h4>');
+      var tasks = c.interiorTasks || [];
+      if (!tasks.length) {
+        taskCard.appendChild(el('div', 'empty', '本城暂无内政任务。选一项委派，会按执行武将能力在 1~3 旬内完工。'));
+      } else {
+        tasks.forEach(function (t) {
+          var active = t.status === 'active';
+          var head = '<b style="color:#f0d998">' + esc(t.label) + '</b> '
+            + '<span class="winTag">' + (active ? ('进行中 · 第 ' + (t.doneTicks + 1) + '/' + t.ticks + ' 旬') : (t.status === 'done' ? '已完工' : '已撤销')) + '</span>';
+          var bar = '▓'.repeat(Math.max(0, Math.round(t.pct / 10))) + '░'.repeat(Math.max(0, 10 - Math.round(t.pct / 10)));
+          var meta = '执行：' + esc(t.officer) + (t.officerStat ? ('（' + t.officerStat + '）') : '')
+            + '　每旬 +' + t.perTick + '　累计 ' + t.progress + '/' + t.total
+            + (active ? ('　预计第 ' + t.endDay + ' 日完工（剩 ' + t.daysLeft + ' 日）') : (t.status === 'cancelled' ? ('　' + esc(t.note || '')) : ''));
+          var row = el('div', 'row', '<span>' + head + '<div class="cost">' + bar + ' ' + Math.round(t.pct) + '%</div>'
+            + '<div class="cost">' + meta + '</div></span>');
+          if (active) {
+            row.appendChild(mkBtn('撤销', 'ghost', function () {
+              fetch('/__slg/strategy/action', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'cancelInvest', taskId: t.id }),
+              }).then(function (r2) { return r2.json(); }).then(function (rs) {
+                if (rs.ok) toast(rs.refund > 0 ? ('任务已撤销，退回 ' + rs.refund + ' 金') : '任务已撤销（已投入的金不退，已到账的增量保留）', true);
+                else toast('无法撤销：' + (rs.reason || '未知'), false);
+                fetchState().then(function (s2) { cache = s2; renderCity(s2); });
+              });
+            }));
+          } else {
+            row.appendChild(el('span', 'cost', '—'));
+          }
+          taskCard.appendChild(row);
+        });
+      }
+      body.appendChild(taskCard);
+
+      var invCard = el('div', 'card', '<h4 style="margin-top:0">委派内政</h4>'
+        + '<div class="cost">每项委派有成本与工期：执行武将越强，旬数越少（强将 1 旬，普通 2 旬，无驻城武将 3 旬），'
+        + '总产出不变。开发度直接提升该城日产与征兵效率。委任五职后，驻在本城的官员每旬还会自动推动对应开发。</div>');
       var mkInv = function (label, kind, cost, note) {
         /* ★ 修 bug-12：按项冷却 —— 只置灰刚办过的那一项，并写明哪天可再办 */
         var today = Number((cache && cache.day) || 0);
@@ -2824,16 +3172,21 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         var legacy = Object.keys(days).length ? 0 : Number(c.lastInvestDay || 0);
         var last = Number(days[kind] || legacy) || 0;
         var cdDay = (last && today - last < 10) ? last + 10 : 0;
-        var b = mkBtn(cdDay ? ('第 ' + cdDay + ' 日可再办') : (label + '（' + cost + ' 金）'),
+        var doing = (c.interiorTasks || []).some(function (t) { return t.kind === kind && t.status === 'active'; });
+        var b = mkBtn(cdDay ? ('第 ' + cdDay + ' 日可再办') : (doing ? (label + '（进行中）') : (label + '（' + cost + ' 金）')),
           cdDay ? 'ghost' : '', function () {
             fetch('/__slg/strategy/action', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ action: 'invest', cityId: c.id, kind: kind }),
             }).then(function (r2) { return r2.json(); }).then(function (rs) {
               if (rs.ok) {
-                toast(label + '完工：' + (rs.effectText || ''), true);
+                var tk = rs.task || {};
+                toast(rs.instant
+                  ? (label + '已完成：' + (rs.effectText || ''))
+                  : (label + '已委派给 ' + (tk.officer || '无专员') + '，' + tk.ticks + ' 旬完工（第 ' + tk.endDay + ' 日），每旬 +' + tk.perTick), true);
                 fetchState().then(function (s2) { cache = s2; renderCity(s2); });
-              } else if (rs.reason === 'cooldown') toast('这项内政本旬办过了，第 ' + rs.nextDay + ' 日可再办', false);
+              } else if (rs.reason === 'busy') toast('这项还在办，第 ' + rs.nextDay + ' 日完工', false);
+              else if (rs.reason === 'cooldown') toast('这项内政本旬办过了，第 ' + rs.nextDay + ' 日可再办', false);
               else if (rs.reason === 'no_gold') toast('金不足（需 ' + rs.cost + '）', false);
               else if (rs.reason === 'no_disaster') toast('本城眼下无灾可赈', false);
               else toast('无法办理：' + (rs.reason || '未知'), false);
@@ -2953,8 +3306,12 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       var today = m.today || [];
       if (!today.length) list.appendChild(el('div', 'empty', '今日无人来访。'));
       today.forEach(function (g) {
+        /* ★ U15 相性差/义理/预计登庸率直接写在名字后面：玩家能提前判断「值不值得等」 */
+        var meta = (g.xiangxingGap != null)
+          ? '<span class="cost">　相性差 ' + g.xiangxingGap + ' · 义理 ' + g.yili + ' · 登庸 ' + g.recruitRate + '%</span>'
+          : '';
         var row = el('div', 'row', '<span><b style="color:#f0d998">' + esc(g.name) + '</b> <span class="chip">' + g.when
-          + '</span> <span class="cost">' + (g.state === 'now' ? '此刻在店' : g.state === 'passed' ? '已过时辰' : '未到时辰') + '</span></span>');
+          + '</span> <span class="cost">' + (g.state === 'now' ? '此刻在店' : g.state === 'passed' ? '已过时辰' : '未到时辰') + '</span>' + meta + '</span>');
         row.appendChild(mkBtn('招募', '', function () {
           send('general.drawGeneral', { drawTimes: 1, cityId: c.id }).then(function (r2) {
             var got = (r2.msg && r2.msg.generals) || [];
@@ -2979,9 +3336,11 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
             toast('登庸成功：' + (r2.msg.general.name || '贤才') + ' 入仕！（成功率 ' + r2.msg.rate + '%）', true);
           } else if (r2.msg && r2.msg.reason === 'not_found') {
             /* ★ P7 三顾：失败会累积好感，下次成功率高 12% */
+            /* ★ U15 失败也要给构成条：玩家得知道下次该改什么（政治/相性/义理/三顾） */
+            var parts = (r2.msg.parts || []).map(function (p) { return p.label + ' ' + (p.value > 0 ? '+' : '') + p.value; }).join('；');
             toast('探索未遇贤才（成功率 ' + r2.msg.rate + '%）'
               + (r2.msg.favor ? '，此人已拒 ' + r2.msg.favor + ' 次，再访更易' : '')
-              + '，金已破费', false);
+              + (parts ? '。构成：' + parts : '') + '。金已破费', false);
           } else if (r2.msg && r2.msg.reason === 'not_enough_gold') {
             toast('金不足（需 ' + r2.msg.cost + '）', false);
           } else if (r2.msg && r2.msg.reason === 'already_today') {
@@ -3017,6 +3376,9 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         + kv('日产 · 粮', '+' + fmt(c.yieldGrain))
         + kv('日产 · 金', '+' + fmt(c.yieldGold))
         + kv('民心', (c.morale != null ? c.morale : '—') + ' / 治安 ' + (c.order != null ? c.order : '—'))
+        + kv('粮道', (c.supply && c.supply.connected === false)
+          ? ('断绝 ' + (c.supply.days || 0) + ' 日')
+          : ('通 · ' + ((c.supply && c.supply.hops) || 0) + ' 跳 / 约 ' + ((c.supply && c.supply.km) || 0) + ' 里'))
         + kv('开发', '农田 Lv' + (c.lvAgri || 1) + ' · 市集 Lv' + (c.lvTrade || 1)
           + ' · 兵营 Lv' + (c.lvArms || 1) + ' · 城防 Lv' + (c.lvDef || 1))
         + (c.modUntil ? kv('减产中', '至第 ' + c.modUntil + ' 日（×' + c.modGrain + '）') : '')
@@ -3549,17 +3911,44 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         var tag = r.result === 2 ? ['胜', '#6fcf97'] : (r.result === 0 ? ['败', '#ff6b5e'] : ['平', '#c8b88a']);
         var place = r.anim && r.anim.place ? r.anim.place : ('(' + r.x + ',' + r.y + ')');
         var row = el('div', 'row');
-        row.innerHTML = '<span>#' + r.id + ' <b>' + place + '</b></span>'
-          + '<span style="display:flex;align-items:center;gap:4px">'
-          + '<b style="color:' + tag[1] + '">' + tag[0] + '</b></span>';
+        var who = el('span', '');
+        who.style.cursor = 'pointer';
+        who.innerHTML = '<b style="color:' + tag[1] + '">' + tag[0] + '</b> #' + r.id
+          + ' <b>' + esc(place) + '</b>'
+          + '<span class="cost" style="margin-left:6px" data-fold="1">▸ 展开</span>';
+        /* ★ 验收 #23：回合报告可折叠——列表只给胜负与地点，展开才看兵力变化与归因，
+           不然三十份战报铺成一面墙，「哪一仗怎么输的」反而读不出来。 */
+        var fold = el('div', '');
+        fold.style.display = 'none';
+        fold.innerHTML = (r.summary ? ('<div style="margin-top:4px">' + esc(r.summary) + '</div>') : '')
+          + (r.analysis ? ('<div class="cost">我军 ' + fmt(r.analysis.aTotal) + ' → '
+            + fmt((r.analysis.aRemain || []).reduce(function (a, b) { return a + Number(b || 0); }, 0))
+            + '　守军 ' + fmt(r.analysis.dTotal) + ' → '
+            + fmt((r.analysis.dRemain || []).reduce(function (a, b) { return a + Number(b || 0); }, 0))
+            + (r.analysis.aLoss != null ? ('　折损 ' + fmt(r.analysis.aLoss) + ' / 歼敌 ' + fmt(r.analysis.dLoss)) : '')
+            + '</div>') : '')
+          + (r.ctime ? ('<div class="cost">' + new Date(r.ctime).toLocaleString('zh-CN') + '</div>') : '');
+        var tip = who.querySelector('[data-fold]');
+        who.onclick = function () {
+          var open = fold.style.display !== 'none';
+          fold.style.display = open ? 'none' : 'block';
+          if (tip) tip.textContent = open ? '▸ 展开' : '▾ 收起';
+        };
         var bar = el('div', '');
         if (r.anim) bar.appendChild(mkBtn('回放', 'ghost', function () {
           if (window.__slgPlayBattle) window.__slgPlayBattle(r.anim);
         }));
         // ★ P0-2：详情必须能在被遮住的 Cocos 面板之外打开，否则玩家永远看不到「为什么输」
         bar.appendChild(mkBtn('详情', 'ghost', function () { openReportDetail(r); }));
+        /* ★ 验收 #23：回跳——从战报直接回到当时那座城，不用在地图上重新找 */
+        bar.appendChild(mkBtn('回跳地图', 'ghost', function () {
+          var ok = window.__slgFocusCity ? window.__slgFocusCity(place) : false;
+          if (!ok) toast('这张战报没有可回跳的城（' + place + '）', false);
+        }));
+        row.appendChild(who);
         row.appendChild(bar);
         hostEl.appendChild(row);
+        hostEl.appendChild(fold);
       });
     });
   }

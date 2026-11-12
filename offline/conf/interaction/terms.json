@@ -4,7 +4,7 @@
   "note": "构建期由 index.js 内联进 /__slg/interaction/ui.js，运行时零网络请求。证据级别：史料有载 / 演义 / 本作设定。",
   "terms": [
     { "id": "wudim", "名称": "五维", "分类": "武将", "简述": "统率／武力／智力／政治／魅力。界面必须展示「基础 → +装备 → +增量 → 最终」，不允许只给黑箱结果。", "数值来源": ["conf/panels/generals-lore.json", "state.generals[].five"], "关联词条": ["zhuangbei", "shixing", "shiyi"], "证据级别": "本作设定", "source_id": "panel:general.attr", "confidence": "高" },
-    { "id": "xiangxing", "名称": "相性", "分类": "人事", "简述": "1–149 环形数值，影响登庸与忠诚，但不是唯一参数。未侦察敌将只给模糊区间。", "数值来源": ["本作尚未实装，属设计规格中的待补字段"], "关联词条": ["dengyong", "zhongcheng", "longluo"], "证据级别": "本作设定", "source_id": "design:6.8", "confidence": "中" },
+    { "id": "xiangxing", "名称": "相性", "分类": "人事", "简述": "1–149 环形数值，影响登庸与忠诚，但不是唯一参数。未侦察敌将只给模糊区间。", "数值来源": ["server/domain/relation.js（势力锚点 + cfgId 散列，1–149 环形）", "conf/relations.json"], "关联词条": ["dengyong", "zhongcheng", "longluo"], "证据级别": "本作设定", "source_id": "design:6.8", "confidence": "中" },
     { "id": "zhongcheng", "名称": "忠诚", "分类": "人事", "简述": "受欠饷、相性、出身地、离间影响。低于 70 有叛逃风险，40 以下风险显著上升。", "数值来源": ["state.generals[].loyal", "city-econ.loyaltyTick"], "关联词条": ["fenglu", "qianxiang", "pantao"], "证据级别": "本作设定", "source_id": "econ:loyaltyTick", "confidence": "高" },
     { "id": "fenglu", "名称": "俸禄", "分类": "人事", "简述": "逐将旬俸 = 20 × 星级。府库不足时全军忠诚 -5，属可预警事件，不是突发惩罚。", "数值来源": ["city-econ.loyaltyTick:290", "state.roleRes.gold"], "关联词条": ["zhongcheng", "fuku"], "证据级别": "本作设定", "source_id": "econ:loyaltyTick", "confidence": "高" },
     { "id": "qianxiang", "名称": "欠饷", "分类": "人事", "简述": "府库不足以支付俸禄时触发，全军忠诚 -5。可在「当前事务」中提前看到预警。", "数值来源": ["city-econ.loyaltyTick"], "关联词条": ["fenglu", "zhongcheng"], "证据级别": "本作设定", "source_id": "econ:loyaltyTick", "confidence": "高" },

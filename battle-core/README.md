@@ -17,7 +17,7 @@
 
 ```bash
 npm install
-npm test          # 33 条单元测试（含 500 场随机对局）
+npm test          # 37 条单元测试（含 500 场随机对局、战位射程 4 条）
 npm run golden    # 生成 golden/ts_vectors.json 回归快照
 npm run stress    # 10000 场压测 -> reports/stress.json
 ```
@@ -45,7 +45,7 @@ console.log(result.winner, result.rounds, result.events.length);
 | `src/config.ts` | 配置校验、快照、指纹 |
 | `src/report.ts` | 文字战报、不变量校验、事件摘要 |
 | `golden/` | 纯函数黄金向量 + Python 参考事件流快照 |
-| `tests/` | 33 条测试，含逐事件跨语言比对 |
+| `tests/` | 37 条测试，含逐事件跨语言比对与战位射程语义 |
 
 ## 设计约束
 
@@ -54,6 +54,24 @@ console.log(result.winner, result.rounds, result.events.length);
 - 输入深拷贝；配置在引擎构造时快照，外部后续修改不影响可复现性；
 - 每次伤害事件带 `base / counter / bonus_total / raw / floored / final` 中间量与兵力对账字段；
 - 同输入 + 同配置 + 同 seed → 完全相同的事件流。
+
+## 战位与射程（P6/P7 语义，已回填到 TS 源）
+
+参考实现只有「谁先出手」，没有「打得到谁」。单机版需要站位与射程才能让配将产生取舍，因此扩展了三处**可选**字段；**全部缺省时不改变任何既有行为**，基准 175 事件与黄金向量保持逐字节一致。
+
+| 字段 | 位置 | 语义 | 缺省 |
+|---|---|---|---|
+| `UnitInput.pos` | 单位 | 战位 0=前锋 1=中军 2=大营（clamp 0~4） | 从 `unit_id` 末位数字推导，推不出当 0 |
+| `UnitInput.attack_range` | 单位 | 普攻攻击距离（战位口径 1~9） | 9 = 不受限 |
+| `Effect.range` | 战法效果 | 该战法有效距离 | 9 = 无远弗届 |
+
+- 战位距离：同阵营 `|pos 差|`；跨阵营 `pos 相加 + 1`（前锋→前锋 1，大营→大营 5）。
+- 普攻目标 = 攻击距离内**战位最近**的存活敌军；超出攻击距离则本回合不普攻（战法仍可越排释放）。
+- 同距并列口径固定，避免重跑 build 后事件流漂移：普攻取 `unit_id` 字典序最小者；追击取敌方阵列首位（与 Python 参考的 `enemies.slice(0,1)` 一致）。
+- 追击战法（`skill_class === '追击'`）目标 = 普攻目标，不吃射程表。
+- `effectTargets` 先按 `range` 过滤再按 `_12` / `_13` 截取 2/3 人。
+
+这四条语义由 `tests/engine.test.ts` 的「战位距离 / 普攻攻击距离 / 战法射程 / 缺省不改行为」四例锁死，**重跑 `npm run build` 不会再覆盖它们**（此前是直接手改 `build/src/engine.js` 与 `offline/kernel/`，一 build 就丢）。
 
 ## 已知问题（继承而来，已登记、未擅自改动）
 

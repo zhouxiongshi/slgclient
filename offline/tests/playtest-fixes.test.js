@@ -15,7 +15,7 @@ import { loadConfig } from '../server/config.js';
 import { createWorld, normalizeWorld, makeGeneral, nextId, makeArmy } from '../server/world.js';
 import { handleRequest, processTask, settleWorld, advanceToNextTurn } from '../server/handlers.js';
 import {
-  ensureStrategy, strategyMap, neighborsOf, garrisonOf, strategyResolveMarches,
+  ensureStrategy, strategyMap, neighborsOf, garrisonOf, strategyResolveMarches, previewAssault,
 } from '../server/domain/strategy.js';
 import { ensureTavern } from '../server/domain/tavern.js';
 
@@ -155,7 +155,14 @@ test('P0-3 战败不会把家底清零：溃兵归营', () => {
   assert.equal(state.armys[0].soldiers.length, 3);
 });
 
-test('P0-3 首战可胜：两将 1200 兵能打下 1 级小城', () => {
+/* ★ 修（P10）：这条用例原来要求「1200 兵（守军 1030 的 1.17×）稳赢」，
+   但战斗种子在 P10 已改为唯一公式 battleSeedFor(队伍, 坐标, 到达日)（验收 #10 的前提：
+   预演必须能算出与结算逐位相同的种子）。种子定死之后实测 40 个到达日：
+   1.17× → 19 胜 21 负（五五开），1.46× → 40 胜 0 负。
+   而本作 UI 自己给玩家的口径就是「≥1.25× 才算兵力占优，0.9~1.25× 是胜负参半」。
+   所以「首战可胜」应当按设计口径断言，而不是靠某一天的运气：
+   兵力占优就打下来；边际兵力则必须能被战前推演提前看出来（#10），由玩家决定加兵还是择日。 */
+test('P0-3 首战可胜：兵力占优（≥1.25×）时两将能打下 1 级小城', () => {
   const state = createWorld(cfg);
   const ctx = makeCtx(state);
   const home = homeOf(state);
@@ -172,7 +179,8 @@ test('P0-3 首战可胜：两将 1200 兵能打下 1 级小城', () => {
     cityId: 1, order: 1, position: 1, generalId: g.id,
   }));
   assert.equal(asg.code, 0);
-  state.armys[0].soldiers = [800, 400, 0];
+  /* 兵力拉到守军 1.25× 以上（设计口径的「兵力占优」），首发即应有把握 */
+  state.armys[0].soldiers = [1000, 500, 0];
   const rsp = handleRequest(ctx, req('strategy.attack', { cityId: target.id, armyId: state.armys[0].id }));
   assert.equal(rsp.msg.ok, true);
   // ★ P2：行军到到达日再结算
@@ -181,6 +189,35 @@ test('P0-3 首战可胜：两将 1200 兵能打下 1 级小城', () => {
   assert.equal(fought.length, 1);
   assert.equal(fought[0].result, 2, `两将夹击应能拿下小城：${fought[0].summary}`);
   assert.equal(ensureStrategy(state).cities[target.id].owner, 'player');
+});
+
+test('P0-3b 边际兵力不必靠运气：战前推演先告诉你能不能打（验收 #10）', () => {
+  const state = createWorld(cfg);
+  const ctx = makeCtx(state);
+  const home = homeOf(state);
+  const target = neighborsOf(home.id)
+    .map((id) => map.cities.find((c) => c.id === id))
+    .filter((c) => c && garrisonOf(c) < 1200)
+    .sort((a, b) => garrisonOf(a) - garrisonOf(b))[0];
+  const g = makeGeneral(cfg, nextId(state, 'generalId'), [...cfg.generalByCfg.keys()][5], 1, 3);
+  state.generals.push(g);
+  handleRequest(ctx, req('army.dispose', { cityId: 1, order: 1, position: 1, generalId: g.id }));
+  /* 1.17×：正落在「胜负参半」区间，结果随种子变——所以必须能提前问一嘴 */
+  state.armys[0].soldiers = [800, 400, 0];
+  const p = previewAssault(state, cfg, {
+    cityId: target.id, fromCityId: home.id, armyId: state.armys[0].id, frac: 1,
+  });
+  assert.equal(p.ok, true, JSON.stringify(p));
+  /* 预演结论必须与「真打」逐位一致：否则玩家看到的概率是假的 */
+  const rsp = handleRequest(ctx, req('strategy.attack', {
+    cityId: target.id, armyId: state.armys[0].id, frac: 1, fromCityId: home.id,
+  }));
+  assert.equal(rsp.msg.ok, true);
+  state.clock.day = rsp.msg.arriveDay + 1;
+  const fought = strategyResolveMarches(state, cfg, ctx);
+  assert.equal(fought.length, 1);
+  assert.equal(fought[0].result, p.code, `推演说 ${p.code}，实打却是 ${fought[0].result}`);
+  assert.ok(/折损|相持|可下|难下/.test(p.attribution), '边际情形必须给出归因，不能只说「可能赢」');
 });
 
 /* ---------------- P0-4 ---------------- */

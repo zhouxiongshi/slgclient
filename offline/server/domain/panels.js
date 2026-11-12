@@ -21,6 +21,8 @@ import { ensureCityEcon, cityYield, armsApt, ARMS_NAMES } from './city-econ.js';
 import { marchableNeighbors, marchGraph } from './march.js';
 import { booksOf } from './strategy-log.js';
 import { captiveRateParts, captiveRecruitRate } from './captive-rules.js';
+/* ★ U15 相性 / 义理 / 关系网（relation.js 只依赖 oath.js，不成环） */
+import { xiangxingOf, yiliOf, relationSummary, talentRecruitRate } from './relation.js';
 import { recordRes } from './economy.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -352,8 +354,14 @@ export function panelState(state, cfg) {
         } : null,
       };
     });
+    const gname = generalName(state, cfg, g);
+    const camp = cfg?.generalByCfg?.get?.(Number(g.cfgId))?.camp ?? 1;
     return {
-      id: g.id, cfgId: g.cfgId, name: generalName(state, cfg, g),
+      id: g.id, cfgId: g.cfgId, name: gname,
+      /* ★ U15 相性/义理/关系网：相性与义理标注为本作设定（派生值），关系逐条带回目出处 */
+      xiangxing: xiangxingOf(g.cfgId, camp),
+      yili: yiliOf(g.cfgId),
+      camp,
       isProtagonist: !!g.isProtagonist, level: int(g.level, 1), star: int(g.star, 0),
       exp: int(g.exp, 0), physical: int(g.physical_power, 100),
       state: isDeployed(state, g.id) ? '在编' : '闲置',
@@ -373,7 +381,7 @@ export function panelState(state, cfg) {
       slots,
       lore,
       merits: state.panelMerits[String(g.id)] || { battles: 0, merits: 0, defense: 0, upset: 0 },
-      relations: { sworn: [], rival: [], note: '关系网将在 P3 接入宿命链' },
+      relations: relationSummary(gname),
     };
   });
 
@@ -381,7 +389,17 @@ export function panelState(state, cfg) {
   const prospects = PANEL_CONF.lore.list
     .filter((r) => !ownedCfgIds.has(Number(r.cfgId)))
     .slice(0, 12)
-    .map((r) => ({ cfgId: r.cfgId, name: r.name, zi: r.zi, faction: r.faction, historyStats: r.historyStats, brief: r.brief }));
+    .map((r) => {
+      const camp = cfg?.generalByCfg?.get?.(Number(r.cfgId))?.camp ?? 1;
+      const calc = talentRecruitRate(state, cfg, { cfgId: r.cfgId });
+      return {
+        cfgId: r.cfgId, name: r.name, zi: r.zi, faction: r.faction,
+        historyStats: r.historyStats, brief: r.brief,
+        xiangxing: xiangxingOf(r.cfgId, camp), yili: yiliOf(r.cfgId),
+        recruitRate: calc.rate, recruitParts: calc.parts, xiangxingGap: calc.gap,
+        relations: relationSummary(r.name),
+      };
+    });
 
   const items = (state.items || []).map((i) => {
     const def = ITEM_BY_ID.get(Number(i.cfgId));
