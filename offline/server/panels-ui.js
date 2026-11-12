@@ -405,13 +405,17 @@
   function viewInterior() {
     var it = data.interior, out = '';
     out += '<h3>内政委任台</h3><div class="card"><h3>资源流水线</h3><table><thead><tr>'
-      + '<th>资源</th><th>库存</th><th>产量</th><th>府库上限</th><th>满仓预警</th></tr></thead><tbody>'
+      + '<th>资源</th><th>库存</th><th>基础产量</th><th>委任加成</th><th>府库上限</th><th>满仓预警</th></tr></thead><tbody>'
       + it.output.resources.map(function (r) {
         var full = r.capacity && r.stock >= r.capacity;
+        var eff = Math.floor((r.yield || 0) * (1 + (r.bonusPct || 0) / 100));
         return '<tr><td>' + esc(r.label) + '</td><td class="v">' + fmt(r.stock) + '</td><td>+' + fmt(r.yield)
-          + '</td><td class="muted">' + (r.capacity ? fmt(r.capacity) : '—') + '</td><td>'
+          + '</td><td>' + (r.bonusPct ? '<span class="up">+' + r.bonusPct + '%（实际 +' + fmt(eff) + '）</span>'
+            : '<span class="muted">—</span>') + '</td>'
+          + '<td class="muted">' + (r.capacity ? fmt(r.capacity) : '—') + '</td><td>'
           + (full ? '<span class="tag no">已满仓</span>' : '<span class="muted">正常</span>') + '</td></tr>';
-      }).join('') + '</tbody></table></div>';
+      }).join('') + '</tbody></table>'
+      + '<div class="muted">★ 委任加成已真实生效：每日常规入账即按此比例上浮，收支流水可查。</div></div>';
 
     out += '<div class="card"><h3>三条硬约束</h3><div class="grid">'
       + [['民心', it.constraints.morale.morale, '过低触发减产'], ['治安', it.constraints.order.order, '过低触发流寇'],
@@ -459,9 +463,17 @@
       }).join('') + '</div>';
 
     var list = data.items.filter(function (i) { return ui.itemFilter === 'all' || i.kind === ui.itemFilter; });
+    // ★ P1：用途总表——每项资源一个唯一主用途，玩家不再问「这资源干嘛的」
+    var RES_USE = {
+      wood: '建筑与设施升级', iron: '锻造兵刃与征兵', stone: '城墙与城防工事',
+      grain: '征兵与军饷（兵越多吃得越多）', gold: '战法研习、招募与委任俸禄', decree: '政令与提案',
+    };
     out += '<div class="card"><h3>资源</h3><div class="grid">' + data.interior.output.resources.map(function (r) {
+      var eff = Math.floor((r.yield || 0) * (1 + (r.bonusPct || 0) / 100));
       return '<div><span class="k">' + esc(r.label) + '</span> <span class="v">' + fmt(r.stock) + '</span>'
-        + '<div class="muted">日产 +' + fmt(r.yield) + '</div></div>';
+        + '<div class="muted">日产 +' + fmt(r.yield)
+        + (r.bonusPct ? '（委任 +<span class="up">' + r.bonusPct + '%</span> → 实际 +' + fmt(eff) + '）' : '')
+        + '</div><div class="muted">用途：' + esc(RES_USE[r.key] || '—') + '</div></div>';
     }).join('') + '</div></div>';
 
     // ★ P0-3：收支流水——玩家第一次能回答「我的资源怎么没的」

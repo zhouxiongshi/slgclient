@@ -205,13 +205,16 @@ function proposalsFor(state) {
   return [0, 1, 2].map((i) => all[(offset + i) % all.length]);
 }
 
-function interiorOutput(state, cfg) {
-  const res = state.roleRes || {};
-  const bonusPct = {};
+/**
+ * 各岗位加成百分比（P1：从「只显示」升级为「真实生效」）。
+ * 红线：单岗位 ≤30%，随城池数递减，出征中减半。与界面显示同源。
+ */
+export function postBonusPct(state) {
   const c = PANEL_CONF.posts.redline;
   const cityCount = Math.max(1, (state.citys || []).length || 1);
+  const bonusPct = {};
   for (const p of PANEL_CONF.posts.posts) {
-    const gId = Number(state.interior.posts[p.id]) || 0;
+    const gId = Number(state.interior?.posts?.[p.id]) || 0;
     if (!gId) { bonusPct[p.id] = 0; continue; }
     const g = (state.generals || []).find((x) => x.id === gId);
     if (!g) { bonusPct[p.id] = 0; continue; }
@@ -221,6 +224,29 @@ function interiorOutput(state, cfg) {
     if (isDeployed(state, gId)) pct = round2(pct / 2);   // 出征中减半，明写在界面
     bonusPct[p.id] = Math.max(0, pct);
   }
+  return bonusPct;
+}
+
+/** 岗位加成折算到资源轴：{grain: 12, gold: 8, ...}，economy.applyDays 直接乘产量。 */
+export function yieldBonusByResource(state) {
+  const bonusPct = postBonusPct(state);
+  const out = {};
+  for (const p of PANEL_CONF.posts.posts) {
+    const pct = bonusPct[p.id] || 0;
+    if (pct > 0 && p.resource) out[p.resource] = Math.max(0, out[p.resource] || 0) + pct;
+  }
+  return out;
+}
+
+/** 在岗委任人数（俸禄用）：有人的岗位每天发俸禄，让委任有成本、政治值有回报。 */
+export function filledPostCount(state) {
+  return Object.values(state.interior?.posts || {}).filter((v) => Number(v) > 0).length;
+}
+
+function interiorOutput(state, cfg) {
+  const res = state.roleRes || {};
+  const bonusPct = postBonusPct(state);
+  const resBonus = yieldBonusByResource(state);
   // 收支流水视图（P0-3）：府库面板展示「钱花哪了」；净变化取最近 30 条按资源合计
   const ledgerSrc = Array.isArray(state.resLedger) ? state.resLedger : [];
   const netKeys = ['wood', 'iron', 'stone', 'grain', 'gold'];
@@ -231,6 +257,7 @@ function interiorOutput(state, cfg) {
       key: k, label: RES_LABEL[k],
       stock: Number(res[k]) || 0,
       yield: Number(res[`${k}_yield`]) || 0,
+      bonusPct: resBonus[k] || 0,
       capacity: k === 'decree' ? null : Number(res.depot_capacity) || 0,
     })),
     ledger: {

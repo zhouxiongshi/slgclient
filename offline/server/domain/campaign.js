@@ -7,6 +7,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { advanceClock } from '../clock.js';
 import { applyDays } from './economy.js';
+import { yieldBonusByResource } from './panels.js';
 import { addDrift } from './drift.js';
 import { lineFor } from './story.js';
 import { peopleById } from './people.js';
@@ -306,7 +307,7 @@ export function settleCampaign(state, cfg, ctx, now = Date.now()) {
   const rules = chapterRules();
   const from = state.clock.day;
   const { days } = advanceClock(state, now, rules);
-  if (days > 0) applyDays(state, cfg, days, rules);
+  if (days > 0) applyDays(state, cfg, days, { ...rules, resBonus: yieldBonusByResource(state) });
   // 结局后连开篇文本都不再补推，fired 完全冻结
   if (!state.campaign.ending && !state.campaign.fired['1']) runDay(state, cfg, ctx, 1, rules);
   // ★ P0-4：章节一经结算就停止按日触发。旧实现每天仍写一次 fired，

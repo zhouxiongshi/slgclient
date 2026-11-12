@@ -15,6 +15,7 @@ import { loadConfig } from '../server/config.js';
 import { createWorld, normalizeWorld } from '../server/world.js';
 import {
   panelState, panelAction, panelSelfCheck, ensurePanels, PANEL_CONF,
+  yieldBonusByResource as _yieldBonus, filledPostCount as _filledPosts,
 } from '../server/domain/panels.js';
 import { applyDays as _applyDays } from '../server/domain/economy.js';
 import { startOfflineServer, PANELS_UI_SOURCE } from '../server/index.js';
@@ -143,6 +144,28 @@ test('收支流水：锻造/政令扣费逐笔入账、带事由；面板输出�
   const added = (s.resLedger || []).slice(before);
   assert.ok(added.some((e) => e.reason === '属地日产' && e.delta > 0), '日产入账');
   assert.ok(added.some((e) => e.reason === '军饷' && e.delta === -2400), '军饷入账（800 兵 × 3 日 × 1 粮）');
+});
+
+test('委任真实生效：岗位加成折算进日产；在岗武将每天发俸禄并入流水', () => {
+  const s = fresh();
+  const g = s.generals[0];
+  assert.equal(panelAction(s, cfg, { type: 'appoint', post: 'agri', target: g.id }).ok, true);
+  const bonus = _yieldBonus(s);
+  assert.ok(bonus.grain > 0, `agri 岗应给 grain 正加成，实得 ${JSON.stringify(bonus)}`);
+  assert.ok(bonus.grain <= 30, '红线：单岗 ≤30%');
+  assert.equal(_filledPosts(s), 1, '在岗人数为 1');
+  // 产量按加成上浮：每日 = floor(基础 × (1+加成))
+  const baseYield = Math.floor(Number(s.roleRes.grain_yield) || 0);
+  const gBefore = Number(s.roleRes.grain) || 0;
+  _applyDays(s, cfg, 2, { resBonus: bonus, upkeepPerSoldier: 0, postSalaryPerPost: 30 });
+  assert.equal(Number(s.roleRes.grain) - gBefore,
+    2 * Math.floor(baseYield * (1 + bonus.grain / 100)), '日产按委任加成上浮');
+  // 俸禄：1 岗 × 30 × 2 日 = 60，且流水有「委任俸禄」负项
+  assert.ok((s.resLedger || []).some((e) => e.reason === '委任俸禄' && e.delta === -60), '俸禄入流水');
+  // 面板显示与生效同源
+  const v = panelState(s, cfg);
+  const grainRow = v.interior.output.resources.find((r) => r.key === 'grain');
+  assert.equal(grainRow.bonusPct, bonus.grain, '面板 bonusPct 与 applyDays 实算一致');
 });
 
 test('动作校验：非法输入全部被拒且不破坏存档', () => {

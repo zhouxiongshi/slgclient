@@ -49,26 +49,40 @@ export function applyDays(state, cfg, days, rules) {
   const decreePerDay = rules.decreePerDay ?? 30;
   const cost = Math.floor(countSoldiers(state) * (rules.upkeepPerSoldier ?? 0));
   const startDay = Math.floor(Number(state.clock?.day) || 1);
+  // ★ P1：委任岗位真实生效——resBonus[k] 为该资源产量加成百分比（panels.js 计算，红线 ≤30%）
+  const resBonus = rules.resBonus || {};
+  // ★ P1：委任俸禄——在岗武将每人每天发俸（rules.postSalaryPerPost，缺省 30 金），让委任有成本
+  const salaryPerPost = rules.postSalaryPerPost ?? 30;
+  const filledPosts = Object.values(state.interior?.posts || {}).filter((v) => Number(v) > 0).length;
+  const salaryPerDay = filledPosts * salaryPerPost;
   const before = {};
   for (const k of STOCK) before[k] = Number(r[k]) || 0;
   let upkeepPaid = 0;
+  let salaryPaid = 0;
   for (let i = 0; i < days; i += 1) {
     for (const k of STOCK) {
-      const gain = Math.floor(r[`${k}_yield`] || 0);
+      const base = Math.floor(r[`${k}_yield`] || 0);
+      const gain = base > 0 ? Math.floor(base * (1 + (Number(resBonus[k]) || 0) / 100)) : base;
       r[k] = Math.min(cap, (r[k] || 0) + gain);
     }
     const pay = Math.min(r.grain || 0, cost);
     r.grain -= pay;
     upkeepPaid += pay;
+    const sal = Math.min(r.gold || 0, salaryPerDay);
+    r.gold -= sal;
+    salaryPaid += sal;
     r.decree = Math.min(limit, (r.decree || 0) + decreePerDay);
   }
-  // 流水：按整段结算记净变化；满仓被截断也如实记录（delta < 理论日产）
+  // 流水：按整段结算记净变化。gold 拆成「属地日产」与「委任俸禄」两笔，
+  //   两笔之和恒等于实际净变化（满仓截断也如实入账）；其余资源记一笔净差。
   for (const k of STOCK) {
-    const delta = (Number(r[k]) || 0) - before[k];
+    let delta = (Number(r[k]) || 0) - before[k];
+    if (k === 'gold') delta += salaryPaid;   // 先把俸禄从净差里摘出来
     if (delta) recordRes(state, k, delta, '属地日产', startDay);
   }
   if (upkeepPaid) recordRes(state, 'grain', -upkeepPaid, '军饷', startDay + days - 1);
-  return { days, upkeepPaid, soldiers: countSoldiers(state) };
+  if (salaryPaid) recordRes(state, 'gold', -salaryPaid, '委任俸禄', startDay + days - 1);
+  return { days, upkeepPaid, salaryPaid, soldiers: countSoldiers(state) };
 }
 
 /** 曲辕犁：磨坊（加成类型 19）的产量额外 +20%。其他设施不加。 */

@@ -14,7 +14,7 @@ import {
 import { resolveBattle } from './battle.js';
 import { skillById, LEVEL_COUNT } from './skills.js';
 import { marchMs, rewindDays } from './clock.js';
-import { facilityBonus } from './domain/economy.js';
+import { facilityBonus, recordRes } from './domain/economy.js';
 import {
   chapterRules, settleCampaign, chooseChapter, onTileCleared, applyChoice, noticeRecruit,
 } from './domain/campaign.js';
@@ -205,8 +205,9 @@ function normalizeTriple(list) {
   return out;
 }
 
-/** 原版 TryUseNeed：政令不足→25，资源不足→16，成功扣除→0。 */
-function tryUseNeed(state, need) {
+/** 原版 TryUseNeed：政令不足→25，资源不足→16，成功扣除→0。
+ *  ★ P1：带 reason 时逐项写入收支流水，玩家在府库能看到「钱花哪了」。 */
+function tryUseNeed(state, need, reason) {
   const r = state.roleRes;
   const n = {
     decree: need?.decree ?? 0, wood: need?.wood ?? 0, iron: need?.iron ?? 0,
@@ -221,6 +222,12 @@ function tryUseNeed(state, need) {
   r.stone -= n.stone;
   r.grain -= n.grain;
   r.gold -= n.gold;
+  if (reason) {
+    for (const [k, v] of Object.entries(n)) {
+      if (v > 0 && k !== 'decree') recordRes(state, k, -v, reason);
+    }
+    if (n.decree > 0) recordRes(state, 'decree', -n.decree, reason);
+  }
   return OK;
 }
 
@@ -529,7 +536,7 @@ export function handleRequest(ctx, req) {
       }
       const c = cfg.buildCustomCfg(type, 1);
       if (!c) { rsp.code = CODE.InvalidParam; break; }
-      const code = tryUseNeed(state, c.need);
+      const code = tryUseNeed(state, c.need, `建造·${c.name || type}`);
       if (code !== OK) { rsp.code = code; break; }
       b.type = c.type ?? type;
       b.name = c.name ?? b.name;
@@ -557,7 +564,7 @@ export function handleRequest(ctx, req) {
       if (name === 'nationMap.upBuild') {
         const c = cfg.buildCustomCfg(b.type, b.level + 1);
         if (!c) { rsp.code = CODE.InvalidParam; break; }
-        const code = tryUseNeed(state, c.need);
+        const code = tryUseNeed(state, c.need, `要塞升级 ${b.level}→${b.level + 1}`);
         if (code !== OK) { rsp.code = code; break; }
         b.building = true;
         b.op_level = c.level;            // level 保持当前值，op_level 为目标等级
@@ -565,7 +572,7 @@ export function handleRequest(ctx, req) {
       } else {
         const c = cfg.buildCustomCfg(b.type, b.level);
         if (!c) { rsp.code = CODE.InvalidParam; break; }
-        const code = tryUseNeed(state, c.need);
+        const code = tryUseNeed(state, c.need, '要塞拆除');
         if (code !== OK) { rsp.code = code; break; }
         b.building = true;
         b.op_level = 0;                  // 标记拆除中，到点由 tickBuilds 恢复为资源地
@@ -607,7 +614,7 @@ export function handleRequest(ctx, req) {
       if (f.up_time > 0) { rsp.code = CODE.UpError; break; } // 正在升级中
       const need = cfg.facilityNeed(fType, f.level + 1);
       if (!need) { rsp.code = CODE.UpError; break; }
-      const code = tryUseNeed(state, need);
+      const code = tryUseNeed(state, need, `设施「${f.name}」升至 ${f.level + 1} 级`);
       if (code !== OK) { rsp.code = code; break; }
       f.up_time = nowSec();
       ctx.push('roleRes.push', roleResOf(state));
@@ -628,6 +635,7 @@ export function handleRequest(ctx, req) {
       const r = totalYield(state, cfg);
       const gold = r.gold_yield || 1000;
       state.roleRes.gold += gold;
+      recordRes(state, 'gold', gold, '税赋征收');
       state.roleAttr.collectTimes = (state.roleAttr.collectTimes || 0) + 1;
       state.roleAttr.lastCollectTime = now;
       ctx.push('roleRes.push', roleResOf(state));
@@ -905,7 +913,7 @@ export function handleRequest(ctx, req) {
         rsp.msg = { reason: 'empty_slot', slot: emptySlot, per };
         break;
       }
-      const code = tryUseNeed(state, need);
+      const code = tryUseNeed(state, need, `征兵 ${total} 人`);
       if (code !== OK) { rsp.code = code; rsp.msg = { reason: 'res_not_enough', need, per }; break; }
       const sec = conscriptSec(total, c.cost_time);
       army.soldiers = normalizeTriple(army.soldiers);
