@@ -38,6 +38,9 @@ export const PANEL_CONF = {
 };
 
 const SKILLS = [...PANEL_CONF.mainSkills, ...PANEL_CONF.libSkills];
+// ★ P6：战法描述补射程——与内核/原客户端技能面板同一函数，保证描述=计算
+import { applyRangeNote } from '../skills.js';
+for (const s of SKILLS) applyRangeNote(s);
 const SKILL_BY_ID = new Map(SKILLS.map((s) => [Number(s.cfgId), s]));
 const ITEM_BY_ID = new Map(PANEL_CONF.items.items.map((i) => [Number(i.id), i]));
 const RECIPE_BY_ID = new Map(PANEL_CONF.recipes.recipes.map((r) => [Number(r.cfgId), r]));
@@ -407,6 +410,7 @@ export function panelState(state, cfg) {
       cfgId: id,
       name: s.ui?.name ?? s.name,
       des: s.ui?.des ?? '',
+      range: s.ui?.range ?? null,
       trigger: r.trigger, tags: r.tags, sourceGroup: r.sourceGroup,
       target: s.ui?.target ?? null, arms: s.ui?.arms ?? [],
       levels: lv, levelCount: (s.ui?.levels || []).length,
@@ -512,6 +516,11 @@ export function panelState(state, cfg) {
       };
     })(),
     generals,
+    // ★ P6 俘虏名册：六府「武将」页招降入口（政治判定在 strategy.recruitCaptive，这里只展示）
+    captives: (state.captives || []).map((c, i) => ({
+      idx: i, name: c.name, from: c.from, loyal: c.loyal, days: c.days,
+      star: cfg.generalByCfg.get(Number(c.cfgId))?.star ?? 0,
+    })),
     prospects,
     items,
     scrolls: scrollCount(state),

@@ -24,7 +24,10 @@ import { attachWebSocketServer } from './wsserver.js';
 import { createSkillAssets } from './skills.js';
 import { loadOverrides, saveOverrides } from './gm/overrides.js';
 import { dossierFor } from './domain/dossier.js';
-import { strategyViewState, oathOptions, chooseOath, strategyFormup, strategyTransport, rewardGeneral } from './domain/strategy.js';
+import {
+  strategyViewState, oathOptions, chooseOath, strategyFormup, strategyTransport,
+  rewardGeneral, strategyInvest, recruitCaptive,
+} from './domain/strategy.js';
 import { panelState, panelAction, panelSelfCheck } from './domain/panels.js';
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -378,6 +381,8 @@ export async function startOfflineServer(options = {}) {
         if (act === 'formup') result = strategyFormup(state, cfg, ctx, body);
         else if (act === 'transport') result = strategyTransport(state, cfg, ctx, body);
         else if (act === 'reward') result = rewardGeneral(state, cfg, ctx, body);
+        else if (act === 'invest') result = strategyInvest(state, cfg, ctx, body);
+        else if (act === 'captive') result = recruitCaptive(state, cfg, ctx, body);
         else result = { ok: false, reason: 'bad_action' };
         if (result.ok) save();
         sendJson(req, res, result);

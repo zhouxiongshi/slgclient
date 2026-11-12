@@ -47,6 +47,54 @@ export const SKILL_TABLE_SHA = TABLE.sourceSha256;
 
 export function skillById(cfgId) { return SKILL_BY_ID.get(Number(cfgId)) || null; }
 
+/**
+ * ★ P6 战法射程（三战口径）：战场 3 槽 = 前锋/中军/大营，
+ *   攻击方 pos p 到敌方 pos q 的距离 = p + q + 1（1~5）。
+ *   - 追击：目标 = 普攻目标，不受射程限制 → range 9，描述写「目标：普攻目标」
+ *   - 谋略伤害：5（奇谋无远弗届）；物理群体：4；物理单体：3；控制：3
+ *   - 自身/友方目标：9
+ * 修改只发生在内存表（conf/skills.json 不动），UI JsonAsset 与 kernel 同源，保证描述=计算。
+ */
+export function rangeOf(skill) {
+  if (!skill) return 9;
+  if (skill.trigger === 3) return 9;                       // 追击：随普攻目标
+  const k = skill.kernel || {};
+  const effects = Array.isArray(k.effects) && k.effects.length
+    ? k.effects
+    : [k];
+  const types = effects.map((e) => e.effect_type || '');
+  const tt = String(skill.ui?.target ?? skill.ui?.target_type ?? 0);
+  if (types.includes('CONTROL')) return 3;
+  if (types.includes('STRATEGY_DAMAGE')) return 5;
+  if (types.includes('PHYSICAL_DAMAGE')) {
+    // 单体(t6) 3；群体(t7/t8/t9) 4；我方攻击增益类按 9
+    if (['7', '8', '9'].includes(tt)) return 4;
+    if (tt === '6') return 3;
+    return 9;
+  }
+  return 9;                                                // 治疗/增益/自身
+}
+
+const RANGE_NOTE = { 3: '（射程3）', 4: '（射程4）', 5: '（射程5）' };
+/**
+ * 把射程写进单条战法的 ui（幂等）。skills.js 自身表在模块加载时全部过一遍；
+ * panels.js 的独立技能表（mainSkills+libSkills 原始 JSON）也用同一函数补齐，
+ * 保证「原客户端技能面板 / 六府战法摘要 / 内核」三处描述与计算同源。
+ */
+export function applyRangeNote(skill) {
+  if (!skill?.ui) return skill;
+  const r = rangeOf(skill);
+  skill.ui = { ...skill.ui, range: r };
+  if (skill.trigger === 3) {
+    if (!/普攻目标/.test(skill.ui.des || '')) skill.ui.des = `${skill.ui.des || ''}（目标：普攻目标）`;
+  } else if (RANGE_NOTE[r] && !/射程/.test(skill.ui.des || '')) {
+    skill.ui.des = `${skill.ui.des || ''}${RANGE_NOTE[r]}`;
+  }
+  return skill;
+}
+// 一次性把射程写进 UI 描述与 ui.range 字段：原客户端技能面板、六府战法摘要、内核三处同源
+for (const s of SKILLS) applyRangeNote(s);
+
 /** 技能等级 → 内核 Effect 的真实数值（不再使用演示随机 pick）。 */
 export function kernelSkillAt(cfgId, lv) {
   const s = skillById(cfgId);
@@ -77,6 +125,7 @@ export function kernelSkillAt(cfgId, lv) {
           target_type: e.target_type,
           attack_type: e.attack_type || 'normal',
           available_round: e.available_round || 0,
+          range: rangeOf(s),
           control_probability: e.effect_type === 'CONTROL' ? now / 100 : (e.control_probability || 0),
           control_state: e.control_state || null,
           bonus_terms: (e.bonus_terms || []).map((b) => ({
@@ -109,6 +158,7 @@ export function kernelSkillAt(cfgId, lv) {
       target_type: k.target_type,
       attack_type: k.attack_type,
       available_round: 0,
+      range: rangeOf(s),
       control_probability: k.control_probability,
       control_state: k.control_state,
       bonus_terms: k.bonus_terms.map((b) => ({
@@ -605,7 +655,12 @@ export function patchClientBundle(source) {
     ],
     [
       `          EventMgr.on(LogicEvent.openGeneralRoster, this.onOpenGeneralRoster, this);`,
-      `          EventMgr.on(LogicEvent.openGeneralRoster, this.onOpenGeneralRoster, this);
+      `          EventMgr.on(LogicEvent.openGeneralRoster, function () {
+            /* ★ P6：原版武将名册是 Cocos 面板，被离线遮罩挡住（点击看似没反应）。
+               这里改开注入的六府「武将」页，与右侧菜单同一套内容联动。 */
+            if (window.__slgPanels && window.__slgPanels.open) window.__slgPanels.open('general');
+            else if (window.__slgGeneralsWindow) window.__slgGeneralsWindow();
+          }, this);
           EventMgr.on("campaign.pending", this.onCampaignPending, this);
           EventMgr.on("warReport.push", this.onWarReportAnim, this);`,
     ],
@@ -1022,7 +1077,9 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       if (window.__slgHomeWindow && lastState) window.__slgHomeWindow();
     };
     document.getElementById('slgBtnGens').onclick = function () {
-      if (window.__slgGeneralsWindow) window.__slgGeneralsWindow();
+      /* ★ P6：与右侧六府菜单联动——优先开六府「武将」页，旧窗口兜底 */
+      if (window.__slgPanels && window.__slgPanels.open) window.__slgPanels.open('general');
+      else if (window.__slgGeneralsWindow) window.__slgGeneralsWindow();
     };
     document.getElementById('slgBtnReps').onclick = function () {
       if (window.__slgReportsWindow) window.__slgReportsWindow();
@@ -2300,6 +2357,35 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
   }
 
   function tabInteriorView(c, body) {
+    /* ★ P6 己方非主城：城池内政任务（开垦/招商/修城），每城每旬一次 */
+    if (c.owner === 'player') {
+      var invCard = el('div', 'card', '<h4 style="margin-top:0">' + c.name + ' · 内政任务</h4>'
+        + '<div class="cost">每城每旬（10 日）可办一项；开发度直接提升该城日产，修城加驻军。</div>');
+      var mkInv = function (label, kind, cost, note) {
+        var b = mkBtn(label + '（' + cost + ' 金）', '', function () {
+          fetch('/__slg/strategy/action', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'invest', cityId: c.id, kind: kind }),
+          }).then(function (r2) { return r2.json(); }).then(function (rs) {
+            if (rs.ok) {
+              toast(label + '完工：' + (kind === 'defense' ? '守军 +150' : '开发度 +3'), true);
+              fetchState().then(function (s2) { cache = s2; renderCity(s2); });
+            } else if (rs.reason === 'cooldown') toast('本城本旬已办过内政，第 ' + rs.nextDay + ' 日可再办', false);
+            else if (rs.reason === 'no_gold') toast('金不足（需 ' + rs.cost + '）', false);
+            else toast('无法办理：' + (rs.reason || '未知'), false);
+          });
+        });
+        b.style.margin = '0';
+        var row = el('div', 'row', '<span>' + label + '<span class="cost">　' + note + '</span></span>');
+        row.appendChild(b);
+        invCard.appendChild(row);
+      };
+      mkInv('开垦农田', 'agri', 300, '农业 +3 → 粮产上升');
+      mkInv('招商兴市', 'trade', 300, '商业 +3 → 金产上升');
+      mkInv('修筑城防', 'defense', 400, '守军 +150，城防 +2');
+      body.appendChild(invCard);
+      return;
+    }
     body.appendChild(el('div', 'card', '<h4 style="margin-top:0">' + c.name + ' · 内政</h4><div class="grid">'
       + kv('归属', c.ownerName)
       + kv('行政', c.adminLevel || c.levelName || ('Lv' + c.level))
@@ -2307,7 +2393,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       + kv('农业', c.agri) + kv('商业', c.commerce)
       + kv('城防', c.cityDef) + kv('特产', c.specialty || '—')
       + kv('地形', c.terrain || '—')
-      + '</div><div class="cost" style="margin-top:8px">设施升级与征收在本城办理。此城入版图后，内政并入本城府库。</div>'));
+      + '</div><div class="cost" style="margin-top:8px">非我军城池无法在此办理内政；攻占后即可开垦经营。</div>'));
   }
 
   function tabConscriptView(c, body) {
@@ -2320,14 +2406,92 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
   }
 
   function tabGeneralView(c, body) {
+    /* ★ P6 己方城：驻城武将（驻本城的队伍，含武将/兵力/忠诚），不再是一句占位 */
+    if (c.owner === 'player') {
+      var card = el('div', 'card', '<h4 style="margin-top:0">' + c.name + ' · 驻城武将</h4>');
+      var stationed = c.stationed || [];
+      if (!stationed.length) {
+        card.appendChild(el('div', 'empty', '本城没有驻军队伍。出征前整编的队伍会驻在出发城。'));
+      }
+      stationed.forEach(function (a) {
+        var gens = (a.generals || []).map(function (g) {
+          return '<span class="chip">' + esc(g.name) + '·忠' + g.loyal + '</span>';
+        }).join('');
+        var row = el('div', 'row',
+          '<span>队伍#' + a.armyId + '<span class="cost">　盾 ' + fmt(a.soldiers[0]) + ' / 弓 ' + fmt(a.soldiers[1]) + ' / 骑 ' + fmt(a.soldiers[2]) + '</span></span>');
+        if (gens) row.appendChild(el('div', '', gens));
+        card.appendChild(row);
+      });
+      if (c.owner === 'player') {
+        var tip = el('div', 'cost', '整编与出征：天下沙盘左上「武将」→ 队伍整编，或六府「武将」页。');
+        card.appendChild(tip);
+      }
+      body.appendChild(card);
+      return;
+    }
     body.appendChild(el('div', 'card', '<h4 style="margin-top:0">' + c.name + ' · 武将</h4>'
       + '<div class="grid">' + kv('守军', fmt(c.troops)) + kv('兵种', c.arms || '—') + '</div>'
-      + '<div class="cost" style="margin-top:8px">敌将名册尚未探明。帐下武将在本城「武将」页编组。</div>'));
+      + '<div class="cost" style="margin-top:8px">敌将名册尚未探明。战胜后有机会阵前擒将，可在六府「武将」页招降。</div>'));
   }
 
   function tabTavernView(c, body) {
-    body.appendChild(el('div', 'card', '<h4 style="margin-top:0">' + c.name + ' · 酒馆</h4>'
-      + '<div class="cost">' + c.name + ' 的酒馆未对你开放。招募在本城酒馆，按辰光来访。</div>'));
+    /* ★ P6 己方城酒馆：本籍在野武将来访 + 探索人才（登庸） */
+    if (c.owner !== 'player') {
+      body.appendChild(el('div', 'card', '<h4 style="margin-top:0">' + c.name + ' · 酒馆</h4>'
+        + '<div class="cost">' + c.name + ' 不在我军治下，酒馆进不去。攻占后即可在此招揽本籍贤才。</div>'));
+      return;
+    }
+    var card = el('div', 'card', '<h4 style="margin-top:0">' + c.name + ' · 酒馆</h4><div class="empty">读取中…</div>');
+    body.appendChild(card);
+    send('tavern.guests', { cityId: c.id }, true).then(function (rsp) {
+      var m = rsp.msg || {};
+      card.innerHTML = '<h4 style="margin-top:0">' + c.name + ' · 酒馆</h4>';
+      var head = el('div', 'cost', '招募一位 <b style="color:#f0d998">' + m.cost + '</b> 金。'
+        + '各城酒馆来的是本籍在野武将，过了时辰便见不到。');
+      card.appendChild(head);
+      var list = el('div', 'card', '<h4 style="margin-top:0">今日来访</h4>');
+      var today = m.today || [];
+      if (!today.length) list.appendChild(el('div', 'empty', '今日无人来访。'));
+      today.forEach(function (g) {
+        var row = el('div', 'row', '<span><b style="color:#f0d998">' + esc(g.name) + '</b> <span class="chip">' + g.when
+          + '</span> <span class="cost">' + (g.state === 'now' ? '此刻在店' : g.state === 'passed' ? '已过时辰' : '未到时辰') + '</span></span>');
+        row.appendChild(mkBtn('招募', '', function () {
+          send('general.drawGeneral', { drawTimes: 1, cityId: c.id }).then(function (r2) {
+            var got = (r2.msg && r2.msg.generals) || [];
+            if (got.length) {
+              toast('入营：' + got.map(function (x) { return x.name || '武将'; }).join('、'), true);
+              send('tavern.guests', { cityId: c.id }, true).then(function (r3) {
+                var m3 = r3.msg || {};
+                renderCity(cache);
+              });
+            } else toast('招募失败：' + (r2.msg && r2.msg.reason === 'no_guest' ? '此人已过时辰' : r2.msg && r2.msg.reason === 'not_enough_gold' ? '金不足' : (r2.msg && r2.msg.reason) || '未知'), false);
+          });
+        }));
+        list.appendChild(row);
+      });
+      card.appendChild(list);
+      var exRow = el('div', 'row', '<span>探索人才<span class="cost">　' + (m.exploreCost || 100)
+        + ' 金 · 派使者探访本城贤才，登庸成功即入仕（政治越高越容易）</span></span>');
+      var exBtn = mkBtn(m.exploredToday ? '今日已探索' : '探索人才', m.exploredToday ? 'ghost' : '', function () {
+        if (m.exploredToday) { toast('本城今日已探索过，明日再来', false); return; }
+        send('general.explore', { cityId: c.id }).then(function (r2) {
+          if (r2.code === 0 && r2.msg && r2.msg.general) {
+            toast('登庸成功：' + (r2.msg.general.name || '贤才') + ' 入仕！（成功率 ' + r2.msg.rate + '%）', true);
+          } else if (r2.msg && r2.msg.reason === 'not_found') {
+            toast('探索未遇贤才（成功率 ' + r2.msg.rate + '%），金已破费', false);
+          } else if (r2.msg && r2.msg.reason === 'not_enough_gold') {
+            toast('金不足（需 ' + r2.msg.cost + '）', false);
+          } else if (r2.msg && r2.msg.reason === 'already_today') {
+            toast('本城今日已探索过', false);
+          } else toast('探索失败：' + (r2.msg && r2.msg.reason) || '未知', false);
+        });
+      });
+      exBtn.style.margin = '0';
+      exRow.appendChild(exBtn);
+      card.appendChild(exRow);
+    }).catch(function () {
+      card.innerHTML = '<div class="cost">读取酒馆失败，稍后再试。</div>';
+    });
   }
 
   function tabOverview(s, c, body, isHome) {
@@ -2341,6 +2505,20 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       + '</div>';
     if (c.history) card.appendChild(el('div', '', '<h4>史略</h4><div style="opacity:.85;line-height:1.9">' + c.history + '</div>'));
     body.appendChild(card);
+
+    /* ★ P6 己方城经营状况：人口/城库/日产/灾害，一目了然 */
+    if (c.owner === 'player' && c.pop != null) {
+      var eco = el('div', 'card', '<h4 style="margin-top:0">经营状况</h4><div class="grid">'
+        + kv('常住人口', fmt(c.pop))
+        + kv('城库存粮', fmt(c.store))
+        + kv('日产 · 粮', '+' + fmt(c.yieldGrain))
+        + kv('日产 · 金', '+' + fmt(c.yieldGold))
+        + (c.modUntil ? kv('减产中', '至第 ' + c.modUntil + ' 日（×' + c.modGrain + '）') : '')
+        + (c.disaster ? '<div class="cost" style="color:#ff9d6b">⚠ ' + esc(c.disaster.name || c.disaster.type || '灾害') + '（第 ' + c.disaster.day + ' 日）</div>' : '')
+        + '</div>');
+      eco.appendChild(el('div', 'cost', '开发度影响日产：去「内政」页开垦/招商可提升。运粮入城库：天下沙盘 → 战略面板。'));
+      body.appendChild(eco);
+    }
 
     var adjCard = el('div', 'card', '<h4 style="margin-top:0">相邻城池</h4>');
     var list = neighbors[c.id] || [];

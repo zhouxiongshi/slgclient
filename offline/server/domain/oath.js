@@ -70,3 +70,33 @@ export function factionTraitOf(state) {
     marchDelta: Math.max(-2, Math.min(2, Number(t.marchDelta) || 0)),
   };
 }
+
+/* ---------------- P6：人物志五维（招募/登庸/招降的成功率判定用） ---------------- */
+
+let cachedLore = null;
+const LORE_PATH = resolve(ROOT, 'conf', 'panels', 'generals-lore.json');
+
+let loreByCfg = null;
+function loreMap() {
+  if (!loreByCfg) {
+    if (!cachedLore) {
+      try { cachedLore = JSON.parse(readFileSync(LORE_PATH, 'utf8')); }
+      catch { cachedLore = { list: [] }; }
+    }
+    loreByCfg = new Map((cachedLore.list || []).map((r) => [Number(r.cfgId), r]));
+  }
+  return loreByCfg;
+}
+
+/** 历史五维（统率/武力/智力/政治/魅力）：缺史载按 50 兜底。 */
+export function loreStat(cfgId, dim) {
+  const row = loreMap().get(Number(cfgId));
+  const v = Number(row?.historyStats?.[dim]);
+  return Number.isFinite(v) ? v : 50;
+}
+
+/** 主角（880001）的五维口径，和 panels.postBonusPct 同源。 */
+export function protagonistStat(state, dim) {
+  const hero = (state.generals || []).find((g) => Number(g.cfgId) === 880001);
+  return loreStat(hero?.cfgId ?? 880001, dim);
+}

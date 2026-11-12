@@ -20,13 +20,13 @@ import {
   chapterRules, settleCampaign, chooseChapter, onTileCleared, applyChoice, noticeRecruit,
 } from './domain/campaign.js';
 import { slotBlock } from './domain/slots.js';
-import { ensureTavern, guestsNow, announceTavern, todaysGuests, dayFraction } from './domain/tavern.js';
+import { ensureTavern, guestsNow, announceTavern, todaysGuests, dayFraction, exploreTalent, cityNameOf } from './domain/tavern.js';
 import {
   strategyTick, strategyAttack, strategyTurnDays, ensureStrategy, clearThreat,
-  strategyResolveMarches,
+  strategyResolveMarches, recordEvent,
 } from './domain/strategy.js';
 import { noteIfGeneralDown } from './command.js';
-import { factionTraitOf } from './domain/oath.js';
+import { factionTraitOf, protagonistStat } from './domain/oath.js';
 
 const OK = 0;
 const nowSec = () => Math.floor(Date.now() / 1000);
@@ -702,7 +702,9 @@ export function handleRequest(ctx, req) {
       ensureTavern(state, cfg);
       const times = Math.max(1, Math.min(10, Number(m.drawTimes ?? 1)));
       const realMsPerDay = chapterRules().realMsPerDay;
-      const here = guestsNow(state, realMsPerDay).slice(0, times);
+      // ★ P6：支持按城招募——各城酒馆来的是本籍在野武将；不带 cityId 时沿用主城口径
+      const cityId = Number(m.cityId) || 0;
+      const here = guestsNow(state, realMsPerDay, cityId || null).slice(0, times);
       const costEach = cfg.basic.general?.draw_general_cost ?? 30;
       const added = [];
       // ★ 试玩 P1-3：旧实现「此刻无人 / 金不足」都返回 code 0 + 空数组，静默失败。
@@ -712,7 +714,7 @@ export function handleRequest(ctx, req) {
           generals: [],
           reason: 'no_guest',
           cost: costEach,
-          today: todaysGuests(state).map((g) => ({ cfgId: g.cfgId, name: g.name, when: g.when })),
+          today: todaysGuests(state, undefined, cityId || null).map((g) => ({ cfgId: g.cfgId, name: g.name, when: g.when, cityId: g.birthCity })),
         };
         break;
       }
@@ -1022,13 +1024,16 @@ export function handleRequest(ctx, req) {
     case 'tavern.guests': {
       const realMsPerDay = chapterRules().realMsPerDay;
       const frac = dayFraction(state, realMsPerDay);
-      const live = guestsNow(state, realMsPerDay);
+      // ★ P6：按城查询来访（msg.cityId）；缺省主城口径
+      const cityId = Number(m.cityId) || 0;
+      const live = guestsNow(state, realMsPerDay, cityId || null);
       const now = live.map((g) => ({ cfgId: g.cfgId, name: g.name, when: g.when }));
-      const today = todaysGuests(state).map((g) => ({
+      const today = todaysGuests(state, undefined, cityId || null).map((g) => ({
         cfgId: g.cfgId,
         name: g.name,
         when: g.when,
         recruited: false,
+        birthCity: g.birthCity,
         // ★ P1-3：让界面能区分「还没到时辰 / 此刻在店 / 已过时辰」
         state: frac >= g.to ? 'passed' : (frac >= g.from ? 'now' : 'upcoming'),
       }));
@@ -1040,7 +1045,53 @@ export function handleRequest(ctx, req) {
         cost: cfg.basic.general?.draw_general_cost ?? 30,
         day: state.clock?.day ?? 1,
         nextAt,
+        cityId: cityId || null,
+        exploredToday: cityId ? Boolean(state.tavern?.explores?.[`${state.clock?.day || 1}:${cityId}`]) : false,
+        exploreCost: 100,
       };
+      break;
+    }
+
+    /* ★ P6 探索人才（登庸）：派主角在指定城探索，成功即登庸一名在野武将。
+     *   成功率 = 55% + 主角政治 × 0.3%；每城每日一次；费用 100 金。 */
+    case 'general.explore': {
+      const cityId = Number(m.cityId) || state.strategy?.playerCity || 1;
+      const cost = 100;
+      if ((state.roleRes.gold || 0) < cost) {
+        rsp.code = 5; rsp.msg = { reason: 'not_enough_gold', cost };
+        break;
+      }
+      const exp = exploreTalent(state, cfg, cityId);
+      if (!exp.ok) { rsp.code = 0; rsp.msg = { reason: exp.reason }; break; }
+      const pol = protagonistStat(state, '政治');
+      const rate = Math.min(0.95, 0.55 + pol * 0.003);
+      const success = Math.random() < rate;
+      state.roleRes.gold -= cost;
+      recordRes(state, 'gold', -cost, `探索人才·${cityNameOf(cityId)}`);
+      if (!success) {
+        ctx.push?.('roleRes.push', roleResOf(state));
+        ctx.save();
+        rsp.code = 0;
+        rsp.msg = { reason: 'not_found', rate: Math.round(rate * 100), cityId, name: exp.target.name };
+        break;
+      }
+      const person = exp.target;
+      person.recruited = true;
+      const g = makeGeneral(cfg, nextId(state, 'generalId'), person.cfgId, cityId, 1);
+      g.loyal = Math.min(100, 80 + Math.round(protagonistStat(state, '魅力') / 20));
+      state.generals.push(g);
+      noticeRecruit(state, ctx, person.name || '');
+      ctx.push('general.push', g);
+      syncOwnedSkills(state);
+      ctx.push('roleRes.push', roleResOf(state));
+      ctx.save();
+      rsp.code = 0;
+      rsp.msg = {
+        general: withGeneralNames(state, cfg, clone([g]))[0],
+        rate: Math.round(rate * 100),
+        cityId,
+      };
+      recordEvent(state, `遣使探索${cityNameOf(cityId)}，登庸在野贤才「${person.name}」，即日入仕。`);
       break;
     }
 

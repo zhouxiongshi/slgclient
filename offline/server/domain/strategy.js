@@ -23,7 +23,7 @@ import {
   cityYield, armsApt, armsCounter, ARMS_NAMES,
 } from './city-econ.js';
 import { SKILLS, LEVEL_COUNT, skillById } from '../skills.js';
-import { oathOf, oathPending, oathFactionOf, factionTraitOf } from './oath.js';
+import { oathOf, oathPending, oathFactionOf, factionTraitOf, protagonistStat } from './oath.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const MAP_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'map.json');
@@ -255,6 +255,11 @@ export function chooseOath(state, cfg, ctx = {}, { lord, city } = {}) {
     added.push(name);
     noticeRecruit(state, ctx, name);
   }
+  // ★ P6 定都即迁营：玩家全部队伍与帐下武将移到新都，驻城武将/城内操作不再指向旧城
+  for (const a of state.armys || []) {
+    if (!a.marchId) a.cityId = cid;
+  }
+  for (const g of state.generals || []) g.cityId = cid;
   // 技能登记表增量更新（主角自带战法 19001 不在技能库配置里，不能全量重建）
   const reg = new Map((state.skills || []).map((s) => [Number(s.cfgId), s]));
   for (const g of newGenerals) {
@@ -379,6 +384,8 @@ export function strategyTick(state, cfg, ctx, now = Date.now()) {
   openMonth(state);
   // ★ P2/P3 城市经营：旬灾害（蝗/瘟/丰收）+ 旬忠诚/俸禄/叛逃 + 30日人口增长
   cityEconTick(state, cfg, ctx);
+  // ★ P6 俘虏：每旬思归/越狱演变
+  captivesTick(state, ctx);
 
   const results = [];
   const mapTick = strategyMap();
@@ -446,7 +453,7 @@ function accrueFactionGrain(state, factionId) {
 
 /* ---------------------------------------------------------------- 执行层 */
 /** 天下大事记。保留整局 200 条（旧实现 50 条滚动截断，读档后本局早先的转折全没了）。 */
-function recordEvent(state, text) {
+export function recordEvent(state, text) {
   const st = state.strategy;
   st.events.push({ turn: st.turn, text, day: state.clock?.day ?? 0 });
   while (st.events.length > 480) st.events.shift();
@@ -785,7 +792,7 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride }
   const place = defenseOverride?.place || `(${x},${y})`;
   const win = result.report.result === 2;
   const rec = recovered.reduce((s, n) => s + n, 0);
-  const summary = win
+  let summary = win
     ? `攻陷${place}：我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}，歼敌 ${dLoss}。`
     : `攻${place}不利：我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}，歼敌 ${dLoss}`
       + (rec > 0 ? `，溃兵 ${rec} 归营。` : '。');
@@ -816,6 +823,30 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride }
 
   state.warReports.unshift(result.report);
   if (state.warReports.length > 100) state.warReports.length = 100;
+
+  /* ★ P6 招降链前置：胜仗可能俘获一名有名有姓的守将（确定性判定，同一场只掷一次）。
+   *   概率 30%；已招募/已在押的不重复。入 state.captives，之后可在六府「武将」页招降。 */
+  if (win) {
+    const day = Math.floor(Number(state.clock?.day) || 1);
+    state.captives = Array.isArray(state.captives) ? state.captives : [];
+    const ownedCfg = new Set((state.generals || []).map((g) => Number(g.cfgId)));
+    let defs = [];
+    try { defs = JSON.parse(result.report.b_d_general || '[]'); } catch { /* 守军无名 */ }
+    const cand = defs
+      .map((row) => Number(row?.[1]))
+      .filter((id) => id && id !== 880001 && !ownedCfg.has(id)
+        && !state.captives.some((c) => c.cfgId === id));
+    const roll = ((cand.join(',') || 'x').length * 31 + day * 7 + Math.floor(aTotal)) % 100;
+    if (cand.length && roll < 30) {
+      const cfgId = cand[day % cand.length];
+      const name = cfg?.generalByCfg?.get(cfgId)?.name || `武将${cfgId}`;
+      state.captives.push({ cfgId, name, from: place, loyal: 50, days: 0, day });
+      summary += ` 阵前擒得敌将「${name}」！可在武将府招降。`;
+      result.report.summary = summary + counterNote;
+      result.report.analysis.captive = name;
+      recordEvent(state, `${place}一战告捷，敌将「${name}」被俘，押入大营听候发落。`);
+    }
+  }
 
   ctx.push?.('army.push', army);
   for (const gid of army.generals || []) {
@@ -1106,6 +1137,94 @@ export function rewardGeneral(state, cfg, ctx, { generalId, amount }) {
   return { ok: true, loyal: g.loyal, gold: Math.floor(r.gold) };
 }
 
+/** ★ P6 城池内政任务：开垦/招商/修城，直接改单城开发度与守军（城市差异可经营）。
+ *   每城每旬（10 日）限一次；开垦/招商 300 金，修城 400 金。 */
+export function strategyInvest(state, cfg, ctx, { cityId, kind }) {
+  const st = ensureStrategy(state);
+  const econ = ensureCityEcon(state);
+  const id = Number(cityId);
+  const tstate = st.cities[id];
+  const e = econ?.[id];
+  if (!tstate || tstate.owner !== 'player' || !e) return { ok: false, reason: 'not_own_city' };
+  const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  if (e.lastInvestDay && day - e.lastInvestDay < 10) {
+    return { ok: false, reason: 'cooldown', nextDay: e.lastInvestDay + 10 };
+  }
+  const r = state.roleRes;
+  const KINDS = {
+    agri: { cost: 300, label: '开垦', apply: () => { e.devAgri = Math.min(120, e.devAgri + 3); } },
+    trade: { cost: 300, label: '招商', apply: () => { e.devTrade = Math.min(120, e.devTrade + 3); } },
+    defense: { cost: 400, label: '修城', apply: () => {
+      e.devDef = Math.min(120, (e.devDef ?? 0) + 2);
+      tstate.troops = Math.min(4000, (tstate.troops || 0) + 150);
+    } },
+  };
+  const K = KINDS[kind];
+  if (!K) return { ok: false, reason: 'bad_kind' };
+  if ((Number(r.gold) || 0) < K.cost) return { ok: false, reason: 'no_gold', cost: K.cost };
+  r.gold -= K.cost;
+  e.lastInvestDay = day;
+  K.apply();
+  recordRes(state, 'gold', -K.cost, `${K.label}·${cityName(id)}`, day);
+  const effectText = kind === 'defense'
+    ? '城防加固，守军 +150'
+    : `${kind === 'agri' ? '农田' : '市集'}开发度 +3`;
+  recordEvent(state, `${cityName(id)}${K.label}完工：${effectText}。`);
+  ctx.push?.('roleRes.push', { ...state.roleRes });
+  const y = cityYield(state, id);
+  return { ok: true, kind, cityId: id, devAgri: e.devAgri, devTrade: e.devTrade, devDef: e.devDef ?? 0, troops: tstate.troops, yieldGrain: y?.grain || 0, yieldGold: y?.gold || 0 };
+}
+
+/** ★ P6 招降：押着的敌将，金 + 政治判定成功率；失败忠诚 -10，低于 0 越狱逃走。 */
+export function recruitCaptive(state, cfg, ctx, { idx }) {
+  const st = ensureStrategy(state);
+  const i = Number(idx);
+  state.captives = Array.isArray(state.captives) ? state.captives : [];
+  const cap = state.captives[i];
+  if (!cap) return { ok: false, reason: 'no_captive' };
+  const cost = 300;
+  const r = state.roleRes;
+  if ((Number(r.gold) || 0) < cost) return { ok: false, reason: 'no_gold', cost };
+  r.gold -= cost;
+  const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  recordRes(state, 'gold', -cost, `招降·${cap.name}`, day);
+  const pol = protagonistStat(state, '政治');
+  const rate = Math.min(0.95, 0.45 + (cap.days || 0) * 0.05 + pol * 0.002);
+  const success = Math.random() < rate;
+  if (!success) {
+    cap.loyal = (cap.loyal ?? 50) - 10;
+    ctx.push?.('roleRes.push', { ...state.roleRes });
+    if (cap.loyal < 0) {
+      state.captives.splice(i, 1);
+      recordEvent(state, `敌将「${cap.name}」拒绝招降，趁夜越狱逃走。`);
+      return { ok: false, reason: 'escaped', name: cap.name, gold: Math.floor(r.gold) };
+    }
+    return { ok: false, reason: 'refused', name: cap.name, loyal: cap.loyal, rate: Math.round(rate * 100), gold: Math.floor(r.gold) };
+  }
+  state.captives.splice(i, 1);
+  const g = makeGeneral(cfg, nextId(state, 'generalId'), cap.cfgId, st.playerCity || 1, 1);
+  g.loyal = Math.min(100, 70 + Math.round(protagonistStat(state, '魅力') / 25));
+  state.generals.push(g);
+  noticeRecruit(state, ctx, cap.name);
+  recordEvent(state, `敌将「${cap.name}」感主公之义，解甲来投，即日入营。`);
+  ctx.push?.('general.push', g);
+  ctx.push?.('roleRes.push', { ...state.roleRes });
+  return { ok: true, general: { id: g.id, name: cap.name }, loyal: g.loyal, rate: Math.round(rate * 100) };
+}
+
+/** 每旬押将演变：忠诚 -2（离乡思归），低于 30 有越狱风险（30%）。 */
+export function captivesTick(state, ctx) {
+  state.captives = Array.isArray(state.captives) ? state.captives : [];
+  for (const cap of [...state.captives]) {
+    cap.days = (cap.days || 0) + 1;
+    cap.loyal = (cap.loyal ?? 50) - 2;
+    if (cap.loyal < 30 && Math.random() < 0.3) {
+      state.captives.splice(state.captives.indexOf(cap), 1);
+      recordEvent(state, `敌将「${cap.name}」看守松懈，越狱而逃。`);
+    }
+  }
+}
+
 /** 供 /__slg/strategy/state 使用。cfg 可选：不给时武将只显示 #id。 */
 export function strategyViewState(state, cfg = null) {
   const st = ensureStrategy(state);
@@ -1180,11 +1299,23 @@ export function strategyViewState(state, cfg = null) {
         if (!e) return {};
         const y = cityYield(state, c.id);
         const mod = e.mod && Number(state.clock?.day) <= e.mod.until ? e.mod : null;
+        // ★ P6 驻城武将：驻在本城的队伍（含武将与兵力），行军中的不算
+        const stationed = (state.armys || [])
+          .filter((a) => Number(a.cityId) === Number(c.id) && !a.marchId)
+          .map((a) => ({
+            armyId: a.id,
+            soldiers: [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(a.soldiers?.[i]) || 0))),
+            generals: (a.generals || []).filter(Boolean).map((gid) => {
+              const g = (state.generals || []).find((x) => x.id === gid);
+              return g ? { id: g.id, name: cfg?.generalByCfg?.get(g.cfgId)?.name || `武将${g.id}`, loyal: Math.round(g.loyal ?? 88) } : null;
+            }).filter(Boolean),
+          }));
         return {
           pop: e.pop, store: e.store,
           yieldGrain: y?.grain || 0, yieldGold: y?.gold || 0,
           disaster: e.disaster || null,
           modUntil: mod?.until || 0, modGrain: mod?.grain || 1,
+          stationed,
         };
       })() : {}),
     })),
@@ -1195,6 +1326,12 @@ export function strategyViewState(state, cfg = null) {
       lord: oathF?.id || null, lordName: oathF?.name || '', color: oathF?.color || '',
       city: oathOf(state).city || 0,
     },
+    // ★ P6 俘虏名册（招降入口）
+    captives: (state.captives || []).map((c, i) => ({
+      idx: i, cfgId: c.cfgId, name: c.name, from: c.from,
+      loyal: c.loyal, days: c.days,
+      rate: Math.min(95, Math.round((0.45 + (c.days || 0) * 0.05 + protagonistStat(state, '政治') * 0.002) * 100)),
+    })),
     // 可出征的城（已按行军校验过滤：关隘封锁即不可走）
     marchable: marchableFrom(st.playerCity || 0),
     // ★ P2：行军队列与日内进度（客户端据此画行军线与移动军标）

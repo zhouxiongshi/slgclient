@@ -89,10 +89,12 @@ function makeHero(g, cfg) {
   };
 }
 
-function makeUnit(unitId, side, general, cfg, troops) {
+function makeUnit(unitId, side, general, cfg, troops, pos = 0) {
   return {
     unit_id: unitId,
     side,
+    /* ★ P6 战位：0=前锋 1=中军 2=大营，战法射程按此结算 */
+    pos: Number(pos) || 0,
     hero: makeHero(general, cfg),
     troops: Math.max(1, Math.ceil(troops / TROOP_SCALE)),
     max_troops: Math.max(1, Math.ceil(troops / TROOP_SCALE)),
@@ -341,14 +343,14 @@ export function resolveBattle({ cfg, state, army, x, y, seed, defenseOverride = 
   attackers.forEach(({ slot, g }, i) => {
     const uid = `a${i}`;
     idMap[uid] = g.id;
-    const unit = makeUnit(uid, 1, g, cfg, beginSoldiers[slot]);
+    const unit = makeUnit(uid, 1, g, cfg, beginSoldiers[slot], slot);
     buildLookup(uid, unit);
     units.push(unit);
   });
   defenders.forEach((g, i) => {
     const uid = `d${i}`;
     idMap[uid] = g.id;
-    const unit = makeUnit(uid, 2, g, cfg, defense.soldiers[i] ?? 0);
+    const unit = makeUnit(uid, 2, g, cfg, defense.soldiers[i] ?? 0, i);
     buildLookup(uid, unit);
     units.push(unit);
   });

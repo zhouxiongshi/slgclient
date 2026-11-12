@@ -219,6 +219,14 @@
         + esc(p.name) + '<small>' + esc(p.zi === '史无明载' ? '' : '字' + p.zi) + ' · ' + esc(p.faction)
         + ' · 统' + esc(p.historyStats.统率) + '</small></button>';
     });
+    /* ★ P6 俘虏名册：招降按钮（金 300/次，政治判定，成功率随关押天数上升） */
+    if ((data.captives || []).length) {
+      out += '<h4 style="color:#e07a5f">阵前被俘（可招降）</h4>';
+      data.captives.forEach(function (c) {
+        out += '<button class="genrow" style="text-align:left" data-act="captive" data-i="' + c.idx + '">'
+          + esc(c.name) + '<small>押 ' + c.days + ' 旬 · 忠 ' + c.loyal + ' · 降率约 ' + c.rate + '%</small></button>';
+      });
+    }
     return out + '</div>';
   }
 
@@ -789,6 +797,14 @@
       var g0 = data.generals.find(function (x) { return x.id === Number(id); });
       var amt2 = window.prompt('赏赐 ' + (g0 ? g0.name : '武将') + ' 多少金？每 100 金提升 1 点忠诚（单次上限 15）。', '500');
       if (amt2) strategyAction({ action: 'reward', generalId: Number(id), amount: Number(amt2) });
+      return;
+    }
+    if (act === 'captive') {
+      var c0 = (data.captives || []).find(function (x) { return x.idx === Number(id); });
+      if (!c0) return;
+      if (window.confirm('招降「' + c0.name + '」？\n费用 300 金，成功率约 ' + c0.rate + '%。\n失败：忠诚 -10（降到 0 以下会越狱逃走）。')) {
+        strategyAction({ action: 'captive', idx: c0.idx });
+      }
       return;
     }
     if (act === 'gotostrategy') {      close();

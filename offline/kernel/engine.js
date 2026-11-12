@@ -40,6 +40,9 @@ function cloneUnits(inputs) {
             troops: u.troops,
             max_troops: u.max_troops,
             speed,
+            /* ★ 战位（0=前锋 1=中军 2=大营）：战法射程/追击目标按战位距离结算。
+             *   旧战报数据无 pos 字段 → 从 unit_id 后缀推导（aN/dN），保证旧用例可复现。 */
+            pos: Number.isFinite(u.pos) ? Math.max(0, Math.min(4, Math.trunc(u.pos))) : Math.max(0, (Number(String(u.unit_id).slice(1)) || 0)),
             states: [],
             buffs: [],
             alive: true,
@@ -72,16 +75,53 @@ export class BattleEngine {
     enemies(side) {
         return this.units.filter((u) => u.side !== side && u.alive);
     }
+    /** 敌我战位距离：跨阵营 pos 相加 +1（前锋→前锋 1，大营→大营 5）；同阵营 |pos 差|。 */
+    slotDist(a, b) {
+        if (a.side === b.side)
+            return Math.abs((a.pos || 0) - (b.pos || 0));
+        return (a.pos || 0) + (b.pos || 0) + 1;
+    }
+    /** 普攻/追击目标：战位距离最近的存活敌军（同距取 unit_id 小者）。 */
+    nearestFoe(unit) {
+        const foes = this.enemies(unit.side);
+        if (!foes.length)
+            return null;
+        return foes
+            .slice()
+            .sort((a, b) => this.slotDist(unit, a) - this.slotDist(unit, b)
+            || (a.unit_id < b.unit_id ? -1 : 1))[0];
+    }
     effectTargets(effect, unit) {
         const enemies = this.units.filter((u) => u.side !== unit.side && u.alive);
         const allies = this.units.filter((u) => u.side === unit.side && u.alive);
         const tt = effect.target_type;
+        /* ★ 射程（P6）：effect.range 缺省 9 = 无远弗届（旧战法数据兼容）。
+         *   目标先按射程过滤，再按 _12/_13 截取前 N 个。 */
+        const range = Number.isFinite(effect.range) ? effect.range : 9;
+        const inRange = (u) => this.slotDist(unit, u) <= range;
+        const pickN = (list, n) => (n ? list.slice(0, n) : list);
         if (tt === 'self')
             return unit.alive ? [unit] : [];
-        if (tt.startsWith('ally'))
-            return tt.endsWith('single') ? allies.slice(0, 1) : allies;
-        if (tt.startsWith('enemy'))
-            return tt.endsWith('single') ? enemies.slice(0, 1) : enemies;
+        if (tt.startsWith('ally')) {
+            const pool = allies.filter(inRange);
+            if (tt.endsWith('single') || tt.endsWith('_one'))
+                return pool.slice(0, 1);
+            if (tt.endsWith('_12'))
+                return pickN(pool, 2);
+            if (tt.endsWith('_13'))
+                return pickN(pool, 3);
+            return pool;
+        }
+        if (tt.startsWith('enemy')) {
+            const pool = enemies.filter(inRange);
+            if (tt.endsWith('single') || tt.endsWith('_one'))
+                return pool.slice(0, 1);
+            if (tt.endsWith('_12'))
+                return pickN(pool, 2);
+            if (tt.endsWith('_13'))
+                return pickN(pool, 3);
+            return pool;
+        }
         return enemies.slice(0, 1);
     }
     applyEffect(effect, attacker, target, skillName, phase) {
@@ -188,7 +228,11 @@ export class BattleEngine {
             probability,
         }, 'E2');
         for (const effect of skill.effects) {
-            for (const target of this.effectTargets(effect, unit)) {
+            /* ★ 追击战法（三战口径）：目标 = 该武将普攻目标（战位最近敌军），不吃射程表 */
+            const targets = skill.skill_class === '追击' && String(effect.target_type).startsWith('enemy')
+                ? [this.nearestFoe(unit)].filter(Boolean)
+                : this.effectTargets(effect, unit);
+            for (const target of targets) {
                 if (target.alive)
                     this.applyEffect(effect, unit, target, skill.name, phase);
             }
@@ -243,10 +287,11 @@ export class BattleEngine {
             for (const u of actionOrder(this.units)) {
                 if (!u.alive)
                     continue;
-                const foes = this.enemies(u.side);
-                if (foes.length === 0)
-                    break;
-                const target = foes.slice().sort((a, b) => (a.unit_id < b.unit_id ? -1 : 1))[0];
+            const foes = this.enemies(u.side);
+            if (foes.length === 0)
+                break;
+            /* ★ 普攻目标 = 战位最近敌军（前锋顶前，溃败后依次补位） */
+            const target = this.nearestFoe(u);
                 if (!hasControl(u, '怯战')) {
                     this.applyEffect(this.normalAttackEffect(u), u, target, '普通攻击', 'action');
                 }
