@@ -488,6 +488,22 @@ async function runSmoke(win, server, app) {
     report.panelDock = dockState;
     check('六府入口层级让位且与战略层按钮坞不重叠', dockState?.ok === true, dockState);
 
+    // ★ P0-2：战报入口必须常驻六府 dock 且红点端点可用
+    const repBtn = await wc.executeJavaScript(`(async function(){
+      try {
+        var b = document.querySelector('#slgPanelsBtns .pb[data-id="__reports"]');
+        if (!b) return { ok:false, reason:'no reports button in panels dock' };
+        var dot = document.getElementById('slgRepDot');
+        var r = await fetch('/__slg/panels/reports-head', { cache:'no-store' });
+        var v = await r.json();
+        return { ok: !!v.ok, unread: v.unread, latest: v.latest, hasDot: !!dot,
+          visible: getComputedStyle(b).display !== 'none' };
+      } catch(e){ return { ok:false, error:String(e) }; }
+    })()`, true);
+    report.reportEntry = repBtn;
+    check('战报入口常驻六府 dock 且红点端点可用',
+      repBtn?.ok === true && repBtn?.visible === true && repBtn?.hasDot === true, repBtn);
+
     // 六面板体系 P0：真实页面里逐一点开，并核对「51 条战法每条都有获取途径」
     const panels = await wc.executeJavaScript(`(async function(){
       try {

@@ -296,6 +296,13 @@ export async function startOfflineServer(options = {}) {
       json(res, 200, panelSelfCheck());
       return;
     }
+    // ★ P0-2：战报红点轮询（HTTP，六府 dock 用；is_read 沿用原版战报字段）
+    if (urlPath === '/__slg/panels/reports-head' && req.method === 'GET') {
+      const reps = Array.isArray(state.warReports) ? state.warReports : [];
+      const unread = reps.filter((r) => !(r.a_is_read && r.d_is_read)).length;
+      json(res, 200, { ok: true, latest: reps.length ? reps[reps.length - 1].id : 0, unread });
+      return;
+    }
     if (urlPath === '/__slg/panels/state' && req.method === 'GET') {
       try { sendJson(req, res, panelState(state, cfg)); }
       catch (err) { log('error', `panels state: ${err.stack || err.message}`); json(res, 500, { ok: false, message: err.message }); }

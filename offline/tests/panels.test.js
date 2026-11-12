@@ -16,6 +16,7 @@ import { createWorld, normalizeWorld } from '../server/world.js';
 import {
   panelState, panelAction, panelSelfCheck, ensurePanels, PANEL_CONF,
 } from '../server/domain/panels.js';
+import { applyDays as _applyDays } from '../server/domain/economy.js';
 import { startOfflineServer, PANELS_UI_SOURCE } from '../server/index.js';
 import { strategyViewState } from '../server/domain/strategy.js';
 
@@ -113,6 +114,35 @@ test('确定性：同一状态深拷贝后执行相同动作序列，结果逐�
     return JSON.stringify({ results, view: panelState(s, cfg) });
   };
   assert.equal(run(), run());
+});
+
+test('收支流水：锻造/政令扣费逐笔入账、带事由；面板输出流水视图；日产/军饷由 applyDays 记账', () => {
+  const s = fresh();
+  const goldBefore = Number(s.roleRes.gold) || 0;
+  panelAction(s, cfg, { type: 'forge', cfgId: 300003 });
+  const forgeLedger = (s.resLedger || []).filter((e) => e.reason.includes('锻造'));
+  assert.ok(forgeLedger.length >= 1, '锻造应入流水');
+  for (const e of forgeLedger) {
+    assert.ok(e.delta < 0, '锻造消耗应为负数');
+    assert.ok(Number(e.day) >= 1, '流水带游戏日');
+  }
+  panelAction(s, cfg, { type: 'proposal', id: 'farm' });
+  assert.ok((s.resLedger || []).some((e) => e.reason.includes('政令')), '政令应入流水');
+  // 面板输出：entries 逆序（最新在前）、net 覆盖五资源
+  const v = panelState(s, cfg);
+  const lg = v.interior.output.ledger;
+  assert.ok(lg.entries.length >= 1);
+  assert.equal(lg.entries[0], (s.resLedger || [])[(s.resLedger || []).length - 1]);
+  assert.equal(lg.net.length, 5);
+  const goldDelta = (s.resLedger || []).filter((e) => e.res === 'gold')
+    .reduce((a, e) => a + e.delta, 0);
+  assert.equal(Number(s.roleRes.gold), goldBefore + goldDelta, '扣费与流水一致');
+  // applyDays：日产与军饷两笔（给每兵 1 粮的维持费，800 兵必出军饷）
+  const before = (s.resLedger || []).length;
+  _applyDays(s, cfg, 3, { upkeepPerSoldier: 1 });
+  const added = (s.resLedger || []).slice(before);
+  assert.ok(added.some((e) => e.reason === '属地日产' && e.delta > 0), '日产入账');
+  assert.ok(added.some((e) => e.reason === '军饷' && e.delta === -2400), '军饷入账（800 兵 × 3 日 × 1 粮）');
 });
 
 test('动作校验：非法输入全部被拒且不破坏存档', () => {

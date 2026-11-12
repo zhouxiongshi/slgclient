@@ -75,6 +75,9 @@
     '  padding:5px 10px;min-width:88px;cursor:pointer;font:13px "Microsoft YaHei",sans-serif;text-align:left;letter-spacing:1px;}',
     '#slgPanelsDock .pb:hover{background:#3a3423;color:#ffe6a6;}',
     '#slgPanelsDock .pb.on{background:#6b5527;color:#fff2cf;}',
+    '#slgPanelsDock .pb{position:relative;}',
+    '#slgPanelsDock .dot{position:absolute;right:4px;top:4px;width:8px;height:8px;border-radius:50%;'
+      + 'background:#e04a3a;box-shadow:0 0 4px rgba(224,74,58,.8);display:none;}',
     '#slgPanelsDock .fold{background:rgba(20,22,16,.9);color:#c9b98c;border:1px solid #6a624a;border-radius:5px;',
     '  padding:2px 9px;cursor:pointer;font:12px "Microsoft YaHei",sans-serif;}',
     '#slgPanelsMask{position:fixed;inset:0;z-index:100100;background:rgba(6,8,6,.9);display:none;}',
@@ -102,8 +105,7 @@
     '#slgPanelsWin .card{background:#1d2017;border:1px solid #3d3b2b;border-radius:7px;padding:12px 14px;margin-bottom:12px;}',
     '#slgPanelsWin .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(238px,1fr));gap:10px;}',
     '#slgPanelsWin .k{color:#8f9c84;}#slgPanelsWin .v{color:#f0e2bd;}',
-    '#slgPanelsWin .up{color:#e8a06a;}#slgPanelsWin .down{color:#9dca8b;}',
-    '#slgPanelsWin .btn{background:#2c2f22;color:#e8c670;border:1px solid #7a6a42;border-radius:4px;',
+    '#slgPanelsWin .up{color:#e8a06a;}#slgPanelsWin .down{color:#9dca8b;}',    '#slgPanelsWin .btn{background:#2c2f22;color:#e8c670;border:1px solid #7a6a42;border-radius:4px;',
     '  padding:4px 11px;cursor:pointer;font:12px "Microsoft YaHei",sans-serif;margin:2px 4px 2px 0;}',
     '#slgPanelsWin .btn:hover{background:#474029;}#slgPanelsWin .btn:disabled{opacity:.4;cursor:not-allowed;}',
     '#slgPanelsWin .btn.warn{border-color:#a8664c;color:#e6a786;}',
@@ -462,6 +464,29 @@
         + '<div class="muted">日产 +' + fmt(r.yield) + '</div></div>';
     }).join('') + '</div></div>';
 
+    // ★ P0-3：收支流水——玩家第一次能回答「我的资源怎么没的」
+    var lg = data.interior.output && data.interior.output.ledger;
+    if (lg) {
+      out += '<div class="card"><h3>收支流水（近期净变化）</h3><div class="grid">'
+        + lg.net.map(function (n) {
+          var cls = n.delta > 0 ? 'up' : (n.delta < 0 ? 'down' : 'muted');
+          return '<div><span class="k">' + esc(n.label) + '</span> <span class="' + cls + '">'
+            + (n.delta > 0 ? '+' : '') + fmt(n.delta) + '</span></div>';
+        }).join('') + '</div>';
+      if (lg.entries.length) {
+        out += '<table><thead><tr><th>游戏日</th><th>资源</th><th>增减</th><th>事由</th></tr></thead><tbody>'
+          + lg.entries.map(function (e) {
+            var lbl = (data.interior.output.resources.find(function (r) { return r.key === e.res; }) || {}).label || e.res;
+            var d = Number(e.delta) || 0;
+            return '<tr><td class="muted">' + esc(e.day) + '</td><td>' + esc(lbl) + '</td><td class="'
+              + (d > 0 ? 'up' : 'down') + '">' + (d > 0 ? '+' : '') + fmt(d) + '</td><td class="muted">'
+              + esc(e.reason) + '</td></tr>';
+          }).join('') + '</tbody></table></div>';
+      } else {
+        out += '<div class="muted">还没有收支记录：每日结算、锻造、政令都会在这里记账。</div></div>';
+      }
+    }
+
     if (!list.length) return out + '<div class="card muted">该分类暂无物品。</div>';
     out += '<div class="grid">' + list.map(function (i) {
       var actions = '';
@@ -659,6 +684,30 @@
     if (again) { again.focus(); try { again.setSelectionRange(pos, pos); } catch (_) {} }
   }
 
+  /* ---------------- 战报红点（P0-2） ---------------- */
+  var API_ROOT = API.replace(/\/panels$/, '');   // '/__slg'
+  function fetchReportsHead(cb) {
+    fetch(API_ROOT + '/panels/reports-head', { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (v) { if (cb) cb(v); }).catch(function () {});
+  }
+  function pollReports() {
+    fetchReportsHead(function (v) {
+      var dot = document.getElementById('slgRepDot');
+      if (dot && v) dot.style.display = v.unread > 0 ? 'block' : 'none';
+    });
+  }
+  function markReportsSeen() {
+    // 点开战报窗即视为已读（原版 war.read 在战报详情内逐条触发；红点只做提醒）
+    var dot = document.getElementById('slgRepDot');
+    if (dot) dot.style.display = 'none';
+    fetchReportsHead(function (v) {
+      if (v && typeof v.latest === 'number') {
+        try { localStorage.setItem('slgLastReportSeen', String(v.latest)); } catch (_) {}
+      }
+    });
+  }
+
   /* ---------------- 启动 ---------------- */
   function boot() {
     if (document.getElementById('slgPanelsDock')) return;
@@ -671,7 +720,11 @@
     dock.innerHTML = '<button class="fold" data-fold="1">六府 ▸</button><div id="slgPanelsBtns">'
       + NAV.map(function (x) {
         return '<button class="pb" data-id="' + x[0] + '">' + x[1] + '</button>';
-      }).join('') + '</div>';
+      }).join('')
+      /* ★ P0-2：战报入口常驻六府 dock——原「战报」按钮只在天下大势全屏地图里，
+         玩家在城内视图找不到，等于没有入口。红点 = 有未读战报。 */
+      + '<button class="pb" data-id="__reports">战报<span class="dot" id="slgRepDot"></span></button>'
+      + '</div>';
     dock.addEventListener('click', function (e) {
       if (e.target.hasAttribute('data-fold')) {
         ui.dockOpen = !ui.dockOpen;
@@ -680,7 +733,14 @@
         return;
       }
       var b = e.target.closest('.pb');
-      if (b) open(b.getAttribute('data-id'));
+      if (!b) return;
+      var id = b.getAttribute('data-id');
+      if (id === '__reports') {
+        if (window.__slgReportsWindow) window.__slgReportsWindow();
+        markReportsSeen();
+        return;
+      }
+      open(id);
     });
     document.body.appendChild(dock);
     // 折叠态是默认：只露一枚按钮；展开时按钮竖排，宽度 ≈ 100px，不侵入战略层版面
@@ -706,6 +766,8 @@
       render: render,
       setData: function (v) { data = v; render(); },
     };
+    pollReports();
+    setInterval(pollReports, 25000);
     fetchState();
   }
 

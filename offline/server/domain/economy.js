@@ -26,6 +26,21 @@ export function projectGrain({ grain, yieldPerDay, soldiers, upkeepPerSoldier, d
   return series;
 }
 
+/**
+ * 收支流水（P0-3）：每笔资源变动记一条 {day,res,delta,reason}，滚动保留 240 条。
+ * 玩家在府库面板看「钱花哪了」的唯一事实来源；delta 为 0 不记。
+ */
+export function recordRes(state, res, delta, reason, day) {
+  const d = Math.round(Number(delta) || 0);
+  if (!d) return;
+  if (!Array.isArray(state.resLedger)) state.resLedger = [];
+  state.resLedger.push({
+    day: Math.floor(Number(day ?? state.clock?.day) || 1),
+    res: String(res), delta: d, reason: String(reason || ''),
+  });
+  if (state.resLedger.length > 240) state.resLedger.splice(0, state.resLedger.length - 240);
+}
+
 export function applyDays(state, cfg, days, rules) {
   if (days <= 0) return { days: 0, upkeepPaid: 0, soldiers: countSoldiers(state) };
   const r = state.roleRes;
@@ -33,6 +48,9 @@ export function applyDays(state, cfg, days, rules) {
   const limit = cfg.basic.role?.decree_limit ?? 20;
   const decreePerDay = rules.decreePerDay ?? 30;
   const cost = Math.floor(countSoldiers(state) * (rules.upkeepPerSoldier ?? 0));
+  const startDay = Math.floor(Number(state.clock?.day) || 1);
+  const before = {};
+  for (const k of STOCK) before[k] = Number(r[k]) || 0;
   let upkeepPaid = 0;
   for (let i = 0; i < days; i += 1) {
     for (const k of STOCK) {
@@ -44,6 +62,12 @@ export function applyDays(state, cfg, days, rules) {
     upkeepPaid += pay;
     r.decree = Math.min(limit, (r.decree || 0) + decreePerDay);
   }
+  // 流水：按整段结算记净变化；满仓被截断也如实记录（delta < 理论日产）
+  for (const k of STOCK) {
+    const delta = (Number(r[k]) || 0) - before[k];
+    if (delta) recordRes(state, k, delta, '属地日产', startDay);
+  }
+  if (upkeepPaid) recordRes(state, 'grain', -upkeepPaid, '军饷', startDay + days - 1);
   return { days, upkeepPaid, soldiers: countSoldiers(state) };
 }
 

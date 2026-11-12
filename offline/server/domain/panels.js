@@ -16,6 +16,7 @@ import { slotBlock } from './slots.js';
    刻意不 import strategy.js —— 它反向 import world.js，而 world.js 又 import 本文件，会成环。 */
 import { marchableNeighbors, marchGraph } from './march.js';
 import { booksOf } from './strategy-log.js';
+import { recordRes } from './economy.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const load = (p) => JSON.parse(readFileSync(resolve(ROOT, p), 'utf8'));
@@ -220,6 +221,10 @@ function interiorOutput(state, cfg) {
     if (isDeployed(state, gId)) pct = round2(pct / 2);   // 出征中减半，明写在界面
     bonusPct[p.id] = Math.max(0, pct);
   }
+  // 收支流水视图（P0-3）：府库面板展示「钱花哪了」；净变化取最近 30 条按资源合计
+  const ledgerSrc = Array.isArray(state.resLedger) ? state.resLedger : [];
+  const netKeys = ['wood', 'iron', 'stone', 'grain', 'gold'];
+  const netSrc = ledgerSrc.slice(-30);
   return {
     bonusPct,
     resources: ['wood', 'iron', 'stone', 'grain', 'gold', 'decree'].map((k) => ({
@@ -228,6 +233,13 @@ function interiorOutput(state, cfg) {
       yield: Number(res[`${k}_yield`]) || 0,
       capacity: k === 'decree' ? null : Number(res.depot_capacity) || 0,
     })),
+    ledger: {
+      entries: ledgerSrc.slice(-14).reverse(),
+      net: netKeys.map((k) => ({
+        key: k, label: RES_LABEL[k],
+        delta: netSrc.reduce((acc, e) => acc + (e.res === k ? (Number(e.delta) || 0) : 0), 0),
+      })),
+    },
   };
 }
 
@@ -507,6 +519,7 @@ export function panelAction(state, cfg, action = {}) {
         if ((Number(state.roleRes?.[k]) || 0) < v) return fail(`${RES_LABEL[k] || k}不足，需 ${v}`);
       }
       for (const [k, v] of Object.entries(cost)) state.roleRes[k] = (Number(state.roleRes[k]) || 0) - v;
+      for (const [k, v] of Object.entries(cost)) recordRes(state, k, -v, `锻造「${def.name}」`);
       const id = Math.max(500000, ...(state.items || []).map((i) => Number(i.id) || 0)) + 1;
       state.items.push({ id, cfgId: def.id, kind: 'equip', count: 1, ownerGeneralId: 0, source: `锻造·${def.forge.drawing}`, forgedAt: int(state.clock?.day, 1) });
       return done(`「${def.name}」锻造完成（100% 成功，词条固定）`, { itemId: id });
@@ -584,6 +597,7 @@ export function panelAction(state, cfg, action = {}) {
         if ((Number(state.roleRes?.[k]) || 0) < v) return fail(`${RES_LABEL[k] || k}不足，需 ${v}`);
       }
       for (const [k, v] of Object.entries(cost)) state.roleRes[k] -= v;
+      for (const [k, v] of Object.entries(cost)) recordRes(state, k, -v, `政令「${p.name}」`);
       state.interior.appliedTurn = turnOf(state);
       state.interior.appliedThisTurn = id;
       if (id === 'levy') state.interior.morale = clamp(state.interior.morale - 8, 0, 100);

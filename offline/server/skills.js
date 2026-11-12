@@ -1490,6 +1490,52 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       g.stroke();
     });
 
+    // ★ P0-1：势力旗帜——燕尾旗插在城池插画上方，旗面 = 势力色 + 诸侯姓氏单字。
+    //   玩家本城旗更大、金描边；无主城灰旗无字。画在城名之前，名字始终在最上层。
+    s.cities.forEach(function (c) {
+      var info = cityInfo(c) || {};
+      var q = P([c.x, c.y]);
+      var footY = q[1] - (info.h || 40) * scale * 0.5;
+      var isPlayer = s.playerCity === c.id;
+      var poleH = Math.max(12, (isPlayer ? 30 : 24) * scale);
+      var fw = poleH * 1.15, fh = poleH * 0.52, tail = fh * 0.42;
+      var topY = footY - poleH;
+      var neutral = !c.ownerName || (s.neutral && c.ownerName === s.neutral.name);
+      g.save();
+      g.strokeStyle = isPlayer ? '#e8c670' : 'rgba(58,42,26,.9)';
+      g.lineWidth = Math.max(1, 1.6 * scale);
+      g.beginPath(); g.moveTo(q[0], footY); g.lineTo(q[0], topY); g.stroke();
+      g.fillStyle = isPlayer ? '#ffd98a' : '#d9c08a';
+      g.beginPath(); g.arc(q[0], topY, Math.max(1.2, 1.8 * scale), 0, 6.2832); g.fill();
+      // 燕尾旗面：飞端内凹 V 口
+      g.beginPath();
+      g.moveTo(q[0], topY);
+      g.lineTo(q[0] + fw, topY);
+      g.lineTo(q[0] + fw - tail, topY + fh / 2);
+      g.lineTo(q[0] + fw, topY + fh);
+      g.lineTo(q[0], topY + fh);
+      g.closePath();
+      g.fillStyle = c.color || '#8a8a8a';
+      g.globalAlpha = 0.92;
+      g.fill();
+      g.globalAlpha = 1;
+      g.strokeStyle = isPlayer ? 'rgba(232,198,112,.95)' : 'rgba(30,24,14,.55)';
+      g.lineWidth = isPlayer ? Math.max(1.2, 1.6 * scale) : Math.max(0.8, 1 * scale);
+      g.stroke();
+      var ch = neutral ? '' : String(c.ownerName || '').charAt(0);
+      if (ch && fh >= 9) {
+        var cx = q[0] + fw * 0.42, cy = topY + fh / 2;
+        g.font = Math.min(14, fh * 0.72).toFixed(1) + 'px "KaiTi","STKaiti","SimSun",serif';
+        g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+        g.lineWidth = Math.max(1, 2 * scale);
+        g.strokeStyle = 'rgba(0,0,0,.55)';
+        g.strokeText(ch, cx, cy);
+        g.fillStyle = '#f7efdb';
+        g.fillText(ch, cx, cy);
+      }
+      g.restore();
+    });
+
     // 关隘贴图里地名带方底，只抠图标本身；地名改用描边文字
     var passImg = (LAYER.pass && hasLayers && DETAIL.layers.pass)
       ? ensureImg('layer:pass', layerUrl(DETAIL.layers.pass)) : null;
