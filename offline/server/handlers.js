@@ -15,7 +15,7 @@ import { resolveBattle } from './battle.js';
 import { skillById, LEVEL_COUNT } from './skills.js';
 import { marchMs, rewindDays } from './clock.js';
 import { facilityBonus, recordRes } from './domain/economy.js';
-import { cityLayer, ensureCityEcon } from './domain/city-econ.js';
+import { cityLayer, ensureCityEcon, conscriptFactor } from './domain/city-econ.js';
 import {
   chapterRules, settleCampaign, chooseChapter, onTileCleared, applyChoice, noticeRecruit,
 } from './domain/campaign.js';
@@ -946,16 +946,28 @@ export function handleRequest(ctx, req) {
           break;
         }
         let left = total;
-        popRows.sort((a, b) => b.pop - a.pop);
+        /* ★ P7：先吃队伍所在城的人口（分城征兵就该分城出人），再按人口从多到少分摊 */
+        const here = Number(army.cityId) || 0;
+        popRows.sort((a, b) => (b.id === here ? 1 : 0) - (a.id === here ? 1 : 0) || b.pop - a.pop);
         popRows.forEach((row, idx) => {
           const share = idx === popRows.length - 1
             ? left
             : Math.min(row.pop, Math.floor(total * row.pop / Math.max(1, popTotal)));
           left -= share;
-          if (econ[row.id]) econ[row.id].pop = Math.max(0, row.pop - share);
+          if (econ[row.id]) {
+            econ[row.id].pop = Math.max(0, row.pop - share);
+            /* ★ P7 战争系数：征兵抽丁伤民心（抽走人口的 10% ≈ 民心 -20） */
+            const bite = (share / Math.max(1, row.pop)) * 200;
+            if (bite > 0) {
+              econ[row.id].morale = Math.max(0, Math.round(((econ[row.id].morale ?? 60) - bite) * 10) / 10);
+            }
+          }
         });
       }
-      const sec = conscriptSec(total, c.cost_time);
+      /* ★ P7 兵营与民心：兵营等级越高征兵越快，民心低则征不动 */
+      const secRaw = conscriptSec(total, c.cost_time);
+      const cf = conscriptFactor(state, army.cityId || mainCity(state)?.cityId || 1);
+      const sec = Math.max(2, Math.min(30, Math.round(secRaw * cf)));
       army.soldiers = normalizeTriple(army.soldiers);
       army.con_times = normalizeTriple(army.con_times);
       army.con_cnts = normalizeTriple(army.con_cnts);
@@ -1064,19 +1076,28 @@ export function handleRequest(ctx, req) {
       const exp = exploreTalent(state, cfg, cityId);
       if (!exp.ok) { rsp.code = 0; rsp.msg = { reason: exp.reason }; break; }
       const pol = protagonistStat(state, '政治');
-      const rate = Math.min(0.95, 0.55 + pol * 0.003);
+      /* ★ P7 三顾之礼：同一个人被拒过一次，再次登门成功率 +12%（最多叠到 95%）。
+         三国志11 的登庸手感靠的就是「多跑几趟」，而不是一次赌脸。 */
+      state.tavern.favor = state.tavern.favor || {};
+      const favorN = Number(state.tavern.favor[exp.target.cfgId] || 0);
+      const rate = Math.min(0.95, 0.55 + pol * 0.003 + favorN * 0.12);
       const success = Math.random() < rate;
       state.roleRes.gold -= cost;
       recordRes(state, 'gold', -cost, `探索人才·${cityNameOf(cityId)}`);
       if (!success) {
+        state.tavern.favor[exp.target.cfgId] = favorN + 1;
         ctx.push?.('roleRes.push', roleResOf(state));
         ctx.save();
         rsp.code = 0;
-        rsp.msg = { reason: 'not_found', rate: Math.round(rate * 100), cityId, name: exp.target.name };
+        rsp.msg = {
+          reason: 'not_found', rate: Math.round(rate * 100), cityId, name: exp.target.name,
+          favor: favorN + 1,
+        };
         break;
       }
       const person = exp.target;
       person.recruited = true;
+      delete state.tavern.favor[person.cfgId];
       const g = makeGeneral(cfg, nextId(state, 'generalId'), person.cfgId, cityId, 1);
       g.loyal = Math.min(100, 80 + Math.round(protagonistStat(state, '魅力') / 20));
       state.generals.push(g);
@@ -1222,6 +1243,7 @@ export function handleRequest(ctx, req) {
       const frac = Number.isFinite(fracRaw) && fracRaw > 0 && fracRaw <= 1 ? fracRaw : 1;
       const result = strategyAttack(state, cfg, ctx, {
         cityId: Number(m.cityId), armyId: Number(m.armyId), frac,
+        fromCityId: Number(m.fromCityId) || 0,
       });
       if (!result.ok) rsp.code = CODE.InvalidParam;
       else ctx.save();
@@ -1229,6 +1251,7 @@ export function handleRequest(ctx, req) {
         ok: result.ok, marching: result.marching || false, reason: result.reason,
         marchId: result.marchId, arriveDay: result.arriveDay, need: result.need,
         city: result.city, grainCost: result.grainCost,
+        marchDays: result.marchDays, km: result.km, speed: result.speed, from: result.from,
       };
       break;
     }

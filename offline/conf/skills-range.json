@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "note": [
+    "战法有效距离与普攻攻击距离（三国志战略版口径）。",
+    "战场三槽：前锋=0 / 中军=1 / 大营=2；跨阵营距离 = 双方槽位之和 + 1，取值 1~5。",
+    "前锋打前锋=1，前锋打大营=3，大营打前锋=3，大营打大营=5。",
+    "距离不够时：单体战法打空，群体战法命中人数自然变少，普攻打不出——站位因此有意义。",
+    "derive 是按「效果类型 + 单体/群体」推导的默认值；ranges 里可以逐个战法覆盖（cfgId 为键）。"
+  ],
+  "attackDistance": {
+    "default": 3,
+    "byArms": {
+      "1": 3,
+      "2": 4,
+      "3": 3
+    },
+    "overrides": {}
+  },
+  "derive": {
+    "PHYSICAL_DAMAGE": { "single": 3, "group": 4 },
+    "STRATEGY_DAMAGE": { "single": 4, "group": 5 },
+    "CONTROL": { "single": 3, "group": 4 },
+    "HEAL": { "single": 9, "group": 9 },
+    "BUFF": { "single": 9, "group": 9 }
+  },
+  "ranges": {}
+}

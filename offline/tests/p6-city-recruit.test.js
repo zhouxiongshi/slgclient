@@ -53,9 +53,9 @@ test('UI 描述同步：敌方目标战法的 des 带射程，UI.range 与内核
   for (const s of SKILLS) {
     assert.ok(s.ui.range != null, `${s.name} 应有 ui.range`);
     if (s.trigger !== 3 && rangeOf(s) <= 5 && rangeOf(s) >= 3) {
-      assert.match(s.ui.des || '', /射程|普攻目标/, `${s.name} 描述应注明射程`);
+      assert.match(s.ui.des || '', /射程|有效距离|普攻目标/, `${s.name} 描述应注明射程`);
     }
-    if (/射程/.test(s.ui.des || '')) withNote += 1;
+    if (/射程|有效距离/.test(s.ui.des || '')) withNote += 1;
   }
   assert.ok(withNote >= 10, `至少 10 条战法描述带射程标注（实际 ${withNote}）`);
 });

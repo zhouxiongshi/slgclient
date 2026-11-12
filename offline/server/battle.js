@@ -15,7 +15,7 @@
  */
 import { runBattle, DEFAULT_BATTLE_CONFIG, crc32Utf8 } from '../kernel/index.js';
 import { generalToArray, findGeneral, nextId } from './world.js';
-import { kernelSkillAt, reportSkillFields, SKILLS, LEVEL_COUNT } from './skills.js';
+import { kernelSkillAt, reportSkillFields, SKILLS, LEVEL_COUNT, attackDistanceOf } from './skills.js';
 
 /** 真实兵力 → 内核兵力 1:1（配合下面的 troop_factor 微调）。
  *  原先用 10 会把 1000 兵压成 100 兵，1 回合就打完；实测 1:1 + troop_factor=0.2
@@ -99,6 +99,9 @@ function makeUnit(unitId, side, general, cfg, troops, pos = 0) {
     troops: Math.max(1, Math.ceil(troops / TROOP_SCALE)),
     max_troops: Math.max(1, Math.ceil(troops / TROOP_SCALE)),
     speed: general.curArms ? 100 + general.curArms : 100,
+    /* ★ P7 普攻攻击距离：武将自己填了 attack_distance 就用它，否则按兵种（盾3/弓4/骑3）。
+       大营里的短手武将打不到人，只有战法能越排——站位因此有取舍。 */
+    attack_range: attackDistanceOf(general, general.curArms),
   };
 }
 

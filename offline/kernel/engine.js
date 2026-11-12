@@ -43,6 +43,9 @@ function cloneUnits(inputs) {
             /* ★ 战位（0=前锋 1=中军 2=大营）：战法射程/追击目标按战位距离结算。
              *   旧战报数据无 pos 字段 → 从 unit_id 后缀推导（aN/dN），保证旧用例可复现。 */
             pos: Number.isFinite(u.pos) ? Math.max(0, Math.min(4, Math.trunc(u.pos))) : Math.max(0, (Number(String(u.unit_id).slice(1)) || 0)),
+            /* ★ P7 普攻攻击距离：缺省 9 = 不受限（旧战报/旧用例行为不变）。
+             *   给了 1~5 才生效：距离不足者本回合普攻打不到人，只能靠战法。 */
+            attack_range: Number.isFinite(u.attack_range) ? Math.max(1, Math.min(9, Math.trunc(u.attack_range))) : 9,
             states: [],
             buffs: [],
             alive: true,
@@ -81,9 +84,12 @@ export class BattleEngine {
             return Math.abs((a.pos || 0) - (b.pos || 0));
         return (a.pos || 0) + (b.pos || 0) + 1;
     }
-    /** 普攻/追击目标：战位距离最近的存活敌军（同距取 unit_id 小者）。 */
-    nearestFoe(unit) {
-        const foes = this.enemies(unit.side);
+    /** 普攻/追击目标：战位距离最近、且在攻击距离内的存活敌军（同距取 unit_id 小者）。
+     *  ★ P7：超出 attack_range 就返回 null —— 大营里的短手武将打不出普攻，
+     *    站位与配将才有取舍（三战口径）。 */
+    nearestFoe(unit, maxDist) {
+        const limit = Number.isFinite(maxDist) ? maxDist : (unit.attack_range ?? 9);
+        const foes = this.enemies(unit.side).filter((u) => this.slotDist(unit, u) <= limit);
         if (!foes.length)
             return null;
         return foes
@@ -290,9 +296,10 @@ export class BattleEngine {
             const foes = this.enemies(u.side);
             if (foes.length === 0)
                 break;
-            /* ★ 普攻目标 = 战位最近敌军（前锋顶前，溃败后依次补位） */
+            /* ★ 普攻目标 = 攻击距离内最近的敌军（前锋顶前，溃败后依次补位）。
+             *   P7：超出攻击距离则本回合无普攻（战法仍可越排释放）。 */
             const target = this.nearestFoe(u);
-                if (!hasControl(u, '怯战')) {
+                if (target && !hasControl(u, '怯战')) {
                     this.applyEffect(this.normalAttackEffect(u), u, target, '普通攻击', 'action');
                 }
                 const active = u.hero.skills

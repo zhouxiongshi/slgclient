@@ -839,6 +839,9 @@
   }
   /* ---------------- 开局举义页（P4-①）：择主 8 诸侯卡 + 择都 3 候选城 ---------------- */
   var oathEl = null;
+  /* ★ P7：举义页切城后「另择明主」要能回退——lords 原先只是 renderOathLords 的局部变量，
+     在 renderOathCities 的回调里根本取不到（冒烟报 ReferenceError）。 */
+  var oathLords = [];
   function showOath() {
     if (oathEl) return;
     oathEl = document.createElement('div');
@@ -891,6 +894,7 @@
     setTimeout(function () { el.remove(); }, 520);
   }
   function renderOathLords(lords) {
+    oathLords = lords || oathLords || [];
     var box = document.getElementById('slgOathBody');
     if (!box) return;
     box.innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">'
@@ -935,7 +939,7 @@
         + '</div>';
     }).join('');
     box.innerHTML = head + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">' + cards + '</div>';
-    document.getElementById('slgOathBack').addEventListener('click', function () { renderOathLords(lords); });
+    document.getElementById('slgOathBack').addEventListener('click', function () { renderOathLords(oathLords); });
     Array.prototype.forEach.call(box.querySelectorAll('.slgOathCity'), function (card) {
       card.addEventListener('mouseenter', function () { card.style.borderColor = '#e8c670'; card.style.transform = 'translateY(-3px)'; });
       card.addEventListener('mouseleave', function () { card.style.borderColor = '#3a3325'; card.style.transform = ''; });

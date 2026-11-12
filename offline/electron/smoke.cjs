@@ -442,6 +442,14 @@ async function runSmoke(win, server, app) {
         await new Promise(function(r){ setTimeout(r, 1200); });
         if (typeof window.__slgHomeWindow === 'function') window.__slgHomeWindow();
         else { var btn = document.getElementById('slgBtnHome'); if (btn) btn.click(); }
+        await new Promise(function(r){ setTimeout(r, 1200); });
+        /* ★ P7：府库/设施/存档从「内政」页拆到「府库」页（内政页改为逐城治理），
+           这里先切到府库页签再检查存档卡。 */
+        var tw = document.getElementById('slgCityWin');
+        var btns = tw ? tw.querySelectorAll('.tabs button') : [];
+        for (var k = 0; k < btns.length; k++) {
+          if ((btns[k].textContent || '').trim() === '府库') { btns[k].click(); break; }
+        }
         // 本城页要串行拉设施、资源、meta、存档档位，给足时间
         var text = '';
         for (var i = 0; i < 24; i++) {

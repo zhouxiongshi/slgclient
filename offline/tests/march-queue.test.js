@@ -8,6 +8,7 @@ import { loadConfig } from '../server/config.js';
 import { createWorld, normalizeWorld } from '../server/world.js';
 import {
   strategyAttack, strategyResolveMarches, ensureStrategy, strategyViewState,
+  marchKmBetween, armySpeed, marchDaysBy,
 } from '../server/domain/strategy.js';
 import { ensureCityEcon } from '../server/domain/city-econ.js';
 
@@ -37,7 +38,18 @@ test('行军系统：出征生成行军队列+扣行军粮+锁队；到达日结
   assert.ok((s.resLedger || []).some((e) => e.reason.includes('行军粮')), '行军粮入流水');
   assert.equal(army.marchId, r.marchId, '队伍被锁');
   assert.equal(st.marches.length, 1);
-  assert.equal(st.marches[0].arriveDay - st.marches[0].departDay, 2, '相邻城 2 游戏日');
+  /* ★ P7：行军日数由里程 ÷ 速度算，不再是写死的 2 日 */
+  const km = marchKmBetween(st.playerCity, targetId);
+  const spd = armySpeed(s, cfg, army);
+  const baseDays = marchDaysBy(km, spd);
+  assert.ok(km > 0, '路网必带里程');
+  assert.equal(st.marches[0].km, km, '行军记录带里程');
+  assert.equal(st.marches[0].speed, spd, '行军记录带队速');
+  assert.equal(st.marches[0].arriveDay - st.marches[0].departDay, baseDays,
+    `行军日 = ceil(里程 ÷ (55×速度/100))，实际 ${baseDays} 日`);
+  assert.ok(baseDays >= 1 && baseDays <= 12, '日数夹在 1~12');
+  assert.equal(marchDaysBy(km * 3, spd) > marchDaysBy(km, spd), true, '越远越慢');
+  assert.equal(marchDaysBy(km, spd * 2) < baseDays || baseDays === 1, true, '越快越早到');
 
   // 行军中的队伍不能再出征（自动选队也应跳过它）
   const again = strategyAttack(s, cfg, {}, { cityId: targetId, armyId: army.id, frac: 1 });

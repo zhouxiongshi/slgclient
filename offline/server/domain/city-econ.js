@@ -35,22 +35,37 @@ const SPECIALTY_MAP = [
   { key: '玉', res: 'gold', add: 60 },
 ];
 
-/** 确保城市经济数据存在（新档/旧档首次进入时初始化）。 */
+/** 确保城市经济数据存在（新档/旧档首次进入时初始化）。
+ *  ★ P7：12 维城属性不再是摆设——民心/治安/兵源/城防全部接进逐城经济，
+ *    每座城的「性格」由 attrs 决定，玩家经营后逐城变化。
+ */
 export function ensureCityEcon(state) {
   const st = state.strategy;
   if (!st) return null;
   if (!st.cityEcon) st.cityEcon = {};
   const map = cityMap();
   for (const [id, c] of map) {
+    const attr = c.attrs || {};
     if (!st.cityEcon[id]) {
       st.cityEcon[id] = {
         pop: Math.min(100000, c.population || 30000),
-        devAgri: c.attrs?.农业 ?? 50,
-        devTrade: c.attrs?.商业 ?? 50,
+        devAgri: attr.农业 ?? 50,
+        devTrade: attr.商业 ?? 50,
+        devArms: attr.兵源 ?? 50,
+        devDef: attr.城防 ?? 50,
+        morale: attr.民心 ?? 60,          // 民心：影响人口增长与征兵意愿
+        order: attr.治安 ?? 60,           // 治安：影响灾害概率与守军恢复
         store: 2000,
         mod: null,          // {grain: 0.5|1.5, until: day}
         disaster: null,     // 最近一次灾害 {type, day, name}
       };
+    } else {
+      // 旧档兜底：只补缺，不改已有值
+      const e = st.cityEcon[id];
+      if (e.devArms == null) e.devArms = attr.兵源 ?? 50;
+      if (e.devDef == null) e.devDef = attr.城防 ?? 50;
+      if (e.morale == null) e.morale = attr.民心 ?? 60;
+      if (e.order == null) e.order = attr.治安 ?? 60;
     }
   }
   for (const id of Object.keys(st.cityEcon)) {
@@ -59,7 +74,24 @@ export function ensureCityEcon(state) {
   return st.cityEcon;
 }
 
-/** 单城日产加成层（叠加在基础产量之上）。devAgri/50+1 系数：长安农业 87 → 粮 +52/日。 */
+/** 开发度 → 等级 1~5（三国志14 分档：0-23 / 24-47 / 48-71 / 72-95 / 96+）。 */
+export function devLevel(dev) {
+  return Math.max(1, Math.min(5, Math.floor((Number(dev) || 0) / 24) + 1));
+}
+
+/** 征兵工期系数：兵营等级越高越快（LV1 1.0 → LV5 0.76），民心低则征不动。 */
+export function conscriptFactor(state, cityId) {
+  const econ = ensureCityEcon(state);
+  const e = econ?.[Number(cityId)];
+  if (!e) return 1;
+  const arms = devLevel(e.devArms);
+  const morale = Number(e.morale ?? 60);
+  const f = (1 - (arms - 1) * 0.06) * (0.9 + (100 - morale) / 200);
+  return Math.max(0.7, Math.min(1.3, Math.round(f * 100) / 100));
+}
+
+/** 单城日产加成层（叠加在基础产量之上）。devAgri/50+1 系数：长安农业 87 → 粮 +52/日。
+ *  ★ P7：民心也进产量（低民心怠耕），开发度按等级参与。 */
 export function cityYield(state, cityId) {
   const econ = ensureCityEcon(state);
   const e = econ?.[Number(cityId)];
@@ -68,14 +100,24 @@ export function cityYield(state, cityId) {
   let grainMod = 1;
   if (e.mod && Number(state.clock?.day) <= e.mod.until) grainMod = e.mod.grain;
   const besieged = state.strategy?.cities?.[Number(cityId)]?.besieged ? 0.5 : 1;
-  const grain = Math.round(30 * (e.devAgri / 50) * grainMod * besieged);
-  const gold = Math.round(20 * (e.devTrade / 50) * besieged);
+  // 民心 0~100 → 产量 ×0.85~1.10；民心越低越怠耕
+  const moraleMod = 0.85 + (Number(e.morale ?? 60) / 400);
+  const grain = Math.round(30 * (e.devAgri / 50) * grainMod * besieged * moraleMod);
+  const gold = Math.round(20 * (e.devTrade / 50) * besieged * moraleMod);
   const extra = {};
   for (const sp of SPECIALTY_MAP) {
     if ((c.specialty || '').includes(sp.key)) extra[sp.res] = (extra[sp.res] || 0) + sp.add;
   }
   if (grainMod !== 1 && extra.grain) extra.grain = Math.round(extra.grain * grainMod);
-  return { cityId: Number(cityId), grain, gold, extra, grainMod, besieged, pop: e.pop, store: e.store, devAgri: e.devAgri, devTrade: e.devTrade, specialty: c.specialty || '', disaster: e.disaster };
+  return {
+    cityId: Number(cityId), grain, gold, extra, grainMod, besieged,
+    pop: e.pop, store: e.store,
+    devAgri: e.devAgri, devTrade: e.devTrade, devArms: e.devArms ?? 0, devDef: e.devDef ?? 0,
+    lvAgri: devLevel(e.devAgri), lvTrade: devLevel(e.devTrade),
+    lvArms: devLevel(e.devArms), lvDef: devLevel(e.devDef),
+    morale: Math.round(e.morale ?? 60), order: Math.round(e.order ?? 60),
+    moraleMod, specialty: c.specialty || '', disaster: e.disaster,
+  };
 }
 
 /** 玩家名下全部城的加成层汇总（handlers.totalYield 叠加用）。 */
@@ -94,7 +136,7 @@ export function cityLayer(state) {
   return out;
 }
 
-/** 每 30 日：人口自然增长（+4%，上限 10 万）+ 各城自动屯粮入库（3×日产，上限 2 万）。 */
+/** 每 30 日：人口自然增长（民心驱动）+ 各城自动屯粮入库（3×日产，上限 2 万）。 */
 export function popTick(state, ctx) {
   const econ = ensureCityEcon(state);
   if (!econ) return;
@@ -102,13 +144,15 @@ export function popTick(state, ctx) {
     if (row.owner !== 'player') continue;
     const e = econ[id];
     if (!e) continue;
-    e.pop = Math.min(100000, Math.round(e.pop * 1.04));
+    // 民心 0~100 → 增长 2%~6%（民心高则流民来附，民心低则逃亡）
+    const rate = 0.02 + (Number(e.morale ?? 60) / 100) * 0.04;
+    e.pop = Math.min(100000, Math.round(e.pop * (1 + rate)));
     const y = cityYield(state, id);
     e.store = Math.min(20000, e.store + 3 * (y?.grain || 0));
   }
 }
 
-/** 每 10 日（旬）：灾害掷骰。政务官在岗 → 概率 ×0.8（呼应职业体系）。 */
+/** 每 10 日（旬）：灾害掷骰。政务官在岗 → 概率 ×0.8；治安越高越少灾（P7）。 */
 export function disasterTick(state, cfg, ctx) {
   const econ = ensureCityEcon(state);
   const st = state.strategy;
@@ -124,23 +168,114 @@ export function disasterTick(state, cfg, ctx) {
     const risk = (c.attrs?.灾害风险 ?? 50) / 100 + 0.5;   // 0.5~1.5
     const roll = Math.random();
     const civic = hasCivic ? 0.8 : 1;
-    if (roll < 0.03 * risk * civic) {
+    // ★ P7 治安：治安 100 时灾害概率 ×0.7，治安 0 时 ×1.0
+    const orderK = 1 - (Number(e.order ?? 60) / 100) * 0.3;
+    if (roll < 0.03 * risk * civic * orderK) {
       e.store = Math.round(e.store * 0.6);
       e.mod = { grain: 0.5, until: day + 10 };
       e.disaster = { type: 'locust', name: '蝗灾', day };
-      fired.push({ cityId: Number(id), name: cityName(id), type: '蝗灾', text: `${cityName(id)}爆发蝗灾：城内存粮蚀耗四成，未来十日粮产减半。` });
-    } else if (roll < 0.03 * risk * civic + 0.02 * risk * civic) {
+      e.morale = Math.max(0, (e.morale ?? 60) - 5);       // 灾害伤民心
+      fired.push({ cityId: Number(id), name: cityName(id), type: '蝗灾', text: `${cityName(id)}爆发蝗灾：城内存粮蚀耗四成，未来十日粮产减半，民心 -5。` });
+    } else if (roll < (0.03 + 0.02) * risk * civic * orderK) {
       if (Array.isArray(row.troops)) row.troops = row.troops.map((v) => Math.max(0, Math.round(Number(v) * 0.9)));
       e.pop = Math.round(e.pop * 0.95);
       e.disaster = { type: 'plague', name: '瘟疫', day };
-      fired.push({ cityId: Number(id), name: cityName(id), type: '瘟疫', text: `${cityName(id)}流行瘟疫：守军折损一成，人口折损半成。` });
-    } else if (roll < 0.03 * risk * civic + 0.02 * risk * civic + 0.04 * civic) {
+      e.morale = Math.max(0, (e.morale ?? 60) - 3);
+      fired.push({ cityId: Number(id), name: cityName(id), type: '瘟疫', text: `${cityName(id)}流行瘟疫：守军折损一成，人口折损半成，民心 -3。` });
+    } else if (roll < (0.03 + 0.02 + 0.04) * civic * orderK) {
       e.mod = { grain: 1.5, until: day + 10 };
       e.disaster = { type: 'bumper', name: '丰收', day };
-      fired.push({ cityId: Number(id), name: cityName(id), type: '丰收', text: `${cityName(id)}今岁大丰收：未来十日粮产加五成。` });
+      e.morale = Math.min(100, (e.morale ?? 60) + 3);
+      fired.push({ cityId: Number(id), name: cityName(id), type: '丰收', text: `${cityName(id)}今岁大丰收：未来十日粮产加五成，民心 +3。` });
     }
   }
   return fired;
+}
+
+/** 岗位 → 逐城开发度（三国志14 口径：委任官员按属性逐旬推动对应开发）。
+ *  官员驻在哪座城，就推动哪座城——所以「派谁去边城」本身是内政决策。 */
+const POST_DEV = {
+  agri: { field: 'devAgri', stat: 'strategy', label: '农田', gain: 1.3 },
+  commerce: { field: 'devTrade', stat: 'strategy', label: '市集', gain: 1.3 },
+  military: { field: 'devArms', stat: 'defense', label: '兵营', gain: 1.1 },
+  defense: { field: 'devDef', stat: 'force', label: '城防', gain: 1.0 },
+  personnel: { field: 'morale', stat: 'strategy', label: '民心', gain: 0.8 },
+};
+
+/** 官员属性（英文五维 + 装备加成），0~10000。主公取 protagonist 基线。 */
+function postStat(cfg, g, key) {
+  const base = g.isProtagonist
+    ? 7400
+    : (Number(cfg?.generalByCfg?.get?.(Number(g.cfgId))?.[key]) || 6000);
+  return base + (Number(g[`${key}_added`]) || 0);
+}
+
+/**
+ * ★ P7 每旬：五项官职按属性推动「官员驻城」的开发度，并结算民心/治安的自然演变。
+ *  - 开发度上限 120（超过 100 后收益递减，防止后期滚雪球）
+ *  - 出征中的官员（所在队伍行军）内政收益减半——posts.json 的 visibleRule
+ *  - 民心向该城基线回归；围城、城库缺粮都会掉民心；民心低则治安下滑
+ */
+export function cityDevTick(state, cfg, ctx) {
+  const econ = ensureCityEcon(state);
+  const st = state.strategy;
+  if (!econ || !st) return { gains: [], upsets: [] };
+  const posts = state.interior?.posts || {};
+  const marching = new Set();
+  for (const a of state.armys || []) {
+    if (a.marchId) for (const gid of a.generals || []) if (gid) marching.add(Number(gid));
+  }
+  const gains = [];
+  for (const [postId, conf] of Object.entries(POST_DEV)) {
+    const gid = Number(posts[postId]) || 0;
+    if (!gid) continue;
+    const g = (state.generals || []).find((x) => x.id === gid);
+    if (!g) continue;
+    const cid = Number(g.cityId) || st.playerCity;
+    const e = econ[cid];
+    if (!e || st.cities[cid]?.owner !== 'player') continue;
+    const stat = postStat(cfg, g, conf.stat);
+    const cur = Number(e[conf.field]) ?? 0;
+    const soft = cur >= 100 ? 0.3 : (cur >= 80 ? 0.6 : 1);   // 越高越难涨
+    const half = marching.has(gid) ? 0.5 : 1;
+    const gain = Math.max(0.1, conf.gain * (0.5 + stat / 10000) * soft * half);
+    const next = Math.min(conf.field === 'morale' ? 100 : 120, cur + gain);
+    e[conf.field] = Math.round(next * 10) / 10;
+    gains.push({
+      postId, label: conf.label, cityId: cid, city: cityName(cid),
+      field: conf.field, gain: Math.round((next - cur) * 10) / 10,
+      level: devLevel(e[conf.field]),
+    });
+  }
+  // 民心/治安自然演变
+  const upsets = [];
+  for (const [id, row] of Object.entries(st.cities || {})) {
+    if (row.owner !== 'player') continue;
+    const e = econ[id];
+    const c = cityMap().get(Number(id));
+    if (!e || !c) continue;
+    const base = Number(c.attrs?.民心 ?? 60);
+    let dm = 0;
+    if (row.besieged) dm -= 3;                  // 被围：民心崩
+    if (e.store < 500) dm -= 2;                 // 城库见底：饿肚子
+    if (e.morale > base + 10) dm -= 0.5;        // 高出基线自然回落
+    else if (e.morale < base) dm += 0.5;        // 低于基线缓慢恢复
+    const prevM = e.morale;
+    e.morale = Math.max(0, Math.min(100, Math.round((e.morale + dm) * 10) / 10));
+    // 治安：民心高则升，民心过低则流寇横行
+    let doo = e.morale < 40 ? -1 : (e.morale > 70 ? 0.5 : 0);
+    const prevO = e.order;
+    e.order = Math.max(0, Math.min(100, Math.round((e.order + doo) * 10) / 10));
+    if (Math.abs(e.morale - prevM) >= 1 || Math.abs(e.order - prevO) >= 1) {
+      upsets.push({
+        cityId: Number(id), city: cityName(id),
+        morale: Math.round(e.morale), order: Math.round(e.order),
+        dMorale: Math.round((e.morale - prevM) * 10) / 10,
+        dOrder: Math.round((e.order - prevO) * 10) / 10,
+      });
+    }
+  }
+  return { gains, upsets };
 }
 
 /** 每 10 日（旬）：忠诚自然变化 + 旬俸 + 叛逃判定。三国志11 口径。 */
@@ -195,10 +330,22 @@ export function loyaltyTick(state, cfg, ctx) {
 export function cityEconTick(state, cfg, ctx) {
   const day = Math.floor(Number(state.clock?.day) || 1);
   ensureCityEcon(state);
+  // ★ P7：旬结算先跑委任开发（官员推动驻城成长），再掷灾害
+  const dev = day % 10 === 0 ? cityDevTick(state, cfg, ctx) : { gains: [], upsets: [] };
   const fired = day % 10 === 0 ? disasterTick(state, cfg, ctx) : [];
   const loyalty = day % 10 === 0 ? loyaltyTick(state, cfg, ctx) : null;
   if (day % 30 === 0) popTick(state, ctx);
-  return { fired, loyalty };
+  // 开发有实感时才播报（每旬每城最多一条），避免日志被 +0.3 刷屏
+  const notable = dev.gains.filter((g) => g.gain >= 1);
+  if (notable.length && ctx?.push) {
+    const text = notable.map((g) => `${g.city}${g.label} +${g.gain}（Lv${g.level}）`).join('　');
+    ctx.push('chat.push', {
+      rid: 0, nickName: '系统', type: 0,
+      msg: `【内政】委任见效：${text}`,
+      time: Date.now(),
+    });
+  }
+  return { fired, loyalty, dev };
 }
 
 /** 出发行军粮：优先从出发城城库扣，不足部分吃全局池并加 25% 损耗。 */

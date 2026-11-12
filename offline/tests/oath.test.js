@@ -7,7 +7,7 @@ import { loadConfig } from '../server/config.js';
 import { createWorld } from '../server/world.js';
 import {
   ensureStrategy, strategyViewState, oathOptions, chooseOath,
-  strategyMap, marchableFrom, strategyAttack,
+  strategyMap, marchableFrom, strategyAttack, marchKmBetween, armySpeed, marchDaysBy,
 } from '../server/domain/strategy.js';
 import { oathPending, oathOf, factionTraitOf } from '../server/domain/oath.js';
 import { ensureTavern } from '../server/domain/tavern.js';
@@ -133,7 +133,11 @@ test('势力特技：吕布行军快一日抵达', () => {
   const r = strategyAttack(state, cfg, makeCtx(state), { cityId: targetId });
   assert.equal(r.ok, true, JSON.stringify(r));
   const m = st.marches[st.marches.length - 1];
-  assert.equal(m.arriveDay - m.departDay, 1);
+  /* ★ P7：行军改距离驱动后，「快一日」= 比同条件少 1 日，而不是绝对值 1 日 */
+  const army = state.armys.find((a) => a.marchId === m.id);
+  const base = marchDaysBy(marchKmBetween(st.playerCity, targetId), armySpeed(state, cfg, army));
+  assert.equal(m.arriveDay - m.departDay, Math.max(1, base - 1), `吕布应比常规 ${base} 日快一日`);
+  assert.equal(factionTraitOf(state).marchDelta, -1);
 });
 
 test('举义拒绝：城不属于该诸侯、重复举义都无效', () => {

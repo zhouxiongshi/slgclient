@@ -16,11 +16,11 @@ import { resolveBattle } from '../battle.js';
 import { planCampaign, commitBrainGoal, noteBattleOutcome, noteCityLost } from './strategy-brain.js';
 import { quoteMarch, openMonth, closeMonth, noteMove, noteCity, booksOf } from './strategy-log.js';
 import { onTileCleared, chapterRules, noticeRecruit } from './campaign.js';
-import { dayFraction } from './tavern.js';
+import { dayFraction, ensureTavern } from './tavern.js';
 import { recordRes } from './economy.js';
 import {
   ensureCityEcon, consumeMarchGrain, deliverGrain, cityEconTick, cityName,
-  cityYield, armsApt, armsCounter, ARMS_NAMES,
+  cityYield, armsApt, armsCounter, ARMS_NAMES, devLevel, cityDevTick,
 } from './city-econ.js';
 import { SKILLS, LEVEL_COUNT, skillById } from '../skills.js';
 import { oathOf, oathPending, oathFactionOf, factionTraitOf, protagonistStat } from './oath.js';
@@ -105,6 +105,8 @@ export function ensureStrategy(state) {
     if (!st.memory) st.memory = {};
     if (!st.chronicle) st.chronicle = [];
     if (!st.cityLogs) st.cityLogs = {};
+    // ★ P7：旧档队伍没有 cityId（那时只有本城概念），一律并到本城
+    for (const a of state.armys || []) if (!a.cityId) a.cityId = st.playerCity || 0;
     return st;
   }
   const factionByState = new Map(conf.factions.map((f) => [f.id, f]));
@@ -386,6 +388,8 @@ export function strategyTick(state, cfg, ctx, now = Date.now()) {
   cityEconTick(state, cfg, ctx);
   // ★ P6 俘虏：每旬思归/越狱演变
   captivesTick(state, ctx);
+  // ★ P7 出仕：在野贤才按名声主动来投
+  defectTick(state, cfg, ctx);
 
   const results = [];
   const mapTick = strategyMap();
@@ -698,9 +702,17 @@ function spawnFactionAssault(state, cfg, ctx, faction, targetCity, troops) {
 }
 
 /** 选出征队伍：优先指定 armyId，否则挑兵力最多的那支（界面只传城时也能打）。
- *  ★ P2：行军中的队伍自动跳过，不能一队两用。 */
-function pickArmy(state, armyId) {
-  const list = state.armys || [];
+ *  ★ P2：行军中的队伍自动跳过，不能一队两用。
+ *  ★ P7：给了 cityId 就只在该城驻军中挑（分城出兵的前提）。 */
+function pickArmy(state, armyId, cityId = 0) {
+  const cid = Number(cityId) || 0;
+  /* ★ P7：举义前队伍挂在「本地地图主城」(id=1)，与战略城编号不是一套；
+     那时只有一座城，不必按城筛。举义后 chooseOath 会把 cityId 改成战略城 id，
+     此时才按城取兵——分城出征靠的就是这一步。 */
+  const useCity = cid > 0 && !oathPending(state);
+  const list = useCity
+    ? (state.armys || []).filter((a) => Number(a.cityId) === cid)
+    : (state.armys || []);
   if (armyId) return list.find((a) => a.id === Number(armyId) && !a.marchId) || null;
   let best = null;
   let bestN = 0;
@@ -862,23 +874,91 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride }
   };
 }
 
-/** 行军耗时：相邻城 2 个游戏日（关隘路网均为邻接段；速度差异留到兵种分层后再调）。 */
-const MARCH_DAYS = 2;
-/** 行军粮：每兵每程 0.1 粮，出发一次扣清（远征有代价）。 */
+/**
+ * ★ P7 行军由距离与队伍速度决定（率土之滨口径，而非固定 2 日）。
+ *
+ *   率土：行军时间 = 距离 × 30 ÷ 队伍速度；队伍速度取队内**最慢**武将。
+ *   本作把「距离」换成路网里的真实里程（conf/.../map.json 每条 route 自带 km），
+ *   速度换算为 60~160（五维 speed 0→60、10000→160），再折算成游戏日：
+ *
+ *       行军日 = ceil( 里程km ÷ (55 × 速度/100) )，夹在 1~12 日
+ *
+ *   于是：相邻 105km + 速度 134 → 1.4 → 2 日（与旧基线一致）；
+ *        远路 337km + 速度 100 → 6.1 → 7 日；骑兵队（150）则 4 日。
+ *   关键：**时长随距离变、像素距离也随距离变，屏幕上军标速度才恒定**。
+ */
+const MARCH_KM_BASE = 55;      // 速度 100 时每日推进的里程（km/日）
+const MARCH_DAYS_MIN = 1;
+const MARCH_DAYS_MAX = 12;
 const GRAIN_PER_TROOP = 0.1;
+/** 辎重队速度固定：车马慢，比最慢的步卒还慢一截。 */
+const TRANSPORT_SPEED = 70;
+
+/** 两城之间的行军里程（km）。优先取 route.km，缺失时按坐标距离估。 */
+export function marchKmBetween(fromId, toId) {
+  const map = strategyMap();
+  const r = (map.routes || []).find((x) => (x.from === fromId && x.to === toId) || (x.from === toId && x.to === fromId));
+  if (r && Number(r.km) > 0) return Number(r.km);
+  const a = map.cities.find((c) => c.id === Number(fromId));
+  const b = map.cities.find((c) => c.id === Number(toId));
+  if (!a || !b) return 0;
+  return Math.round(Math.hypot(a.x - b.x, a.y - b.y) * 1.2);
+}
+
+/** 武将速度（60~160）：五维 speed 与装备加成折算，缺配置按 6000 兜底。 */
+function generalSpeed(cfg, g) {
+  if (!g) return 100;
+  const base = g.isProtagonist
+    ? 7400
+    : (Number(cfg?.generalByCfg?.get?.(Number(g.cfgId))?.speed) || 6000);
+  return Math.max(20, Math.min(200, 60 + (base + (Number(g.speed_added) || 0)) * 0.01));
+}
+
+/** 队伍行军速度：取队内最慢武将（率土口径），空队按 100。 */
+export function armySpeed(state, cfg, army) {
+  let slowest = Infinity;
+  for (const gid of army?.generals || []) {
+    const g = (state.generals || []).find((x) => x.id === gid);
+    if (!g) continue;
+    slowest = Math.min(slowest, generalSpeed(cfg, g));
+  }
+  return Number.isFinite(slowest) ? Math.round(slowest * 10) / 10 : 100;
+}
+
+/** 里程 + 速度 → 行军日数（夹 1~12 日）。 */
+export function marchDaysBy(km, speed) {
+  const v = Math.max(20, Number(speed) || 100);
+  const raw = Math.ceil((Number(km) || 0) / (MARCH_KM_BASE * (v / 100)));
+  return Math.max(MARCH_DAYS_MIN, Math.min(MARCH_DAYS_MAX, raw));
+}
+
+/** 战术锁：同一出发城 + 目标城的行军日（含势力特技 marchDelta）。 */
+export function marchPlan(state, cfg, fromId, toId, army) {
+  const km = marchKmBetween(fromId, toId);
+  const speed = armySpeed(state, cfg, army);
+  const base = marchDaysBy(km, speed);
+  const days = Math.max(MARCH_DAYS_MIN, Math.min(MARCH_DAYS_MAX, base + factionTraitOf(state).marchDelta));
+  return { km, speed, days };
+}
 
 /** 战略层城战（P2 行军版）：出兵不再瞬时开打，而是生成行军队列，
  *  扣行军粮、锁队，`strategyResolveMarches` 在到达日走真实内核结算。
- *  frac：出兵比例（1 全军 / 0.5 半军 / 0.34 三成）。 */
-export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1 }) {
+ *  frac：出兵比例（1 全军 / 0.5 半军 / 0.34 三成）。
+ *  ★ P7：fromCityId 指定出发城（任意己方城），缺省回落本城 —— 分城也能出征了。 */
+export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, fromCityId = 0 }) {
   const st = ensureStrategy(state);
   const map = strategyMap();
-  const home = st.playerCity;
+  const home = Number(fromCityId) || st.playerCity;
   const id = Number(cityId);
   const target = map.cities.find((c) => c.id === id);
   const tstate = st.cities[id];
   if (!target || !tstate) return { ok: false, code: 1, reason: 'no_city' };
   if (tstate.owner === 'player') return { ok: false, code: 2, reason: 'own_city' };
+  // 出发城必须能用：己方城，或玩家本城（未举义时本城尚未易帜，沿用旧档语义）
+  const fromState = st.cities[home];
+  const fromOk = fromState && (fromState.owner === 'player' || home === st.playerCity);
+  if (!fromOk) return { ok: false, code: 6, reason: 'not_own_city' };
+  if (home === id) return { ok: false, code: 2, reason: 'own_city' };
   // 行军校验：只能沿既有行军段推进，关隘封锁则过不去
   const march = canMarchBetween(home, id);
   if (march && march.ok === false) {
@@ -888,8 +968,9 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1 }) {
   }
   if (!neighborsOf(home).includes(id)) return { ok: false, code: 3, reason: 'not_adjacent' };
   // ★ P0-3：界面只传 cityId，旧实现固定取 armys[0]，而那支可能正好是空队
-  const army = pickArmy(state, armyId);
+  const army = pickArmy(state, armyId, home);
   if (!army) return { ok: false, code: 4, reason: 'no_army' };
+  if (!army.cityId) army.cityId = home;   // 旧队补驻城，后续驻城逻辑才有依据
   if ((army.generals || []).every((g) => !g)) return { ok: false, code: 4, reason: 'no_general' };
   if ((army.soldiers || []).every((n) => !(n > 0))) return { ok: false, code: 4, reason: 'no_troops' };
   // 行军粮：兵力 × 0.1/程；优先从出发城城库扣（前线囤粮，三国志14 补给线口径），
@@ -903,26 +984,29 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1 }) {
 
   if (!Array.isArray(st.marches)) st.marches = [];
   const departDay = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
-  // ★ P4-①：势力特技可缩行军（吕布·飞将 -1 日），夹到至少 1 日
-  const marchDays = Math.max(1, MARCH_DAYS + factionTraitOf(state).marchDelta);
+  // ★ P7：时长由里程与队伍速度算（势力特技 marchDelta 已并入 marchPlan）
+  const plan = marchPlan(state, cfg, home, id, army);
+  const marchDays = plan.days;
   const row = {
     id: (st.marchSeq = (st.marchSeq || 0) + 1),
     side: 'player', from: home, to: id,
     departDay, arriveDay: departDay + marchDays,
     armyId: army.id, frac, grainCost,
+    km: plan.km, speed: plan.speed,
   };
   st.marches.push(row);
   army.marchId = row.id;   // 锁队：到达前不能再出征/清剿
   const fromName = map.cities.find((c) => c.id === home)?.name || '本城';
-  recordEvent(state, `大军自${fromName}开拔，出征${target.name}，预计第 ${row.arriveDay} 日抵城下（耗粮 ${grainCost}）。`);
+  recordEvent(state, `大军自${fromName}开拔，出征${target.name}，`
+    + `行程 ${Math.round(plan.km)} 里、速度 ${plan.speed}，预计第 ${row.arriveDay} 日抵城下（耗粮 ${grainCost}）。`);
   ctx.push?.('chat.push', {
     rid: 0, nickName: '系统', type: 0,
-    msg: `【天下】我军自${fromName}开拔，进军${target.name}，预计 ${marchDays} 日后抵达。`,
+    msg: `【天下】我军自${fromName}开拔，进军${target.name}，程 ${Math.round(plan.km)} 里，预计 ${marchDays} 日后抵达。`,
     time: Date.now(),
   });
   return {
     ok: true, marching: true, marchId: row.id, arriveDay: row.arriveDay,
-    city: target.name, grainCost,
+    city: target.name, grainCost, marchDays, km: plan.km, speed: plan.speed, from: fromName,
   };
 }
 
@@ -954,6 +1038,7 @@ export function strategyResolveMarches(state, cfg, ctx) {
     const tstate = st.cities[mm.to];
     if (!target || !tstate) continue;
     if (tstate.owner === 'player') {
+      if (army) army.cityId = mm.to;
       recordEvent(state, `${target.name}已入我军版图，班师。`);
       continue;
     }
@@ -982,6 +1067,9 @@ export function strategyResolveMarches(state, cfg, ctx) {
         sackGrain = Math.round(e.store * 0.5);
         e.pop = Math.round(e.pop * 0.85);
         e.store = Math.round(e.store * 0.5);
+        /* ★ P7 战争系数：城破流民四散，民心/治安双降（三国志11/14 口径） */
+        e.morale = Math.max(0, (e.morale ?? 60) - 15);
+        e.order = Math.max(0, (e.order ?? 60) - 12);
         const r = state.roleRes;
         r.gold = Math.min(r.depot_capacity || 1000000, (r.gold || 0) + sackGold);
         r.grain = Math.min(r.depot_capacity || 1000000, (r.grain || 0) + sackGrain);
@@ -1000,6 +1088,9 @@ export function strategyResolveMarches(state, cfg, ctx) {
     } else {
       recordEvent(state, `攻${target.name}相持不下，暂退。`);
     }
+    // ★ P7 驻城归位：胜则进驻新占城，败/平则退回出发城。
+    //   分城出征后队伍不再永远挂在旧城，玩家能在新城里继续操作。
+    if (army) army.cityId = win ? mm.to : (Number(mm.from) || st.playerCity || 0);
     results.push({
       cityId: mm.to, city: target.name, result: fought.result,
       reportId: fought.report.id, summary: fought.summary,
@@ -1094,14 +1185,19 @@ export function strategyFormup(state, cfg, ctx, { armyId, generals, soldiers }) 
   };
 }
 
-/** ★ P3 运输队：把粮从府库运往指定己方城城库，走行军队列 2 日抵达。
- *  蝗灾前把粮运出去是经典避险操作（三国志11）。 */
-export function strategyTransport(state, cfg, ctx, { cityId, grain }) {
+/** ★ P3 运输队：把粮从府库运往指定己方城城库，走行军队列按时抵达。
+ *  蝗灾前把粮运出去是经典避险操作（三国志11）。
+ *  ★ P7：改为按里程与辎重速度算日数（不再固定 2 日），可指定出发城。 */
+export function strategyTransport(state, cfg, ctx, { cityId, grain, fromCityId = 0 }) {
   const st = ensureStrategy(state);
   ensureCityEcon(state);
   const id = Number(cityId);
   const tstate = st.cities[id];
   if (!tstate || tstate.owner !== 'player') return { ok: false, reason: 'not_own_city' };
+  const from = Number(fromCityId) || st.playerCity || 0;
+  const fromState = st.cities[from];
+  if (!fromState || fromState.owner !== 'player') return { ok: false, reason: 'not_own_city' };
+  if (from === id) return { ok: false, reason: 'same_city' };
   const amount = Math.floor(Number(grain) || 0);
   if (amount <= 0) return { ok: false, reason: 'bad_amount' };
   const r = state.roleRes;
@@ -1109,16 +1205,20 @@ export function strategyTransport(state, cfg, ctx, { cityId, grain }) {
   r.grain -= amount;
   const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
   if (!Array.isArray(st.marches)) st.marches = [];
+  const km = marchKmBetween(from, id);
+  const days = marchDaysBy(km, TRANSPORT_SPEED);
   const row = {
     id: (st.marchSeq = (st.marchSeq || 0) + 1),
-    side: 'player', kind: 'transport', from: st.playerCity || 0, to: id,
-    departDay: day, arriveDay: day + 2, grain: amount,
+    side: 'player', kind: 'transport', from, to: id,
+    departDay: day, arriveDay: day + days, grain: amount,
+    km, speed: TRANSPORT_SPEED,
   };
   st.marches.push(row);
   recordRes(state, 'grain', -amount, `运往${cityName(id)}城库`, day);
-  recordEvent(state, `运输队启程，运粮 ${amount} 前往${cityName(id)}，第 ${row.arriveDay} 日抵达。`);
+  recordEvent(state, `运输队自${cityName(from)}启程，运粮 ${amount} 前往${cityName(id)}，`
+    + `程 ${Math.round(km)} 里，第 ${row.arriveDay} 日抵达。`);
   ctx.push?.('chat.push', { rid: 0, nickName: '系统', type: 0, msg: `【天下】运输队启程，运粮 ${amount} 前往${cityName(id)}。`, time: Date.now() });
-  return { ok: true, marchId: row.id, arriveDay: row.arriveDay, city: cityName(id), grain: amount };
+  return { ok: true, marchId: row.id, arriveDay: row.arriveDay, city: cityName(id), grain: amount, km, days };
 }
 
 /** ★ P1 赏赐：金 +amount/100 忠诚（单次上限 +15，三国志11 口径）。 */
@@ -1137,8 +1237,9 @@ export function rewardGeneral(state, cfg, ctx, { generalId, amount }) {
   return { ok: true, loyal: g.loyal, gold: Math.floor(r.gold) };
 }
 
-/** ★ P6 城池内政任务：开垦/招商/修城，直接改单城开发度与守军（城市差异可经营）。
- *   每城每旬（10 日）限一次；开垦/招商 300 金，修城 400 金。 */
+/** ★ P6 城池内政任务：开垦/招商/募兵/修城/赈灾，直接改单城开发度、守军与民心。
+ *   每城每旬（10 日）限一次；开发类 300~350 金，修城 400 金，赈灾 500 金。
+ *   ★ P7：募兵（兵营）、赈灾为新增；开发度按 LV1~5 分档展示。 */
 export function strategyInvest(state, cfg, ctx, { cityId, kind }) {
   const st = ensureStrategy(state);
   const econ = ensureCityEcon(state);
@@ -1152,27 +1253,64 @@ export function strategyInvest(state, cfg, ctx, { cityId, kind }) {
   }
   const r = state.roleRes;
   const KINDS = {
-    agri: { cost: 300, label: '开垦', apply: () => { e.devAgri = Math.min(120, e.devAgri + 3); } },
-    trade: { cost: 300, label: '招商', apply: () => { e.devTrade = Math.min(120, e.devTrade + 3); } },
-    defense: { cost: 400, label: '修城', apply: () => {
-      e.devDef = Math.min(120, (e.devDef ?? 0) + 2);
-      tstate.troops = Math.min(4000, (tstate.troops || 0) + 150);
-    } },
+    agri: {
+      cost: 300, label: '开垦',
+      apply: () => { e.devAgri = Math.min(120, e.devAgri + 3); },
+      text: () => `农田开发度 +3（Lv${devLevel(e.devAgri)}）`,
+    },
+    trade: {
+      cost: 300, label: '招商',
+      apply: () => { e.devTrade = Math.min(120, e.devTrade + 3); },
+      text: () => `市集开发度 +3（Lv${devLevel(e.devTrade)}）`,
+    },
+    barracks: {
+      cost: 350, label: '募兵整编',
+      apply: () => {
+        e.devArms = Math.min(120, (e.devArms ?? 0) + 3);
+        e.morale = Math.min(100, (e.morale ?? 60) + 1);
+      },
+      text: () => `兵营开发度 +3（Lv${devLevel(e.devArms)}），征兵更快`,
+    },
+    defense: {
+      cost: 400, label: '修城',
+      apply: () => {
+        e.devDef = Math.min(120, (e.devDef ?? 0) + 2);
+        e.order = Math.min(100, (e.order ?? 60) + 2);
+        tstate.troops = Math.min(4000, (tstate.troops || 0) + 150);
+      },
+      text: () => '城防加固，守军 +150，治安 +2',
+    },
+    relief: {
+      cost: 500, label: '赈灾',
+      apply: () => {
+        e.mod = null;                                  // 立即解除减产
+        e.morale = Math.min(100, (e.morale ?? 60) + 6);
+        e.order = Math.min(100, (e.order ?? 60) + 3);
+      },
+      text: () => '开仓赈济：减产解除，民心 +6，治安 +3',
+    },
   };
   const K = KINDS[kind];
   if (!K) return { ok: false, reason: 'bad_kind' };
   if ((Number(r.gold) || 0) < K.cost) return { ok: false, reason: 'no_gold', cost: K.cost };
+  if (kind === 'relief' && !e.mod && !e.disaster) return { ok: false, reason: 'no_disaster' };
   r.gold -= K.cost;
   e.lastInvestDay = day;
   K.apply();
   recordRes(state, 'gold', -K.cost, `${K.label}·${cityName(id)}`, day);
-  const effectText = kind === 'defense'
-    ? '城防加固，守军 +150'
-    : `${kind === 'agri' ? '农田' : '市集'}开发度 +3`;
+  const effectText = K.text();
   recordEvent(state, `${cityName(id)}${K.label}完工：${effectText}。`);
   ctx.push?.('roleRes.push', { ...state.roleRes });
   const y = cityYield(state, id);
-  return { ok: true, kind, cityId: id, devAgri: e.devAgri, devTrade: e.devTrade, devDef: e.devDef ?? 0, troops: tstate.troops, yieldGrain: y?.grain || 0, yieldGold: y?.gold || 0 };
+  return {
+    ok: true, kind, cityId: id, effectText,
+    devAgri: e.devAgri, devTrade: e.devTrade, devArms: e.devArms ?? 0, devDef: e.devDef ?? 0,
+    lvAgri: devLevel(e.devAgri), lvTrade: devLevel(e.devTrade),
+    lvArms: devLevel(e.devArms), lvDef: devLevel(e.devDef),
+    morale: Math.round(e.morale ?? 60), order: Math.round(e.order ?? 60),
+    troops: tstate.troops,
+    yieldGrain: y?.grain || 0, yieldGold: y?.gold || 0,
+  };
 }
 
 /** ★ P6 招降：押着的敌将，金 + 政治判定成功率；失败忠诚 -10，低于 0 越狱逃走。 */
@@ -1225,6 +1363,51 @@ export function captivesTick(state, ctx) {
   }
 }
 
+/**
+ * ★ P7 出仕：在野贤才主动来投（三国志11/14 的「名声」机制）。
+ *   名声 = 城池数×8 + 帐下武将×2 + 君主魅力/100；每旬掷一次，概率 3%~45%。
+ *   优先投奔「籍贯正好在我方城里」的人——版图越大、名声越响，来投者越多，
+ *   这条线补上了原先只有「酒馆来访 / 探索 / 招降」三条的缺口。
+ */
+export function defectTick(state, cfg, ctx) {
+  const st = ensureStrategy(state);
+  const tavern = ensureTavern(state, cfg);
+  if (!tavern?.people?.length) return null;
+  const own = Object.entries(st.cities || {})
+    .filter(([, v]) => v.owner === 'player').map(([id]) => Number(id));
+  if (!own.length) return null;
+  const fame = own.length * 8 + (state.generals || []).length * 2
+    + protagonistStat(state, '魅力') / 100;
+  const rate = Math.min(0.45, 0.03 + fame / 700);
+  const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  if (Math.random() > rate) return null;
+  const local = tavern.people.filter((p) => !p.recruited && own.includes(Number(p.birthCity)));
+  const pool = local.length ? local : tavern.people.filter((p) => !p.recruited);
+  if (!pool.length) return null;
+  const pick = pool[(day * 13 + own.length * 7) % pool.length];
+  const cityId = own.includes(Number(pick.birthCity)) ? Number(pick.birthCity) : (st.playerCity || own[0]);
+  const g = makeGeneral(cfg, nextId(state, 'generalId'), pick.cfgId, cityId, 1);
+  g.loyal = Math.min(100, 72 + Math.round(protagonistStat(state, '魅力') / 22));
+  state.generals.push(g);
+  pick.recruited = true;
+  // 战法登记表增量更新（与原版技能面板共用一张表）
+  const s = g.skills?.[0];
+  if (s?.cfgId && skillById(s.cfgId)) {
+    const row = (state.skills || []).find((x) => Number(x.cfgId) === Number(s.cfgId));
+    if (row) { if (!row.generals.includes(g.id)) row.generals.push(g.id); }
+    else state.skills = [...(state.skills || []), { id: s.cfgId, cfgId: s.cfgId, generals: [g.id] }];
+  }
+  noticeRecruit(state, ctx, pick.name || '');
+  recordEvent(state, `${cityName(cityId)}名士「${pick.name}」闻主公之名，束身来投，即日入仕。`);
+  ctx?.push?.('chat.push', {
+    rid: 0, nickName: '系统', type: 0,
+    msg: `【天下】${cityName(cityId)}名士「${pick.name}」慕义来投，帐下又添一员。`,
+    time: Date.now(),
+  });
+  ctx?.push?.('general.push', g);
+  return { cfgId: pick.cfgId, name: pick.name, cityId, city: cityName(cityId), fame: Math.round(fame), rate: Math.round(rate * 100) };
+}
+
 /** 供 /__slg/strategy/state 使用。cfg 可选：不给时武将只显示 #id。 */
 export function strategyViewState(state, cfg = null) {
   const st = ensureStrategy(state);
@@ -1266,7 +1449,10 @@ export function strategyViewState(state, cfg = null) {
     armies: (state.armys || []).map((a) => ({
       id: a.id,
       order: a.order,
+      cityId: Number(a.cityId) || st.playerCity || 0,
       marching: !!a.marchId,
+      // ★ P7：队伍行军速度（队内最慢武将），客户端据此预算行军日
+      speed: armySpeed(state, cfg, a),
       soldiers: [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(a.soldiers?.[i]) || 0))),
       armsNames: [ARMS_NAMES[1], ARMS_NAMES[2], ARMS_NAMES[3]],
       generals: (a.generals || []).map((gid, i) => {
@@ -1315,7 +1501,21 @@ export function strategyViewState(state, cfg = null) {
           yieldGrain: y?.grain || 0, yieldGold: y?.gold || 0,
           disaster: e.disaster || null,
           modUntil: mod?.until || 0, modGrain: mod?.grain || 1,
+          /* ★ P7 逐城治理面：民心/治安/四项开发度与等级，全部来自该城 attrs 与经营 */
+          morale: y?.morale ?? 60, order: y?.order ?? 60,
+          devAgri: y?.devAgri ?? 0, devTrade: y?.devTrade ?? 0,
+          devArms: y?.devArms ?? 0, devDef: y?.devDef ?? 0,
+          lvAgri: y?.lvAgri ?? 1, lvTrade: y?.lvTrade ?? 1,
+          lvArms: y?.lvArms ?? 1, lvDef: y?.lvDef ?? 1,
           stationed,
+          // ★ P7：该城能打哪些邻城（关隘封锁已过滤）——分城出征的选项来源
+          marchable: marchableFrom(c.id),
+          // 带里程，界面出兵前就能显示「程 208 里」
+          marchRoutes: marchableFrom(c.id).map((nid) => ({
+            id: nid, km: marchKmBetween(c.id, nid),
+            name: map.cities.find((x) => x.id === nid)?.name || '',
+          })),
+          garrison: Math.max(0, Math.round(Number(st.cities[c.id]?.troops) || 0)),
         };
       })() : {}),
     })),
@@ -1335,9 +1535,11 @@ export function strategyViewState(state, cfg = null) {
     // 可出征的城（已按行军校验过滤：关隘封锁即不可走）
     marchable: marchableFrom(st.playerCity || 0),
     // ★ P2：行军队列与日内进度（客户端据此画行军线与移动军标）
+    // ★ P7：带 km/speed，客户端按「剩余里程 ÷ 剩余日」画，远近军标速度才一致
     marches: (st.marches || []).map((mm) => ({
-      id: mm.id, side: mm.side, from: mm.from, to: mm.to,
+      id: mm.id, side: mm.side, kind: mm.kind || 'attack', from: mm.from, to: mm.to,
       departDay: mm.departDay, arriveDay: mm.arriveDay, resolved: !!mm.resolved,
+      km: mm.km || 0, speed: mm.speed || 0, grain: mm.grain || 0,
     })),
     dayFrac: dayFraction(state, chapterRules().realMsPerDay),
     msPerDay: Math.max(1000, Math.round(chapterRules().realMsPerDay / (state.clock?.scale || 1))),
