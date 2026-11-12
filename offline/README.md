@@ -21,9 +21,13 @@
 | **回合推进** | 月制回合 `turnDays = 10`；服务端 500ms 时钟定时结算，**「推演一月」原子推进到下一回合日**（不足 10 天会给出「还差 N 天」提示） |
 | **编队** | 三军 × 三槽，逐槽配将（同一武将全局唯一）、逐槽征兵；空槽位拒绝征兵 |
 | **征兵** | 按兵种消耗木/铁/石/粮/金五种资源，工期压到 **2~30 秒**（`etaSec` 倒计时），资源不足返回错误码 16 并禁用按钮 |
-| **出征** | 需相邻城池；可派 `frac`（0<frac≤1）比例的兵力；守军按城等级分档（Lv1≈1032、Lv2≈1810、Lv3 更高），守军将领数按等级 1/2/3 → 1 级城一队主力可下 |
+| **出征** | 需相邻城池；可派 `frac`（0<frac≤1）比例的兵力；守军按城等级分档（Lv1≈1032、Lv2≈1810、Lv3 更高），守军将领数按等级 1/2/3；1 级城在兵力 ≥1.25× 时可稳下，边际兵力先推演 |
 | **战报** | 所有战斗写入 `state.warReports`（上限 100 条），含双方兵力、逐回合动作、`summary` / `analysis`，UI 可点开复盘 |
 | **军情** | 来犯军可见（`threats`），可就地清剿（`strategy.clearThreat`），不再"看不见也清不掉" |
+| **战前推演** | 出征面板可「推演一次」：与正式结算同一战斗内核、同一守军构造、同一战斗种子，只读沙盒不耗粮不动兵，可反复推演换比例；给折损/歼敌/回合/兵种克制归因与失效条件 |
+| **内政任务状** | 开垦/招商/募兵/修城改为任务对象（执行武将 + 开工回合 + 每旬增量 + 预计完工），好官只缩短工期不改总产出；可撤销（已投入不退），城陷自动取消 |
+| **粮道** | 沿己方城 + 未封锁关隘 BFS 到都城；断粮每旬民心 −3、治安 −1、守军逃散 2%、粮产 ×0.55，出征面板与透镜都能看到断粮预警 |
+| **相性与关系网** | 相性 1~149 环形（势力锚点 ±12），义理 = 政治×0.6+魅力×0.4；登庸成功率拆成「基础/政治/相性/义理/三顾」构成条，与掷骰同源 |
 | **序章章节** | 40 日主线（`conf/campaign/chapter1.json`），结局后 `fired` 冻结、不再错误推进；首页提供「重开一局」（`POST /__slg/restart`） |
 | **招贤 / 武将** | 招贤返回明确原因（`no_guest` / `not_enough_gold`）+ 今日名单时段状态；武将面板、战法装配、名将替身 |
 | **战法** | 31 条真实战法（`conf/skills.json`，数据源 battle-kit 原文片段，可溯源；版本串 `battle-kit/original-fragments/v3`），四类战法 + 10 级真实数值成长 |
@@ -48,7 +52,11 @@ offline/
 │   ├── wsserver.js        WebSocket 服务
 │   ├── gm/                GM 覆盖层（只写 overrides，不动原配置）
 │   └── domain/            领域模块
-│       ├── strategy.js      战略层：回合、守军分档、编队、征兵、出征结算、来犯军
+│       ├── strategy.js      战略层：回合、守军分档、编队、征兵、出征结算、来犯军、战前推演
+│       ├── interior-task.js 内政任务状（执行武将/开工回合/每旬增量/预计完工/撤销）
+│       ├── supply.js        粮道 BFS 连通判定与断粮旬罚（民心/治安/逃兵/粮产）
+│       ├── relation.js      相性(1~149 环形)/义理/关系网与登庸成功率构成条
+│       ├── map-lod.js       地图标注分级（要城/中城/小城，按缩放取档）
 │       ├── strategy-map.js  沙盘地图装配
 │       ├── strategy-rng.js  确定性随机（可回放）
 │       ├── campaign.js      40 日章节、结局冻结
@@ -63,10 +71,11 @@ offline/
 │   └── campaign/        章节、人物、命运、主角、战略层（strategy/map.json 72 城）
 ├── web/               原版客户端构建产物（web-desktop，磁盘逐字节不动）
 ├── electron/          Electron 壳（main.cjs + smoke.cjs 冒烟）
-├── tests/             单测 199 条 / 31 个文件（node --test）
+├── tests/             单测 273 条 / 38 个文件（node --test）
 ├── tools/             工具链
 │   ├── pack.js            打包 exe → build/SLG-Offline-win32-x64/
-│   ├── check-release.js   发行核查（70 项硬性验收，含画面指纹）
+│   ├── check-release.js   发行核查（72 项硬性验收，含画面指纹与合规台账）
+│   ├── compliance-report.js 合规台账三向扫描（覆盖性/禁入物/发行包）
 │   ├── smoke.js           运行时冒烟（28 项，源码态 / --packaged 打包态）
 │   ├── explore-bugs.mjs   协议穷举探测（73 handler × 5 payload）
 │   └── build-skills.js    战法表生成器（从 battle-kit 原文生成 skills.json）
@@ -91,8 +100,9 @@ node electron/main.cjs        # 或直接跑 Electron 壳
 node tools/pack.js               # 打包 exe（自动拷贝 server/conf/web 进包，并校验画面指纹）
 node tools/smoke.js              # 源码态冒烟 28 项
 node tools/smoke.js --packaged   # 打包态冒烟 28 项
-node tools/check-release.js      # 发行核查 70 项
-node --test tests/*.test.js      # 单元测试 199 条
+node tools/check-release.js      # 发行核查 72 项
+node tools/compliance-report.js  # 合规扫描（资产台账 / 禁入物 / 发行包）
+node --test tests/*.test.js      # 单元测试 273 条
 node tools/explore-bugs.mjs      # 协议穷举探测
 ```
 
@@ -101,11 +111,14 @@ node tools/explore-bugs.mjs      # 协议穷举探测
 ## 五、当前验证状态
 
 - ✅ 画面指纹 `ee987ec2…` 与原版逐字节一致（`pack.json`：`byteIdentical: true`，1582 个文件）
-- ✅ 单元测试 **199/199**（含 `tests/panels.test.js` 11 条：六面板回归 + 与战略层的数据／层级对齐断言、`tests/playtest-fixes.test.js` 实机试玩回归、`tests/save-slots.test.js` 存档档位）
+- ✅ 单元测试 **273/273**（含 `tests/panels.test.js` 11 条：六面板回归 + 与战略层的数据／层级对齐断言、`tests/playtest-fixes.test.js` 实机试玩回归、`tests/save-slots.test.js` 存档档位）
 - ✅ 运行时冒烟 **28/28**（源码态 `reports/smoke-original.json`、打包态 `reports/smoke-packaged.json`，含本城页存档卡 + 六面板逐一点开/零横向溢出/51 条战法获取途径 + 六府入口层级让位与不重叠 + 战略台情报卡可见）
-- ✅ 发行核查 **70/70**（含内核黄金向量、协议、画面指纹、工作区干净）
+- ✅ 发行核查 **72/72**（含内核黄金向量、协议、画面指纹、合规台账、工作区干净）
 - ✅ 协议穷举：73 handler × 5 = 365 用例，**0 抛异常**（35 条 "null 字段" 为设计空值：空战法槽、未解锁天赋、未选章节分支、无在店客人）
-- ✅ 战争闭环：出征 → 结算 → 战报入档 → 复盘（`[800,400,0]` 可下 1 级城，`[1000,600,600]` 可下 2 级城）
+- ✅ 战争闭环：战前推演 → 出征 → 结算 → 战报入档 → 折叠/回跳复盘。
+  **兵力口径（实测 40 个到达日）**：守军 1.46× 兵力 40 胜 0 负、1.17× 为 19 胜 21 负。
+  也就是说「≥1.25× 才算兵力占优、0.9~1.25× 胜负参半」这条 UI 口径是**真的**，
+  所以边际兵力请先点「战前推演」再决定加兵还是择日——推演与真打逐位一致（同种子）。
 
 ## 六、运行时注入说明（重要）
 

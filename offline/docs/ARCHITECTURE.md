@@ -221,12 +221,30 @@ index.html 响应末尾追加两个 script
 三条硬约束：
 
 1. **逐城经济只从 `state.strategy.cityEcon` 取**。`state.cityEcon` 是历史遗留空对象，取错会让全城显示 0 粮（已在 `tests/p9-interaction.test.js` 锁住）。
-2. **服务端不提供的数据必须显式降级**。`interaction/state.fieldGaps` 列出「相性 / 粮道连通 / 敌方精确值 / 内政任务状 / 逐将 delta」五项缺口，前端照实标注，不允许编造。
+2. **服务端不提供的数据必须显式降级**。`interaction/state.fieldGaps` 只列**当前真空**的缺口，前端照实标注，不允许编造。P9 时列的五项里，「相性（含关系网）」「粮道连通」「内政任务状」已在 P10 落地并从此表移除，现存缺口见 §9 与 `interaction.js` 的 `fieldGaps`。
 3. **随机必须可复现**。招降、俘虏越狱、探索、出仕、灾害、叛逃统一走 `strategy-rng.js` 的 `rngFor(seed, turn, tag)`；新代码里出现 `Math.random()` 即视为回归。
 
 ---
 
-## 9. 文档地图（读哪本、信哪本）
+## 9. P10 加的三个叶子模块与两条不变量
+
+P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/纯函数，**不 import `strategy.js`、`city-econ.js`、`panels.js`**（它们互相已经成环，再挂进来就是把环焊死）。需要写事件时各文件自带 `recordEvent` 副本（写 `state.strategy.events`，上限 480），不为一行日志去反向依赖战略层。
+
+| 文件 | 职责 | 依赖禁令 |
+|---|---|---|
+| `server/domain/interior-task.js` | 内政任务状：`planTicks`（好官 1 旬 / 中 2 旬 / 差 3 旬）、`beginInteriorTask`、`advanceInteriorTasks`、`cancelInteriorTask` | 不 import `strategy.js`；城池显示名由调用方回写 |
+| `server/domain/supply.js` | 粮道 BFS（己方城 + 未封锁关隘 → 都城）、`supplyTick` 断粮旬罚、行军粮估算 | 自带 `cityName`（读 `map.json`），不 import `strategy.js` |
+| `server/domain/relation.js` | 相性 1~149 环形、义理、关系网、登庸成功率构成条 | 零依赖纯函数，服务端掷骰 / 面板构成条 / 酒馆来访三处同源 |
+| `server/domain/map-lod.js` | 城池标注分级 `cityLabelRank` + 缩放档位 `labelPolicy` | 纯函数；「哪座城算要城」只此一处口径，客户端不再自判 |
+
+两条不变量（改动前先读）：
+
+1. **战斗种子只有一个公式** `battleSeedFor(armyId, x, y, arriveDay)`（`server/battle.js`）。它同时被正式结算与战前推演使用，**不许在别处再拼一个**——旧口径含 `battleLog.length`，导致「预演必错一档」，这是验收 #10 的根因。改这个公式等于改所有战报。
+2. **内政只改工期不改产出**。`interior-task.planTicks` 用官员属性决定 1/2/3 旬，总产出恒定（开垦/招商/募兵 +3、修城 +2），否则好官就会变成印钞机。
+
+---
+
+## 10. 文档地图（读哪本、信哪本）
 
 | 文档 | 管什么 | 权威性 |
 |---|---|---|
