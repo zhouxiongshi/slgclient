@@ -11,8 +11,9 @@ import { recordRes } from './economy.js';
 import { rngFor } from './strategy-rng.js';
 /* ★ U14 内政任务状：city-econ → interior-task 单向依赖（interior-task 不 import 回来，无环） */
 import { advanceInteriorTasks } from './interior-task.js';
-/* ★ U20 粮道连通与断粮：单向依赖 march（supply 不 import city-econ，无环） */
-import { supplyTick } from './supply.js';
+/* ★ U20 粮道连通与断粮：单向依赖 march（supply 不 import city-econ，无环）
+ *   ★ M2 L2：军级补给线（supplyLineForArmy / armySupplyTick）与城级同模块同入口 */
+import { supplyTick, armySupplyTick } from './supply.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const MAP_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'map.json');
@@ -315,8 +316,14 @@ export function loyaltyTick(state, cfg, ctx) {
   }
   // 叛逃
   const defected = [];
+  const econAll = state.strategy?.cityEcon || {};
+  const day0 = day;
   for (const g of [...(state.generals || [])]) {
-    const p = (g.loyal ?? 88) < 40 ? 0.10 : ((g.loyal ?? 88) < 70 ? 0.03 : 0);
+    const loyal = g.loyal ?? 88;
+    let p = loyal < 40 ? 0.10 : (loyal < 70 ? 0.03 : 0);
+    /* ★ M2 招抚（GDD §5.4）：驻城有活跃招抚（90 日内）时叛逃概率 −30% */
+    const eApp = econAll[Number(g.cityId)];
+    if (p > 0 && eApp && (Number(eApp.appeaseUntil) || 0) > day0) p *= 0.7;
     // 修 U21：叛逃掷骰走确定性 rngFor，同 seed + 日 + 武将结果恒定。
     if (p > 0 && rngFor(state.seed ?? 20261110, day, `defect:${g.id}`).random() < p) defected.push(g);
   }
@@ -348,6 +355,8 @@ export function cityEconTick(state, cfg, ctx) {
   // ★ P7：旬结算先跑委任开发（官员推动驻城成长），再掷灾害
   /* ★ U20 粮道：旬界先判连通性（断粮城本旬就吃惩罚），再跑委任开发 */
   const supply = day % 10 === 0 ? supplyTick(state, cfg, ctx) : { isolated: [], recovered: [], hits: [] };
+  /* ★ M2 粮道 L2：军级补给结算（通畅扣节点粮 / 断绝警告与逃兵），NPC 与玩家同入口 */
+  const armySupply = day % 10 === 0 ? armySupplyTick(state, ctx) : { fed: [], cut: [] };
   const dev = day % 10 === 0 ? cityDevTick(state, cfg, ctx) : { gains: [], upsets: [] };
   const fired = day % 10 === 0 ? disasterTick(state, cfg, ctx) : [];
   const loyalty = day % 10 === 0 ? loyaltyTick(state, cfg, ctx) : null;
@@ -362,7 +371,7 @@ export function cityEconTick(state, cfg, ctx) {
       time: Date.now(),
     });
   }
-  return { fired, loyalty, dev, tasks, supply };
+  return { fired, loyalty, dev, tasks, supply, armySupply };
 }
 
 /** 出发行军粮：优先从出发城城库扣，不足部分吃全局池并加 25% 损耗。 */

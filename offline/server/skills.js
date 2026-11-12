@@ -3165,6 +3165,12 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       var invCard = el('div', 'card', '<h4 style="margin-top:0">委派内政</h4>'
         + '<div class="cost">每项委派有成本与工期：执行武将越强，旬数越少（强将 1 旬，普通 2 旬，无驻城武将 3 旬），'
         + '总产出不变。开发度直接提升该城日产与征兵效率。委任五职后，驻在本城的官员每旬还会自动推动对应开发。</div>');
+      /* ★ M2：练兵充能 / 招抚期一览（数据来自 econ 视图） */
+      var today0 = Number((cache && cache.day) || 0);
+      var stat0 = [];
+      if (Number(c.drillCharges) > 0) stat0.push('练兵充能 ×' + c.drillCharges);
+      if (Number(c.appeaseUntil) > today0) stat0.push('招抚生效至第 ' + c.appeaseUntil + ' 日');
+      if (stat0.length) invCard.appendChild(el('div', 'cost', stat0.join('　')));
       var mkInv = function (label, kind, cost, note) {
         /* ★ 修 bug-12：按项冷却 —— 只置灰刚办过的那一项，并写明哪天可再办 */
         var today = Number((cache && cache.day) || 0);
@@ -3203,6 +3209,56 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       mkInv('募兵整编', 'barracks', 350, '兵营 +3 → 征兵更快，民心 +1');
       mkInv('修筑城防', 'defense', 400, '城防 +2、治安 +2，守军 +150');
       if (c.disaster || c.modUntil) mkInv('开仓赈灾', 'relief', 500, '解除减产，民心 +6、治安 +3');
+      /* ★ M2 内政 12 类（GDD §5.4）：新增兴学/招抚/屯田/练兵，全部走同一任务对象 */
+      mkInv('兴学', 'study', 600, '酒馆来访贤才 +1 位（常设）');
+      mkInv('招抚', 'appease', 450, '治安 +5、叛逃风险 −30%（90 日）');
+      mkInv('屯田', 'tuntian', 500, '农田 +2、城库 +800 粮');
+      mkInv('练兵', 'drill', 550, '下次自本城出征攻击 +5%（一充能）');
+      /* ★ M2 边任务：修路/侦察/离间要指定相邻城，下拉列出 marchRoutes（服务端二次校验相邻） */
+      var mkEdgeInv = function (label, kind, cost, note) {
+        var today = Number((cache && cache.day) || 0);
+        var days = (c.investDays || {});
+        var last = Number(days[kind] || 0) || 0;
+        var cdDay = (last && today - last < 10) ? last + 10 : 0;
+        var doing = (c.interiorTasks || []).some(function (t) { return t.kind === kind && t.status === 'active'; });
+        var routes = (c.marchRoutes || []);
+        var row = el('div', 'row', '<span>' + label + '<span class="cost">　' + note + '</span></span>');
+        var sel = el('select');
+        sel.style.cssText = 'max-width:130px';
+        routes.forEach(function (rt) {
+          var o = el('option');
+          o.value = rt.id;
+          o.textContent = (rt.name || ('城' + rt.id)) + (rt.km ? ' ' + rt.km + '里' : '');
+          sel.appendChild(o);
+        });
+        var b = mkBtn(cdDay ? ('第 ' + cdDay + ' 日可再办') : (doing ? (label + '（进行中）') : (label + '（' + cost + ' 金）')),
+          (cdDay || doing) ? 'ghost' : '', function () {
+            fetch('/__slg/strategy/action', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'invest', cityId: c.id, kind: kind, targetCityId: Number(sel.value) || 0 }),
+            }).then(function (r2) { return r2.json(); }).then(function (rs) {
+              if (rs.ok) {
+                var tk = rs.task || {};
+                toast(label + '已委派给 ' + (tk.officer || '无专员') + '，' + tk.ticks + ' 旬完工（第 ' + tk.endDay + ' 日）', true);
+                fetchState().then(function (s2) { cache = s2; renderCity(s2); });
+              } else if (rs.reason === 'busy') toast('这项还在办，第 ' + rs.nextDay + ' 日完工', false);
+              else if (rs.reason === 'cooldown') toast('这项内政本旬办过了，第 ' + rs.nextDay + ' 日可再办', false);
+              else if (rs.reason === 'no_gold') toast('金不足（需 ' + rs.cost + '）', false);
+              else if (rs.reason === 'not_adjacent' || rs.reason === 'no_target') toast('目标必须是行军可达的相邻城', false);
+              else if (rs.reason === 'target_own_city') toast('侦察/离间只能指敌城', false);
+              else if (rs.reason === 'road_done') toast('这条驿道已经修过了', false);
+              else toast('无法办理：' + (rs.reason || '未知'), false);
+            });
+          });
+        b.style.margin = '0';
+        if (cdDay || doing || !routes.length) b.disabled = true;
+        row.appendChild(sel);
+        row.appendChild(b);
+        invCard.appendChild(row);
+      };
+      mkEdgeInv('修路（选邻城）', 'road', 700, '该边行军 −1 日（双向）');
+      mkEdgeInv('侦察（选邻城）', 'scout', 200, '敌城情报 +1 档');
+      mkEdgeInv('离间（选敌城）', 'sow', 800, '守军 −3%、离心 +1');
       body.appendChild(invCard);
       body.appendChild(el('div', 'cost',
         '民心的作用：影响人口增长（+2%~6%/月）与粮金产量（×0.85~1.10）。'

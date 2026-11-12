@@ -244,6 +244,26 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 
 ---
 
+## 9.1 M2-2 双账本与粮道 L2（GDD §5.2/§5.3 落地）
+
+三条只认这里的口径（改动前先读）：
+
+1. **双账本切断写入**：NPC 田赋粮按城写入 `cityEcon.store`（满仓 20000 截断），金上缴国库；
+   `resources[faction].grain` 是**只读汇总**（= 己方城库之和），唯一写入口 `refreshGrainSummary`，
+   NPC 支出只准走 `spendFactionGrain` / `creditFactionGrain`。玩家侧 `roleRes.grain` 有自己的日产体系，
+   属 M3 迁移范围，不许在本批混改。
+2. **军级补给线只有 `supplyLineForArmy` 一个判定**（补给节点 = 己方城 store>0；锚点 = 行军行出发城）。
+   通畅每旬就地取粮 0.1/兵扣节点城库；断绝第 1 旬警告（带运输队/撤军两个应对）、第 3 旬起逃兵 2%/旬。
+   玩家与 NPC 同一入口（§9.4 同函数判据），运输队（kind:'transport'）豁免。
+3. **内政 12 类共用一个任务对象**（GDD §5.4）：新增兴学/招抚/屯田/练兵/修路/侦察/离间，
+   效果只在 `advanceInteriorTasks` 完工分支结算；练兵充能接 `battle.js` 攻击 +5%
+   （`army.drillMorale`，previewAssault 同口径，推演与正式逐位一致）；
+   修路写 `st.roadWorks`（`marchPlan` 行军 −1 日，双向，最低 1 日）；
+   侦察写 `st.intel`（0 传闻/1 估算/2 精确，张力守恒 #1 的情报底座）；
+   离间写敌城 `unrest` + 守军 −3%。招抚 90 日内叛逃概率 ×0.7（`loyaltyTick` 消费 `appeaseUntil`）。
+
+---
+
 ## 10. 文档地图（读哪本、信哪本）
 
 | 文档 | 管什么 | 权威性 |

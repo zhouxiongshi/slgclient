@@ -11,7 +11,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { makeBuild, makeGeneral, makeFacilityList, nextId, mainCity } from '../world.js';
 import { rngFor } from './strategy-rng.js';
-import { beginInteriorTask, cancelInteriorTask, interiorTaskView } from './interior-task.js';
+import { beginInteriorTask, cancelInteriorTask, interiorTaskView, roadEdgeKey } from './interior-task.js';
 /* ★ U20 粮道（supply 只依赖 march，不反向 import 本文件） */
 import { supplyMap, marchSupplyEstimate } from './supply.js';
 /* 修 U08：招降成功率收敛到唯一公式，面板图鉴/预览/实际掷骰同源 */
@@ -457,20 +457,86 @@ export function localBrain(faction, snapshot, state) {
   return planCampaign(conf, snapshot, state || {});
 }
 
-/** 每月按城入账一笔田赋，经济轴才有粮可征。 */
-function accrueFactionGrain(state, factionId) {
+/* ---------------------------------------------------------------- 双账本
+ * GDD §5.2 M2「切断写入」：田赋粮按城写入 cityEcon.store（粮留城），金全额上缴国库。
+ * resources[faction].grain 降级为**只读汇总**（= 己方城库之和），
+ * 唯一写入口是 refreshGrainSummary；NPC 支出只准走 spendFactionGrain / creditFactionGrain。
+ * 玩家侧 roleRes.grain 有自己的日产体系，属 M3 迁移范围，本批不动。
+ */
+export function refreshGrainSummary(state, factionId) {
   const st = state.strategy;
+  const res = st.resources[factionId];
+  if (!res) return 0;
+  let sum = 0;
+  for (const [id, row] of Object.entries(st.cities)) {
+    if (row.owner !== factionId) continue;
+    sum += Math.max(0, Math.floor(Number(st.cityEcon?.[id]?.store) || 0));
+  }
+  res.grain = sum;
+  return sum;
+}
+
+/** NPC 粮支出唯一口：从城库扣（优先 preferCity，跨城按存粮补足）。
+ *  扣完刷新只读汇总。返回 { ok, spent:[{cityId,grain}], shortage }。 */
+export function spendFactionGrain(state, factionId, amount, preferCityId = 0) {
+  const st = state.strategy;
+  ensureCityEcon(state);
+  const prefer = Number(preferCityId) || 0;
+  const own = Object.keys(st.cities)
+    .filter((id) => st.cities[id].owner === factionId)
+    .map((id) => ({ id: Number(id), store: Math.max(0, Math.floor(Number(st.cityEcon[id]?.store) || 0)) }))
+    .sort((a, b) => (a.id === prefer ? -1 : b.id === prefer ? 1 : b.store - a.store));
+  let remain = Math.max(0, Math.floor(Number(amount) || 0));
+  const spent = [];
+  for (const c of own) {
+    if (remain <= 0) break;
+    const take = Math.min(c.store, remain);
+    if (take > 0) {
+      st.cityEcon[c.id].store -= take;
+      remain -= take;
+      spent.push({ cityId: c.id, grain: take });
+    }
+  }
+  refreshGrainSummary(state, factionId);
+  return { ok: remain <= 0, spent, shortage: remain };
+}
+
+/** NPC 粮入账唯一口：写入城库（优先 preferCity，满仓 20000 截断），并刷新汇总。 */
+export function creditFactionGrain(state, factionId, amount, preferCityId = 0) {
+  const st = state.strategy;
+  ensureCityEcon(state);
+  const prefer = Number(preferCityId) || 0;
+  const ids = Object.keys(st.cities).filter((id) => st.cities[id].owner === factionId);
+  const target = ids.includes(String(prefer)) ? prefer
+    : (ids.map(Number).sort((a, b) => (Number(st.cityEcon[b]?.store) || 0) - (Number(st.cityEcon[a]?.store) || 0))[0] || 0);
+  const n = Math.max(0, Math.floor(Number(amount) || 0));
+  if (target && st.cityEcon[target]) {
+    st.cityEcon[target].store = Math.min(20000, st.cityEcon[target].store + n);
+  }
+  refreshGrainSummary(state, factionId);
+  return n;
+}
+
+/** 每旬按城征赋（双账本：粮留城库、金上缴国库）。
+ *  返回 { grain, gold }：grain 是本旬按城**应收**合计（写入城库时满仓截断，应收照记），
+ *  全国账 grain 由 refreshGrainSummary 汇总，只读。 */
+export function accrueFactionGrain(state, factionId) {
+  const st = state.strategy;
+  ensureCityEcon(state);
   const res = st.resources[factionId] || (st.resources[factionId] = { gold: 8000, grain: 12000 });
   if (res.gold == null) res.gold = 8000;
   let grain = 0;
   let gold = 0;
   for (const c of strategyMap().cities) {
     if (st.cities[c.id]?.owner !== factionId) continue;
-    grain += 140 + Math.round((c.attrs?.农业 ?? 40) * 3);
+    const g = 140 + Math.round((c.attrs?.农业 ?? 40) * 3);
+    const e = st.cityEcon[c.id];
+    if (e) e.store = Math.min(20000, e.store + g);   // 粮留城库（GDD §5.2）
+    grain += g;
     gold += 60 + Math.round((c.attrs?.商业 ?? 40) * 1.2);
   }
-  res.grain += grain;
   res.gold += gold;
+  refreshGrainSummary(state, factionId);
   return { grain, gold };
 }
 
@@ -494,15 +560,15 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
 
   for (const order of [...diploFirst, ...afterDiplo]) {
     if (order.type === '征兵') {
-      const res = st.resources[faction.id] || (st.resources[faction.id] = { gold: 8000, grain: 12000 });
       const count = Math.max(0, Number(order.params?.count) || 0);
       const cost = count * 2;
-      if (res.grain >= cost && count > 0) {
-        res.grain -= cost;
+      if (count > 0) {
         const own = Object.keys(st.cities).filter((id) => st.cities[id].owner === faction.id);
         const want = order.params?.cityId != null ? String(order.params.cityId) : '';
         const home = (want && st.cities[want]?.owner === faction.id) ? want : own.slice().sort((a, b) => st.cities[a].troops - st.cities[b].troops)[0];
-        if (home) {
+        /* 双账本：征兵粮从城库扣（优先征兵城），全国账只读汇总（GDD §5.2） */
+        const spend = spendFactionGrain(state, faction.id, cost, home);
+        if (spend.ok && home) {
           st.cities[home].troops += count;
           noteMove(state, {
             kind: '征兵', faction: faction.id, who: faction.name,
@@ -516,8 +582,8 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
         }
       }
     } else if (order.type === '屯田') {
-      const res = st.resources[faction.id];
-      if (res) res.grain += 400;
+      /* 双账本：屯田收成入城库（优先指令城），汇总账自动跟随 */
+      creditFactionGrain(state, faction.id, 400, order.params?.cityId);
       noteMove(state, { kind: '屯田', faction: faction.id, who: faction.name, grain: -400 });
       if (order.expect) recordEvent(state, `${faction.name}${order.expect}`);
     } else if (order.type === '固守') {
@@ -555,17 +621,25 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
           recordEvent(state, `${faction.name}欲出兵${target.name}，${quote.reason || '粮饷不足'}，未发兵。`);
           continue;
         }
-        purse.grain = Math.max(0, (purse.grain || 0) - quote.totalGrain);
-        purse.gold = Math.max(0, (purse.gold || 0) - quote.totalGold);
+        /* 双账本：出征粮饷从城库扣（优先出发城），金从国库扣（GDD §5.2） */
+        const spendG = spendFactionGrain(state, faction.id, quote.totalGrain, order.params.fromCity);
+        if (!spendG.ok) {
+          noteMove(state, {
+            kind: '出征', faction: faction.id, who: faction.name, result: '未发',
+            fromName: fromCity?.name || '', toName: target.name, reason: '城库粮不足',
+          });
+          continue;
+        }
+        const resG = st.resources[faction.id];
+        resG.gold = Math.max(0, (resG.gold || 0) - quote.totalGold);
       }
       const drawn = hasFrom ? drawMarchTroops(st, faction, order, targetId) : null;
       if (hasFrom && !drawn) {
         if (quote && quote.ok) {
-          const purse = st.resources[faction.id];
-          if (purse) {
-            purse.grain += quote.totalGrain;
-            purse.gold += quote.totalGold;
-          }
+          /* 兵力抽不出：粮退回出发城城库，金退回国库 */
+          creditFactionGrain(state, faction.id, quote.totalGrain, order.params.fromCity);
+          const resR = st.resources[faction.id];
+          if (resR) resR.gold = (resR.gold || 0) + quote.totalGold;
         }
         continue;
       }
@@ -974,13 +1048,15 @@ export function marchDaysBy(km, speed) {
   return Math.max(MARCH_DAYS_MIN, Math.min(MARCH_DAYS_MAX, raw));
 }
 
-/** 战术锁：同一出发城 + 目标城的行军日（含势力特技 marchDelta）。 */
+/** 战术锁：同一出发城 + 目标城的行军日（含势力特技 marchDelta）。
+ *  ★ M2 修路：驿道完工的边行军 −1 日（最低 1 日，双向生效；interior-task 完工写入 roadWorks）。 */
 export function marchPlan(state, cfg, fromId, toId, army) {
   const km = marchKmBetween(fromId, toId);
   const speed = armySpeed(state, cfg, army);
   const base = marchDaysBy(km, speed);
-  const days = Math.max(MARCH_DAYS_MIN, Math.min(MARCH_DAYS_MAX, base + factionTraitOf(state).marchDelta));
-  return { km, speed, days };
+  const roadCut = Number(state.strategy?.roadWorks?.[roadEdgeKey(fromId, toId)]) || 0;
+  const days = Math.max(1, Math.min(MARCH_DAYS_MAX, base + factionTraitOf(state).marchDelta - roadCut));
+  return { km, speed, days, roadCut };
 }
 
 /** 战略层城战（P2 行军版）：出兵不再瞬时开打，而是生成行军队列，
@@ -1027,6 +1103,14 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
   }
 
   if (!Array.isArray(st.marches)) st.marches = [];
+  /* ★ M2 练兵：出发城有充能 → 本队攻击 +5%（battle.js 按 army.drillMorale 折算，
+     previewAssault 用同一口径预演，推演与正式逐位一致；一支部队耗一充能） */
+  const drillCharges = Number(st.cityEcon?.[home]?.drillCharges) || 0;
+  const drillMorale = drillCharges > 0 ? 10 : 0;
+  if (drillMorale > 0) {
+    st.cityEcon[home].drillCharges = drillCharges - 1;
+    army.drillMorale = drillMorale;
+  }
   const departDay = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
   // ★ P7：时长由里程与队伍速度算（势力特技 marchDelta 已并入 marchPlan）
   const plan = marchPlan(state, cfg, home, id, army);
@@ -1036,13 +1120,16 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
     side: 'player', from: home, to: id,
     departDay, arriveDay: departDay + marchDays,
     armyId: army.id, frac: ratio, grainCost, troops: deploy,
-    km: plan.km, speed: plan.speed,
+    km: plan.km, speed: plan.speed, drillMorale,
   };
   st.marches.push(row);
   army.marchId = row.id;   // 锁队：到达前不能再出征/清剿
   const fromName = map.cities.find((c) => c.id === home)?.name || '本城';
   recordEvent(state, `大军自${fromName}开拔，出征${target.name}，`
-    + `行程 ${Math.round(plan.km)} 里、速度 ${plan.speed}，预计第 ${row.arriveDay} 日抵城下（耗粮 ${grainCost}）。`);
+    + `行程 ${Math.round(plan.km)} 里、速度 ${plan.speed}`
+    + (plan.roadCut ? `（驿道 −${plan.roadCut} 日）` : '')
+    + `，预计第 ${row.arriveDay} 日抵城下（耗粮 ${grainCost}）`
+    + (drillMorale ? '，练兵加成 +5% 攻击' : '') + '。');
   ctx.push?.('chat.push', {
     rid: 0, nickName: '系统', type: 0,
     msg: `【天下】我军自${fromName}开拔，进军${target.name}，程 ${Math.round(plan.km)} 里，预计 ${marchDays} 日后抵达。`,
@@ -1051,6 +1138,8 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
   return {
     ok: true, marching: true, marchId: row.id, arriveDay: row.arriveDay,
     city: target.name, grainCost, marchDays, km: plan.km, speed: plan.speed, from: fromName,
+    drillMorale,
+    roadCut: plan.roadCut || 0,
     // ★ 出征面板：把「哪支队 / 实出多少 / 留守多少」原样回给界面，UI 不再自己猜
     armyId: army.id, troops: troopsTotal, deploy, frac: ratio,
     supplyStops: Math.max(0, Math.floor(marchDays / 10)),
@@ -1086,7 +1175,10 @@ export function strategyResolveMarches(state, cfg, ctx) {
     }
     mm.resolved = true;
     const army = (state.armys || []).find((a) => a.id === mm.armyId);
-    if (army) delete army.marchId;
+    if (army) {
+      delete army.marchId;
+      delete army.drillMorale;   // ★ M2：一场战斗消耗一次练兵加成
+    }
     const target = map.cities.find((c) => c.id === mm.to);
     const tstate = st.cities[mm.to];
     if (!target || !tstate) continue;
@@ -1182,6 +1274,7 @@ export function strategyRecallMarch(state, cfg, ctx, { marchId }) {
     const army = (state.armys || []).find((a) => a.id === mm.armyId);
     if (army) {
       delete army.marchId;
+      delete army.drillMorale;   // ★ M2：撤回的队伍练兵加成随行军行一并作废
       army.cityId = Number(mm.from) || st.playerCity;
     }
     refund = Math.round((Number(mm.grainCost) || 0) * 0.5);
@@ -1372,13 +1465,13 @@ export function rewardGeneral(state, cfg, ctx, { generalId, amount }) {
  *  本函数只做旧接口兼容：老 UI 与老调用方仍走 `invest`，返回里多了 task 字段与完工日。
  *  行为变化（刻意）：开发类不再即时生效，而是按执行武将能力 1~3 旬完工，
  *  每旬在事件簿留一条带归因的记录（「长安农田 +1.5（荀彧·9600）」）。 */
-export function strategyInvest(state, cfg, ctx, { cityId, kind }) {
+export function strategyInvest(state, cfg, ctx, { cityId, kind, targetCityId }) {
   const st = ensureStrategy(state);
   ensureCityEcon(state);
   const id = Number(cityId);
   const tstate = st.cities[id];
   if (!tstate || tstate.owner !== 'player') return { ok: false, reason: 'not_own_city' };
-  const r = beginInteriorTask(state, cfg, ctx, { cityId: id, kind });
+  const r = beginInteriorTask(state, cfg, ctx, { cityId: id, kind, targetCityId: Number(targetCityId) || 0 });
   if (!r.ok) return r;
   /* 城名权威来源是 map.json（cityName），interior-task 零依赖不自己读图，由这里回写一次 */
   if (r.task) r.task.city = cityName(id);
@@ -1465,8 +1558,11 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
   const seed = battleSeedFor(army.id, 8000 + to, 100 + level, arriveDay);
   /* 深拷贝：预演绝不改真实存档（含队伍、战报、俘虏、资源） */
   const sandbox = structuredClone(state);
+  /* ★ M2 练兵：与 strategyAttack 同一口径——出发城有充能就算 +5% 攻击，
+     否则推演会漏掉练兵加成，预演与正式结算就对不上（张力守恒 #3 前提） */
+  const drill = (Number(st.cityEcon?.[from]?.drillCharges) || 0) > 0 ? 10 : 0;
   const result = resolveBattle({
-    cfg, state: sandbox, army: { ...army, soldiers: commit },
+    cfg, state: sandbox, army: { ...army, soldiers: commit, drillMorale: drill },
     x: 8000 + to, y: 100 + level, defenseOverride: defense2, seed,
   });
   const remain = result.endAttackSoldiers || [0, 0, 0];
@@ -1683,6 +1779,12 @@ export function strategyViewState(state, cfg = null) {
       ownerName: nameOf(st.cities[c.id]?.owner || 'han'),
       color: colorOf(st.cities[c.id]?.owner || 'han'),
       troops: st.cities[c.id]?.troops || 0,
+      /* ★ M2 侦察：敌方城情报档位（0 传闻 / 1 估算 / 2 精确），随视图下发供界面标注 */
+      intelTier: st.cities[c.id]?.owner === 'player'
+        ? undefined
+        : (Number(st.intel?.[c.id]) || 0),
+      /* ★ M2 离间：敌城守将离心度（离间计成累加），后续外交/叛变判定消费 */
+      unrest: st.cities[c.id]?.owner === 'player' ? undefined : (Number(st.cities[c.id]?.unrest) || 0),
       /* ★ 验收 #22：地图标注分级（1 要城 / 2 中城 / 3 小城）。客户端按缩放档过滤，
          低倍只标本城与要城，避免 72 城城名糊成一片。口径见 domain/map-lod.js。 */
       labelRank: cityLabelRank(c, { isPlayer: st.cities[c.id]?.owner === 'player' }),
@@ -1720,6 +1822,9 @@ export function strategyViewState(state, cfg = null) {
           armsCount: stationed.length,
           // ★ 修 bug-12：逐城内政冷却（按项目），界面据此置灰并显示可再办日
           investDays: e.investDays || {}, lastInvestDay: e.lastInvestDay || 0,
+          /* ★ M2 练兵充能 / 招抚期：界面显示「下次出征 +5%」与「叛逃风险 −30% 至第 N 日」 */
+          drillCharges: Number(e.drillCharges) || 0,
+          appeaseUntil: Number(e.appeaseUntil) || 0,
           /* ★ U14 该城在施/最近完工的内政任务状（进度、执行武将、每旬增量、预计完工） */
           interiorTasks: interiorTaskView(state, c.id),
           /* ★ U20 粮道：连通到都城的跳数与里程；断绝时给原因，界面必须显示断粮后果 */
@@ -1779,6 +1884,11 @@ export function strategyViewState(state, cfg = null) {
           : (Number(mm.troops) || 0),
         factionName: mm.factionName || '',
         intel: mm.intel || '',
+        /* ★ M2 粮道 L2：军级补给状态随行军行下发（通畅/断绝/断绝天数），
+           客户端只渲染，不再自己猜补给好不好 */
+        supplyOk: mm.supplyOk !== false,
+        supplyCutDays: Number(mm.supplyCutDays) || 0,
+        supplyNode: Number(mm.supplyNode) || 0,
         km: mm.km || 0, speed: mm.speed || 0, grain: mm.grain || 0,
         grainCost: mm.grainCost || 0,
         remainDays: Math.max(0, Number(mm.arriveDay) - today),

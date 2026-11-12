@@ -352,6 +352,10 @@ export function resolveBattle({ cfg, state, army, x, y, seed, defenseOverride = 
     const uid = `a${i}`;
     idMap[uid] = g.id;
     const unit = makeUnit(uid, 1, g, cfg, beginSoldiers[slot], slot);
+    /* ★ M2 练兵（GDD §5.4）：+10 士气折算攻击 +5%，随队伍走；
+       previewAssault 与正式结算用同一 army.drillMorale 口径，推演与真打逐位一致 */
+    const drill = Math.max(0, Math.min(10, Number(army.drillMorale) || 0));
+    if (drill > 0) unit.hero.attack_base = Math.round(unit.hero.attack_base * (1 + 0.005 * drill));
     buildLookup(uid, unit);
     units.push(unit);
   });

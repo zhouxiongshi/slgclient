@@ -93,7 +93,9 @@ export function todaysGuests(state, day = state.clock?.day || 1, cityId = null) 
       .sort((a, b) => a.h - b.h || a.p.cfgId - b.p.cfgId);
     const local = cid == null ? [] : pick(localPool, 0x243f6a88);
     const global = pick(globalPool.filter((p) => !local.some((l) => l.p.cfgId === p.cfgId)), 0x85a308d3);
-    const ranked = local.concat(global).slice(0, WINDOWS.length);
+    /* ★ M2 兴学：兴学宫完工的城，来访贤才位 +1（常设，至多 +2；interior-task 完工时写入） */
+    const bonus = cid == null ? 0 : Math.min(2, (Number(tavern.studyBonus?.[cid]) || 0));
+    const ranked = local.concat(global).slice(0, WINDOWS.length + bonus);
     tavern.schedule = {
       day,
       key,

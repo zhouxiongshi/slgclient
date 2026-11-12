@@ -40,11 +40,12 @@ function recordEvent(state, text) {
 
 export { cityName as supplyCityName };
 
-/** 己方城之间的粮道邻接（一次 BFS 复用，避免逐城重复算路）。 */
-function ownedAdjacency(state) {
+/** 己方城之间的粮道邻接（一次 BFS 复用，避免逐城重复算路）。
+ *  ★ M2 L2：接受 factionId（玩家 / 诸侯），军级补给线与城级共用同一张图。 */
+function ownedAdjacency(state, factionId = 'player') {
   const st = state?.strategy;
   const owned = Object.entries(st?.cities || {})
-    .filter(([, v]) => v && v.owner === 'player')
+    .filter(([, v]) => v && v.owner === factionId)
     .map(([id]) => Number(id));
   const adj = new Map(owned.map((id) => [id, []]));
   for (let i = 0; i < owned.length; i += 1) {
@@ -139,6 +140,101 @@ export function marchSupplyEstimate(state, fromCityId, soldiers, days = 1) {
       ? `粮道通（${supply.hops} 跳 · 约 ${supply.km} 里）`
       : '粮道断绝：出发城与都城之间没有己方通路，出征后无法补给',
   };
+}
+
+/**
+ * ★ M2 粮道 L2：军级补给线（GDD §5.3，玩家与 NPC 共用同一函数——§9.4 同函数判据）。
+ *
+ * 口径（写死，与城级 L1 一致的确定性判定）：
+ *  - 补给节点 = 己方城（cityEcon.store > 0）。本沙盘关隘不可占领（gateStatus 只有
+ *    通行/封锁，无归属字段），「路径未被敌方控制」由己方图 BFS 天然保证：
+ *    ownedAdjacency 只在己方城之间连边，敌城/封锁关隘根本进不了图。
+ *  - 部队锚点 = 行军行的出发城（march.from）。锚点失守 → 补给断。
+ *  - 需求 = 0.1 粮/兵/旬（与出征粮 GRAIN_PER_TROOP 同一单兵口径）。
+ */
+export function supplyLineForArmy(state, factionId, march) {
+  const st = state?.strategy;
+  const fid = String(factionId || '');
+  if (!st || !fid) return { connected: false, reason: 'no_faction' };
+  const anchor = Number(march?.from) || 0;
+  const row = st.cities[anchor];
+  if (!row || row.owner !== fid) return { connected: false, reason: 'from_lost', anchor };
+  const econ = st.cityEcon || {};
+  const storeOf = (id) => Math.max(0, Math.floor(Number(econ[id]?.store) || 0));
+  const need = Math.round((Number(march?.troops) || 0) * 0.1);
+  if (storeOf(anchor) > 0) {
+    return { connected: true, nodeId: anchor, hops: 0, store: storeOf(anchor), need, anchor };
+  }
+  const { adj } = ownedAdjacency(state, fid);
+  // BFS：最近的 store>0 己方城即补给节点（先到先得，同跳数按邻接顺序，确定性）
+  const dist = new Map([[anchor, { hops: 0, path: [anchor] }]]);
+  const queue = [anchor];
+  while (queue.length) {
+    const cur = queue.shift();
+    for (const e of adj.get(cur) || []) {
+      if (dist.has(e.to)) continue;
+      const prev = dist.get(cur);
+      const d = { hops: prev.hops + 1, path: [...prev.path, e.to] };
+      dist.set(e.to, d);
+      if (storeOf(e.to) > 0) {
+        return { connected: true, nodeId: e.to, hops: d.hops, store: storeOf(e.to), path: d.path, need, anchor };
+      }
+      queue.push(e.to);
+    }
+  }
+  return { connected: false, reason: 'no_supply_node', anchor };
+}
+
+/**
+ * ★ M2 每旬军粮结算（由 cityEconTick 在旬界调用；GDD §5.3 断粮惩罚链的军级部分）：
+ *  - 通畅：就地取粮，0.1 粮/兵 扣补给节点城库；
+ *  - 断绝：第 1 旬警告（附带两个可执行应对——运输队 / 撤军），第 3 旬起逃兵 2%/旬；
+ *  - 玩家与 NPC 同一入口（march.side/factionId 区分归属，同一判定、同一惩罚）。
+ *  运输队（kind:'transport'）本身就是补给动作，不吃补给判定。
+ */
+export function armySupplyTick(state, ctx) {
+  const st = state?.strategy;
+  if (!st || !Array.isArray(st.marches)) return { fed: [], cut: [] };
+  const fed = [];
+  const cut = [];
+  for (const mm of st.marches) {
+    if (mm.resolved || mm.kind === 'transport') continue;
+    const fid = mm.side === 'player' ? 'player' : String(mm.factionId || '');
+    if (!fid) continue;
+    const line = supplyLineForArmy(state, fid, mm);
+    if (line.connected) {
+      const e = st.cityEcon?.[line.nodeId];
+      const need = Math.round((Number(mm.troops) || 0) * 0.1);
+      if (e && need > 0) e.store = Math.max(0, Math.floor(Number(e.store) || 0) - need);
+      if ((Number(mm.supplyCutDays) || 0) > 0) {
+        recordEvent(state, `${cityName(mm.from)}方向的部队补给恢复，士心安。`);
+        mm.supplyCutDays = 0;
+      }
+      mm.supplyOk = true;
+      mm.supplyNode = line.nodeId;
+      fed.push({ marchId: mm.id, side: mm.side, nodeId: line.nodeId, need });
+      continue;
+    }
+    mm.supplyOk = false;
+    mm.supplyCutDays = (Number(mm.supplyCutDays) || 0) + 10;
+    const troopsBefore = Math.max(0, Math.round(Number(mm.troops) || 0));
+    let deserters = 0;
+    if (mm.supplyCutDays >= 30 && troopsBefore > 0) {
+      deserters = Math.max(1, Math.ceil(troopsBefore * 0.02));
+      mm.troops = Math.max(0, troopsBefore - deserters);
+    }
+    const sideName = mm.side === 'player' ? '我军' : `${mm.factionName || '诸侯'}军`;
+    if (mm.supplyCutDays === 10) {
+      const msg = `【粮道】${sideName}自${cityName(mm.from)}出征${cityName(mm.to)}的部队补给线断绝。`
+        + '应对：派运输队送粮续命，或撤军回城——第 3 旬起士卒开始逃散。';
+      recordEvent(state, msg);
+      ctx?.push?.('chat.push', { rid: 0, nickName: '系统', type: 0, msg, time: Date.now() });
+    } else if (deserters > 0) {
+      recordEvent(state, `${sideName}补给断绝第 ${mm.supplyCutDays / 10} 旬，逃兵 ${deserters}。`);
+    }
+    cut.push({ marchId: mm.id, side: mm.side, days: mm.supplyCutDays, deserters });
+  }
+  return { fed, cut };
 }
 
 /**

@@ -15,6 +15,10 @@
  */
 
 import { recordRes } from './economy.js';
+/* ★ M2 招抚依赖「魅力」：游戏配置无此维，用史载五维折算（oath.js 只依赖 node:fs，无环） */
+import { loreStat } from './oath.js';
+/* ★ M2 修路/侦察/离间需要「相邻」校验：march.js 是零依赖叶子（只读 detail.json），无环 */
+import { canMarchBetween } from './march.js';
 
 /**
  * 事件簿追加（与 strategy.js 的 recordEvent 同形）。
@@ -59,7 +63,44 @@ export const KINDS = {
     label: '赈灾', cost: 500, field: null, total: 0, ticks: 0, stat: 'strategy', instant: true,
     note: '应急', effectText: '开仓赈济：减产解除，民心 +6、治安 +3（立即）',
   },
+  /* ★ M2 新增 7 类（GDD §5.4「5 类 → 12 类」）。全部走同一任务对象，不新建系统；
+     效果字段在 advanceInteriorTasks 完工时消费，口径见各 effectText。 */
+  study: {
+    label: '兴学', cost: 600, field: null, total: 0, ticks: 3, stat: 'strategy',
+    visitBonus: 1, note: '文教', effectText: '兴学宫：该城酒馆来访贤才每次 +1 位（常设，至多 +2）',
+  },
+  appease: {
+    label: '招抚', cost: 450, field: null, total: 0, ticks: 2, stat: 'charm',
+    order: 5, appeaseDays: 90, note: '维稳', effectText: '招抚流民：治安 +5，叛逃风险 −30%（90 日）',
+  },
+  tuntian: {
+    label: '屯田', cost: 500, field: 'devAgri', total: 2, ticks: 3, stat: 'strategy',
+    storeGain: 800, note: '军粮', effectText: '屯田：农田 +2，城库 +800 粮',
+  },
+  drill: {
+    label: '练兵', cost: 550, field: null, total: 0, ticks: 3, stat: 'force',
+    drillCharge: 1, note: '整训', effectText: '练兵：下次自本城出征攻击 +5%（一支部队耗一充能）',
+  },
+  road: {
+    label: '修路', cost: 700, field: null, total: 0, ticks: 4, stat: 'strategy',
+    targetEdge: true, note: '驿道', effectText: '修路：指定相邻城行军 −1 日（最低 1 日，双向生效）',
+  },
+  scout: {
+    label: '侦察', cost: 200, field: null, total: 0, ticks: 1, stat: 'strategy',
+    targetEdge: true, note: '情报', effectText: '侦察：相邻敌城情报 +1 档（传闻→估算→精确）',
+  },
+  sow: {
+    label: '离间', cost: 800, field: null, total: 0, ticks: 2, stat: 'strategy',
+    targetEdge: true, note: '人事战', effectText: '离间：目标敌城守将离心（守军 −3%，离心度 +1）',
+  },
 };
+
+/** 修路驿道的边键（双向同一条路；与 strategy.marchPlan 的查表口径一致）。 */
+export function roadEdgeKey(a, b) {
+  const x = Number(a);
+  const y = Number(b);
+  return x < y ? `${x}-${y}` : `${y}-${x}`;
+}
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, Number(v) || 0));
 
@@ -71,9 +112,15 @@ export function interiorTasks(state) {
   return st.interiorTasks;
 }
 
-/** 武将属性（0~10000）。与 city-econ 的 postStat 同口径，但本模块不依赖它。 */
+/** 武将属性（0~10000）。与 city-econ 的 postStat 同口径，但本模块不依赖它。
+ *  ★ M2：'charm'（魅力）游戏配置没有这一维，改用史载五维折算——
+ *  ×80 对齐 0~10000 工期口径（魅力 85 → 6800 = 合格档），主角仍取 7400 基线。 */
 export function officerStat(cfg, g, key) {
   if (!g) return 0;
+  if (key === 'charm') {
+    if (g.isProtagonist) return 7400;
+    return Math.round(loreStat(Number(g.cfgId), '魅力') * 80) + (Number(g.charm_added) || 0);
+  }
   const base = g.isProtagonist ? 7400 : Number(cfg?.generalByCfg?.get?.(Number(g.cfgId))?.[key]) || 6000;
   return base + (Number(g[`${key}_added`]) || 0);
 }
@@ -140,6 +187,8 @@ export function taskView(state, t) {
     progress: Math.round((Math.min(t.ticks, doneTicks) * t.perTick) * 100) / 100,
     status: t.status, cost: t.cost, effectText: K.effectText || '',
     note: t.reason || '',
+    /* ★ M2：目标城（修路/侦察/离间）与来源、可撤销位，界面据此展示 */
+    target: Number(t.target) || 0, reason: t.reason || '', cancelable: t.cancelable !== false,
   };
 }
 
@@ -172,8 +221,10 @@ function applyGain(state, e, t, ratio) {
  * 派单（替代旧的瞬时 strategyInvest）。
  * 返回 { ok, task, ... } 或 { ok:false, reason }。
  * reason: not_own_city / no_econ / bad_kind / cooldown / no_gold / no_disaster / busy
+ *         / no_target / not_adjacent / target_own_city / road_done
+ * ★ M2：修路/侦察/离间带 targetCityId（相邻城）；任务对象新增 reason/cancelable/target。
  */
-export function beginInteriorTask(state, cfg, ctx, { cityId, kind }) {
+export function beginInteriorTask(state, cfg, ctx, { cityId, kind, targetCityId = 0 }) {
   const st = state?.strategy;
   const id = Number(cityId);
   const K = KINDS[kind];
@@ -203,6 +254,17 @@ export function beginInteriorTask(state, cfg, ctx, { cityId, kind }) {
   if (gold < K.cost) return { ok: false, reason: 'no_gold', cost: K.cost };
   if (kind === 'relief' && !e.mod && !e.disaster) return { ok: false, reason: 'no_disaster' };
 
+  /* ★ M2 修路/侦察/离间：目标必须是行军可达的相邻城；侦察/离间只指敌城 */
+  let target = 0;
+  if (K.targetEdge) {
+    target = Number(targetCityId) || 0;
+    const trow = st.cities[target];
+    if (!target || !trow) return { ok: false, reason: 'no_target' };
+    if (!canMarchBetween(id, target).ok) return { ok: false, reason: 'not_adjacent' };
+    if (kind !== 'road' && trow.owner === 'player') return { ok: false, reason: 'target_own_city' };
+    if (kind === 'road' && st.roadWorks?.[roadEdgeKey(id, target)]) return { ok: false, reason: 'road_done' };
+  }
+
   state.roleRes.gold = gold - K.cost;
   e.investDays[kind] = day;
   e.lastInvestDay = day;
@@ -221,6 +283,7 @@ export function beginInteriorTask(state, cfg, ctx, { cityId, kind }) {
       kind, cityId: id, cityName, startDay: day, ticks: 0, perTick: 0, total: 0,
       officerId: officer?.id || 0, officerName: officer?.name || '太守亲办', officerStat: officer?.stat || 0,
       cost: K.cost, status: 'done', doneDay: day,
+      reason: '玩家指派', cancelable: false, target: 0,
     };
     task.id = `it${task.seq}`;
     interiorTasks(state).push(task);
@@ -231,12 +294,14 @@ export function beginInteriorTask(state, cfg, ctx, { cityId, kind }) {
   }
 
   const { ticks, perTick } = planTicks(kind, officer?.stat || 0);
-  const task = {
-    id: `it${(st.interiorSeq = (st.interiorSeq || 0) + 1)}`,
-    kind, cityId: id, cityName, startDay: day, ticks, perTick, total: K.total,
-    officerId: officer?.id || 0, officerName: officer?.name || '无专员', officerStat: officer?.stat || 0,
-    cost: K.cost, status: 'active', ticksDone: 0,
-  };
+    const task = {
+      id: `it${(st.interiorSeq = (st.interiorSeq || 0) + 1)}`,
+      kind, cityId: id, cityName, startDay: day, ticks, perTick, total: K.total,
+      officerId: officer?.id || 0, officerName: officer?.name || '无专员', officerStat: officer?.stat || 0,
+      cost: K.cost, status: 'active', ticksDone: 0,
+      /* ★ M2 GDD §5.4 schema：来源 / 可撤销 / 目标城（修路/侦察/离间） */
+      reason: '玩家指派', cancelable: true, target,
+    };
   interiorTasks(state).push(task);
   recordRes(state, 'gold', -K.cost, `${K.label}·${cityName}（预付）`, day);
   ctx?.push?.('roleRes.push', { ...state.roleRes });
@@ -283,6 +348,31 @@ export function advanceInteriorTasks(state, cfg, ctx) {
       t.status = 'done';
       t.doneDay = day;
       const K = KINDS[t.kind];
+      /* ★ M2 新 7 类的完工效果（效果字段唯一消费口；数值口径见 KINDS.effectText） */
+      const e2 = st?.cityEcon?.[t.cityId];
+      if (K?.storeGain && e2) e2.store = Math.min(20000, (Number(e2.store) || 0) + K.storeGain);
+      if (K?.appeaseDays && e2) e2.appeaseUntil = day + K.appeaseDays;
+      if (K?.drillCharge && e2) e2.drillCharges = (Number(e2.drillCharges) || 0) + 1;
+      if (K?.visitBonus) {
+        const tavern = state.tavern || (state.tavern = { people: [] });
+        tavern.studyBonus = tavern.studyBonus || {};
+        tavern.studyBonus[t.cityId] = (Number(tavern.studyBonus[t.cityId]) || 0) + K.visitBonus;
+      }
+      if (t.kind === 'road' && t.target) {
+        st.roadWorks = st.roadWorks || {};
+        st.roadWorks[roadEdgeKey(t.cityId, t.target)] = 1;
+      }
+      if (t.kind === 'scout' && t.target) {
+        st.intel = st.intel || {};
+        st.intel[t.target] = Math.min(2, (Number(st.intel[t.target]) || 0) + 1);
+      }
+      if (t.kind === 'sow' && t.target) {
+        const row = st.cities?.[t.target];
+        if (row) {
+          row.unrest = (Number(row.unrest) || 0) + 1;
+          row.troops = Math.max(200, Math.round((Number(row.troops) || 0) * 0.97));
+        }
+      }
       completed.push(taskView(state, t));
       ctx?.push?.('chat.push', {
         rid: 0, nickName: '系统', type: 0,
@@ -299,6 +389,7 @@ export function cancelInteriorTask(state, { taskId }) {
   const t = interiorTasks(state).find((x) => x.id === String(taskId));
   if (!t) return { ok: false, reason: 'no_task' };
   if (t.status !== 'active') return { ok: false, reason: 'not_active', status: t.status };
+  if (t.cancelable === false) return { ok: false, reason: 'not_cancelable' };
   t.status = 'cancelled';
   t.reason = '主动撤销';
   recordEvent(state, `${t.cityName}${KINDS[t.kind]?.label || ''}任务撤销（已投入 ${t.cost} 金不退）。`);
