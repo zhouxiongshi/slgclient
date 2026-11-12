@@ -220,6 +220,17 @@ export function interactionState(state, cfg) {
 
   return {
     ok: true, day, turn, month,
+    /* ★ M0-4（GDD §14.2-3 / 验收 B1~B4）：撤销栈策略由服务端权威下发，前端不复算。
+       depth：本旬可撤销步数（undoDepth，参数表 §9.2）；
+       clearOnBattle / clearOnLoad：前端在检测到新战斗结算 / 读档回退时清空撤销栈；
+       battleCount / turn：清栈检测的信号（战斗计数增加 / turn 回退）。 */
+    undo: {
+      depth: 5,
+      clearOnBattle: true,
+      clearOnLoad: true,
+      battleCount: Array.isArray(state.battleLog) ? state.battleLog.length : 0,
+      turn,
+    },
     season: ['冬', '春', '夏', '秋'][Math.floor((month - 1) / 3) % 4] || '春',
     treasury: {
       gold: Math.floor(num(roleRes.gold)), grain: Math.floor(num(roleRes.grain)),

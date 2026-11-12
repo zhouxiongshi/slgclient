@@ -491,13 +491,47 @@
       parts.push({ k: '失败后果', v: '不扣费；俘虏忠诚 -10，低于 0 越狱' });
     }
     if (!d.ok) parts.push({ k: '服务端数据', v: '聚合端点未就绪，以下为按公开规则推算，不视为权威值' });
+    /* ★ M0-3（GDD §14.2-2 / §2.1 判据「预览含如果钱不够会怎样」）：
+       决策预览不只给收益，还必须给三种失败态——做不成会怎样。 */
+    (function failStates() {
+      var tw = (d.treasury && d.treasury.gold) || 0;
+      /* ① 资源不足：从成本文案里抽「N 金 / N 粮」与府库比对 */
+      var needGold = (String(m.cost).match(/(\d+)\s*金/) || [0, 0])[1];
+      var needGrain = (String(m.cost).match(/(\d+)\s*粮/) || [0, 0])[1];
+      if (Number(needGold) > 0 && tw < Number(needGold)) {
+        parts.push({ k: '失败态 · 资源不足', v: '需要 ' + needGold + ' 金，府库现有 ' + tw
+          + ' 金。点了会怎样：请求被服务端拒绝（资源不足），不扣费、状态不变；'
+          + '建议先招商/等田赋或降级做更便宜的任务。', bad: true });
+      }
+      if (Number(needGrain) > 0 && d.treasury && Number(needGrain) > (d.treasury.grain || 0)) {
+        parts.push({ k: '失败态 · 粮不足', v: '需要 ' + needGrain + ' 粮，现有 ' + (d.treasury.grain || 0)
+          + ' 粮。同上：服务端拒绝，不扣粮。可先屯田/调运。', bad: true });
+      }
+      /* ② 粮道断：出征/运输类动作 + 存在断粮城 */
+      if (/出征|进军|运输|运粮/.test(m.title) && d.alerts && d.alerts.supplyCut && d.alerts.supplyCut.length) {
+        var cut = d.alerts.supplyCut[0];
+        parts.push({ k: '失败态 · 粮道断', v: cut.name + ' 粮道已断 ' + (cut.days || 10)
+          + ' 日（粮产 ×0.55）。从此城出发的部队行军粮更紧，粮尽后每旬士气 −5、3 旬起逃兵 2%。'
+          + '建议先修粮道（夺回关隘）或换后方城出发。', bad: true });
+      }
+      /* ③ 超时：可逆窗口只有 0.9 秒；时间推进的结算有 2.5 秒判据 */
+      if (m.reversible) {
+        parts.push({ k: '失败态 · 超时', v: '确认后 0.9 秒内不按 Ctrl+Z 即视为最终提交，'
+          + '此后只能读档回退。提交动画超过 2.5 秒视为卡顿 bug（请反馈）。', bad: false });
+      } else if (isTurn && (tp.need || 0) > 10) {
+        parts.push({ k: '失败态 · 超时', v: '本次推进需结算 ' + tp.need + ' 日（>10 日长结算），'
+          + '期间输入会被排队，完成后统一刷新；不是卡死。', bad: false });
+      }
+    })();
     parts.push({ k: '间接连锁', v: isTurn ? '结算后本回合作废，只能读档或看回合报告' : '成功后相关面板刷新，选中对象与地图视口保持不变（P4）' });
     parts.push({ k: '可逆性', v: m.reversible ? '可逆：提交前 2 秒可按 Ctrl+Z 撤销' : '不可逆：已提交结算，需读档回退' });
     box.innerHTML = '<h3>决策前预览 · ' + esc(m.title) + '</h3>'
       + '<div class="muted" style="font-size:11px;margin-bottom:9px">设计规格 6.2：点确认之前就知道会发生什么；'
       + '数值按「基础 → 加成项 → 最终」拆解；服务端未提供者标注为推算值。</div>'
       + parts.map(function (p) {
-        return '<div class="delta' + (p.final ? ' final' : '') + '"><span class="muted">' + esc(p.k)
+        var cls = 'delta' + (p.final ? ' final' : '') + (p.bad ? ' bad' : '');
+        var style = p.bad ? ' style="border-color:#a33;background:rgba(170,51,51,.08)"' : '';
+        return '<div class="' + cls + '"' + style + '><span class="muted">' + esc(p.k)
           + '：</span>' + esc(p.v) + '</div>';
       }).join('')
       + (m.term && BY_ID[m.term] ? '<div style="margin-top:10px"><button data-act="term" data-id="' + esc(m.term)
@@ -532,7 +566,8 @@
           if (!S.pendingCommit) return;
           S.pendingCommit = null;
           S.undo.unshift({ label: m.title, ts: Date.now(), reversible: m.reversible, target: t.textContent.trim().slice(0, 20) });
-          S.undo = S.undo.slice(0, 5);
+          /* ★ M0-4：撤销深度来自服务端下发的 undo.depth（undoDepth 参数化，不再硬编码 5） */
+          S.undo = S.undo.slice(0, (S.data && S.data.undo && Number(S.data.undo.depth)) || 5);
           t.dataset.ixAllow = '1';
           try { t.click(); } finally { delete t.dataset.ixAllow; }
           phase('已提交：' + m.title, 'ok');
@@ -900,6 +935,23 @@
   /* ---------------- 12. 数据加载与启动 ---------------- */
   function loadState() {
     return fetchJSON(API).then(function (d) {
+      /* ★ M0-4（验收 B2/B3）：撤销栈策略来自服务端（d.undo），前端不复算。
+         B2 战斗结算后清栈：battleCount 增加；
+         B3 读档后清栈：turn 回退（比上次小）视为读档。 */
+      var up = d && d.undo;
+      if (up) {
+        var battleNow = Number(up.battleCount) || 0;
+        var turnNow = Number(up.turn) || 0;
+        if (S.undoSignal) {
+          if (up.clearOnBattle && battleNow > S.undoSignal.battle) {
+            if (S.undo.length) { S.undo = []; toast('战斗已结算，撤销栈已清空（战斗不可撤）', 'info'); }
+          }
+          if (up.clearOnLoad && turnNow < S.undoSignal.turn) {
+            if (S.undo.length) { S.undo = []; toast('检测到读档回退，撤销栈已清空', 'info'); }
+          }
+        }
+        S.undoSignal = { battle: battleNow, turn: turnNow };
+      }
       S.data = d;
       buildAgendaHtml(); buildLens(); buildQueue();
       scanTerms(document.getElementById('slgPanelsMask') || document.body);

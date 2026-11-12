@@ -293,6 +293,19 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
   }
 }
 
+/* ---------------- 7.10 术语覆盖率（GDD §14.2-5，M0） ---------------- */
+{
+  const termsReport = readJson(join(REPORTS, 'terms.json'), null);
+  if (!termsReport) {
+    spawnSync(process.execPath, [join(ROOT, 'tools', 'check-terms.js')], { cwd: ROOT, stdio: 'ignore' });
+    termsReport = readJson(join(REPORTS, 'terms.json'), null);
+  }
+  check('术语词表 ≥120 条且 UI 用词覆盖率 100%（tools/check-terms.js）',
+    !!termsReport && Number(termsReport.terms) >= 120 && termsReport.coverage === '100%',
+    JSON.stringify({ terms: termsReport?.terms, coverage: termsReport?.coverage,
+      problems: termsReport?.problems?.length }));
+}
+
 /* ---------------- 8. 需用户处理（本机无法验证） ---------------- */
 requiresUser.push(
   { name: 'Steamworks 账号与 Steam Direct 上架费', detail: '每款应用 US$100，需本人注册与付款；我无法代办。' },
