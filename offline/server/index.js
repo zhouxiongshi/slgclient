@@ -29,6 +29,8 @@ import {
   rewardGeneral, strategyInvest, recruitCaptive, strategyAttack, strategyRecallMarch,
 } from './domain/strategy.js';
 import { panelState, panelAction, panelSelfCheck } from './domain/panels.js';
+/* 交互增强层：只读聚合（纯函数），不改 WS 协议与消息结构 */
+import { interactionState } from './domain/interaction.js';
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -37,6 +39,15 @@ const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
  * 直接读文本而非 import，保证该文件保持纯浏览器脚本（可单独 node --check）。
  */
 export const PANELS_UI_SOURCE = readFileSync(resolve(ROOT, 'server/panels-ui.js'), 'utf8');
+
+/**
+ * 交互增强层（设计规格 6.1~6.11）：独立浏览器 IIFE，唯一一份源码。
+ * 术语表在启动期读一次并内联进脚本前缀 —— 运行时内存查表，零网络请求、零外部依赖，
+ * 且与 conf/interaction/terms.json 是同一份数据（描述 = 计算 = 战报同源）。
+ */
+const IX_TERMS = JSON.parse(readFileSync(resolve(ROOT, 'conf/interaction/terms.json'), 'utf8'));
+export const IX_SOURCE = 'window.SLG_TERMS=' + JSON.stringify(IX_TERMS) + ';\n'
+  + readFileSync(resolve(ROOT, 'server/interaction-ui.js'), 'utf8');
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -255,7 +266,8 @@ export async function startOfflineServer(options = {}) {
     // 六面板 UI：只在 HTTP 响应里追加一个 script 标签，磁盘 index.html 与打包产物一个字节都不改。
     if (urlPath === '/index.html' && !body.includes(Buffer.from('/__slg/panels/ui.js'))) {
       const html = body.toString('utf8');
-      const tag = '<script src="/__slg/panels/ui.js" charset="utf-8"></script>';
+      const tag = '<script src="/__slg/panels/ui.js" charset="utf-8"></script>'
+        + '<script src="/__slg/interaction/ui.js" charset="utf-8"></script>';
       body = Buffer.from(/<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${tag}</body>`) : html + tag);
     }
     res.writeHead(200, {
@@ -293,6 +305,25 @@ export async function startOfflineServer(options = {}) {
         'Content-Length': buf.length,
       });
       res.end(buf);
+      return;
+    }
+    /* ---------------- 交互增强层：静态脚本 + 只读聚合态 ---------------- */
+    if (urlPath === '/__slg/interaction/ui.js') {
+      const buf = Buffer.from(IX_SOURCE, 'utf8');
+      res.writeHead(200, {
+        'Content-Type': 'text/javascript; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'Content-Length': buf.length,
+      });
+      res.end(buf);
+      return;
+    }
+    if (urlPath === '/__slg/interaction/state' && req.method === 'GET') {
+      try { sendJson(req, res, interactionState(state, cfg)); }
+      catch (err) {
+        log('error', `interaction state: ${err.stack || err.message}`);
+        json(res, 500, { ok: false, message: err.message });
+      }
       return;
     }
     if (urlPath === '/__slg/panels/selfcheck' && req.method === 'GET') {

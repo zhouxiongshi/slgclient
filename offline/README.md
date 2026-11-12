@@ -63,12 +63,12 @@ offline/
 │   └── campaign/        章节、人物、命运、主角、战略层（strategy/map.json 72 城）
 ├── web/               原版客户端构建产物（web-desktop，磁盘逐字节不动）
 ├── electron/          Electron 壳（main.cjs + smoke.cjs 冒烟）
-├── tests/             单测 138 条（node --test）
+├── tests/             单测 199 条 / 31 个文件（node --test）
 ├── tools/             工具链
 │   ├── pack.js            打包 exe → build/SLG-Offline-win32-x64/
 │   ├── check-release.js   发行核查（70 项硬性验收，含画面指纹）
-│   ├── smoke.js           运行时冒烟（24 项，源码态 / --packaged 打包态）
-│   ├── explore-bugs.mjs   协议穷举探测（71 handler × 5 payload）
+│   ├── smoke.js           运行时冒烟（28 项，源码态 / --packaged 打包态）
+│   ├── explore-bugs.mjs   协议穷举探测（73 handler × 5 payload）
 │   └── build-skills.js    战法表生成器（从 battle-kit 原文生成 skills.json）
 └── package.json
 ```
@@ -89,10 +89,10 @@ node electron/main.cjs        # 或直接跑 Electron 壳
 ### 打包 / 验证
 ```bash
 node tools/pack.js               # 打包 exe（自动拷贝 server/conf/web 进包，并校验画面指纹）
-node tools/smoke.js              # 源码态冒烟 24 项
-node tools/smoke.js --packaged   # 打包态冒烟 24 项
+node tools/smoke.js              # 源码态冒烟 28 项
+node tools/smoke.js --packaged   # 打包态冒烟 28 项
 node tools/check-release.js      # 发行核查 70 项
-node --test tests/*.test.js      # 单元测试 138 条
+node --test tests/*.test.js      # 单元测试 199 条
 node tools/explore-bugs.mjs      # 协议穷举探测
 ```
 
@@ -101,10 +101,10 @@ node tools/explore-bugs.mjs      # 协议穷举探测
 ## 五、当前验证状态
 
 - ✅ 画面指纹 `ee987ec2…` 与原版逐字节一致（`pack.json`：`byteIdentical: true`，1582 个文件）
-- ✅ 单元测试 **138/138**（含 `tests/panels.test.js` 11 条：六面板回归 + 与战略层的数据／层级对齐断言、`tests/playtest-fixes.test.js` 实机试玩回归、`tests/save-slots.test.js` 存档档位）
-- ✅ 运行时冒烟 **24/24**（源码态 `reports/smoke-original.json`、打包态 `reports/smoke-packaged.json`，含本城页存档卡 + 六面板逐一点开/零横向溢出/51 条战法获取途径 + 六府入口层级让位与不重叠 + 战略台情报卡可见）
+- ✅ 单元测试 **199/199**（含 `tests/panels.test.js` 11 条：六面板回归 + 与战略层的数据／层级对齐断言、`tests/playtest-fixes.test.js` 实机试玩回归、`tests/save-slots.test.js` 存档档位）
+- ✅ 运行时冒烟 **28/28**（源码态 `reports/smoke-original.json`、打包态 `reports/smoke-packaged.json`，含本城页存档卡 + 六面板逐一点开/零横向溢出/51 条战法获取途径 + 六府入口层级让位与不重叠 + 战略台情报卡可见）
 - ✅ 发行核查 **70/70**（含内核黄金向量、协议、画面指纹、工作区干净）
-- ✅ 协议穷举：71 handler × 5 = 355 用例，**0 抛异常**（35 条 "null 字段" 为设计空值：空战法槽、未解锁天赋、未选章节分支、无在店客人）
+- ✅ 协议穷举：73 handler × 5 = 365 用例，**0 抛异常**（35 条 "null 字段" 为设计空值：空战法槽、未解锁天赋、未选章节分支、无在店客人）
 - ✅ 战争闭环：出征 → 结算 → 战报入档 → 复盘（`[800,400,0]` 可下 1 级城，`[1000,600,600]` 可下 2 级城）
 
 ## 六、运行时注入说明（重要）

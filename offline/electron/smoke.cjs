@@ -654,6 +654,40 @@ async function runSmoke(win, server, app) {
       panels?.ok === true, panels);
     await sleep(300);
 
+    // ★ 交互增强层：术语提示 / 地图透镜 / 当前事务 / 队列 / 聚合端点 必须真的能用
+    const ix = await wc.executeJavaScript(`(async function(){
+      try {
+        var IX = window.__slgIX;
+        if (!IX) return { ok:false, reason:'__slgIX missing' };
+        var st = await (await fetch('/__slg/interaction/state', { cache:'no-store' })).json();
+        if (!st || !st.ok) return { ok:false, reason:'interaction/state failed' };
+        var terms = IX.terms().length;
+        var first = IX.terms()[0];
+        IX.tip(first && first.id);
+        await new Promise(function(r){ setTimeout(r, 260); });
+        var shown = Array.from(document.querySelectorAll('.slgIx-tip'))
+          .filter(function(t){ return getComputedStyle(t).display !== 'none' && t.innerHTML.length > 20; }).length;
+        IX.closeAll();
+        IX.lens('supply');
+        await new Promise(function(r){ setTimeout(r, 160); });
+        var lensOn = !!document.querySelector('#slgIxLens button[data-lens="supply"].on');
+        IX.lens('faction');
+        var agendaDom = !!document.getElementById('slgIxAgenda');
+        var queueDom = !!document.getElementById('slgIxQueue');
+        var zeroStore = (st.cities || []).filter(function(c){ return !(c.store > 0); }).length;
+        return {
+          ok: terms >= 60 && shown > 0 && lensOn && agendaDom && queueDom && zeroStore === 0,
+          terms: terms, tipsShown: shown, lensOn: lensOn,
+          agendaDom: agendaDom, queueDom: queueDom,
+          agenda: (st.agenda || []).length, cities: (st.cities || []).length,
+          zeroStoreCities: zeroStore,
+        };
+      } catch(e){ return { ok:false, error:String(e) }; }
+    })()`, true);
+    report.interaction = ix;
+    check('交互增强层：术语提示/透镜/当前事务/队列/聚合端点可用，逐城城库非 0',
+      ix?.ok === true, ix);
+
     report.pageErrors = await wc.executeJavaScript('window.__slgErrors || []', true);
     check('页面无未捕获异常（含战报详情渲染）', report.pageErrors.length === 0, report.pageErrors.slice(0, 6));
     check('无渲染进程 error 级控制台输出', report.consoleErrors.length === 0, report.consoleErrors.slice(0, 10));

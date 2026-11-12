@@ -131,7 +131,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 4,
+        "rangeNote": "有效距离 4 · 3 人"
       },
       "kernel": {
         "cfgId": 10001,
@@ -275,7 +277,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 4,
+        "rangeNote": "有效距离 4 · 3 人"
       },
       "kernel": {
         "cfgId": 10002,
@@ -419,7 +423,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 4,
+        "rangeNote": "有效距离 4 · 3 人"
       },
       "kernel": {
         "cfgId": 10003,
@@ -563,7 +569,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 4,
+        "rangeNote": "有效距离 4 · 3 人"
       },
       "kernel": {
         "cfgId": 10004,
@@ -707,7 +715,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 4,
+        "rangeNote": "有效距离 4 · 3 人"
       },
       "kernel": {
         "cfgId": 10005,
@@ -851,7 +861,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 4,
+        "rangeNote": "有效距离 4 · 3 人"
       },
       "kernel": {
         "cfgId": 10006,
@@ -995,7 +1007,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 4,
+        "rangeNote": "有效距离 4 · 3 人"
       },
       "kernel": {
         "cfgId": 10007,
@@ -1139,7 +1153,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 3,
+        "rangeNote": "有效距离 3 · 单体"
       },
       "kernel": {
         "cfgId": 10008,
@@ -1283,7 +1299,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 3,
+        "rangeNote": "有效距离 3 · 单体"
       },
       "kernel": {
         "cfgId": 10009,
@@ -1427,7 +1445,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 5,
+        "rangeNote": "有效距离 5 · 3 人"
       },
       "kernel": {
         "cfgId": 10010,
@@ -1571,7 +1591,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 5,
+        "rangeNote": "有效距离 5 · 3 人"
       },
       "kernel": {
         "cfgId": 10011,
@@ -1715,7 +1737,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 5,
+        "rangeNote": "有效距离 5 · 2 人"
       },
       "kernel": {
         "cfgId": 10012,
@@ -1859,7 +1883,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 5,
+        "rangeNote": "有效距离 5 · 2 人"
       },
       "kernel": {
         "cfgId": 10013,
@@ -2003,7 +2029,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 3,
+        "rangeNote": "有效距离 3 · 单体"
       },
       "kernel": {
         "cfgId": 10014,
@@ -2147,7 +2175,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 3,
+        "rangeNote": "有效距离 3 · 单体"
       },
       "kernel": {
         "cfgId": 10015,
@@ -2312,7 +2342,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 5,
+        "rangeNote": "有效距离 5 · 3 人"
       },
       "kernel": {
         "cfgId": 10016,
@@ -2498,7 +2530,9 @@
               3
             ]
           }
-        ]
+        ],
+        "range": 3,
+        "rangeNote": "有效距离 3 · 单体"
       },
       "kernel": {
         "cfgId": 10017,
@@ -2642,7 +2676,9 @@
               3
             ]
           }
-        ]
+        ],
+        "range": 3,
+        "rangeNote": "有效距离 3 · 单体"
       },
       "kernel": {
         "cfgId": 10018,
@@ -2786,7 +2822,9 @@
               3
             ]
           }
-        ]
+        ],
+        "range": 3,
+        "rangeNote": "有效距离 3 · 单体"
       },
       "kernel": {
         "cfgId": 10019,
@@ -2930,7 +2968,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 3,
+        "rangeNote": "有效距离 3 · 单体"
       },
       "kernel": {
         "cfgId": 10020,
@@ -3074,7 +3114,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 9,
+        "rangeNote": "无距离限制"
       },
       "kernel": {
         "cfgId": 10021,
@@ -3218,7 +3260,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 9,
+        "rangeNote": "无距离限制"
       },
       "kernel": {
         "cfgId": 10022,
@@ -3362,7 +3406,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 9,
+        "rangeNote": "无距离限制"
       },
       "kernel": {
         "cfgId": 10023,
@@ -3506,7 +3552,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 9,
+        "rangeNote": "无距离限制"
       },
       "kernel": {
         "cfgId": 10024,
@@ -3650,7 +3698,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 9,
+        "rangeNote": "无距离限制"
       },
       "kernel": {
         "cfgId": 10025,
@@ -3800,7 +3850,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 9,
+        "rangeNote": "无距离限制"
       },
       "kernel": {
         "cfgId": 10026,
@@ -3950,7 +4002,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 9,
+        "rangeNote": "无距离限制"
       },
       "kernel": {
         "cfgId": 10027,
@@ -4100,7 +4154,9 @@
               3
             ]
           }
-        ]
+        ],
+        "range": 4,
+        "rangeNote": "有效距离 4 · 3 人"
       },
       "kernel": {
         "cfgId": 10028,
@@ -4244,7 +4300,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 9,
+        "rangeNote": "无距离限制"
       },
       "kernel": {
         "cfgId": 10029,
@@ -4394,7 +4452,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 3,
+        "rangeNote": "有效距离 3 · 单体"
       },
       "kernel": {
         "cfgId": 10030,
@@ -4538,7 +4598,9 @@
               0
             ]
           }
-        ]
+        ],
+        "range": 9,
+        "rangeNote": "无距离限制"
       },
       "kernel": {
         "cfgId": 10031,
@@ -4571,5 +4633,7 @@
         "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径"
       }
     }
-  ]
+  ],
+  "rangeVersion": 1,
+  "rangeSource": "skills-range.json / derive（persist-skill-range.mjs，与 server/skills.js:rangeOf 同源）"
 }

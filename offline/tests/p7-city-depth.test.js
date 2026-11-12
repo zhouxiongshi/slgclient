@@ -16,6 +16,7 @@ import {
 } from '../server/domain/city-econ.js';
 import { BattleEngine } from '../kernel/engine.js';
 import { rangeOf, attackDistanceOf, SKILLS } from '../server/skills.js';
+import { rngFor } from '../server/domain/strategy-rng.js';
 
 const cfg = loadConfig();
 
@@ -258,17 +259,21 @@ test('P7 无灾时赈灾被拒绝', () => {
 /* 6. 出仕（在野主动来投）                                                     */
 /* -------------------------------------------------------------------------- */
 
-test('P7 出仕：名声足够时有在野贤才主动来投，并落到籍贯城', () => {
+test('P7 出仕：名声足够时有在野贤才主动来投，并落到籍贯城（U21 确定性种子）', () => {
   const { state, st } = oathWorld();
   const n0 = state.generals.length;
-  const oldRandom = Math.random;
-  Math.random = () => 0;                    // 强制掷骰通过，保证用例确定
-  let out = null;
-  try {
-    out = defectTick(state, cfg, { push() {} });
-  } finally {
-    Math.random = oldRandom;
+  const turn = ensureStrategy(state).turn ?? 1;
+  // U21：defectTick 改走 rngFor(seed, turn, 'defect:tavern')，不再 mock Math.random。
+  // 率下限 3%，扫描 seed 找一个 <2% 的确定性命中分支。
+  let hit = 0;
+  for (let s = 1; s < 20000 && !hit; s += 1) {
+    // 乘大质数打散低位：xorshift32 对连续小 seed 的首次输出分布很差。
+    const seed = s * 7919;
+    if (rngFor(seed, turn, 'defect:tavern').random() < 0.02) hit = seed;
   }
+  assert.ok(hit, '应能找到确定性命中 seed');
+  state.seed = hit;
+  const out = defectTick(state, cfg, { push() {} });
   assert.ok(out, '应有人来投');
   assert.equal(state.generals.length, n0 + 1, '帐下应多一人');
   assert.ok(state.generals.some((g) => g.cfgId === out.cfgId), '新将入营');

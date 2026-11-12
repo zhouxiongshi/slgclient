@@ -13,6 +13,7 @@ import { rangeOf, applyRangeNote, skillById, SKILLS, kernelSkillAt } from '../se
 import { BattleEngine } from '../kernel/engine.js';
 import { ensureTavern, todaysGuests, exploreTalent } from '../server/domain/tavern.js';
 import { panelState } from '../server/domain/panels.js';
+import { rngFor } from '../server/domain/strategy-rng.js';
 
 const cfg = loadConfig();
 
@@ -171,35 +172,55 @@ test('内政任务拒绝：非己方城 / 未知类型', () => {
 
 /* ---------------- 俘虏与招降 ---------------- */
 
-test('招降：成功率随天数上升；成功入营；失败忠诚-10；忠诚<0 越狱', () => {
+test('招降：成功才扣费／失败不扣费／确定性可回放／越狱（U11 U21 U08）', () => {
   const state = freshCao();
   const ctx = makeCtx(state);
   state.roleRes.gold = 5000;
-  state.captives = [{ cfgId: 100002, name: '测试敌将', from: '测试', loyal: 50, days: 3, day: 1 }];
-  const realRandom = Math.random;
-  try {
-    Math.random = () => 0.01;   // 命中成功（率上限 95%）
-    const r1 = recruitCaptive(state, cfg, ctx, { idx: 0 });
-    assert.ok(r1.ok, `招降应成功: ${JSON.stringify(r1)}`);
-    assert.equal(state.captives.length, 0, '俘虏应移除');
-    assert.ok(state.generals.some((g) => g.cfgId === 100002), '敌将应入营');
-    // 失败路径
-    state.captives = [{ cfgId: 100003, name: '顽将', from: '测试', loyal: 50, days: 0, day: 1 }];
-    Math.random = () => 0.99;   // 落败（率 <99%）
-    const r2 = recruitCaptive(state, cfg, ctx, { idx: 0 });
-    assert.equal(r2.ok, false);
-    assert.equal(r2.reason, 'refused');
-    assert.equal(state.captives[0].loyal, 40, '失败忠诚 -10');
-    // 连败到越狱
-    Math.random = () => 0.99;
-    for (let i = 0; i < 5; i++) {
-      if (!state.captives.length) break;
-      recruitCaptive(state, cfg, ctx, { idx: 0 });
-    }
-    assert.equal(state.captives.length, 0, '忠诚 <0 应越狱逃走');
-  } finally {
-    Math.random = realRandom;
+  const captive = () => ({ cfgId: 100002, name: '测试敌将', from: '测试', loyal: 50, days: 3, day: 1 });
+  const turn = ensureStrategy(state).turn ?? 1;
+  const tag = 'captive:0:100002';
+  // U21：招降已改走 rngFor(seed, turn, tag)，不再 mock Math.random。
+  // 扫描确定性种子，分别构造「命中」与「落败」两条分支。
+  let hitSeed = 0, missSeed = 0;
+  for (let s = 1; s < 20000 && (!hitSeed || !missSeed); s += 1) {
+    // 乘大质数打散低位：xorshift32 对连续小 seed 的首次输出分布很差。
+    const seed = s * 7919;
+    const v = rngFor(seed, turn, tag).random();
+    if (!hitSeed && v < 0.3) hitSeed = seed;
+    if (!missSeed && v > 0.97) missSeed = seed;
   }
+  assert.ok(hitSeed && missSeed, '应能找到两种确定性分支');
+
+  state.seed = hitSeed;
+  state.captives = [captive()];
+  const r1 = recruitCaptive(state, cfg, ctx, { idx: 0 });
+  assert.equal(r1.ok, true, `应成功: ${JSON.stringify(r1)}`);
+  assert.equal(r1.charged, 300, '成功才扣 300 金');
+  assert.equal(state.roleRes.gold, 4700);
+  assert.equal(state.captives.length, 0, '俘虏应移除');
+  assert.ok(state.generals.some((g) => g.cfgId === 100002), '敌将应入营');
+
+  state.seed = missSeed;
+  state.captives = [captive()];
+  const goldBefore = state.roleRes.gold;
+  const r2 = recruitCaptive(state, cfg, ctx, { idx: 0 });
+  assert.equal(r2.ok, false);
+  assert.equal(r2.reason, 'refused');
+  assert.equal(r2.charged, 0, '失败不扣费');
+  assert.equal(state.roleRes.gold, goldBefore, '失败后府库不变');
+  assert.equal(state.captives[0].loyal, 40, '失败忠诚 -10');
+
+  // 同 seed 重放结果必须一致（确定性内核红线）
+  state.seed = missSeed;
+  state.captives = [captive()];
+  const r3 = recruitCaptive(state, cfg, ctx, { idx: 0 });
+  assert.equal(r3.ok, r2.ok);
+  assert.equal(r3.reason, r2.reason);
+
+  for (let i = 0; i < 8 && state.captives.length; i += 1) {
+    recruitCaptive(state, cfg, ctx, { idx: 0 });
+  }
+  assert.equal(state.captives.length, 0, '忠诚 <0 应越狱逃走');
 });
 
 test('视图输出：captives 名册带成功率；驻城武将随城市下发', () => {

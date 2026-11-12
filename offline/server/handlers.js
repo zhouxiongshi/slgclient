@@ -20,6 +20,7 @@ import {
   chapterRules, settleCampaign, chooseChapter, onTileCleared, applyChoice, noticeRecruit,
 } from './domain/campaign.js';
 import { slotBlock } from './domain/slots.js';
+import { rngFor } from './domain/strategy-rng.js';
 import { ensureTavern, guestsNow, announceTavern, todaysGuests, dayFraction, exploreTalent, cityNameOf } from './domain/tavern.js';
 import {
   strategyTick, strategyAttack, strategyTurnDays, ensureStrategy, clearThreat,
@@ -318,6 +319,23 @@ export function advanceToNextTurn(ctx, now = Date.now()) {
   const turnBefore = st.turn;
   const target = (st.lastTurnDay || 0) + turnDays;
   const need = Math.max(0, target - (state.clock?.day ?? 1));
+  /* 修 U22：旧实现每次都用 rewindDays 伪造「已过 10 日」再结算，连点可无限推进，
+     回合门槛形同虚设，且界面不告诉玩家发生了什么。现在不再假装是「回合到了」：
+       - need > 0 明确标记为 fast-forward（自由快进），返回真实推进天数与结算摘要；
+       - need === 0 才是正式回合结算 turn-settle；
+       - 摘要供「推进前预览」使用（设计规格 6.10 / P3 / P8：规则 100% 透明）。 */
+  const fastForward = need > 0;
+  const preview = {
+    days: need || turnDays,
+    marching: (st.marches || []).filter((m) => !m.resolved).length,
+    arriving: (st.marches || []).filter((m) => !m.resolved && m.arriveDay <= target).length,
+    captives: (state.captives || []).length,
+    lowLoyalty: (state.generals || []).filter((g) => (g.loyal ?? 88) < 70).length,
+    treasury: Math.floor(Number(state.roleRes?.gold) || 0),
+    note: fastForward
+      ? `快进 ${need} 日：按真实天数补算产出、军饷、行军、灾害与事件（非额外奖励）`
+      : '正式回合结算：执行诸侯决策与旬度事件',
+  };
   if (need > 0) {
     // rewindDays 把上次结算时刻拨回 need 个游戏日，下一次 settle 正好补足
     rewindDays(state, need, chapterRules(), now);
@@ -328,6 +346,9 @@ export function advanceToNextTurn(ctx, now = Date.now()) {
   return {
     skipped: st.turn === turnBefore,
     advanced: need,
+    advancedDays: need,
+    mode: fastForward ? 'fast-forward' : 'turn-settle',
+    preview,
     day: state.clock.day,
     turn: st.turn,
     month: (st.turn || 0) + 1,
@@ -656,6 +677,11 @@ export function handleRequest(ctx, req) {
          realCityId 是「要看哪座战略城的设施」，cityId 仍是客户端自己的城 ——
          原客户端拿 msg.cityId 去 getMyCityById，回战略城 id 会拿到 null 直接崩。 */
       const realCid = Number(m.realCityId) || cityId;
+      /* 修 U04：回给客户端的 cityId 必须是原版 state.citys 里真实存在的 id。
+         战略层 72 城用另一套编号，客户端 getMyCityById(战略城id) 返回 null 会直接抛
+         TypeError。双 id 规避只挡住了不传参的路径，显式传战略城 id 仍会崩，这里做终局回落。 */
+      const clientCid = (state.citys || []).some((x) => Number(x.cityId) === cityId)
+        ? cityId : (Number(mainCity(state)?.cityId) || 1);
       const list = ownFacilityList(state, cfg, realCid);
       const facilities = (list || []).map((f) => ({
         ...clone(f),
@@ -663,7 +689,7 @@ export function handleRequest(ctx, req) {
         nextNeed: cfg.facilityNeed(f.type, f.level + 1),
         nextTime: cfg.facilityTime(f.type, f.level + 1),
       }));
-      rsp.msg = { cityId, realCityId: realCid, facilities };
+      rsp.msg = { cityId: clientCid, realCityId: realCid, facilities };
       break;
     }
     case 'city.upFacility': {
@@ -1235,9 +1261,11 @@ export function handleRequest(ctx, req) {
       state.tavern.favor = state.tavern.favor || {};
       const favorN = Number(state.tavern.favor[exp.target.cfgId] || 0);
       const rate = Math.min(0.95, 0.55 + pol * 0.003 + favorN * 0.12);
-      const success = Math.random() < rate;
-      state.roleRes.gold -= cost;
-      recordRes(state, 'gold', -cost, `探索人才·${cityNameOf(cityId)}`);
+      /* 修 U21/U11：登庸掷骰改走确定性 rngFor（同 seed + 日 + 城 + 人 + 登门次数恒定）；
+         费用只在成功登庸后扣，失败不收费（旧实现失败也扣 100 金且无补偿）。 */
+      const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+      const success = rngFor(state.seed ?? 20261110, day,
+        `explore:${cityId}:${exp.target.cfgId}:${favorN}`).random() < rate;
       if (!success) {
         state.tavern.favor[exp.target.cfgId] = favorN + 1;
         ctx.push?.('roleRes.push', roleResOf(state));
@@ -1245,10 +1273,12 @@ export function handleRequest(ctx, req) {
         rsp.code = 0;
         rsp.msg = {
           reason: 'not_found', rate: Math.round(rate * 100), cityId, name: exp.target.name,
-          favor: favorN + 1,
+          favor: favorN + 1, charged: 0,
         };
         break;
       }
+      state.roleRes.gold -= cost;
+      recordRes(state, 'gold', -cost, `探索人才·${cityNameOf(cityId)}`);
       const person = exp.target;
       person.recruited = true;
       delete state.tavern.favor[person.cfgId];

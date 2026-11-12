@@ -191,3 +191,35 @@ conf/
 8. GM 最后接，而且只写覆盖层。
 
 这样序章、关羽、以后的官渡，走的是同一条命令管道。新增的是章节 JSON 和宿命表，不是一套新的调用关系。
+
+---
+
+## 8. 交互增强层（P9，纯注入，不改原画面）
+
+设计规格《三国SLG交互原型设计提示词》的落地层。原则是**不碰原版 `web/` 磁盘、不改协议、不往 `skills.js` 里塞新逻辑**，全部以独立 IIFE 注入，出问题可以整段摘掉。
+
+```text
+index.html 响应末尾追加两个 script
+  ├── /__slg/panels/ui.js       六府面板（原有，panels-ui.js）
+  └── /__slg/interaction/ui.js  交互增强层（新增，interaction-ui.js）
+
+数据来源只有一个只读端点
+  └── GET /__slg/interaction/state
+        └── server/domain/interaction.js
+              ├── captive-rules.js（招降成功率：描述=计算=预览 同一公式）
+              ├── city-econ.js（逐城城库/开发度/灾害风险）
+              └── strategy 视图（行军、内政冷却、回合预览）
+```
+
+| 文件 | 职责 | 边界 |
+|---|---|---|
+| `server/interaction-ui.js` | 术语提示（嵌套/锁定/面包屑/Esc 逐级）、离线百科、决策预览、撤销、当前事务·军师建言、就地抽屉、地图六透镜、进度队列、渐进引导、快捷键 | 只读 `window.__slg*` 与 `/__slg/*`，**不 import 任何领域模块**，不写存档 |
+| `server/domain/interaction.js` | 把「玩家现在能做什么」聚合成一个只读快照 | 不 import `strategy.js` / `panels.js`（它们成环）；只 import `captive-rules.js` 与 `city-econ.js` |
+| `server/domain/captive-rules.js` | 招降成功率与费用，零依赖纯函数 | 服务端结算、面板显示、建言预览三处共用，禁止各算一份 |
+| `conf/interaction/terms.json` | 67 条术语的唯一定义（名称/分类/简述/关联/证据级别/source_id/confidence） | 提示框与百科同源；新增术语只改这一份 |
+
+三条硬约束：
+
+1. **逐城经济只从 `state.strategy.cityEcon` 取**。`state.cityEcon` 是历史遗留空对象，取错会让全城显示 0 粮（已在 `tests/p9-interaction.test.js` 锁住）。
+2. **服务端不提供的数据必须显式降级**。`interaction/state.fieldGaps` 列出「相性 / 粮道连通 / 敌方精确值 / 内政任务状 / 逐将 delta」五项缺口，前端照实标注，不允许编造。
+3. **随机必须可复现**。招降、俘虏越狱、探索、出仕、灾害、叛逃统一走 `strategy-rng.js` 的 `rngFor(seed, turn, tag)`；新代码里出现 `Math.random()` 即视为回归。

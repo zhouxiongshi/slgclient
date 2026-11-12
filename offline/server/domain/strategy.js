@@ -11,6 +11,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { makeBuild, makeGeneral, makeFacilityList, nextId, mainCity } from '../world.js';
 import { rngFor } from './strategy-rng.js';
+/* 修 U08：招降成功率收敛到唯一公式，面板图鉴/预览/实际掷骰同源 */
+import { captiveRecruitRate, captiveRateParts, CAPTIVE_COST } from './captive-rules.js';
 import { canMarchBetween, marchableNeighbors, marchGraph } from './march.js';
 import { resolveBattle } from '../battle.js';
 import { planCampaign, commitBrainGoal, noteBattleOutcome, noteCityLost } from './strategy-brain.js';
@@ -566,7 +568,7 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
       if (!troops) continue;
       if (tstate.owner === state.role?.rid || tstate.owner === 'player') {
         // 打玩家的城：换算成本地地图来犯军，走既有战报
-        spawnFactionAssault(state, cfg, ctx, faction, target, troops);
+        spawnFactionAssault(state, cfg, ctx, faction, target, troops, drawn?.fromId);
         applied.attacked_player += 1;
         noteMarch(state, faction, order, target, tstate, quote, '来犯', 0, drawn);
         continue;
@@ -686,10 +688,30 @@ function ownerNameOf(state, ownerId) {
   return otherName(state, ownerId);
 }
 
-/** 诸侯来犯玩家的城：在本地地图上出现一支来犯军，兵力按战略层折算。 */
-function spawnFactionAssault(state, cfg, ctx, faction, targetCity, troops) {
+/** 诸侯来犯玩家的城：在本地地图上出现一支来犯军，兵力按战略层折算。
+ *  修 U12：同时写一条可见行军实体（side:'faction'），与玩家共用 marchDaysBy 时长口径；
+ *  情报分级（精确/估算/传闻）由视图层按覆盖率标注，此处不伪造战果。 */
+export function spawnFactionAssault(state, cfg, ctx, faction, targetCity, troops, fromId = 0) {
   const city = mainCity(state);
   if (!city) return;
+  const st = ensureStrategy(state);
+  if (!Array.isArray(st.marches)) st.marches = [];
+  const departDay = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  const srcId = Number(fromId) || Number(Object.entries(st.cities || {})
+    .find(([, v]) => v.owner === faction.id)?.[0]) || 0;
+  const km = srcId ? marchKmBetween(srcId, Number(targetCity?.id) || 0) : 120;
+  const npcSpeed = 100;
+  const marchDays = marchDaysBy(km, npcSpeed);
+  const marchRow = {
+    id: (st.marchSeq = (st.marchSeq || 0) + 1),
+    side: 'faction', kind: 'assault', from: srcId, to: Number(targetCity?.id) || 0,
+    departDay, arriveDay: departDay + marchDays,
+    troops: Math.max(200, Math.min(2000, Math.round(troops / 6))),
+    km, speed: npcSpeed, marchDays,
+    factionId: faction.id, factionName: faction.name || '',
+    intel: 'estimated',
+  };
+  st.marches.push(marchRow);
   const rules = cfg.campaignRules || {};
   const soldiers = Math.max(200, Math.min(2000, Math.round(troops / 6)));
   const at = { x: city.x + 2, y: city.y };
@@ -1038,7 +1060,13 @@ export function strategyResolveMarches(state, cfg, ctx) {
   const map = strategyMap();
   const results = [];
   for (const mm of st.marches) {
-    if (mm.side !== 'player' || mm.resolved) continue;
+    /* 修 U12：诸侯行军只做「可见性 + 到达标记」。战斗已在 applyOrders 抽象结算，
+       此处不能重复开打；到达后保留 resolved 行，供战报与情报回看。 */
+    if (mm.side !== 'player') {
+      if (!mm.resolved && today >= mm.arriveDay) mm.resolved = true;
+      continue;
+    }
+    if (mm.resolved) continue;
     if (today < mm.arriveDay) continue;
     // ★ P3 运输队：抵达即粮入城库，不走战斗
     if (mm.kind === 'transport') {
@@ -1386,32 +1414,34 @@ export function strategyInvest(state, cfg, ctx, { cityId, kind }) {
   };
 }
 
-/** ★ P6 招降：押着的敌将，金 + 政治判定成功率；失败忠诚 -10，低于 0 越狱逃走。 */
+/** ★ P6 招降：押着的敌将，金 + 政治判定成功率；失败忠诚 -10，低于 0 越狱逃走。
+ *  修 U11：只在判定成功后扣费（旧实现失败也先扣 300 金，无补偿且不可回放）。
+ *  修 U21：掷骰走 rngFor(seed, turn, tag)，同 seed + 回合结果恒定。
+ *  修 U08：成功率读 captive-rules.js 唯一公式，与面板构成条 / 决策预览同源。 */
 export function recruitCaptive(state, cfg, ctx, { idx }) {
   const st = ensureStrategy(state);
   const i = Number(idx);
   state.captives = Array.isArray(state.captives) ? state.captives : [];
   const cap = state.captives[i];
   if (!cap) return { ok: false, reason: 'no_captive' };
-  const cost = 300;
+  const cost = CAPTIVE_COST;
   const r = state.roleRes;
   if ((Number(r.gold) || 0) < cost) return { ok: false, reason: 'no_gold', cost };
-  r.gold -= cost;
   const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
-  recordRes(state, 'gold', -cost, `招降·${cap.name}`, day);
-  const pol = protagonistStat(state, '政治');
-  const rate = Math.min(0.95, 0.45 + (cap.days || 0) * 0.05 + pol * 0.002);
-  const success = Math.random() < rate;
+  const rate = captiveRecruitRate(state, cap);
+  const success = rngFor(state.seed ?? 20261110, st.turn ?? day, `captive:${i}:${cap.cfgId}`).random() < rate;
   if (!success) {
     cap.loyal = (cap.loyal ?? 50) - 10;
     ctx.push?.('roleRes.push', { ...state.roleRes });
     if (cap.loyal < 0) {
       state.captives.splice(i, 1);
       recordEvent(state, `敌将「${cap.name}」拒绝招降，趁夜越狱逃走。`);
-      return { ok: false, reason: 'escaped', name: cap.name, gold: Math.floor(r.gold) };
+      return { ok: false, reason: 'escaped', name: cap.name, rate: Math.round(rate * 100), gold: Math.floor(r.gold), charged: 0 };
     }
-    return { ok: false, reason: 'refused', name: cap.name, loyal: cap.loyal, rate: Math.round(rate * 100), gold: Math.floor(r.gold) };
+    return { ok: false, reason: 'refused', name: cap.name, loyal: cap.loyal, rate: Math.round(rate * 100), gold: Math.floor(r.gold), charged: 0 };
   }
+  r.gold -= cost;
+  recordRes(state, 'gold', -cost, `招降·${cap.name}`, day);
   state.captives.splice(i, 1);
   const g = makeGeneral(cfg, nextId(state, 'generalId'), cap.cfgId, st.playerCity || 1, 1);
   g.loyal = Math.min(100, 70 + Math.round(protagonistStat(state, '魅力') / 25));
@@ -1420,16 +1450,19 @@ export function recruitCaptive(state, cfg, ctx, { idx }) {
   recordEvent(state, `敌将「${cap.name}」感主公之义，解甲来投，即日入营。`);
   ctx.push?.('general.push', g);
   ctx.push?.('roleRes.push', { ...state.roleRes });
-  return { ok: true, general: { id: g.id, name: cap.name }, loyal: g.loyal, rate: Math.round(rate * 100) };
+  return { ok: true, general: { id: g.id, name: cap.name }, loyal: g.loyal, rate: Math.round(rate * 100), charged: cost };
 }
 
-/** 每旬押将演变：忠诚 -2（离乡思归），低于 30 有越狱风险（30%）。 */
+/** 每旬押将演变：忠诚 -2（离乡思归），低于 30 有越狱风险（30%）。
+ *  修 U21：越狱掷骰走确定性 rngFor，与战略层同一套种子纪律。 */
 export function captivesTick(state, ctx) {
   state.captives = Array.isArray(state.captives) ? state.captives : [];
-  for (const cap of [...state.captives]) {
+  const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  for (const [k, cap] of [...state.captives].entries()) {
     cap.days = (cap.days || 0) + 1;
     cap.loyal = (cap.loyal ?? 50) - 2;
-    if (cap.loyal < 30 && Math.random() < 0.3) {
+    if (cap.loyal < 30
+      && rngFor(state.seed ?? 20261110, day, `captive-escape:${k}:${cap.cfgId}`).random() < 0.3) {
       state.captives.splice(state.captives.indexOf(cap), 1);
       recordEvent(state, `敌将「${cap.name}」看守松懈，越狱而逃。`);
     }
@@ -1441,6 +1474,7 @@ export function captivesTick(state, ctx) {
  *   名声 = 城池数×8 + 帐下武将×2 + 君主魅力/100；每旬掷一次，概率 3%~45%。
  *   优先投奔「籍贯正好在我方城里」的人——版图越大、名声越响，来投者越多，
  *   这条线补上了原先只有「酒馆来访 / 探索 / 招降」三条的缺口。
+ *   修 U21：掷骰改走 rngFor(seed, turn, 'defect:tavern')，可回放。
  */
 export function defectTick(state, cfg, ctx) {
   const st = ensureStrategy(state);
@@ -1453,7 +1487,7 @@ export function defectTick(state, cfg, ctx) {
     + protagonistStat(state, '魅力') / 100;
   const rate = Math.min(0.45, 0.03 + fame / 700);
   const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
-  if (Math.random() > rate) return null;
+  if (rngFor(state.seed ?? 20261110, st.turn ?? day, 'defect:tavern').random() > rate) return null;
   const local = tavern.people.filter((p) => !p.recruited && own.includes(Number(p.birthCity)));
   const pool = local.length ? local : tavern.people.filter((p) => !p.recruited);
   if (!pool.length) return null;
@@ -1614,7 +1648,9 @@ export function strategyViewState(state, cfg = null) {
     captives: (state.captives || []).map((c, i) => ({
       idx: i, cfgId: c.cfgId, name: c.name, from: c.from,
       loyal: c.loyal, days: c.days,
-      rate: Math.min(95, Math.round((0.45 + (c.days || 0) * 0.05 + protagonistStat(state, '政治') * 0.002) * 100)),
+      // 修 U08：与 panels.js / 确认框共用 captive-rules.js 唯一公式
+      rate: Math.round(captiveRecruitRate(state, c) * 100),
+      rateParts: captiveRateParts(state, c),
     })),
     // 可出征的城（已按行军校验过滤：关隘封锁即不可走；己方城不再算目标）
     marchable: marchableFrom(st.playerCity || 0, state),
@@ -1631,7 +1667,12 @@ export function strategyViewState(state, cfg = null) {
         departDay: mm.departDay, arriveDay: mm.arriveDay, resolved: !!mm.resolved,
         recalled: !!mm.recalled,
         armyId: mm.armyId || 0, frac: mm.frac ?? 1,
-        troops: a ? (a.soldiers || []).reduce((s, v) => s + Math.max(0, Number(v) || 0), 0) : 0,
+        // ★ U12：诸侯军没有 armyId，兵力直接取行军行，别显示成 0
+        troops: a
+          ? (a.soldiers || []).reduce((s, v) => s + Math.max(0, Number(v) || 0), 0)
+          : (Number(mm.troops) || 0),
+        factionName: mm.factionName || '',
+        intel: mm.intel || '',
         km: mm.km || 0, speed: mm.speed || 0, grain: mm.grain || 0,
         grainCost: mm.grainCost || 0,
         remainDays: Math.max(0, Number(mm.arriveDay) - today),

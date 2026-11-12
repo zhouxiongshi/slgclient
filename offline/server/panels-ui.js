@@ -713,6 +713,10 @@
         : s.status === 'researching' ? '<span class="tag mid">研习中</span>' : '<span class="tag no">未解锁</span>';
       // ★ P3：语义摘要——不展开就能看到「怎么触发、Lv10 发动率、效果值」
       var lv10 = s.levels && s.levels[10];
+      /* 修 U09：图鉴必须显示「有效距离」，否则玩家查不到战法射程，
+         描述与内核计算虽然同源，但只有点进战斗才知道 —— 违反设计规格 2.3。 */
+      var rangeTxt = (s.range == null || s.range >= 9) ? '无距离限制'
+        : ('有效距离 ' + esc(s.range) + '（前锋0/中军1/大营2，跨阵营距离=双方槽位+1）');
       var digest = lv10 ? ('Lv10 发动 ' + esc(lv10.probability) + '%'
         + (lv10.effect_value && lv10.effect_value.length
           ? ' · 效果 ' + esc(lv10.effect_value.join('/')) : '')) : '';
@@ -720,6 +724,7 @@
         + tag + '<b class="v">' + esc(s.name) + '</b><span class="muted">' + esc(s.trigger) + ' · '
         + esc(s.sourceGroup) + ' · ' + esc(s.tags.join('/')) + '</span>'
         + (digest ? '<span class="muted" style="color:#c9b98c">' + digest + '</span>' : '')
+        + '<span class="tag mid" style="margin-left:6px" data-term="有效距离">' + rangeTxt + '</span>'
         + '<span style="flex:1"></span><span class="muted">' + (ui.openSkill === s.cfgId ? '收起 ▲' : '展开获取途径 ▼') + '</span></div>';
       if (ui.openSkill === s.cfgId) {
         h += '<div class="dt"><div style="margin:8px 0">' + esc(s.des) + '</div>'

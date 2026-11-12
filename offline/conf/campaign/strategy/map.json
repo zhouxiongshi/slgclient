@@ -37,7 +37,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 77
       },
       "history": "西汉故都，汉长安城周约六十里；东汉为西京，初平元年董卓挟献帝迁都于此，董卓死后李傕郭汜乱关中，城郭残破；曹魏为雍州重镇，诸葛亮北伐屡以长安为目标，钟会灭蜀后亦以此为西线总枢",
       "gameName": "长安",
@@ -46,7 +46,8 @@
       "specialty": "粟、铁、玉",
       "arms": "步弩·禁卫",
       "model": "",
-      "provinceCapital": true
+      "provinceCapital": true,
+      "disasterBasis": "关中旱蝗，初平间李傕郭汜乱后饥馑"
     },
     {
       "id": 2,
@@ -77,7 +78,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 71
       },
       "history": "东汉一百六十年帝都；南北九里东西六里、十二城门，南宫北宫并立，城外太学、灵台、明堂、白马寺；初平元年董卓焚毁，建安末曹操重修，黄初元年曹丕复名洛阳并定都，创单一宫制与太极殿中轴线",
       "gameName": "洛阳",
@@ -86,7 +87,8 @@
       "specialty": "丝绢、铁、太学石经",
       "arms": "步弩·禁卫",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "关中旱蝗，初平间李傕郭汜乱后饥馑"
     },
     {
       "id": 3,
@@ -117,7 +119,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 43
       },
       "history": "蜀汉都城；成都平原都江堰灌区核心，锦官城织锦、盐铁官营，左思《蜀都赋》称\"水陆所凑，兼六合而交会\"；刘璋降刘备后为季汉政治经济中枢，诸葛亮南征北伐皆仰给于此",
       "gameName": "成都",
@@ -126,7 +128,8 @@
       "specialty": "稻、蜀锦、盐、铁",
       "arms": "步弩·山地兵",
       "model": "",
-      "provinceCapital": true
+      "provinceCapital": true,
+      "disasterBasis": "蜀中相对安，惟岷江水患"
     },
     {
       "id": 4,
@@ -157,7 +160,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 72
       },
       "history": "交州南海郡治，珠江三角洲与海上贸易门户；士燮兄弟据交州，后归孙吴，为珠玑犀象香药集散地",
       "gameName": "南海",
@@ -166,7 +169,8 @@
       "specialty": "珠玑、犀象、香药",
       "arms": "水军·水军·象兵",
       "model": "",
-      "provinceCapital": true
+      "provinceCapital": true,
+      "disasterBasis": "岭南瘴疫、台风，士燮据郡时疫疠常见"
     },
     {
       "id": 6,
@@ -197,7 +201,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 90
       },
       "history": "古曹国，济水菏水交汇，战国以来\"天下之中\"商业都会；曹操、吕布定陶之战终结兖州之乱",
       "gameName": "定陶",
@@ -206,7 +210,8 @@
       "specialty": "麦、漆、陶",
       "arms": "步弩",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "黄河泛滥与汉末蝗灾核心区，兴平元年大蝗"
     },
     {
       "id": 68,
@@ -237,7 +242,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 90
       },
       "history": "东汉兖州山阳郡属县昌邑（郡治所在），永和五年(140)本郡领10城、109898户、606091口；汉末三国属曹魏，为齐鲁·山阳地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "山阳",
@@ -246,7 +251,8 @@
       "specialty": "铁、渔",
       "arms": "步弩",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "黄河泛滥与汉末蝗灾核心区，兴平元年大蝗"
     },
     {
       "id": 7,
@@ -277,7 +283,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 88
       },
       "history": "陈留郡治，鸿沟—汴水漕运节点；曹操陈留起兵、张邈陈宫叛迎吕布，兖州争夺核心",
       "gameName": "陈留",
@@ -286,7 +292,8 @@
       "specialty": "麦、漕粮",
       "arms": "步弩",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "黄河泛滥与汉末蝗灾核心区，兴平元年大蝗"
     },
     {
       "id": 8,
@@ -317,7 +324,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 76
       },
       "history": "袁绍据河北治所，曹操破袁后自领冀州牧经营邺城，建铜雀、金虎、冰井三台；为魏王国都、曹魏五都之一，实为建安政治中心；漳水灌溉、河北粮仓，后为西晋八王之乱与后赵都城",
       "gameName": "邺",
@@ -326,7 +333,8 @@
       "specialty": "麦、铁、漳水漕",
       "arms": "步骑·重甲",
       "model": "",
-      "provinceCapital": true
+      "provinceCapital": true,
+      "disasterBasis": "河水与旱蝗，袁曹相持时军食屡困"
     },
     {
       "id": 9,
@@ -357,7 +365,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 64
       },
       "history": "河西走廊东端重镇，凉州治，马匹与胡商要道；马腾韩遂割据，曹操平定后为曹魏通西域咽喉",
       "gameName": "武威",
@@ -366,7 +374,8 @@
       "specialty": "马、麦、玉",
       "arms": "骑兵·羌骑",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "陇右旱霜地震，边饷艰难"
     },
     {
       "id": 10,
@@ -397,7 +406,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 73
       },
       "history": "河东郡治，解池盐与铁官所在，关中侧翼粮盐重地；曹操拒马超于潼关、河东为其后方",
       "gameName": "安邑",
@@ -406,7 +415,8 @@
       "specialty": "盐池、铁、麦",
       "arms": "步弩·禁卫",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "关中旱蝗，初平间李傕郭汜乱后饥馑"
     },
     {
       "id": 11,
@@ -437,7 +447,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 69
       },
       "history": "东汉司隶弘农郡属县弘农（郡治所在），永和五年(140)本郡领9城、46815户、199113口；汉末三国属曹魏，为崤函·两京咽喉地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "弘农",
@@ -446,7 +456,8 @@
       "specialty": "桃林、铜",
       "arms": "步弩·禁卫·山地兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "关中旱蝗，初平间李傕郭汜乱后饥馑"
     },
     {
       "id": 69,
@@ -477,7 +488,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 76
       },
       "history": "东汉司隶左冯翊属县高陵（郡治所在），永和五年(140)本郡领13城、37090户、145195口；汉末三国属曹魏，为关中·京辅地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "冯翊",
@@ -486,7 +497,8 @@
       "specialty": "麦、盐",
       "arms": "步弩·禁卫",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "关中旱蝗，初平间李傕郭汜乱后饥馑"
     },
     {
       "id": 12,
@@ -517,7 +529,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 65
       },
       "history": "并州刺史治，汾河谷地，控太行与雁门，铁马与并州突骑之乡；高干据并州反曹，曹操北征后为曹魏北疆重镇",
       "gameName": "晋阳",
@@ -526,7 +538,8 @@
       "specialty": "铁、马、麦",
       "arms": "骑兵·并州突骑",
       "model": "",
-      "provinceCapital": true
+      "provinceCapital": true,
+      "disasterBasis": "并北霜旱，南匈奴与边患"
     },
     {
       "id": 13,
@@ -557,7 +570,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 55
       },
       "history": "幽州刺史治，燕山南麓，控卢龙、居庸通塞外；刘虞、公孙瓒相争，曹操北征乌桓后为曹魏东北边防枢纽",
       "gameName": "蓟",
@@ -566,7 +579,8 @@
       "specialty": "马、铁、盐",
       "arms": "骑兵·乌桓突骑·山地兵",
       "model": "",
-      "provinceCapital": true
+      "provinceCapital": true,
+      "disasterBasis": "幽燕霜蝗，边郡屯田不稳"
     },
     {
       "id": 70,
@@ -597,7 +611,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 62
       },
       "history": "公孙度、公孙康、公孙渊三代割据辽东近五十年，遥控乐浪、玄菟，魏明帝时司马懿辽东之役灭之，此后归魏",
       "gameName": "辽东",
@@ -606,7 +620,8 @@
       "specialty": "马、铁、貂",
       "arms": "骑兵·乌桓突骑",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "幽燕霜蝗，边郡屯田不稳"
     },
     {
       "id": 14,
@@ -637,7 +652,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 83
       },
       "history": "汴泗之交，楚汉故都，铁官所在；曹操为报父仇屠徐州、陶谦求援，刘备领徐州，吕布夺之，终归曹魏；南北用兵必经",
       "gameName": "彭城",
@@ -646,7 +661,8 @@
       "specialty": "铁、麦",
       "arms": "步弩·水军",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "沂沭水患，曹操屠徐前后疫旱并作"
     },
     {
       "id": 71,
@@ -677,7 +693,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 83
       },
       "history": "东汉徐州东海郡属县郯（郡治所在），永和五年(140)本郡领13城、148784户、706416口；汉末三国属曹魏，为徐淮·东海地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "东海",
@@ -686,7 +702,8 @@
       "specialty": "盐、铁",
       "arms": "步弩·水军",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "沂沭水患，曹操屠徐前后疫旱并作"
     },
     {
       "id": 49,
@@ -717,7 +734,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 52
       },
       "history": "豫章郡治，赣江—鄱阳湖平原粮仓，孙吴江南腹心与兵粮来源；孙策平豫章后为江东六郡之一",
       "gameName": "豫章",
@@ -726,7 +743,8 @@
       "specialty": "稻、铜、木材",
       "arms": "水军·水军·弓兵",
       "model": "",
-      "provinceCapital": true
+      "provinceCapital": true,
+      "disasterBasis": "江淮潮患与疫，孙氏经略时屡见「大疫」"
     },
     {
       "id": 15,
@@ -757,7 +775,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 57
       },
       "history": "吴郡治，太湖平原核心，孙氏起家之地；孙坚孙策墓在此，江东士族顾陆朱张根基，丝稻鱼盐甲于江左",
       "gameName": "吴",
@@ -766,7 +784,8 @@
       "specialty": "稻、丝、鱼盐",
       "arms": "水军·水军·弓兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "江淮潮患与疫，孙氏经略时屡见「大疫」"
     },
     {
       "id": 51,
@@ -797,7 +816,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 57
       },
       "history": "会稽郡治，宁绍平原，鉴湖水利与越布、海盐；孙策平会稽、王朗败走，为江东财赋重地",
       "gameName": "会稽",
@@ -806,7 +825,8 @@
       "specialty": "稻、鱼、盐、越布",
       "arms": "水军·水军·弓兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "江淮潮患与疫，孙氏经略时屡见「大疫」"
     },
     {
       "id": 18,
@@ -837,7 +857,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 40
       },
       "history": "汉水上游盆地，张鲁以五斗米道割据三十年；曹操征张鲁取汉中，刘备定军山之战后夺之，为蜀汉北伐前沿大本营，诸葛亮屯兵八年",
       "gameName": "汉宁",
@@ -846,7 +866,8 @@
       "specialty": "稻麦、铁、木材",
       "arms": "步弩·山地兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "蜀中相对安，惟岷江水患"
     },
     {
       "id": 19,
@@ -877,7 +898,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 48
       },
       "history": "长江与嘉陵江交汇，巴郡治所（东汉巴郡治江州）；刘备入蜀以此为东线枢纽，蜀汉设江州都督，李严曾筑大城",
       "gameName": "江州",
@@ -886,7 +907,8 @@
       "specialty": "稻、盐、丹砂",
       "arms": "步弩·山地兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "蜀中相对安，惟岷江水患"
     },
     {
       "id": 20,
@@ -917,7 +939,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 60
       },
       "history": "长沙郡治，湘江谷地粮仓；韩玄据长沙、黄忠在此，孙刘以湘水为界划分荆南",
       "gameName": "长沙",
@@ -926,7 +948,8 @@
       "specialty": "稻、铁、米",
       "arms": "水军·水军·步兵",
       "model": "",
-      "provinceCapital": true
+      "provinceCapital": true,
+      "disasterBasis": "江汉水患与湿疫，赤壁后大疫"
     },
     {
       "id": 72,
@@ -957,7 +980,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 46
       },
       "history": "南阳郡治，东汉\"南都\"，人口冠绝诸郡（永和五年五十二万余户、二百四十三万余口）；光武帝乡、帝乡豪族云集；汉末为张绣、曹操、刘备反复争夺的南北要冲",
       "gameName": "宛城",
@@ -966,7 +989,8 @@
       "specialty": "稻麦、铁、木材",
       "arms": "水军·步兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "江汉水患与湿疫，赤壁后大疫"
     },
     {
       "id": 21,
@@ -997,7 +1021,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 58
       },
       "history": "长江中游重镇，南郡治所，控巴蜀下游与江汉平原；刘表、曹操、刘备、孙权反复易手，赤壁后周瑜攻取，刘备借荆州以此为根基，吕蒙白衣渡江后归吴",
       "gameName": "江陵",
@@ -1006,7 +1030,8 @@
       "specialty": "稻、鱼、木材、漆",
       "arms": "水军·水军·步兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "江汉水患与湿疫，赤壁后大疫"
     },
     {
       "id": 27,
@@ -1037,7 +1062,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 67
       },
       "history": "东汉交州合浦郡属县合浦（郡治所在），永和五年(140)本郡领5城、23121户、86617口；汉末三国属孙吴，为交州·合浦地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "合浦",
@@ -1046,7 +1071,8 @@
       "specialty": "珍珠、盐、海贸",
       "arms": "水军·水军·象兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "岭南瘴疫、台风，士燮据郡时疫疠常见"
     },
     {
       "id": 28,
@@ -1077,7 +1103,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 78
       },
       "history": "汉代交趾刺史部旧治，西江要冲，岭南通中原的漓水—湘水走廊节点；士燮势力与孙吴交州争夺要地",
       "gameName": "苍梧",
@@ -1086,7 +1112,8 @@
       "specialty": "稻、珠、木材",
       "arms": "水军·水军·象兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "岭南瘴疫、台风，士燮据郡时疫疠常见"
     },
     {
       "id": 73,
@@ -1117,7 +1144,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 85
       },
       "history": "东汉兖州泰山郡属县奉高（郡治所在），永和五年(140)本郡领12城、8929户、437317口；汉末三国属曹魏，为齐鲁·泰山地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "泰山",
@@ -1126,7 +1153,8 @@
       "specialty": "铁、木材",
       "arms": "步弩·山地兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "黄河泛滥与汉末蝗灾核心区，兴平元年大蝗"
     },
     {
       "id": 33,
@@ -1157,7 +1185,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 90
       },
       "history": "东郡治，古昆吾、帝丘，黄河南岸；曹操与吕布濮阳之战、袁绍南下官渡皆在此线",
       "gameName": "濮阳",
@@ -1166,7 +1194,8 @@
       "specialty": "麦、盐",
       "arms": "步弩",
       "model": "",
-      "provinceCapital": true
+      "provinceCapital": true,
+      "disasterBasis": "黄河泛滥与汉末蝗灾核心区，兴平元年大蝗"
     },
     {
       "id": 74,
@@ -1197,7 +1226,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 75
       },
       "history": "东汉冀州河间国属县乐成（郡治所在），永和五年(140)本郡领11城、93754户、634421口；汉末三国属曹魏，为河北·河间地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "乐成",
@@ -1206,7 +1235,8 @@
       "specialty": "麦、渔",
       "arms": "步骑·重甲",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "河水与旱蝗，袁曹相持时军食屡困"
     },
     {
       "id": 75,
@@ -1237,7 +1267,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 77
       },
       "history": "东汉冀州中山国属县卢奴（郡治所在），永和五年(140)本郡领13城、97412户、658195口；汉末三国属曹魏，为河北·中山地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "中山",
@@ -1246,7 +1276,8 @@
       "specialty": "麦、铁",
       "arms": "步骑·重甲",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "河水与旱蝗，袁曹相持时军食屡困"
     },
     {
       "id": 76,
@@ -1277,7 +1308,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 75
       },
       "history": "东汉冀州清河国属县甘陵（郡治所在），永和五年(140)本郡领7城、123964户、760418口；汉末三国属曹魏，为河北·清河地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "清河",
@@ -1286,7 +1317,8 @@
       "specialty": "麦、绢",
       "arms": "步骑·重甲",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "河水与旱蝗，袁曹相持时军食屡困"
     },
     {
       "id": 77,
@@ -1317,7 +1349,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 78
       },
       "history": "东汉冀州赵国属县邯郸（郡治所在），永和五年(140)本郡领5城、32719户、188381口；汉末三国属曹魏，为河北·邯郸地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "邯郸",
@@ -1326,7 +1358,8 @@
       "specialty": "铁、麦",
       "arms": "步骑·重甲",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "河水与旱蝗，袁曹相持时军食屡困"
     },
     {
       "id": 78,
@@ -1357,7 +1390,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 66
       },
       "history": "东汉凉州安定郡属县临泾（郡治所在），永和五年(140)本郡领8城、6094户、29060口；汉末三国属曹魏，为关陇·安定地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "安定",
@@ -1366,7 +1399,8 @@
       "specialty": "马、麦",
       "arms": "骑兵·羌骑",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "陇右旱霜地震，边饷艰难"
     },
     {
       "id": 79,
@@ -1397,7 +1431,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 68
       },
       "history": "东汉凉州张掖属国属县候官（郡治所在），永和五年(140)本郡领5城、4656户、16952口；汉末三国属曹魏，为河西·属国地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "张掖",
@@ -1406,7 +1440,8 @@
       "specialty": "马、牧",
       "arms": "骑兵·羌骑",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "陇右旱霜地震，边饷艰难"
     },
     {
       "id": 37,
@@ -1437,7 +1472,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 71
       },
       "history": "东汉凉州金城郡属县允吾（郡治所在），永和五年(140)本郡领10城、3858户、18947口；汉末三国属曹魏，为河西·金城地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "金城",
@@ -1446,7 +1481,8 @@
       "specialty": "马、麦、盐",
       "arms": "骑兵·羌骑",
       "model": "",
-      "provinceCapital": true
+      "provinceCapital": true,
+      "disasterBasis": "陇右旱霜地震，边饷艰难"
     },
     {
       "id": 38,
@@ -1477,7 +1513,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 69
       },
       "history": "汉阳郡治，陇右门户；马超据冀城抗曹，后为曹魏雍凉防线与诸葛亮北伐争夺焦点，街亭、祁山皆在其外围",
       "gameName": "天水",
@@ -1486,7 +1522,8 @@
       "specialty": "马、麦、铁",
       "arms": "骑兵·羌骑",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "陇右旱霜地震，边饷艰难"
     },
     {
       "id": 80,
@@ -1517,7 +1554,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 66
       },
       "history": "东汉凉州北地郡属县富平（郡治所在），永和五年(140)本郡领6城、3122户、18637口；汉末三国属曹魏，为关陇·北地地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "富平",
@@ -1526,7 +1563,8 @@
       "specialty": "马、麦",
       "arms": "骑兵·羌骑",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "陇右旱霜地震，边饷艰难"
     },
     {
       "id": 81,
@@ -1557,7 +1595,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 60
       },
       "history": "东汉凉州张掖居延属国属县居延（郡治所在），永和五年(140)本郡领1城、1560户、4733口；汉末三国属曹魏，为漠南·居延地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "居延",
@@ -1566,7 +1604,8 @@
       "specialty": "马、驼、烽燧",
       "arms": "骑兵·羌骑",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "陇右旱霜地震，边饷艰难"
     },
     {
       "id": 82,
@@ -1597,7 +1636,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 71
       },
       "history": "河西最西郡，玉门阳关所在，丝绸之路南北道分岔；汉末中原隔绝，曹魏复置太守、通西域屯戍",
       "gameName": "敦煌",
@@ -1606,7 +1645,8 @@
       "specialty": "玉、马、胡商",
       "arms": "骑兵·羌骑",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "陇右旱霜地震，边饷艰难"
     },
     {
       "id": 83,
@@ -1637,7 +1677,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 69
       },
       "history": "东汉凉州陇西郡属县狄道（郡治所在），永和五年(140)本郡领11城、5628户、29637口；汉末三国属曹魏，为陇右·狄道地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "陇西",
@@ -1646,7 +1686,8 @@
       "specialty": "马、麦、羌毡",
       "arms": "骑兵·羌骑·山地兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "陇右旱霜地震，边饷艰难"
     },
     {
       "id": 84,
@@ -1677,7 +1718,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 65
       },
       "history": "东汉并州五原郡属县九原（郡治所在），永和五年(140)本郡领10城、4667户、22957口；汉末三国属曹魏，为并州·五原地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "五原",
@@ -1686,7 +1727,8 @@
       "specialty": "马、牧、盐",
       "arms": "骑兵·并州突骑",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "并北霜旱，南匈奴与边患"
     },
     {
       "id": 85,
@@ -1717,7 +1759,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 63
       },
       "history": "东汉并州云中郡属县云中（郡治所在），永和五年(140)本郡领11城、5351户、26430口；汉末三国属曹魏，为并州·云中地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "云中",
@@ -1726,7 +1768,8 @@
       "specialty": "马、牧",
       "arms": "骑兵·并州突骑",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "并北霜旱，南匈奴与边患"
     },
     {
       "id": 86,
@@ -1757,7 +1800,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 66
       },
       "history": "东汉并州定襄郡属县善无（郡治所在），永和五年(140)本郡领5城、3153户、13571口；汉末三国属曹魏，为并州·定襄地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "定襄",
@@ -1766,7 +1809,8 @@
       "specialty": "马、牧",
       "arms": "骑兵·并州突骑·山地兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "并北霜旱，南匈奴与边患"
     },
     {
       "id": 87,
@@ -1797,7 +1841,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 64
       },
       "history": "东汉并州西河郡属县离石（郡治所在），永和五年(140)本郡领13城、5698户、20838口；汉末三国属曹魏，为并州·西河地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "西河",
@@ -1806,7 +1850,8 @@
       "specialty": "马、铁",
       "arms": "骑兵·并州突骑·山地兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "并北霜旱，南匈奴与边患"
     },
     {
       "id": 40,
@@ -1837,7 +1882,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 59
       },
       "history": "东汉并州上党郡属县长子（郡治所在），永和五年(140)本郡领13城、26222户、127403口；汉末三国属曹魏，为并州·上党地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "上党",
@@ -1846,7 +1891,8 @@
       "specialty": "铁、麦、马",
       "arms": "骑兵·并州突骑·山地兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "并北霜旱，南匈奴与边患"
     },
     {
       "id": 41,
@@ -1877,7 +1923,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 66
       },
       "history": "东汉并州雁门郡属县阴馆（郡治所在），永和五年(140)本郡领14城、31862户、249000口；汉末三国属曹魏，为并州·雁门地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "雁门",
@@ -1886,7 +1932,8 @@
       "specialty": "马、铁、边骑",
       "arms": "骑兵·并州突骑·山地兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "并北霜旱，南匈奴与边患"
     },
     {
       "id": 42,
@@ -1917,7 +1964,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 60
       },
       "history": "东汉幽州右北平郡属县土垠（郡治所在），永和五年(140)本郡领4城、9170户、53475口；汉末三国属曹魏，为幽州·右北平地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "右北平",
@@ -1926,7 +1973,8 @@
       "specialty": "马、铁",
       "arms": "骑兵·乌桓突骑·山地兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "幽燕霜蝗，边郡屯田不稳"
     },
     {
       "id": 88,
@@ -1957,7 +2005,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 58
       },
       "history": "东汉幽州辽东属国属县昌辽（郡治所在），永和五年(140)本郡领6城、0户、0口；汉末三国属曹魏，为辽东·昌黎地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "昌黎",
@@ -1966,7 +2014,8 @@
       "specialty": "马、牧",
       "arms": "骑兵·乌桓突骑",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "幽燕霜蝗，边郡屯田不稳"
     },
     {
       "id": 89,
@@ -1997,7 +2046,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 60
       },
       "history": "东汉幽州乐浪郡属县朝鲜（郡治所在），永和五年(140)本郡领18城、61492户、257050口；汉末三国属公孙氏→曹魏，为辽东·乐浪地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "乐浪",
@@ -2006,7 +2055,8 @@
       "specialty": "稻、铁、海产",
       "arms": "骑兵·乌桓突骑",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "幽燕霜蝗，边郡屯田不稳"
     },
     {
       "id": 43,
@@ -2037,7 +2087,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 62
       },
       "history": "东汉幽州涿郡属县涿（郡治所在），永和五年(140)本郡领7城、102218户、633754口；汉末三国属曹魏，为幽州·涿郡地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "涿",
@@ -2046,7 +2096,8 @@
       "specialty": "麦、桑",
       "arms": "骑兵·乌桓突骑",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "幽燕霜蝗，边郡屯田不稳"
     },
     {
       "id": 90,
@@ -2077,7 +2128,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 54
       },
       "history": "东汉幽州玄菟郡属县高句骊（郡治所在），永和五年(140)本郡领6城、1594户、43163口；汉末三国属公孙氏→曹魏，为辽东·玄菟地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "玄菟",
@@ -2086,7 +2137,8 @@
       "specialty": "马、貂、人参",
       "arms": "骑兵·乌桓突骑·山地兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "幽燕霜蝗，边郡屯田不稳"
     },
     {
       "id": 91,
@@ -2117,7 +2169,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 61
       },
       "history": "东汉幽州代郡属县高柳（郡治所在），永和五年(140)本郡领11城、20123户、126188口；汉末三国属曹魏，为幽州·代郡地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "代",
@@ -2126,7 +2178,8 @@
       "specialty": "马、牧",
       "arms": "骑兵·乌桓突骑",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "幽燕霜蝗，边郡屯田不稳"
     },
     {
       "id": 44,
@@ -2157,7 +2210,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 83
       },
       "history": "沂泗交汇，东汉徐州刺史初治郯、后徙下邳；陶谦、刘备、吕布相继据之，建安三年曹操水灌下邳擒吕布，此后为曹魏徐州重镇",
       "gameName": "下邳",
@@ -2166,7 +2219,8 @@
       "specialty": "麦、铁、泗水漕",
       "arms": "步弩·水军",
       "model": "",
-      "provinceCapital": true
+      "provinceCapital": true,
+      "disasterBasis": "沂沭水患，曹操屠徐前后疫旱并作"
     },
     {
       "id": 45,
@@ -2197,7 +2251,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 79
       },
       "history": "广陵郡治，邗沟入江、江北门户，吴王濞故都城周十四里半；曹魏与孙吴反复争夺，魏文帝三次伐吴至此临江",
       "gameName": "广陵",
@@ -2206,7 +2260,8 @@
       "specialty": "盐、稻、漕",
       "arms": "步弩·水军",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "沂沭水患，曹操屠徐前后疫旱并作"
     },
     {
       "id": 46,
@@ -2237,7 +2292,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 82
       },
       "history": "东汉徐州琅邪国属县开阳（郡治所在），永和五年(140)本郡领13城、20804户、570967口；汉末三国属曹魏，为徐淮·琅邪地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "琅琊",
@@ -2246,7 +2301,8 @@
       "specialty": "盐、铁、桑",
       "arms": "步弩·水军",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "沂沭水患，曹操屠徐前后疫旱并作"
     },
     {
       "id": 92,
@@ -2277,7 +2333,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 50
       },
       "history": "东汉扬州丹阳郡属县宛陵（郡治所在），永和五年(140)本郡领16城、136518户、630545口；汉末三国属孙吴，为江东·丹阳地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "丹阳",
@@ -2286,7 +2342,8 @@
       "specialty": "铜、铁、稻",
       "arms": "水军·水军·弓兵·山地兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "江淮潮患与疫，孙氏经略时屡见「大疫」"
     },
     {
       "id": 53,
@@ -2317,7 +2374,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 42
       },
       "history": "孙吴建安郡治，本版据《汉末三国》要地补点；汉末属会稽郡南部，孙氏讨山越后置郡，为闽中通江东的枢纽。",
       "gameName": "建安",
@@ -2326,7 +2383,8 @@
       "specialty": "",
       "arms": "",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "江淮潮患与疫，孙氏经略时屡见「大疫」"
     },
     {
       "id": 52,
@@ -2357,7 +2415,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 44
       },
       "history": "孙吴庐陵郡治，本版据《汉末三国》要地补点；汉末属豫章郡南部，赣江中游，孙策平江东后分置，控豫章通岭南。",
       "gameName": "庐陵",
@@ -2366,7 +2424,8 @@
       "specialty": "",
       "arms": "",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "江淮潮患与疫，孙氏经略时屡见「大疫」"
     },
     {
       "id": 55,
@@ -2397,7 +2456,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 47
       },
       "history": "东汉会稽郡永宁县（今浙江温州），本版据《汉末三国》要地补点；孙吴据江东后为浙东沿海要地，属会稽南部都尉辖境。",
       "gameName": "永宁",
@@ -2406,7 +2465,8 @@
       "specialty": "",
       "arms": "",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "江淮潮患与疫，孙氏经略时屡见「大疫」"
     },
     {
       "id": 93,
@@ -2437,7 +2497,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 37
       },
       "history": "东汉益州犍为属国属县朱提（郡治所在），永和五年(140)本郡领2城、7938户、37187口；汉末三国属蜀汉（朱提），为南中·朱提地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "朱提",
@@ -2446,7 +2506,8 @@
       "specialty": "银、铜、马",
       "arms": "步弩·山地兵·山地兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "蜀中相对安，惟岷江水患"
     },
     {
       "id": 94,
@@ -2477,7 +2538,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 41
       },
       "history": "东汉益州犍为郡属县武阳（郡治所在），永和五年(140)本郡领9城、137713户、411378口；汉末三国属蜀汉，为巴蜀·犍为地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "犍为",
@@ -2486,7 +2547,8 @@
       "specialty": "稻、盐、铁",
       "arms": "步弩·山地兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "蜀中相对安，惟岷江水患"
     },
     {
       "id": 95,
@@ -2517,7 +2579,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 48
       },
       "history": "东汉益州蜀郡属国属县汉嘉（郡治所在），永和五年(140)本郡领4城、111568户、475629口；汉末三国属蜀汉，为巴蜀·汉嘉地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "汉嘉",
@@ -2526,7 +2588,8 @@
       "specialty": "铜、木、羌布",
       "arms": "步弩·山地兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "蜀中相对安，惟岷江水患"
     },
     {
       "id": 96,
@@ -2557,7 +2620,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 42
       },
       "history": "滇池坝子，益州郡治；诸葛亮南征后改建宁郡，为南中庲降都督所辖，蜀汉盐铁与兵源后方",
       "gameName": "滇",
@@ -2566,7 +2629,8 @@
       "specialty": "盐、铜、稻",
       "arms": "步弩·山地兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "蜀中相对安，惟岷江水患"
     },
     {
       "id": 97,
@@ -2597,7 +2661,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 40
       },
       "history": "东汉益州越巂郡属县邛都（郡治所在），永和五年(140)本郡领14城、130120户、623418口；汉末三国属蜀汉（南中），为南中·越巂地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "邛都",
@@ -2606,7 +2670,8 @@
       "specialty": "盐、铁、马",
       "arms": "步弩·山地兵·山地兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "蜀中相对安，惟岷江水患"
     },
     {
       "id": 98,
@@ -2637,7 +2702,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 36
       },
       "history": "东汉益州广汉属国属县阴平道（郡治所在），永和五年(140)本郡领3城、37110户、205652口；汉末三国属曹魏，为陇蜀·阴平地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "阴平",
@@ -2646,7 +2711,8 @@
       "specialty": "马、麦、药材",
       "arms": "步弩·山地兵·山地兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "蜀中相对安，惟岷江水患"
     },
     {
       "id": 62,
@@ -2677,7 +2743,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 57
       },
       "history": "东汉荆州武陵郡属县临沅（郡治所在），永和五年(140)本郡领12城、46672户、250913口；汉末三国属孙吴，为荆南·武陵地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "武陵",
@@ -2686,7 +2752,8 @@
       "specialty": "稻、木、五溪蛮",
       "arms": "水军·水军·步兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "江汉水患与湿疫，赤壁后大疫"
     },
     {
       "id": 99,
@@ -2717,7 +2784,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 46
       },
       "history": "东汉荆州零陵郡属县泉陵（郡治所在），永和五年(140)本郡领13城、212284户、1001578口；汉末三国属孙吴，为荆南·零陵地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "零陵",
@@ -2726,7 +2793,8 @@
       "specialty": "稻、木、湘水",
       "arms": "水军·步兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "江汉水患与湿疫，赤壁后大疫"
     },
     {
       "id": 100,
@@ -2757,7 +2825,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 51
       },
       "history": "南岭北麓，控湘粤通道，桂阳铜铁与山越，孙吴与蜀汉争夺荆南时的南端",
       "gameName": "桂阳",
@@ -2766,7 +2834,8 @@
       "specialty": "铜、铁、稻",
       "arms": "水军·步兵·山地兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "江汉水患与湿疫，赤壁后大疫"
     },
     {
       "id": 101,
@@ -2797,7 +2866,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 87
       },
       "history": "东汉豫州沛国属县相（郡治所在），永和五年(140)本郡领21城、200495户、251393口；汉末三国属曹魏，为丰沛·帝乡地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "相城",
@@ -2806,7 +2875,8 @@
       "specialty": "麦、桑",
       "arms": "步兵·弩兵",
       "model": "",
-      "provinceCapital": true
+      "provinceCapital": true,
+      "disasterBasis": "中原蝗旱频仍，建安间屡有「蝗虫起」记载"
     },
     {
       "id": 102,
@@ -2837,7 +2907,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 85
       },
       "history": "东汉豫州陈国属县陈（郡治所在），永和五年(140)本郡领9城、112653户、1547572口；汉末三国属曹魏，为陈蔡·粮仓地方城邑，具体沿革史籍阙载，按郡治相对定位建模。",
       "gameName": "陈",
@@ -2846,7 +2916,8 @@
       "specialty": "麦、粟",
       "arms": "步兵·弩兵",
       "model": "",
-      "provinceCapital": false
+      "provinceCapital": false,
+      "disasterBasis": "中原蝗旱频仍，建安间屡有「蝗虫起」记载"
     },
     {
       "id": 66,
@@ -2877,7 +2948,7 @@
         "治安": null,
         "开发度": null,
         "战略价值": null,
-        "灾害风险": null
+        "灾害风险": 73
       },
       "history": "平原郡治，刘备曾领平原相，黄巾与袁绍势力交锋地带，黄河故道要冲",
       "gameName": "平原",
@@ -2886,7 +2957,8 @@
       "specialty": "麦、桑",
       "arms": "弩兵·水军",
       "model": "",
-      "provinceCapital": true
+      "provinceCapital": true,
+      "disasterBasis": "海滨蝗、海溢，黄巾余部与饥荒交织"
     }
   ],
   "routes": [
@@ -10963,5 +11035,7 @@
         ]
       ]
     }
-  ]
+  ],
+  "disasterRiskVersion": 1,
+  "disasterRiskSource": "史料地理 + 本作设定（fill-disaster-risk.mjs，确定性）"
 }

@@ -35,6 +35,23 @@ const PROVINCE_ID = new Map([
 ]);
 const ATTR_KEYS = ['民心', '繁荣', '士气', '农业', '商业', '城防', '兵源', '水运', '治安', '开发度', '战略价值', '灾害风险'];
 
+/* U07：TMX 里「灾害风险」为空时按东汉灾害地理兜底，避免每次重建把 72 城打回全 null
+   （全 null → city-econ.disasterTick 恒取 50 → 全图灾害概率一样）。确定性，无随机。 */
+const RISK_BASE = {
+  司隶: 68, 兖州: 82, 豫州: 80, 冀州: 72, 青州: 70, 徐州: 74,
+  荆州: 48, 扬州: 44, 益州: 38, 凉州: 64, 并州: 62, 幽州: 58, 交州: 66,
+};
+function withDisasterRisk(attrs, province, id) {
+  if (attrs.灾害风险 != null) return attrs;
+  let v = RISK_BASE[province] ?? 50;
+  if (/平原|河|泽|水|湖|江/.test(String(province === '' ? '' : ''))) v += 0; // 地形字段在 TMX 无稳定键，保留为接口
+  if (Number(attrs.水运) >= 60) v += 5;
+  if (Number(attrs.农业) >= 85) v += 2;
+  v += ((Number(id) * 7) % 9) - 4;
+  attrs.灾害风险 = Math.max(20, Math.min(90, Math.round(v)));
+  return attrs;
+}
+
 /** tmx 图层名 → 游戏里的图层键与文件名 */
 const IMAGE_LAYERS = {
   '00_底图·东汉十三州水墨': ['base', 'layer_base.png'],
@@ -131,7 +148,7 @@ const cities = gCity.objects.map((o) => {
     width: o.width ?? null,
     height: o.height ?? null,
     population: num(p['鼎立期估测人口']),
-    attrs: Object.fromEntries(ATTR_KEYS.map((k) => [k, num(p[k])])),
+    attrs: withDisasterRisk(Object.fromEntries(ATTR_KEYS.map((k) => [k, num(p[k])])), province, o.id),
     history: p['历史简介'] || '',
     gameName: p['游戏对应名'] || '',
     jun: p['所属郡国'] || '',

@@ -7,6 +7,8 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { recordRes } from './economy.js';
+/* 修 U21：灾害/叛逃改用确定性随机，同 seed + 回合可回放（strategy-rng 零内部依赖） */
+import { rngFor } from './strategy-rng.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const MAP_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'map.json');
@@ -165,8 +167,11 @@ export function disasterTick(state, cfg, ctx) {
     const e = econ[id];
     const c = cityMap().get(Number(id));
     if (!e || !c) continue;
-    const risk = (c.attrs?.灾害风险 ?? 50) / 100 + 0.5;   // 0.5~1.5
-    const roll = Math.random();
+    /* 修 U07/U21：风险值按史实地理写入 map.json（原先 72 城全 null → 恒取 50，
+       全图灾害概率一致）；掷骰改走确定性 rngFor，同 seed + 日 + 城 结果可回放。 */
+    const riskVal = Number(c.attrs?.灾害风险 ?? c.disasterRisk ?? 50);
+    const risk = riskVal / 100 + 0.5;   // 0.5~1.5
+    const roll = rngFor(state.seed ?? 20261110, day, `disaster:${id}`).random();
     const civic = hasCivic ? 0.8 : 1;
     // ★ P7 治安：治安 100 时灾害概率 ×0.7，治安 0 时 ×1.0
     const orderK = 1 - (Number(e.order ?? 60) / 100) * 0.3;
@@ -305,7 +310,8 @@ export function loyaltyTick(state, cfg, ctx) {
   const defected = [];
   for (const g of [...(state.generals || [])]) {
     const p = (g.loyal ?? 88) < 40 ? 0.10 : ((g.loyal ?? 88) < 70 ? 0.03 : 0);
-    if (p > 0 && Math.random() < p) defected.push(g);
+    // 修 U21：叛逃掷骰走确定性 rngFor，同 seed + 日 + 武将结果恒定。
+    if (p > 0 && rngFor(state.seed ?? 20261110, day, `defect:${g.id}`).random() < p) defected.push(g);
   }
   for (const g of defected) {
     const cfgRow = cfg.generalByCfg?.get(Number(g.cfgId));

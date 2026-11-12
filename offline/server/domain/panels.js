@@ -20,6 +20,7 @@ import { ensureCityEcon, cityYield, armsApt, ARMS_NAMES } from './city-econ.js';
    刻意不 import strategy.js —— 它反向 import world.js，而 world.js 又 import 本文件，会成环。 */
 import { marchableNeighbors, marchGraph } from './march.js';
 import { booksOf } from './strategy-log.js';
+import { captiveRateParts, captiveRecruitRate } from './captive-rules.js';
 import { recordRes } from './economy.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -464,7 +465,9 @@ export function panelState(state, cfg) {
       garrison: troops, // 兼容旧 UI 字段：已改为实时驻军，不再是拍脑袋估算
       agriculture: c.attrs?.农业 ?? null, commerce: c.attrs?.商业 ?? null,
       cityDef: c.attrs?.城防 ?? null,
-      terrain: c.terrain || '', specialty: c.attrs?.特产 || '',
+      // 修 U06：特产/主要兵种在 map.json 顶层，attrs 里没有这两个键（旧写法恒空）。
+      terrain: c.terrain || '', specialty: c.specialty || c.attrs?.特产 || '',
+      arms: c.arms || c.attrs?.主要兵种 || '',
       reachable: reachable.has(Number(c.id)),
       // ★ P2/P3 城市经营（仅玩家城）：人口/城库/逐城日产/灾害状态
       ...(row.owner === 'player' ? (() => {
@@ -517,9 +520,13 @@ export function panelState(state, cfg) {
     })(),
     generals,
     // ★ P6 俘虏名册：六府「武将」页招降入口（政治判定在 strategy.recruitCaptive，这里只展示）
+    // 修 U08：降率与「成功率构成条」走 captive-rules.js 唯一公式，
+    // 旧实现缺 rate 字段，界面显示「降率约 undefined%」。
     captives: (state.captives || []).map((c, i) => ({
       idx: i, name: c.name, from: c.from, loyal: c.loyal, days: c.days,
       star: cfg.generalByCfg.get(Number(c.cfgId))?.star ?? 0,
+      rate: Math.round(captiveRecruitRate(state, c) * 100),
+      rateParts: captiveRateParts(state, c),
     })),
     prospects,
     items,

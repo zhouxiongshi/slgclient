@@ -19,6 +19,7 @@ import {
   careerOf,
 } from '../server/domain/panels.js';
 import { applyDays as _applyDays } from '../server/domain/economy.js';
+import { loyaltyTick } from '../server/domain/city-econ.js';
 import { startOfflineServer, PANELS_UI_SOURCE } from '../server/index.js';
 import { strategyViewState } from '../server/domain/strategy.js';
 
@@ -147,7 +148,7 @@ test('收支流水：锻造/政令扣费逐笔入账、带事由；面板输出�
   assert.ok(added.some((e) => e.reason === '军饷' && e.delta === -2400), '军饷入账（800 兵 × 3 日 × 1 粮）');
 });
 
-test('委任真实生效：岗位加成折算进日产；在岗武将每天发俸禄并入流水', () => {  const s = fresh();
+test('委任真实生效：岗位加成折算进日产；俸禄单轨不重复扣费（U17）', () => {  const s = fresh();
   const g = s.generals[0];
   assert.equal(panelAction(s, cfg, { type: 'appoint', post: 'agri', target: g.id }).ok, true);
   const bonus = _yieldBonus(s);
@@ -160,8 +161,13 @@ test('委任真实生效：岗位加成折算进日产；在岗武将每天发�
   _applyDays(s, cfg, 2, { resBonus: bonus, upkeepPerSoldier: 0, postSalaryPerPost: 30 });
   assert.equal(Number(s.roleRes.grain) - gBefore,
     2 * Math.floor(baseYield * (1 + bonus.grain / 100)), '日产按委任加成上浮');
-  // 俸禄：1 岗 × 30 × 2 日 = 60，且流水有「委任俸禄」负项
-  assert.ok((s.resLedger || []).some((e) => e.reason === '委任俸禄' && e.delta === -60), '俸禄入流水');
+  /* U17：俸禄单轨。applyDays 不再按在岗人数重复扣「委任俸禄」，
+     全部由 city-econ.loyaltyTick 的逐将旬俸结算，避免双轨重复支出与欠饷判定失真。 */
+  assert.ok(!(s.resLedger || []).some((e) => e.reason === '委任俸禄' && e.delta === -60),
+    'applyDays 不应重复扣委任俸禄');
+  s.roleRes.gold = 5000;
+  loyaltyTick(s, cfg, { push() {} });
+  assert.ok((s.resLedger || []).some((e) => e.reason === '武将旬俸'), '旬俸由 loyaltyTick 唯一结算');
   // 面板显示与生效同源
   const v = panelState(s, cfg);
   const grainRow = v.interior.output.resources.find((r) => r.key === 'grain');

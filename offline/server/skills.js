@@ -1703,6 +1703,11 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       s.marches.forEach(function (mm) {
         var a = byId[mm.from], b = byId[mm.to];
         if (!a || !b) return;
+        /* ★ U12：诸侯行军同样画在地图上，但用敌红区分；玩家军仍是金色 */
+        var isFoe = !!mm.side && mm.side !== 'player';
+        var cWalk = isFoe ? 'rgba(225,92,72,.95)' : 'rgba(232,198,112,.9)';
+        var cRest = isFoe ? 'rgba(225,92,72,.45)' : 'rgba(232,198,112,.45)';
+        var cFlag = isFoe ? '#e15c48' : '#e8c670';
         var span = Math.max(1, mm.arriveDay - mm.departDay);
         var p = Math.max(0, Math.min(1, (dayNow - mm.departDay) / span));
         var pts = [[a.x, a.y], [b.x, b.y]];
@@ -1723,8 +1728,8 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
         var cur = [pts[0][0], pts[0][1]];
         var acc = 0, closed = false;
         g.save();
-        // 已走部分：金色实线
-        g.strokeStyle = 'rgba(232,198,112,.9)';
+        // 已走部分：实线（玩家金色 / 诸侯敌红）
+        g.strokeStyle = cWalk;
         g.lineWidth = Math.max(1.6, 2.2 * scale);
         g.beginPath();
         var q0 = P(pts[0]);
@@ -1743,7 +1748,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
             g.stroke();
             // 未走部分：同色虚线
             g.setLineDash([6 * scale, 5 * scale]);
-            g.strokeStyle = 'rgba(232,198,112,.45)';
+            g.strokeStyle = cRest;
             g.lineWidth = Math.max(1.2, 1.6 * scale);
             g.beginPath();
             g.moveTo(qc[0], qc[1]);
@@ -1763,7 +1768,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
         g.fillStyle = 'rgba(20,16,8,.55)';
         g.beginPath(); g.arc(qm[0], qm[1] + 2 * scale, Math.max(2.5, 3.5 * scale), 0, 6.2832); g.fill();
         var fh2 = Math.max(7, 12 * scale), fw2 = fh2 * 1.1;
-        g.fillStyle = '#e8c670';
+        g.fillStyle = cFlag;
         g.beginPath();
         g.moveTo(qm[0], qm[1] - fh2);
         g.lineTo(qm[0] + fw2, qm[1] - fh2 + fh2 * 0.3);
@@ -1771,7 +1776,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
         g.closePath();
         g.fill();
         g.strokeStyle = 'rgba(30,24,14,.8)'; g.lineWidth = Math.max(0.8, 1 * scale); g.stroke();
-        g.strokeStyle = '#e8c670';
+        g.strokeStyle = cFlag;
         g.beginPath(); g.moveTo(qm[0], qm[1] - fh2); g.lineTo(qm[0], qm[1]); g.stroke();
         g.restore();
       });

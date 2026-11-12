@@ -54,10 +54,12 @@ export function applyDays(state, cfg, days, rules) {
   const startDay = Math.floor(Number(state.clock?.day) || 1);
   // ★ P1：委任岗位真实生效——resBonus[k] 为该资源产量加成百分比（panels.js 计算，红线 ≤30%）
   const resBonus = rules.resBonus || {};
-  // ★ P1：委任俸禄——在岗武将每人每天发俸（rules.postSalaryPerPost，缺省 30 金），让委任有成本
-  const salaryPerPost = rules.postSalaryPerPost ?? 30;
+  /* 修 U17：俸禄只由 city-econ.loyaltyTick 的「逐将旬俸」结算一次。
+     旧实现在此另按在岗人数每日再扣一份（filledPosts × 30），与旬俸并行扣费，
+     造成双轨重复支出、欠饷与忠诚判定失真。保留 filledPosts 供流水/面板展示口径，
+     但这里不再产生第二笔支出（salaryPaid 恒 0，流水仍如实记 0）。 */
   const filledPosts = Object.values(state.interior?.posts || {}).filter((v) => Number(v) > 0).length;
-  const salaryPerDay = filledPosts * salaryPerPost;
+  const salaryPerDay = 0;
   const before = {};
   for (const k of STOCK) before[k] = Number(r[k]) || 0;
   let upkeepPaid = 0;
