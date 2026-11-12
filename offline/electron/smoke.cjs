@@ -10,6 +10,10 @@ const path = require('node:path');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/* console-message 的新旧签名差异与 level 归一化统一放在 console-level.cjs，
+   与 ui-audit.cjs / main.cjs 共用同一口径（别再写第三份拷贝）。 */
+const { consoleSeverity, consolePayload } = require('./console-level.cjs');
+
 function variance(buffer) {
   // NativeImage.toBitmap() -> 4 bytes/pixel (BGRA)
   let n = 0, sum = 0, sum2 = 0;
@@ -230,11 +234,15 @@ async function runSmoke(win, server, app) {
   };
 
   const wc = win.webContents;
-  wc.on('console-message', (_e, level, message) => {
-    const text = String(message);
+  /* ★ 修：Electron 35+ 把 console-message 改成「单个事件对象」参数，旧的
+     (event, level, message) 三参写法会让 level 恒为 undefined，"level >= 2" 永远为假 ——
+     于是「error 级控制台输出 0 条」是个永远成立的假结论，等于这项检测从未生效。 */
+  wc.on('console-message', (...args) => {
+    const d = consolePayload(args);
+    const text = String(d.message == null ? '' : d.message);
     // Electron 开发态的 CSP 提示不是游戏错误，打包后不再出现
     if (/Electron Security Warning/i.test(text)) return;
-    if (level >= 2) report.consoleErrors.push({ level, message: text.slice(0, 400) });
+    if (consoleSeverity(d.level) >= 2) report.consoleErrors.push({ level: d.level, message: text.slice(0, 400) });
   });
 
   // 等待页面加载 + Cocos 场景创建（注入 31 个技能资源后冷启动会稍慢）
@@ -729,4 +737,4 @@ async function runSmoke(win, server, app) {
   return report;
 }
 
-module.exports = { runSmoke };
+module.exports = { runSmoke, consoleSeverity };

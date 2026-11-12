@@ -10,6 +10,8 @@
 const { app, BrowserWindow, ipcMain, Menu, screen } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
+/* 控制台级别的新旧签名归一化，与 smoke.cjs / ui-audit.cjs 共用同一口径 */
+const { consoleSeverity, consolePayload } = require('./console-level.cjs');
 
 const ROOT = path.join(__dirname, '..');
 const PACKAGED_WEB = path.join(ROOT, 'web');
@@ -79,10 +81,14 @@ function createWindow() {
   win.webContents.on('render-process-gone', (_e, details) => {
     logError(new Error(`renderer gone: ${JSON.stringify(details)}`));
   });
-  win.webContents.on('console-message', (_e, level, message) => {
-    const text = String(message);
+  /* ★ 修：Electron 35+ 的 console-message 只传一个事件对象，旧的三参写法让 level
+     恒为 undefined，`level >= 2` 永远为假 —— 主进程这边「renderer console: …」的
+     崩溃日志同样从未真正记过。归一化走 console-level.cjs（唯一口径）。 */
+  win.webContents.on('console-message', (...args) => {
+    const d = consolePayload(args);
+    const text = String(d.message == null ? '' : d.message);
     if (/Electron Security Warning/i.test(text)) return; // 开发态 CSP 提示，非游戏错误
-    if (level >= 2) logError(new Error(`renderer console: ${text}`));
+    if (consoleSeverity(d.level) >= 2) logError(new Error(`renderer console: ${text}`));
   });
   win.webContents.on('will-navigate', (event, url) => {
     if (!url.startsWith('http://127.0.0.1:8088/')) event.preventDefault();
@@ -108,7 +114,11 @@ process.on('unhandledRejection', logError);
 if (process.env.SLG_SMOKE === '1' || process.env.SLG_AUDIT === '1') {
   const os = require('node:os');
   const kind = process.env.SLG_AUDIT === '1' ? 'audit' : 'smoke';
-  app.setPath('userData', path.join(os.tmpdir(), `slg-offline-${kind}-${process.pid}`));
+  /* ★ 只用 pid 命名不够：pid 会被系统复用，复用时会捡到上一轮留下的 save.json，
+     于是「举义页」被跳过，同一份脚本跑出来的路径数在 57/59 之间抖 —— 测试就不可复现了。
+     加时间戳后缀，保证每轮真的是空存档。 */
+  const stamp = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+  app.setPath('userData', path.join(os.tmpdir(), `slg-offline-${kind}-${process.pid}-${stamp}`));
 }
 
 const gotLock = app.requestSingleInstanceLock();

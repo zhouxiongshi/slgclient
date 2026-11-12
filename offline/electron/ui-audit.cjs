@@ -17,6 +17,10 @@ const path = require('node:path');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/* console-message 的新旧签名差异与 level 归一化统一放在 console-level.cjs，
+   与 smoke.cjs / main.cjs 共用同一口径（别再写第三份拷贝）。 */
+const { consoleSeverity, consolePayload } = require('./console-level.cjs');
+
 const AUTO_LOGIN = `(function(){
   try {
     var cc = window.cc || (window.game && window.game.cc);
@@ -135,29 +139,86 @@ const WALK = `(async function(){
   }
 
   /* 第 7 个入口：出征（独立面板，不在六府 DOM 内） */
+  /* ★ 必须先重查一次：六府的 render() 会重建 nav.innerHTML，跨 await 拿到的旧引用
+     会变成游离节点，对游离节点 .click() 不冒泡、什么都不会发生 —— 这会把
+     「审计脚本自己拿了过期引用」误报成「出征面板坏了」。 */
   var warNav = document.querySelector('#slgPanelsNav button[data-id="war"]');
   if (warNav) {
+    /* 首点失败的取证：只观察 10 秒后的最终状态，分不清「从未创建」和「创建后被移除」，
+       而这两种原因的处理方式完全不同。所以 ① 包一层记录 __slgWarWindow 到底有没有被调用，
+       ② 用 MutationObserver 记录 #slgWarWin 在 DOM 里出现/消失的时刻。 */
+    window.__warTrace = [];
+    var _w0 = window.__slgWarWindow;
+    if (typeof _w0 === 'function') {
+      window.__slgWarWindow = function (o) {
+        window.__warTrace.push('call:' + JSON.stringify(o || null));
+        try { return _w0.apply(this, arguments); }
+        catch (e) { window.__warTrace.push('throw:' + (e && e.message)); throw e; }
+      };
+    } else {
+      window.__warTrace.push('missing');
+    }
+    var warSeen = [];
+    var _lastWarHas = !!document.getElementById('slgWarWin');
+    var obsWar = null;
+    try {
+      obsWar = new MutationObserver(function () {
+        var has = !!document.getElementById('slgWarWin');
+        if (has !== _lastWarHas) { _lastWarHas = has; warSeen.push((has ? '+' : '-') + '@' + (Date.now() % 100000)); }
+      });
+      obsWar.observe(document.body, { childList: true, subtree: true });
+    } catch (e) { warSeen.push('obs-fail'); }
+
     var before = (typeof window.__slgWarWindow) + '/' + (document.getElementById('slgWarWin') ? 'has' : 'none');
-    warNav.click();
+    var connected = !!(warNav.isConnected || document.contains(warNav));
+    var liveNav = document.querySelector('#slgPanelsNav button[data-id="war"]');
+    var navBtnNow = !!liveNav;
+    (liveNav || warNav).click();
     await sleep(380);
     var earlyToast = document.querySelector('#slgUIv2 .toast');
     var earlyToastText = earlyToast ? txt(earlyToast) : '';
+    /* 点击压根没进到 __slgWarWindow 时，直接调 API 一次：能把「导航按钮没接上」
+       和「面板渲染不出来」这两类原因分开，否则只能看着「没开」猜。 */
+    var direct = '';
+    if (!window.__warTrace.length) {
+      direct = 'click-not-wired';
+      try { window.__slgWarWindow({ tab: 'go' }); direct += ';direct-called'; }
+      catch (e) { direct += ';direct-throw:' + (e && e.message); }
+      await sleep(600);
+      direct += ';domafter=' + (document.getElementById('slgWarWin') ? 'has' : 'no');
+    }
     /* 出征窗是异步渲染的：必须等它「真的有尺寸」再断言，固定毫秒会误报 */
     var ww = await wait(function(){
       var w = document.getElementById('slgWarWin');
       return w && w.getBoundingClientRect().width > 100 ? w : null;
     }, 10000);
+    /* 首点失败再点一次：能开 → 「第一次点没反应」的用户可见缺陷；还开不了 → 功能真挂了 */
+    var wwRetry = null, retried = '';
+    if (!ww) {
+      var live2 = document.querySelector('#slgPanelsNav button[data-id="war"]');
+      if (live2) live2.click();
+      wwRetry = await wait(function(){
+        var w = document.getElementById('slgWarWin');
+        return w && w.getBoundingClientRect().width > 100 ? w : null;
+      }, 6000);
+      retried = wwRetry ? 'retry-ok(首点无效，再点才开)' : 'retry-fail(两次都开不了)';
+    }
+    if (obsWar) { try { obsWar.disconnect(); } catch (e) {} }
     var anyWin = document.getElementById('slgWarWin');
-    var toastText = '';
-    var tEl = document.querySelector('#slgUIv2 .toast');
-    if (tEl) toastText = txt(tEl);
     rec('panel.war', ['出征', '出击'], {
       visible: !!ww,
-      text: txt(ww || anyWin),
+      text: txt(ww || wwRetry || anyWin),
       note: ww ? '' : ('not-visible-in-10s; before=' + before
         + '; exists=' + (anyWin ? ('rect=' + Math.round(anyWin.getBoundingClientRect().width) + 'x' + Math.round(anyWin.getBoundingClientRect().height)) : 'no')
-        + '; earlyToast=' + earlyToastText),
+        + '; earlyToast=' + earlyToastText
+        + '; trace=' + window.__warTrace.join('|')
+        + '; navConnected=' + connected + '/' + !!navBtnNow
+        + '; ' + direct
+        + '; dom=' + (warSeen.length ? warSeen.join(',') : 'no-change')
+        + '; ' + retried),
     });
+    /* 复原包装，避免影响后面的 war.* 路径取证 */
+    if (typeof _w0 === 'function') window.__slgWarWindow = _w0;
   } else {
     rec('panel.war', ['出征'], { visible: false, note: 'nav-missing' });
   }
@@ -343,10 +404,14 @@ async function runAudit(win, server, app) {
   fs.mkdirSync(outDir, { recursive: true });
 
   const consoleErrors = [];
-  wc.on('console-message', (_e, level, message) => {
-    const text = String(message);
+  /* ★ 修：Electron 35+ 的 console-message 只传一个事件对象。用旧的 (e, level, message)
+     三参写法会让 level 恒为 undefined，"level >= 2" 永远为假 —— 我们之前反复报的
+     「consoleErrors = 0」就是个永远成立的假结论，这项检测等于从未生效。 */
+  wc.on('console-message', (...args) => {
+    const d = consolePayload(args);
+    const text = String(d.message == null ? '' : d.message);
     if (/Electron Security Warning/i.test(text)) return;
-    if (level >= 2) consoleErrors.push(text);
+    if (consoleSeverity(d.level) >= 2) consoleErrors.push('[' + d.level + '] ' + text);
   });
 
   const report = { startedAt: new Date().toISOString(), mode: 'ui-audit', tag, paths: [], pageErrors: [], consoleErrors: [] };
