@@ -96,7 +96,17 @@ const WALK = `(async function(){
     }
     rec('oath.submit', [], { visible: !document.getElementById('slgOath'), text: 'submitted' });
   } else {
-    rec('oath.render', [], { visible: true, text: '旧档已举义，跳过', note: 'skipped:oath-done' });
+    /* 「等不到举义页」至少有三种原因：真旧档 / 渲染比 8 秒慢 / 触发链断了。
+       三种混着标「旧档已举义」会掩盖后两种，这里直接取证服务端真值。 */
+    var oathProbe = 'done=?; lords=?; err=';
+    try {
+      var r2 = await (await fetch('/__slg/oath/options', { cache: 'no-store' })).json();
+      oathProbe = 'done=' + (r2 && r2.done) + '; lords=' + ((r2 && r2.lords) || []).length
+        + '; slgIds=' + Array.prototype.map.call(
+            document.querySelectorAll('[id^="slg"]'),
+            function (e) { return e.id; }).slice(0, 24).join(',');
+    } catch (e) { oathProbe = 'err:' + (e && e.message); }
+    rec('oath.render', [], { visible: true, text: 'no-oath-in-8s; ' + oathProbe, note: 'oath-missing-probe' });
   }
 
   /* 让沙盘重新拉一次状态，举义后城归属已变 */
