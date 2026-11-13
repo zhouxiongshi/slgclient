@@ -26,4 +26,7 @@ offline/saves/
 #//////////////////////////
 # WebStorm
 #//////////////////////////
-.idea/overrides.json.tmp
+.idea/
+
+# pack/smoke 冒烟残留
+overrides.json.tmp
