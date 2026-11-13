@@ -1805,12 +1805,16 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
         + (sub ? '<span class="lg-s">' + esc(sub) + '</span>' : '')
         + '</button>';
     };
+    /* 态度定性：>30 亲善 / <-30 敌视，中间为中立；交战与同盟优先。
+       列表与情报卡必须同一套口径（原来列表用文字、情报卡印裸数字「态度 3」）。 */
+    var attTag = function (f) {
+      var a = Number(f && f.attitude) || 0;
+      return f && f.war ? '交战' : (f && f.ally ? '同盟' : (a >= 30 ? '亲善' : (a <= -30 ? '敌视' : '中立')));
+    };
+    var attNum = function (f) { var a = Number(f && f.attitude) || 0; return (a > 0 ? '+' : '') + a; };
     addRow('player', '我军', '#e8c670', '', '');
     dip.forEach(function (f) {
-      /* 态度：>30 亲善 / <-30 敌视，中间为中立；有停战与同盟单独标注 */
-      var att = Number(f.attitude) || 0;
-      var tag = f.war ? '交战' : (f.ally ? '同盟' : (att >= 30 ? '亲善' : (att <= -30 ? '敌视' : '中立')));
-      addRow(f.id, f.name, f.color, tag, '');
+      addRow(f.id, f.name, f.color, attTag(f), '');
     });
     /* 汉廷等无主城势力（有城才算版图，没城就不列，避免空行） */
     var html = '<div class="lg-head"><span>势力 · 版图</span>'
@@ -1836,9 +1840,10 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
           (s.cities || []).forEach(function (c) { if (String(c.id) === String(f2.homeCity)) homeName = c.name; });
           if (!homeName) homeName = f2.home || (f2.homeCity ? ('城#' + f2.homeCity) : '—');
           var hisTroops = Number(f2.troops) || 0;
-          html += '<div>都城　' + esc(homeName)
-            + '　态度 ' + (Number(f2.attitude) || 0)
-            + (f2.war ? '（交战）' : (f2.ally ? '（同盟）' : '')) + '</div>'
+          /* 都城被夺时说清「已失」，别让上面刚说「暂无城池」下面又报都城名 */
+          var holdCount = countOf(legendSel);
+          html += '<div>都城　' + esc(homeName) + (holdCount ? '' : '（已失）')
+            + '　态度　' + attNum(f2) + '（' + attTag(f2) + '）</div>'
             + '<div>兵力　' + shortN(hisTroops)
             + (hisTroops > 0 ? ('　我/他 ' + (Number(f2.troopsRatio) || 0) + ' 倍') : '　（已无兵）')
             + '</div>'
