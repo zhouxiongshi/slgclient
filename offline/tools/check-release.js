@@ -63,10 +63,14 @@ function runTests(cwd) {
   const out = `${r.stdout ?? ''}${r.stderr ?? ''}`;
   const fail = out.match(/# fail (\d+)/);
   const pass = out.match(/# pass (\d+)/);
+  /* 只报「2 fail」等于没法诊断（本轮真发生过：打包态进程残留占端口，两个用端口的
+     测试挂掉，报告里只有数字）。把失败用例名一并带出来，才不用靠猜。 */
+  const names = [...out.matchAll(/^not ok \d+ - (.+)$/gm)].map((m) => m[1].trim());
   return {
     ok: r.status === 0 && (!fail || fail[1] === '0'),
     tests: pass ? Number(pass[1]) : 0,
     fails: fail ? Number(fail[1]) : -1,
+    names,
     out,
   };
 }
@@ -137,7 +141,9 @@ check(existsSync(join(SLG, '.git'))
 /* ---------------- 3. 战斗内核稳定性 ---------------- */
 const coreTests = runTests(BATTLE_CORE);
 check('战斗内核单测全通过（纯函数/引擎/黄金向量/压力）',
-  coreTests.ok && coreTests.tests >= 30, `${coreTests.tests} tests / ${coreTests.fails} fail`);
+  coreTests.ok && coreTests.tests >= 30,
+  `${coreTests.tests} tests / ${coreTests.fails} fail`
+  + (coreTests.names?.length ? ' · ' + coreTests.names.slice(0, 3).join(' | ') : ''));
 check('跨语言黄金向量：175 条事件逐条一致',
   /175 条事件逐条/.test(coreTests.out) && !/# fail [1-9]/.test(coreTests.out), '');
 const stress = readJson(join(BATTLE_CORE, 'reports', 'stress.json'));
@@ -147,7 +153,9 @@ check('战斗内核 10000 场压测：不变量与确定性零失败',
 
 const gameTests = runTests(ROOT);
 check('离线协议层测试全通过（编解码/登录/战斗/存档重启）',
-  gameTests.ok && gameTests.tests >= 10, `${gameTests.tests} tests / ${gameTests.fails} fail`);
+  gameTests.ok && gameTests.tests >= 10,
+  `${gameTests.tests} tests / ${gameTests.fails} fail`
+  + (gameTests.names?.length ? ' · ' + gameTests.names.slice(0, 3).join(' | ') : ''));
 check('协议测试覆盖存档重启续跑',
   /重启|续跑|loadWorld|save\.json/.test(gameTests.out) || /重启|续跑/.test(readFileSync(join(ROOT, 'tests/protocol.test.js'), 'utf8')), '');
 
@@ -243,6 +251,74 @@ check('可双击的独立 Windows 可执行文件存在',
   existsSync(exe) ? `${(statSync(exe).size / 1024 / 1024).toFixed(1)} MB` : 'missing');
 check('构建脚本可复现（npm run pack）', existsSync(join(ROOT, 'tools', 'pack.js')), '');
 
+/* ---------------- 7.7.5 报告新鲜度：不许用旧报告给新代码背书 ----------------
+ * check-release 的判定方式是「读 reports/*.json 下结论」，报告本身不自证新鲜度。
+ * 于是会出现这种假绿：改完 server/ 只跑单测就直接 check，结果仍是 78/78 ——
+ * 因为打包态那几份报告是上一轮产物，验的根本不是这份代码（本轮真实发生过：
+ * 打包态报告停在 23:53，而源码 01:26 还在改）。这里把「报告时间 ≥ 最后一次
+ * 出厂源码改动时间」变成硬条件。
+ *
+ * 口径：出厂源码 = 真正打进包里的目录（electron/ server/ conf/）；web/ 逐字节
+ * 不可改，由指纹检查单独兜；tools/ 是开发侧工装、不进包，改核查脚本本身不该
+ * 让全部报告作废（否则改一行这里就得全量重跑，等于逼人不改）。
+ * conf/campaign/ 是**运行时回写**的覆盖层与存档（每次开打都会写），不算源码，
+ * 否则每玩一次游戏，全部报告就集体过期。 */
+{
+  const SHIPPED_DIRS = ['electron', 'server', 'conf'];
+  const SKIP = new Set(['node_modules', 'reports', 'build', '.git']);
+  const SKIP_REL = ['conf/campaign'];
+  let newestAt = 0;
+  let newestFile = '';
+  const walk = (p) => {
+    let entries = [];
+    try { entries = readdirSync(p, { withFileTypes: true }); } catch { return; }
+    for (const e of entries) {
+      if (SKIP.has(e.name)) continue;
+      const f = join(p, e.name);
+      if (SKIP_REL.some((r) => relative(ROOT, f).replace(/\\/g, '/').startsWith(r))) continue;
+      if (e.isDirectory()) walk(f);
+      else {
+        const m = statSync(f).mtimeMs;
+        if (m > newestAt) { newestAt = m; newestFile = f; }
+      }
+    }
+  };
+  for (const d of SHIPPED_DIRS) walk(join(ROOT, d));
+
+  /* 本地时间（这台机器 UTC+8），别用 UTC —— 差 8 小时会让「刚跑过」看着像隔了一天 */
+  const fmt = (ms) => {
+    const d = new Date(ms);
+    const p2 = (n) => String(n).padStart(2, '0');
+    return p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes());
+  };
+  const TARGETS = [
+    ['源码态冒烟', 'smoke-original.json'],
+    ['打包态冒烟', 'smoke-packaged.json'],
+    ['源码态 UI 审计', 'ui-audit-original.json'],
+    ['打包态 UI 审计', 'ui-audit-packaged.json'],
+    ['源码态真鼠标', 'mouse-playtest-original.json'],
+    ['打包态真鼠标', 'mouse-playtest-packaged.json'],
+    ['性能探针', 'perf-original.json'],
+    ['布局美观审计', 'layout-original.json'],
+    ['配色对比度', 'contrast.json'],
+    ['战法术语表', 'terms.json'],
+    ['合规台账', 'compliance.json'],
+    ['数据来源台账', 'data-provenance.json'],
+  ];
+  const bad = [];
+  for (const [, file] of TARGETS) {
+    const p = join(REPORTS, file);
+    if (!existsSync(p)) { bad.push(file + '（未生成）'); continue; }
+    const at = statSync(p).mtimeMs;
+    if (at < newestAt) bad.push(file + '（报告 ' + fmt(at) + ' 早于源码 ' + fmt(newestAt) + '）');
+  }
+  check('全部验收报告不早于最后一次出厂源码改动（最新源码：'
+    + (newestFile ? relative(ROOT, newestFile) + ' @ ' + fmt(newestAt) : '—') + '）',
+  bad.length === 0,
+  bad.length ? '过期/缺失，请重跑对应工具：' + bad.join(' | ') : '12 份报告全部新鲜');
+}
+
+/* ---------------- 7.8 冒烟：源码目录态 + 打包产物态 ---------------- */
 for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打包产物态', 'smoke-packaged.json']]) {
   const r = readJson(join(REPORTS, file));
   const checks = r?.checks ?? [];
