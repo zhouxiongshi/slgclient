@@ -345,12 +345,14 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
   const a = readJson(join(REPORTS, 'ui-audit-original.json'), null);
   const byId = new Map((a?.paths || []).map((p) => [p.id, p]));
   const chainOk = (id) => byId.has(id) && byId.get(id).ok !== false
-    && !/attack-refused|no-preview-btn|no-confirm-modal|no-report-row|not-resolved/.test(byId.get(id).note || '');
+    && !/attack-refused|no-preview-btn|no-confirm-modal|no-report-row|not-resolved|no-pending-encounter|no-confirm-battle-btn/.test(byId.get(id).note || '');
   const chain = [
     'war.preview.click',     // 点了「推演一次」且拿到结果（战斗种子或明确拒绝）
     'war.preview.confirm',   // 出征被交互层决策预览拦截（两层弹窗的第一层）
     'war.confirm.modal',     // 过预览后「出兵确认」confirmBox 真的弹了（第二层）
     'war.queue.marching',    // 行军队列页有在途记录
+    'war.encounter.pending', // ★ P11 门 4：抵达城下先挂「遭遇」，不自动开打
+    'war.encounter.confirm', // ★ P11 门 5：「确认开战」按钮可点且真的结算
     'war.march.resolved',    // 推进旬到到达日、队列结算（非 attack-refused）
     'war.report.after',      // 战报页真的读出战报行
   ];

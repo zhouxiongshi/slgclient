@@ -450,24 +450,68 @@ const WALK = `(async function(){
     try { if (window.__slgWarClose) window.__slgWarClose(); } catch (e) {}
     await sleep(400);
 
-    /* ⑤ 推进旬直到到达日（每 tick 10 日，至多 8 旬），到点自动开战 */
+    /* ⑤ 门 4「遭遇」：推进旬到到达日。
+       ★ P11 变更：抵达不再自动开战，队伍挂在 pendingBattle 等玩家定夺。
+       旧脚本只 tick 不确认，队列永远清不掉、战报永远空——check-release 因此报
+       not-resolved / no-report-row。这里必须像玩家一样进「③ 遭遇」页点「确认开战」。 */
     var st2 = await (await fetch('/__slg/strategy/state', { cache: 'no-store' })).json();
-    var mm = (st2.marches || []).find(function(m){ return m.side === 'player'; });
+    var mm = (st2.marches || []).find(function(m){ return m.side === 'player' && !m.resolved; });
     var ticked = 0;
     if (mm) {
-      while (ticked < 8 && (Number(st2.day) || 0) < Number(mm.arriveDay)) {
+      while (ticked < 8) {
+        if ((st2.pendingBattles || []).length) break;            /* 已挂起，等确认 */
+        var live = (st2.marches || []).filter(function(m){ return m.side === 'player' && !m.resolved; });
+        if (!live.length) break;                                  /* 非确认制：已自动结算 */
+        if (ticked > 0 && (Number(st2.day) || 0) >= Number(mm.arriveDay)) break;
         await fetch('/__slg/strategy/tick', { method: 'POST' });
         ticked += 1;
         st2 = await (await fetch('/__slg/strategy/state', { cache: 'no-store' })).json();
-        var still = (st2.marches || []).some(function(m){ return m.side === 'player'; });
-        if (!still) break;
-        mm = (st2.marches || []).find(function(m){ return m.side === 'player'; }) || mm;
+        mm = (st2.marches || []).find(function(m){ return m.side === 'player' && !m.resolved; }) || mm;
       }
-      var left = (st2.marches || []).filter(function(m){ return m.side === 'player'; }).length;
+      var pend = st2.pendingBattles || [];
+      var encWinText = '';
+      var goBtn = null;
+      if (pend.length) {
+        /* 门 5：先把「③ 遭遇」页真的渲染出来，再点「确认开战」。
+           ★ 别用状态字符串去校验 UI：pending>0 只证明服务端挂了遭遇，
+             证明不了玩家能看见卡片、能点到按钮。 */
+        window.__slgWarWindow({ tab: 'encounter' });
+        await wait(function(){ return document.getElementById('slgWarWin'); }, 9000);
+        await sleep(700);
+        var encTab = Array.from(document.querySelectorAll('#slgWarWin .tabs button'))
+          .find(function(b){ return txt(b).indexOf('遭遇') >= 0; });
+        if (encTab) { encTab.click(); await sleep(600); }
+        encWinText = txt(document.getElementById('slgWarWin'));
+        goBtn = Array.from(document.querySelectorAll('#slgWarWin button'))
+          .find(function(b){ return txt(b).indexOf('确认开战') >= 0; });
+      }
+      rec('war.encounter.pending', ['两军对阵', '确认开战', '临阵收兵'], {
+        visible: pend.length > 0 && vis(document.getElementById('slgWarWin')),
+        text: encWinText || ('day=' + st2.day + ' ticks=' + ticked + ' pending=' + pend.length),
+        note: pend.length ? '' : 'no-pending-encounter（未挂遭遇，可能是非确认制出征）',
+      });
+      if (pend.length) {
+        var encBefore = encWinText;
+        if (goBtn) { goBtn.click(); await sleep(2400); }
+        rec('war.encounter.confirm', ['折损', '歼敌', '占领', '已生成', '结算', '安置'], {
+          visible: !!goBtn,
+          text: (encBefore + ' ' + txt(document.getElementById('slgWarWin'))).slice(0, 500),
+          note: goBtn ? '' : 'no-confirm-battle-btn',
+        });
+      }
+      st2 = await (await fetch('/__slg/strategy/state', { cache: 'no-store' })).json();
+      var left = (st2.marches || []).filter(function(m){ return m.side === 'player' && !m.resolved; }).length;
       rec('war.march.resolved', [], {
         visible: true,
-        text: 'day=' + st2.day + ' ticks=' + ticked + ' marches-left=' + left,
+        text: 'day=' + st2.day + ' ticks=' + ticked + ' marches-left=' + left
+          + ' pending=' + (st2.pendingBattles || []).length,
         note: left > 0 ? 'not-resolved-in-' + ticked + '-ticks' : '',
+      });
+      /* 门 6「消化」：占城后必须给出新城的安置入口，否则流程断在战报 */
+      var dg = st2.digest || [];
+      rec('war.digest.after', [], {
+        visible: true, text: 'digest=' + dg.length,
+        note: dg.length ? '' : 'no-digest（本战未占城：战败/平局属正常，胜则必填）',
       });
     } else {
       rec('war.march.resolved', [], { visible: true, text: 'no-march', note: 'attack-refused-or-not-run' });
