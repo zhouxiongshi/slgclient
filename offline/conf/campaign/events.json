@@ -1,0 +1,864 @@
+{
+  "version": 1,
+  "meta": {
+    "source": "GDD-顶配详细设计.md §8.1/§8.2/§8.3 事件系统（第一批）",
+    "note": "史实节点=时间+条件双触发；条件=势力/城/资源/关系；关系=两人关系跨阈值。每条带 source 与 confidence。reviewed=false 表示待人工抽审（出戏防线第 4 闸），tools/check-events.js 只警告不阻塞。",
+    "factionIds": ["sili", "yanzhou", "jizhou", "youzhou", "bingzhou", "xuzhou", "yangzhou", "jingzhou"],
+    "cityRef": "城 id 对齐 conf/campaign/strategy/map.json（雒阳2/成都3/陈留7/邺8/南郑18/江陵21/濮阳33/涿43/下邳44/宛72 等）",
+    "count": 52
+  },
+  "events": [
+    {
+      "id": "evt.184.zhangjiao",
+      "title": "苍天已死",
+      "layer": "史实节点",
+      "priority": 100,
+      "when": { "yearMin": 184 },
+      "once": true,
+      "speaker": "探马",
+      "text": ["张角以「苍天已死，黄天当立」为号，八州并起，天下骚动。", "流民塞道，郡县望风而降——乱世自此始。"],
+      "choices": [
+        { "id": "relief", "label": "开仓赈济流民", "preview": "金 −300 / 恶名 −1", "effects": ["gold:-300", "fame:-1"] },
+        { "id": "recruit", "label": "趁乱募兵自保", "preview": "金 −150", "effects": ["gold:-150"] }
+      ],
+      "source": { "id": "sgz.weishu.1 注/后汉书·皇甫嵩传", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.189.dongzhuo.enter",
+      "title": "董卓入洛",
+      "layer": "史实节点",
+      "priority": 100,
+      "when": { "yearMin": 189 },
+      "once": true,
+      "speaker": "探马",
+      "text": ["何进被宦官所杀，袁绍兄弟尽诛宦官，凉州董卓趁乱进据雒阳。", "废少帝，立陈留王——挟凉州铁骑，威福自专。"],
+      "choices": [
+        { "id": "submit", "label": "暂且依附，静观其变", "preview": "对董卓态度 +15", "effects": ["attitude:sili:+15"] },
+        { "id": "flee", "label": "弃官出奔，别图后计", "preview": "士气 −5 / 恶名 −1", "effects": ["morale:-5", "fame:-1"] }
+      ],
+      "source": { "id": "sgz.weishu.6 董卓传/后汉书", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.190.coalition",
+      "title": "发矫诏会盟",
+      "layer": "史实节点",
+      "priority": 95,
+      "when": { "yearMin": 190 },
+      "once": true,
+      "speaker": "信使",
+      "text": ["曹操发矫诏，诸侯会盟共讨董卓，推袁绍为盟主。", "关东州郡，烽火相连。"],
+      "choices": [
+        { "id": "join", "label": "举兵响应", "preview": "金 −800 / 各势力态度 +5", "effects": ["gold:-800", "attitude:jizhou:+5", "attitude:yanzhou:+5"] },
+        { "id": "wait", "label": "拥兵观望", "preview": "恶名 +2", "effects": ["fame:+2"] }
+      ],
+      "source": { "id": "演义·第五回/sgz.weishu.1", "confidence": "中" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.191.yuxi",
+      "title": "孙坚匿玺",
+      "layer": "史实节点",
+      "priority": 80,
+      "when": { "yearMin": 191 },
+      "once": true,
+      "speaker": "细作",
+      "text": ["细作来报：孙坚于雒阳井中得传国玉玺，匿而不报，欲归江东。"],
+      "choices": [
+        { "id": "demand", "label": "移檄索要玉玺", "preview": "对孙氏态度 −20", "effects": ["attitude:yangzhou:-20"] },
+        { "id": "ignore", "label": "不问玺事，整军经武", "preview": "士气 +3", "effects": ["morale:+3"] }
+      ],
+      "source": { "id": "演义·第六回/吴书注", "confidence": "低" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.192.lianguan",
+      "title": "连环计成",
+      "layer": "史实节点",
+      "priority": 95,
+      "when": { "yearMin": 192, "generalAlive": ["董卓"] },
+      "once": true,
+      "exclusive": ["evt.192.dongzhuo.dead"],
+      "speaker": "细作",
+      "text": ["司徒王允以貂蝉间董卓、吕布。凤仪亭掷戟，嫌隙已成。", "下一步，便是宫门前的那场伏杀。"],
+      "choices": [
+        { "id": "cheer", "label": "暗中声援王允", "preview": "对董卓态度 −10 / 恶名 −1", "effects": ["attitude:sili:-10", "fame:-1"] },
+        { "id": "watch", "label": "静观其变", "preview": "无", "effects": ["nothing"] }
+      ],
+      "source": { "id": "演义·第八、九回（貂蝉史无其人）", "confidence": "低" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.192.dongzhuo.dead",
+      "title": "卓既伏诛",
+      "layer": "史实节点",
+      "priority": 90,
+      "when": { "yearMin": 192, "generalDead": ["董卓"] },
+      "once": true,
+      "exclusive": ["evt.192.lianguan"],
+      "speaker": "探马",
+      "text": ["董卓伏诛，尸于市，百姓称庆。", "凉州旧部惶惶——李傕、郭汜之流，正在寻路自保。"],
+      "choices": [
+        { "id": "stability", "label": "遣使抚谕凉州旧部", "preview": "金 −200 / 恶名 −1", "effects": ["gold:-200", "fame:-1"] },
+        { "id": "press", "label": "趁乱并其屯兵", "preview": "金 +500 / 各势力态度 −10", "effects": ["gold:+500", "attitude:jizhou:-10", "attitude:yanzhou:-10"] }
+      ],
+      "source": { "id": "sgz.weishu.6 董卓传", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.193.yanzhou",
+      "title": "兖州有变",
+      "layer": "史实节点",
+      "priority": 85,
+      "when": { "yearMin": 193, "faction": ["yanzhou"] },
+      "once": true,
+      "speaker": "军情急报",
+      "text": ["陈宫迎吕布袭兖州，郡县皆应，鄄城、范、东阿仅存。", "濮阳已易帜。"],
+      "choices": [
+        { "id": "strike", "label": "回师急夺濮阳", "preview": "士气 −5 / 濮阳归属争夺", "effects": ["morale:-5"] },
+        { "id": "hold", "label": "固守鄄城，徐图后计", "preview": "无", "effects": ["nothing"] }
+      ],
+      "source": { "id": "sgz.weishu.1 武帝纪", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.196.xiandi",
+      "title": "天子蒙尘",
+      "layer": "史实节点",
+      "priority": 95,
+      "when": { "yearMin": 196, "faction": ["yanzhou"] },
+      "once": true,
+      "speaker": "议郎",
+      "text": ["献帝东逃，一路狼狈，诏书到了兖州：奉迎，还是不奉？"],
+      "choices": [
+        { "id": "welcome", "label": "奉迎天子，移都于许", "preview": "金 −1000 / 恶名 −3（奉天子）", "effects": ["gold:-1000", "fame:-3"] },
+        { "id": "refuse", "label": "天子是累赘，不奉", "preview": "恶名 +3", "effects": ["fame:+3"] }
+      ],
+      "source": { "id": "sgz.weishu.1/荀彧传", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.197.wancheng",
+      "title": "宛城之变",
+      "layer": "史实节点",
+      "priority": 80,
+      "when": { "yearMin": 197, "faction": ["yanzhou"], "cityOwned": [72] },
+      "once": true,
+      "speaker": "帐下",
+      "text": ["张绣既降复叛，夜袭大营，典韦战死，宛城得而复失。"],
+      "choices": [
+        { "id": "punish", "label": "整军问罪张绣", "preview": "士气 +5", "effects": ["morale:+5"] },
+        { "id": "appease", "label": "再遣使抚谕，重修盟好", "preview": "金 −200 / 恶名 −1", "effects": ["gold:-200", "fame:-1"] }
+      ],
+      "source": { "id": "sgz.weishu.1 注/张绣传", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.198.baimenlou",
+      "title": "白门楼",
+      "layer": "史实节点",
+      "priority": 90,
+      "when": { "yearMin": 198, "cityOwned": [44], "generalDead": ["吕布"] },
+      "once": true,
+      "speaker": "军情急报",
+      "text": ["下邳城破，吕布缢杀于白门楼。", "其部旧属尚在——张辽、高顺所部去留，一言而决。"],
+      "choices": [
+        { "id": "keep", "label": "厚待降将，收其旧部", "preview": "金 −200 / 张辽忠诚 +10", "effects": ["gold:-200", "loyalty:张辽:+10"] },
+        { "id": "scatter", "label": "分散编管，不留旧帜", "preview": "无", "effects": ["nothing"] }
+      ],
+      "source": { "id": "sgz.weishu.7 吕布传", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.199.yidaizhao",
+      "title": "衣带诏泄",
+      "layer": "史实节点",
+      "priority": 85,
+      "when": { "yearMin": 199, "faction": ["yanzhou"] },
+      "once": true,
+      "speaker": "校尉",
+      "text": ["董承受诏欲诛国贼，事泄，同谋者夷族。", "诏书之名，如今既是烫手的炭，也是最好的旗。"],
+      "choices": [
+        { "id": "raise", "label": "举奉诏讨贼之旗", "preview": "恶名 −2 / 对袁绍态度 −10（宣战意味）", "effects": ["fame:-2", "attitude:jizhou:-10"] },
+        { "id": "silence", "label": "缄口不言", "preview": "无", "effects": ["nothing"] }
+      ],
+      "source": { "id": "sgz.weishu.1 注/先主传", "confidence": "中" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.200.baima",
+      "title": "白马之围",
+      "layer": "史实节点",
+      "priority": 90,
+      "when": { "yearMin": 200, "faction": ["yanzhou"], "generalAlive": ["关羽", "颜良"] },
+      "once": true,
+      "exclusive": ["evt.200.guandu"],
+      "speaker": "军情急报",
+      "text": ["袁绍遣颜良围白马，刘延告急。", "荀攸献计：先趋延津佯渡，再轻兵袭白马。"],
+      "choices": [
+        { "id": "sendGuan", "label": "遣关羽为先锋", "preview": "关羽忠诚 +5 / 对袁绍态度 −10", "effects": ["loyalty:关羽:+5", "attitude:jizhou:-10"] },
+        { "id": "goSelf", "label": "亲率轻兵驰援", "preview": "士气 +5 / 金 −200", "effects": ["morale:+5", "gold:-200"] }
+      ],
+      "source": { "id": "sgz.weishu.1/关羽传", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.200.guandu",
+      "title": "官渡相持",
+      "layer": "史实节点",
+      "priority": 88,
+      "when": { "yearMin": 200, "faction": ["yanzhou"], "cityOwned": [7] },
+      "once": true,
+      "exclusive": ["evt.200.baima", "evt.200.wuchao"],
+      "speaker": "荀彧",
+      "text": ["袁绍进逼官渡，两军相持月余，军粮日蹙。", "「公以至弱当至强，若不能制，必为所乘——此用奇之时，不可失也。」"],
+      "choices": [
+        { "id": "hold", "label": "深沟高垒，持重待机", "preview": "士气 −3 / 粮耗继续", "effects": ["morale:-3"] },
+        { "id": "seek", "label": "遣细作探其粮道", "preview": "金 −300 / 开启乌巢线", "effects": ["gold:-300", "flag:guandu_probing"] }
+      ],
+      "source": { "id": "sgz.weishu.1 武帝纪", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.200.wuchao",
+      "title": "乌巢粮仓",
+      "layer": "史实节点",
+      "priority": 100,
+      "when": { "yearMin": 200, "faction": ["yanzhou"], "flag": { "has": ["guandu_probing"], "not": ["wuchao_burned"] } },
+      "once": true,
+      "exclusive": ["evt.200.baima", "evt.200.guandu"],
+      "speaker": "许攸",
+      "text": ["「袁绍辎重万余乘在故市乌巢，屯军无严备。今以轻兵袭之，燔其积聚，不过三日，袁氏自败。」", "来人是否可信？"],
+      "choices": [
+        { "id": "raid", "label": "亲率轻骑夜袭乌巢", "preview": "士气 +8 / 敌粮道断（flag: wuchao_burned）", "effects": ["flag:wuchao_burned", "morale:+8"] },
+        { "id": "doubt", "label": "此必诈降，按兵不动", "preview": "flag: wuchao_ignored", "effects": ["flag:wuchao_ignored"] }
+      ],
+      "source": { "id": "sgz.weishu.1 武帝纪注", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.202.yuanshao.dead",
+      "title": "袁绍呕血",
+      "layer": "史实节点",
+      "priority": 85,
+      "when": { "yearMin": 202, "generalDead": ["袁绍"] },
+      "once": true,
+      "speaker": "探马",
+      "text": ["袁绍忧愤呕血而亡，诸子不和，河北裂而为三。", "河北士人观望：新主何以待旧人？"],
+      "choices": [
+        { "id": "magnanimous", "label": "招抚河北士人，不计旧怨", "preview": "金 −300 / 恶名 −2", "effects": ["gold:-300", "fame:-2"] },
+        { "id": "seize", "label": "趁乱北进", "preview": "士气 +5", "effects": ["morale:+5"] }
+      ],
+      "source": { "id": "sgz.weishu.6 袁绍传", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.207.gujia",
+      "title": "郭嘉陨落",
+      "layer": "史实节点",
+      "priority": 90,
+      "when": { "yearMin": 207, "generalDead": ["郭嘉"] },
+      "once": true,
+      "speaker": "帐下",
+      "text": ["郭嘉卒于柳城军中，年三十八。", "「哀哉奉孝！惜哉奉孝！」——从征十一年，料事未尝有失。"],
+      "choices": [
+        { "id": "mourn", "label": "厚葬之，抚恤其孤", "preview": "金 −200 / 恶名 −1", "effects": ["gold:-200", "fame:-1"] },
+        { "id": "reflect", "label": "检点军务，慎轻兵深入", "preview": "士气 −3 / 以后的仗会更稳", "effects": ["morale:-3"] }
+      ],
+      "source": { "id": "sgz.weishu.14 郭嘉传", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.207.sangu",
+      "title": "三顾茅庐",
+      "layer": "史实节点",
+      "priority": 95,
+      "when": { "yearMin": 207, "yearMax": 208, "faction": ["xuzhou"], "generalAlive": ["刘备", "诸葛亮"] },
+      "once": true,
+      "speaker": "门客",
+      "text": ["徐庶走马荐诸葛：「此人可就见，不可屈致也。」", "隆中有卧龙，一顾、二顾、三顾——去，还是不去？"],
+      "choices": [
+        { "id": "visit", "label": "凡三往，乃见", "preview": "flag: 隆中对成 / 诸葛亮忠诚 +15", "effects": ["flag:longzhongdui_done", "loyalty:诸葛亮:+15"] },
+        { "id": "skip", "label": "水镜先生言过其实，不访", "preview": "恶名 +1", "effects": ["fame:+1"] }
+      ],
+      "source": { "id": "sgz.shu.35 诸葛亮传「凡三往，乃见」", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.208.changban",
+      "title": "长坂之退",
+      "layer": "史实节点",
+      "priority": 90,
+      "when": { "yearMin": 208, "faction": ["xuzhou"] },
+      "once": true,
+      "speaker": "军情急报",
+      "text": ["曹操铁骑一日一夜行三百里，追及于当阳长坂。", "十余万众随行，辎重千百乘——走，还是带百姓一起走？"],
+      "choices": [
+        { "id": "carry", "label": "携民渡江，日行十余里", "preview": "士气 −5 / 恶名 −3（仁义之名）", "effects": ["morale:-5", "fame:-3"] },
+        { "id": "speed", "label": "弃辎重轻装疾走", "preview": "士气 +3 / 恶名 +2", "effects": ["morale:+3", "fame:+2"] }
+      ],
+      "source": { "id": "sgz.shu.35 注/先主传", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.208.chibi.alliance",
+      "title": "柴桑之议",
+      "layer": "史实节点",
+      "priority": 95,
+      "when": { "yearMin": 208, "faction": ["yangzhou", "xuzhou"] },
+      "once": true,
+      "exclusive": ["evt.208.chibi.lianhuan", "evt.208.chibi.kurou", "evt.208.chibi.eastwind"],
+      "speaker": "鲁肃",
+      "text": ["曹操拥众八十万，顺流而东，檄书已至。", "战、和之争沸于柴桑——先定联盟，再言破敌。"],
+      "choices": [
+        { "id": "alliance", "label": "缔结孙刘之盟", "preview": "flag: 孙刘盟成 / 金 −500", "effects": ["flag:chibi_alliance", "gold:-500"] },
+        { "id": "alone", "label": "独力迎战", "preview": "士气 −5", "effects": ["morale:-5"] }
+      ],
+      "source": { "id": "sgz.wu.9 鲁肃传/诸葛亮传", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.208.chibi.lianhuan",
+      "title": "连环计",
+      "layer": "史实节点",
+      "priority": 92,
+      "when": { "yearMin": 208, "flag": { "has": ["chibi_alliance"] } },
+      "once": true,
+      "exclusive": ["evt.208.chibi.alliance", "evt.208.chibi.kurou", "evt.208.chibi.eastwind"],
+      "speaker": "庞统",
+      "text": ["「彼军船舰首尾相接，可烧而走也。」", "北人使船，风浪稍起便颠簸呕吐——庞士元献连环之计。"],
+      "choices": [
+        { "id": "act", "label": "遣人献计于曹营", "preview": "flag: 铁索连舟", "effects": ["flag:chibi_chain"] },
+        { "id": "no", "label": "疑其有诈，不用", "preview": "无", "effects": ["nothing"] }
+      ],
+      "source": { "id": "演义·第四十七回（连环计属文学增饰）", "confidence": "低" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.208.chibi.kurou",
+      "title": "苦肉计",
+      "layer": "史实节点",
+      "priority": 92,
+      "when": { "yearMin": 208, "flag": { "has": ["chibi_alliance"] }, "generalAlive": ["黄盖", "周瑜"] },
+      "once": true,
+      "exclusive": ["evt.208.chibi.alliance", "evt.208.chibi.lianhuan", "evt.208.chibi.eastwind"],
+      "speaker": "周瑜",
+      "text": ["「欲破曹公，宜用火攻；万事俱备，只欠东风。然曹营无人内应……」", "老将黄盖请行苦肉——打得越狠，曹操才会信得越深。"],
+      "choices": [
+        { "id": "agree", "label": "允黄盖行苦肉计", "preview": "黄盖忠诚 −10（当场）/ flag: 苦肉计成", "effects": ["loyalty:黄盖:-10", "flag:chibi_kurou"] },
+        { "id": "refuse", "label": "不忍老将受刑", "preview": "无", "effects": ["nothing"] }
+      ],
+      "source": { "id": "演义·第四十六回（苦肉计属文学增饰，黄盖诈降见 sgz.wu.10）", "confidence": "低" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.208.chibi.eastwind",
+      "title": "借东风",
+      "layer": "史实节点",
+      "priority": 92,
+      "when": { "yearMin": 208, "flag": { "has": ["chibi_alliance"] } },
+      "once": true,
+      "exclusive": ["evt.208.chibi.alliance", "evt.208.chibi.lianhuan", "evt.208.chibi.kurou"],
+      "speaker": "军情急报",
+      "text": ["隆冬之月，风向骤转，东南风起。", "火船借着风势，可以直入曹营了。"],
+      "choices": [
+        { "id": "burn", "label": "火船齐发，趁风纵火", "preview": "士气 +10 / flag: 赤壁火起", "effects": ["flag:chibi_fire", "morale:+10"] },
+        { "id": "delay", "label": "风势未稳，且待一夜", "preview": "无", "effects": ["nothing"] }
+      ],
+      "source": { "id": "sgz.wu.9 周瑜传注（东南风为史实，借风仪式属演义）", "confidence": "中" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.211.weinan",
+      "title": "渭南离间",
+      "layer": "史实节点",
+      "priority": 85,
+      "when": { "yearMin": 211, "faction": ["yanzhou"], "generalAlive": ["马超", "韩遂"] },
+      "once": true,
+      "speaker": "贾诩",
+      "text": ["马超、韩遂联军十万，扼于渭南，久攻不克。", "「离之而已。」——写一封故意涂改的信，让马超「自己」看到。"],
+      "choices": [
+        { "id": "sow", "label": "用离间计", "preview": "恶名 +2 / flag: 西凉盟散", "effects": ["fame:+2", "flag:xiliang_broken"] },
+        { "id": "fight", "label": "正面决战，堂堂之阵", "preview": "士气 −10", "effects": ["morale:-10"] }
+      ],
+      "source": { "id": "sgz.weishu.1 注/贾诩传", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.214.chengdu",
+      "title": "成都开城",
+      "layer": "史实节点",
+      "priority": 90,
+      "when": { "yearMin": 214, "faction": ["xuzhou"], "cityOwned": [3] },
+      "once": true,
+      "speaker": "军情急报",
+      "text": ["刘璋面缚舆榇，出降于成都。", "府库充盈，士民富庶——如何处置这座城，明日蜀中皆知。"],
+      "choices": [
+        { "id": "kind", "label": "封存府库，秋毫无犯", "preview": "金 −800 / 恶名 −3", "effects": ["gold:-800", "fame:-3"] },
+        { "id": "reward", "label": "纵军取库酬将士三日", "preview": "金 +2000 / 恶名 +4 / 士气 +5", "effects": ["gold:+2000", "fame:+4", "morale:+5"] }
+      ],
+      "source": { "id": "sgz.shu.31 刘二牧传注", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.219.xiangfan",
+      "title": "威震华夏",
+      "layer": "史实节点",
+      "priority": 95,
+      "when": { "yearMin": 219, "generalAlive": ["关羽"], "faction": ["xuzhou", "jingzhou"] },
+      "once": true,
+      "speaker": "军情急报",
+      "text": ["关羽水淹七军，擒于禁、斩庞德，梁郏陆浑群盗遥受印号。", "曹仁困守孤城，许都以南，人心思变。"],
+      "choices": [
+        { "id": "push", "label": "乘胜急攻樊城", "preview": "士气 +5（后患自负）", "effects": ["morale:+5"] },
+        { "id": "consolidate", "label": "收降兵，固守新得之地", "preview": "金 −300 / 恶名 −1", "effects": ["gold:-300", "fame:-1"] }
+      ],
+      "source": { "id": "sgz.shu.36 关羽传", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.220.guanyu.dead",
+      "title": "麦城之后",
+      "layer": "史实节点",
+      "priority": 100,
+      "when": { "yearMin": 220, "generalDead": ["关羽"] },
+      "once": true,
+      "speaker": "军情急报",
+      "text": ["关羽父子殁于章乡。", "消息传开，军中缟素者众——桃园之誓，至此断其一环。"],
+      "choices": [
+        { "id": "mourn", "label": "举哀发丧，厚恤其部", "preview": "士气 −5 / 旧部忠诚 +8", "effects": ["morale:-5", "loyalty:张飞:+8"] },
+        { "id": "suppress", "label": "隐忍不发，以防军心", "preview": "恶名 +2", "effects": ["fame:+2"] }
+      ],
+      "source": { "id": "sgz.shu.36/吴主传", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.220.caocao.dead",
+      "title": "孟德薨逝",
+      "layer": "史实节点",
+      "priority": 95,
+      "when": { "yearMin": 220, "generalDead": ["曹操"] },
+      "once": true,
+      "speaker": "探马",
+      "text": ["曹操薨于洛阳，年六十六。", "天下局势，自此改写——其部将议立新主，各怀观望。"],
+      "choices": [
+        { "id": "attend", "label": "遣使会葬，修新朝之好", "preview": "金 −300 / 对曹氏态度 +5", "effects": ["gold:-300", "attitude:yanzhou:+5"] },
+        { "id": "watch", "label": "坐观其变", "preview": "无", "effects": ["nothing"] }
+      ],
+      "source": { "id": "sgz.weishu.1 武帝纪", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.221.yiling.camp",
+      "title": "连营七百",
+      "layer": "史实节点",
+      "priority": 90,
+      "when": { "yearMin": 221, "faction": ["xuzhou"], "generalAlive": ["刘备"] },
+      "once": true,
+      "exclusive": ["evt.222.yiling.fire"],
+      "speaker": "诸将",
+      "text": ["誓师东征，前锋已过秭归。", "山路崎岖，诸军树栅连营七百里——声势浩大，粮道漫长。"],
+      "choices": [
+        { "id": "camp", "label": "连营并进，示强于吴", "preview": "flag: 连营 / 士气 +5", "effects": ["flag:yiling_camp", "morale:+5"] },
+        { "id": "stay", "label": "顿兵秭归，整备辎重", "preview": "士气 −3 / 粮道更稳", "effects": ["morale:-3"] }
+      ],
+      "source": { "id": "sgz.shu.32 先主传/陆逊传", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.222.yiling.fire",
+      "title": "猇亭之火",
+      "layer": "史实节点",
+      "priority": 100,
+      "when": { "yearMin": 222, "flag": { "has": ["yiling_camp"] } },
+      "once": true,
+      "exclusive": ["evt.221.yiling.camp"],
+      "speaker": "军情急报",
+      "text": ["陆逊火攻，破四十余营。", "尸骸塞江而下，舟船器械，水步军资一时略尽。"],
+      "choices": [
+        { "id": "retreat", "label": "收残兵退屯白帝", "preview": "金 −300 / 士气 −10", "effects": ["gold:-300", "morale:-10"] },
+        { "id": "laststand", "label": "收兵再战", "preview": "士气 −20", "effects": ["morale:-20"] }
+      ],
+      "source": { "id": "sgz.wu.13 陆逊传", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.223.baidi",
+      "title": "白帝托孤",
+      "layer": "史实节点",
+      "priority": 95,
+      "when": { "yearMin": 223, "faction": ["xuzhou"], "generalAlive": ["诸葛亮"] },
+      "once": true,
+      "speaker": "内侍",
+      "text": ["永安宫中，病榻之侧：「君才十倍曹丕，必能安国，终定大事。」", "「若嗣子可辅，辅之；如其不才，君可自取。」"],
+      "choices": [
+        { "id": "accept", "label": "涕泣受命：「敢不竭股肱之力！」", "preview": "flag: 托孤 / 诸葛亮忠诚 +10", "effects": ["flag:tuogu", "loyalty:诸葛亮:+10"] },
+        { "id": "humble", "label": "固辞，请立嗣君", "preview": "恶名 −1", "effects": ["fame:-1"] }
+      ],
+      "source": { "id": "sgz.shu.35 诸葛亮传", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.225.nanzhong",
+      "title": "南中皆反",
+      "layer": "史实节点",
+      "priority": 85,
+      "when": { "yearMin": 225, "faction": ["xuzhou"], "generalAlive": ["孟获"] },
+      "once": true,
+      "speaker": "军情急报",
+      "text": ["雍闿、高定叛于南中，孟获收诸夷之众应之。", "「攻心为上，攻城为下」——马谡送行时如此说。"],
+      "choices": [
+        { "id": "heart", "label": "南征，攻心为上", "preview": "金 −500 / 孟获忠诚 +20 / 恶名 −2", "effects": ["gold:-500", "loyalty:孟获:+20", "fame:-2"] },
+        { "id": "force", "label": "发兵平定，先声夺人", "preview": "士气 +5 / 恶名 +2", "effects": ["morale:+5", "fame:+2"] }
+      ],
+      "source": { "id": "汉晋春秋/华阳国志", "confidence": "中" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.227.chushibiao",
+      "title": "出师表",
+      "layer": "史实节点",
+      "priority": 95,
+      "when": { "yearMin": 227, "faction": ["xuzhou"], "flag": { "has": ["tuogu"] }, "generalAlive": ["诸葛亮"] },
+      "once": true,
+      "exclusive": ["evt.228.jieting"],
+      "speaker": "诸葛亮",
+      "text": ["「今天下三分，益州疲弊，此诚危急存亡之秋也。」", "「当奖率三军，北定中原，兴复汉室，还于旧都。」"],
+      "choices": [
+        { "id": "north", "label": "誓师北伐", "preview": "flag: 北伐 / 金 −1000 / 士气 +8", "effects": ["flag:nvxfa", "gold:-1000", "morale:+8"] },
+        { "id": "tiller", "label": "屯田积粟，缓图中原", "preview": "flag: 先屯田", "effects": ["flag:nvxfa_defer"] }
+      ],
+      "source": { "id": "sgz.shu.35 诸葛亮传", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.228.jieting",
+      "title": "街亭之失",
+      "layer": "史实节点",
+      "priority": 90,
+      "when": { "yearMin": 228, "flag": { "has": ["nvxfa"] } },
+      "once": true,
+      "exclusive": ["evt.227.chushibiao"],
+      "speaker": "军情急报",
+      "text": ["马谡舍水上山，违亮节度，张郃断其汲道，大破于街亭。", "进无所据，退无所守——第一次北伐，功败垂成。"],
+      "choices": [
+        { "id": "law", "label": "挥泪明法，整饬军纪", "preview": "恶名 −1 / 士气 −5", "effects": ["fame:-1", "morale:-5"] },
+        { "id": "pardon", "label": "念其献策之功，宽宥之", "preview": "士气 −8 / 恶名 +1", "effects": ["morale:-8", "fame:+1"] }
+      ],
+      "source": { "id": "sgz.shu.39 马良传附/张郃传", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.234.wuzhang",
+      "title": "五丈原秋",
+      "layer": "史实节点",
+      "priority": 95,
+      "when": { "yearMin": 234, "generalDead": ["诸葛亮"] },
+      "once": true,
+      "speaker": "军情急报",
+      "text": ["诸葛亮卒于五丈原军中，年五十四。", "「鞠躬尽瘁，死而后已。」——遗表在案，大军正在撤退。"],
+      "choices": [
+        { "id": "open", "label": "依遗命退军，举哀全境", "preview": "士气 −8 / 全军忠诚 +8", "effects": ["morale:-8", "loyalty:姜维:+8"] },
+        { "id": "secret", "label": "秘不发丧，稳住追兵", "preview": "士气 −3", "effects": ["morale:-3"] }
+      ],
+      "source": { "id": "sgz.shu.35 诸葛亮传", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.249.gaoping",
+      "title": "高平陵之变",
+      "layer": "史实节点",
+      "priority": 95,
+      "when": { "yearMin": 249, "faction": ["jingzhou"], "generalAlive": ["司马懿"] },
+      "once": true,
+      "speaker": "帐下",
+      "text": ["曹爽陪驾出谒高平陵，洛阳城门已闭。", "「指洛水为誓，只免其官。」——誓言未干，夷三族之诏已下。"],
+      "choices": [
+        { "id": "support", "label": "支持司马氏掌政", "preview": "flag: 政归司马氏", "effects": ["flag:simatakeover"] },
+        { "id": "oppose", "label": "密谏勿使大权旁落", "preview": "司马懿忠诚 −20", "effects": ["loyalty:司马懿:-20"] }
+      ],
+      "source": { "id": "sgz.weishu.1 注/晋书宣帝纪", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.263.shu.falls",
+      "title": "成都出降",
+      "layer": "史实节点",
+      "priority": 90,
+      "when": { "yearMin": 263 },
+      "once": true,
+      "speaker": "探马",
+      "text": ["邓艾偷渡阴平，诸葛瞻战死绵竹，后主出降。", "四十三年基业，一朝而终——「此间乐，不思蜀」。"],
+      "choices": [
+        { "id": "witness", "label": "实录其事，以警后世", "preview": "无", "effects": ["nothing"] }
+      ],
+      "source": { "id": "sgz.shu.33 后主传/邓艾传", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.280.wu.falls",
+      "title": "王濬楼船",
+      "layer": "史实节点",
+      "priority": 90,
+      "when": { "yearMin": 280 },
+      "once": true,
+      "speaker": "探马",
+      "text": ["王濬楼船下益州，金陵王气黯然收。", "「一片降幡出石头。」——三分归晋，乱世落幕。"],
+      "choices": [
+        { "id": "witness", "label": "实录其事", "preview": "无", "effects": ["nothing"] }
+      ],
+      "source": { "id": "sgz.wu.2/晋书王濬传", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.cond.grain.merchant",
+      "title": "粮商叩门",
+      "layer": "条件",
+      "priority": 60,
+      "when": { "resource": { "grain": { "<": 800 } } },
+      "once": false,
+      "cooldown": 6,
+      "speaker": "粮商",
+      "text": ["军粮日减，军心渐浮。有巨商携粟千斛，愿以八百金易之。", "「明公若不要，小人便转售他方了。」"],
+      "choices": [
+        { "id": "buy", "label": "八百金买千斛", "preview": "金 −800 / 粮 +1000", "effects": ["gold:-800"] },
+        { "id": "refuse", "label": "婉拒，加紧屯田", "preview": "无", "effects": ["nothing"] }
+      ],
+      "source": { "id": "GDD §8.2 示例 1（本作设定）", "confidence": "中" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.cond.defeat.morale",
+      "title": "败军之众",
+      "layer": "条件",
+      "priority": 70,
+      "when": { "battleLost": { "count": { ">=": 2 }, "withinTurn": 4 } },
+      "once": false,
+      "cooldown": 6,
+      "speaker": "诸将",
+      "text": ["连番失利，营中逃卒渐多，士卒私语：敌不可胜。", "此刻，军法与人心只能偏重一头。"],
+      "choices": [
+        { "id": "law", "label": "严明军法，逃者斩", "preview": "士气 −10 / 恶名 +2", "effects": ["morale:-10", "fame:+2"] },
+        { "id": "care", "label": "抚恤士卒，亲巡营垒", "preview": "金 −300 / 士气 +10", "effects": ["gold:-300", "morale:+10"] }
+      ],
+      "source": { "id": "GDD §8.2 示例 4（本作设定）", "confidence": "中" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.cond.win.pride",
+      "title": "骄兵之气",
+      "layer": "条件",
+      "priority": 65,
+      "when": { "battleWon": { "count": { ">=": 3 }, "withinTurn": 6 } },
+      "once": false,
+      "cooldown": 8,
+      "speaker": "老将",
+      "text": ["三战三捷，营中渐有轻敌之语，操练也松了。", "「胜而不可骄者，可恒胜。」"],
+      "choices": [
+        { "id": "reward", "label": "犒赏三军，许其庆功", "preview": "金 −500 / 士气 +8", "effects": ["gold:-500", "morale:+8"] },
+        { "id": "warn", "label": "集众申儆，复其操练", "preview": "士气 −3 / 全军忠诚 +5", "effects": ["morale:-3", "loyalty:全军:+5"] }
+      ],
+      "source": { "id": "本作设定（骄兵恒败的决策面）", "confidence": "中" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.cond.rich.school",
+      "title": "富庶之忧",
+      "layer": "条件",
+      "priority": 55,
+      "when": { "resource": { "gold": { ">=": 8000 } } },
+      "once": false,
+      "cooldown": 10,
+      "speaker": "州吏",
+      "text": ["府库充盈，然地方学舍倾颓，流亡学士无所归依。", "钱粮有二用：练兵，或养士。"],
+      "choices": [
+        { "id": "school", "label": "修学舍，养寒士", "preview": "金 −1000 / 恶名 −3", "effects": ["gold:-1000", "fame:-3"] },
+        { "id": "army", "label": "尽以募兵置械", "preview": "金 −1500 / 士气 +5", "effects": ["gold:-1500", "morale:+5"] }
+      ],
+      "source": { "id": "本作设定（资源分配的软压力）", "confidence": "中" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.cond.loyalty.warn",
+      "title": "帐下有变",
+      "layer": "条件",
+      "priority": 80,
+      "when": { "resource": { "min_loyalty": { "<": 40 } } },
+      "once": false,
+      "cooldown": 6,
+      "speaker": "亲随",
+      "text": ["有部将近日夜访他营，言语含糊，其心可察。", "用人者不可不察——买其心，或送其行。"],
+      "choices": [
+        { "id": "gift", "label": "赐金安其心", "preview": "金 −400 / 最低忠诚武将 +10", "effects": ["gold:-400", "loyalty:最低者:+10"] },
+        { "id": "release", "label": "予其路引，来去自由", "preview": "恶名 −1", "effects": ["fame:-1"] }
+      ],
+      "source": { "id": "本作设定（忠诚系统的决策面）", "confidence": "中" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.cond.prisoner.recruit",
+      "title": "阶下之囚",
+      "layer": "条件",
+      "priority": 75,
+      "when": { "resource": { "prisoners": { ">=": 1 } } },
+      "once": false,
+      "cooldown": 8,
+      "speaker": "狱吏",
+      "text": ["阵前俘获之将羁押已久，其旧部皆观我之处置。", "杀之立威？释之收心？礼之纳降？"],
+      "choices": [
+        { "id": "respect", "label": "以礼相待，劝其来归", "preview": "金 −200 / 恶名 −2", "effects": ["gold:-200", "fame:-2"] },
+        { "id": "execute", "label": "明正典刑，以慑四方", "preview": "恶名 +3 / 士气 +3 / 各势力态度 −15", "effects": ["fame:+3", "morale:+3", "attitude:yanzhou:-15", "attitude:jizhou:-15", "attitude:yangzhou:-15", "attitude:xuzhou:-15"] }
+      ],
+      "source": { "id": "GDD §7.3 处决/释放条（本作设定）", "confidence": "中" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.cond.siege.scorch",
+      "title": "兵临城下",
+      "layer": "条件",
+      "priority": 85,
+      "when": { "resource": { "besieged_cities": { ">=": 1 } } },
+      "once": false,
+      "cooldown": 6,
+      "speaker": "太守",
+      "text": ["敌军围城，四野粮秣未收。", "坚壁清野可饿退敌军，然城外百姓先受其害。"],
+      "choices": [
+        { "id": "scorch", "label": "坚壁清野", "preview": "士气 −5 / 恶名 +2", "effects": ["morale:-5", "fame:+2"] },
+        { "id": "sally", "label": "出城邀击，速战速决", "preview": "士气 −10", "effects": ["morale:-10"] }
+      ],
+      "source": { "id": "本作设定（守城决策面）", "confidence": "中" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.cond.plague.summer",
+      "title": "夏疫渐起",
+      "layer": "条件",
+      "priority": 85,
+      "when": { "season": "夏", "resource": { "supply_cut_armies": { ">=": 1 } } },
+      "once": false,
+      "cooldown": 12,
+      "speaker": "军医",
+      "text": ["暑气蒸人，断粮之军已有疫病，一日数十人卧倒。", "建安大疫，殷鉴不远。"],
+      "choices": [
+        { "id": "medicine", "label": "调药施医，分营安置", "preview": "金 −600 / 恶名 −2", "effects": ["gold:-600", "fame:-2"] },
+        { "id": "seal", "label": "封营隔离，防其蔓延", "preview": "士气 −8", "effects": ["morale:-8"] }
+      ],
+      "source": { "id": "后汉书·五行志（建安大疫）/本作设定", "confidence": "中" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.cond.refugee.flow",
+      "title": "流民就食",
+      "layer": "条件",
+      "priority": 60,
+      "when": { "resource": { "grain": { ">=": 3000 } } },
+      "once": false,
+      "cooldown": 8,
+      "speaker": "州吏",
+      "text": ["邻境兵乱，流民数千扶老携幼而至，愿附籍屯垦。", "收之费粮，驱之伤名。"],
+      "choices": [
+        { "id": "accept", "label": "附籍屯垦，编为民户", "preview": "金 −300 / 恶名 −2", "effects": ["gold:-300", "fame:-2"] },
+        { "id": "expel", "label": "遣回原籍，勿乱吾民", "preview": "恶名 +2", "effects": ["fame:+2"] }
+      ],
+      "source": { "id": "本作设定（内政决策面）", "confidence": "中" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.rel.guan.zhangliao",
+      "title": "阵前故人",
+      "layer": "关系",
+      "priority": 75,
+      "when": { "relation": { "a": "关羽", "b": "张辽", "value": { ">=": 60 } } },
+      "once": true,
+      "speaker": "关羽",
+      "text": ["两军阵前，张辽勒马不前：「云长兄，别来无恙。」", "「某虽知公忠义，然各为其主，今日不得不战。」"],
+      "choices": [
+        { "id": "talk", "label": "阵前叙旧，互道珍重", "preview": "对曹氏态度 +5", "effects": ["attitude:yanzhou:+5"] },
+        { "id": "fight", "label": "按剑相对：「各为其主。」", "preview": "士气 +3", "effects": ["morale:+3"] }
+      ],
+      "source": { "id": "演义·第二十六回（张辽说降关羽）", "confidence": "中" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.rel.fengyiting",
+      "title": "凤仪亭",
+      "layer": "关系",
+      "priority": 80,
+      "when": { "yearMin": 192, "generalAlive": ["吕布", "貂蝉"] },
+      "once": true,
+      "speaker": "细作",
+      "text": ["董卓掷戟凤仪亭，吕布之怒已见颜色。", "貂蝉在两雄之间——此局成败，系于一步。"],
+      "choices": [
+        { "id": "promise", "label": "许以婚姻，缓其心", "preview": "吕布忠诚 +10 / flag: 凤仪亭局", "effects": ["loyalty:吕布:+10", "flag:fengyiting"] },
+        { "id": "refuse", "label": "不涉此事", "preview": "吕布忠诚 −10", "effects": ["loyalty:吕布:-10"] }
+      ],
+      "source": { "id": "演义·第八回（史实为吕布私通卓傅婢，见 sgz.weishu.7 注）", "confidence": "低" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.rel.xunyu.box",
+      "title": "空食盒",
+      "layer": "关系",
+      "priority": 90,
+      "when": { "yearMin": 212, "faction": ["yanzhou"], "generalAlive": ["荀彧"] },
+      "once": true,
+      "speaker": "内侍",
+      "text": ["尚书令荀彧再谏南征之议，言语犯颜。", "主公赐下一只食盒——打开，是空的。"],
+      "choices": [
+        { "id": "open", "label": "（送出空食盒）", "preview": "荀彧忠诚 −30 / 恶名 +2 / flag: 荀彧心死", "effects": ["loyalty:荀彧:-30", "fame:+2", "flag:xunyu_dead_wish"] },
+        { "id": "honour", "label": "改赐貂裘金盏，加官安抚", "preview": "金 −500 / 荀彧忠诚 +10", "effects": ["gold:-500", "loyalty:荀彧:+10"] }
+      ],
+      "source": { "id": "演义·第六十一回（空盒属演义，荀彧忧卒见 sgz.weishu.10）", "confidence": "低" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.rel.tianfeng",
+      "title": "狱中之谏",
+      "layer": "关系",
+      "priority": 80,
+      "when": { "faction": ["jizhou"], "flag": { "has": ["wuchao_ignored"] }, "generalAlive": ["田丰"] },
+      "once": true,
+      "speaker": "狱吏",
+      "text": ["官渡之策不用，果败。狱中田丰言：「主公若胜，或可赦我；今败，必杀我。」", "狱吏来问：如何处置田丰？"],
+      "choices": [
+        { "id": "kill", "label": "斩之以塞其口", "preview": "田丰死 / 沮授忠诚 −40 / 恶名 +2", "effects": ["fame:+2", "loyalty:沮授:-40", "flag:tianfeng_dead"] },
+        { "id": "free", "label": "亲至狱中谢之，复其职", "preview": "田丰忠诚 +10 / 士气 −3", "effects": ["loyalty:田丰:+10", "morale:-3"] }
+      ],
+      "source": { "id": "sgz.weishu.6 注/先贤行状", "confidence": "中" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.rel.lusu",
+      "title": "指囷相赠",
+      "layer": "关系",
+      "priority": 70,
+      "when": { "yearMin": 200, "faction": ["yangzhou"], "generalAlive": ["周瑜"] },
+      "once": true,
+      "speaker": "周瑜",
+      "text": ["周瑜荐鲁肃：「肃有王佐之资，宜亟召之。」", "鲁肃初见，即指家中两囷米：「一囷赠公。」"],
+      "choices": [
+        { "id": "summon", "label": "即召鲁肃入幕", "preview": "鲁肃忠诚 +10", "effects": ["loyalty:鲁肃:+10"] },
+        { "id": "later", "label": "记名待用，暂不召见", "preview": "无", "effects": ["nothing"] }
+      ],
+      "source": { "id": "sgz.wu.9 鲁肃传", "confidence": "高" },
+      "reviewed": false
+    },
+    {
+      "id": "evt.rel.jiangwei",
+      "title": "凉州上士",
+      "layer": "关系",
+      "priority": 85,
+      "when": { "faction": ["xuzhou"], "flag": { "has": ["nvxfa"] }, "generalAlive": ["姜维"] },
+      "once": true,
+      "speaker": "诸葛亮",
+      "text": ["姜维归降，亮书与其兄曰：「姜伯约忠勤时事，思虑精密，凉州上士也。」", "「既得其人，当授以平生所学。」"],
+      "choices": [
+        { "id": "teach", "label": "收为弟子，授以兵法", "preview": "姜维忠诚 +20 / flag: 衣钵传", "effects": ["loyalty:姜维:+20", "flag:jiangwei_taught"] },
+        { "id": "assign", "label": "量才任用，置于军前", "preview": "姜维忠诚 +5", "effects": ["loyalty:姜维:+5"] }
+      ],
+      "source": { "id": "sgz.shu.44 姜维传注", "confidence": "高" },
+      "reviewed": false
+    }
+  ]
+}

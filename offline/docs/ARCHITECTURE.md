@@ -296,6 +296,14 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 - `server/domain/fate-groups.js`：零依赖叶子，读 `conf/campaign/fate-groups.json`（24 组，8 组 fullChain 事件链，每组带史实依据与置信度）。`evaluateFates(heroAlive, {heroInCourt})` 回 active/dormant/broken 三档；加成数值由调用方换算（描述=计算=战报同源）。**一人可属多组**（曹操 5 组、赵云 3 组）：`fate` 字段记首个组 id，bonds 全量铺边。
 - 测试 `tests/m3-heroes-fates.test.js` 7 条：含子进程重跑 `build-heroes.mjs --check`（V1..V6 校验失败即构建失败）。运行期接线（招募/关系网渲染/宿命加成落战斗）属 M3-4。
 
+### 9.6 M3-2 事件系统（GDD §8.1-§8.3）
+
+- `server/domain/event-dsl.js`（叶子）：条件求值 `evaluateEvent(when, ctx)`。字段白名单 turn/year/season/faction/cityOwned/cityLost/resource/flag/relation/generalAlive/generalDead/generalInTeam/battleLost/battleWon——**未知字段与未知算子一律 throw**（GDD §13.1「事件 DSL 不做通用脚本」的闸门）；比较只走单算子对象 `{">=": 500}`；ctx 全部由调用方注入，本模块不知道 state 形状。
+- `server/domain/event-engine.js`（叶子）：`selectEvents(events, ctx, state)` 每旬一次——once 排除 → 冷却排除 → 条件过滤 → priority 降序（同分按 id 字典序，确定性）→ exclusive 组内只出 1（其余冷却 1 旬）→ 每旬最多 2 条。`applyEffects(state, event, choiceId, api)` 效果词白名单（flag/flag-/gold/morale/loyalty/attitude/fame/nothing），落账走调用方注入的 api，选择记录写 `state.events.choices`（结局回放用）。**本模块不掷随机数**。
+- `conf/campaign/events.json`：第一批 52 条（37 史实节点 / 9 条件 / 6 关系），城 id 对齐 map.json 72 城、势力 id 对齐 factions.json 8 势力、武将名对齐 heroes-240。`reviewed:false` 表示待人工签核（出戏防线第 4 闸），check-events 只警告不阻塞。
+- `tools/check-events.mjs`：构建期校验（失败即构建失败）——schema/引用有效性/资源 kind 白名单/once-flag 一设一清冲突/exclusive 引用完整/禁入词（eval、Function、require 等）。
+- **tick 接线待 M3-4**：strategy 旬循环里调 `eventCooldownTick` + `selectEvents`（ctx 适配器从 strategy state 取 turn/year/season/faction/resource/flag/general），弹窗呈现走 interaction 层。当前引擎只被测试与冒烟消费。
+
 ---
 
 ## 10. 文档地图（读哪本、信哪本）
