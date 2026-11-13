@@ -28,6 +28,7 @@ import {
   strategyViewState, oathOptions, chooseOath, strategyFormup, strategyTransport,
   rewardGeneral, strategyInvest, recruitCaptive, strategyAttack, strategyRecallMarch, cancelInvest,
   previewAssault, strategyReorderMarch,
+  strategyAppoint, strategyCancelAppointment, diplomacyAct,
 } from './domain/strategy.js';
 import { panelState, panelAction, panelSelfCheck } from './domain/panels.js';
 /* 交互增强层：只读聚合（纯函数），不改 WS 协议与消息结构 */
@@ -436,6 +437,13 @@ export async function startOfflineServer(options = {}) {
           cityId: Number(body.cityId), count: Number(body.count), mercenary: !!body.mercenary,
         });
         else if (act === 'relocateCapital') result = relocateCapital(state, ctx, { cityId: Number(body.cityId) });
+        /* ★ M2-4 委任对象化与外交（GDD §5.6/§5.8）：委任目标 / 取消委任 / 外交动作 */
+        else if (act === 'appoint') result = strategyAppoint(state, cfg, ctx, { cityId: Number(body.cityId), goal: String(body.goal || '') });
+        else if (act === 'cancelAppoint') result = strategyCancelAppointment(state, ctx, { apptId: String(body.apptId || '') });
+        else if (act === 'diplo') result = diplomacyAct(state, cfg, ctx, {
+          action: String(body.diploAction || body.sub || ''), faction: String(body.faction || ''),
+          target: String(body.target || ''), gold: Number(body.gold) || 0,
+        });
         /* ★ 验收 #10 战前推演：与正式结算同一 resolveBattle / defenseFor / battleSeedFor，
            纯只读沙盒，可无限次回退重试；不能 save()，否则反复推演会把存档反复落盘。 */
         /* ★ 验收 #23：行军队列重排（同日抵达按队列顺序结算，所以顺序是真决策） */

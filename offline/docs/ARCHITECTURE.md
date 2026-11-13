@@ -264,7 +264,17 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 
 ---
 
-## 9.2 M2-3 参数表 / 失败态 / 结局 / 平衡脚本（GDD §9.2 / §3.4 / §3.5 / §9.5）
+## 9.2 M2-4 委任对象化 / 外交 / M2-5 张力守恒（GDD §5.6 / §5.8 / §6.7.1）
+
+| 件 | 口径 |
+|---|---|
+| `server/domain/appointment.js` | 委任对象化（§5.6）：`appointment = {id, officerId, cityId, goal: develop/recruit/defend/transport, status, blockedReason, lastTaskId}`。**每旬自动派一条真实内政任务**（走 `interior-task.beginInteriorTask`，与手动同源同价同工期）——不做一键结算。缺金 `blocked` 置顶报告、金到位自动续办；失城 `done` + `blockedReason=城失`；取消只停后续派单、在施任务不动（不静默吞钱）。旬界由 `cityEconTick` 调 `appointmentTick`。视图 `appointments`（blocked 置顶）；动作 appoint / cancelAppoint。 |
+| `server/domain/diplomacy.js` | 外交（§5.8）：每对势力 `attitude ∈ [-100,100]` = 基础(史实占位哈希) + 履约×5 − 背约×10 + 联姻 15 + 赠礼(200金/1 封顶 30) − 边境摩擦×3(邻接城数封顶 6) + 共同敌人×10 − 占城×20 − 离间失手×15。**factors[] 就是理由链**：任何动作（成败都带）返回 `{text, factors}`，拒绝文案含「未达 N」——没有理由链的外交回复视为 bug。8 动作（7 门槛表 + 赠礼）：停战 90 日（NPC 守约由 `applyOrders` 出征前 `truceActive` 拦截）、通行权、结盟（写 `st.relations` 供 `isAllied`）、联姻、请求攻击（付定金 → `st.diploPrompt` 在 strategyTick 注入一单真实出征）、劝降（兵力比 3:1 + 态度 ≥0，拒绝则开战）、离间（都城情报 ≥估算 + 智力判定，失败 `sowFail` −15）、赠礼。占城登记 `noteCityCaptured`（攻城结算处调用，**归属变更前取旧主**；停战期攻城=毁约记背约）。自包含叶子：自读 conf、邻接自建（复用 marchGraph），只依赖 march/strategy-rng/oath。 |
+| M2-5 张力守恒（§6.7.1，在 strategy.js 内） | ① **推演只对已知量精确**：`previewAssault` 按 `st.intel` 档位给守军区间（0 传闻 ±40% / 1 估算 ±15% / 2 精确 ±0），下发 `spreadLines` 最坏/最好两条线 + `intelNote`；推演不写 `st.intel`（不产情报）。② **敌将变招**：`counterVariantFor(state, cityId, arriveDay)`（`rngFor(seed, arriveDay, 'counter')` 三预案 `COUNTER_VARIANTS`：坚守 1.12 / 逆袭 0.88 / 常规 1.0）；defMul 在 `settleArmyBattle` 内与兵种克制**同一处相乘**（战报 dLoss 基线保持 raw 守军数，推演与正式逐位一致——基线错位会直接打挂 p10 一致性测试，踩过）；推演下发 `variantLines` 两条「若敌方变招则…」。③ **确认即锁**：`strategyAttack` 落 `march.lockedSeed`，结算 `mm.lockedSeed ?? battleSeedFor(...)`；推演不限次、确认后只能撤军重来。 |
+
+---
+
+## 9.3 M2-3 参数表 / 失败态 / 结局 / 平衡脚本（GDD §9.2 / §3.4 / §3.5 / §9.5）
 
 | 件 | 口径 |
 |---|---|

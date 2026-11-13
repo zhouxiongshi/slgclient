@@ -2626,6 +2626,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     var tabs = [
       ['go', '出击'],
       ['queue', '行军队列' + (queue.length ? '（' + queue.length + '）' : '')],
+      ['diplo', '外交'],
       ['log', '战报'],
     ];
     var body = makeWindow('slgWarWin', '出征',
@@ -2636,6 +2637,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     body.innerHTML = '';
     if (war.tab === 'go') warGoPanel(s, fromCity, idle, body);
     else if (war.tab === 'queue') warQueuePanel(s, queue, body);
+    else if (war.tab === 'diplo') warDiploPanel(s, body);
     else warLogPanel(s, body);
     /* ★ #18：面板每次重绘都把「选到一半的输入」落一次，切走再回来原样还在 */
     saveWar();
@@ -2862,6 +2864,25 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     var tone = r.win ? '#a9e2a0' : (r.draw ? '#e0c56a' : '#ff6b5e');
     var tag = r.win ? '预计可下' : (r.draw ? '预计相持' : '预计难下');
     var seedHex = (Number(r.seed) >>> 0).toString(16).toUpperCase();
+    /* ★ M2-5 张力守恒（GDD §6.7.1）：情报区间 / 敌将变招 / 确认即锁，三条都要让玩家看见 */
+    var tension = [];
+    if (r.intelNote) tension.push(kv('情报档位', esc(r.intelNote)));
+    if (r.variant) tension.push(kv('敌方预案', '<b style="color:#f0d998">' + esc(r.variant.name) + '</b>　' + esc(r.variant.note || '')));
+    if (r.spreadLines && r.spreadLines.length) {
+      var w0 = r.spreadLines[0], b0 = r.spreadLines[1];
+      tension.push(kv('守军区间',
+        '最坏（守军偏多）：' + (w0.win ? '<span style="color:#a9e2a0">可下</span>' : '<span style="color:#ff6b5e">难下</span>')
+        + ' 折损 −' + fmt(w0.aLoss)
+        + '　最好（守军偏少）：' + (b0.win ? '<span style="color:#a9e2a0">可下</span>' : '<span style="color:#ff6b5e">难下</span>')
+        + ' 折损 −' + fmt(b0.aLoss)));
+    }
+    if (r.variantLines && r.variantLines.length) {
+      tension.push(kv('若敌方变招', r.variantLines.map(function (v) {
+        return esc(v.variant) + '：' + (v.win ? '<span style="color:#a9e2a0">我胜</span>' : '<span style="color:#ff6b5e">我负</span>')
+          + ' 折损 −' + fmt(v.aLoss) + ' / 歼敌 ' + fmt(v.dLoss);
+      }).join('　')));
+    }
+    if (r.lockNote) tension.push('<div class="cost" style="margin-top:2px">' + esc(r.lockNote) + '</div>');
     return [
       kv('判定', '<span style="color:' + tone + '">' + tag + '</span>　战报码 ' + r.code
         + '　' + r.rounds + ' 回合'),
@@ -2871,9 +2892,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       kv('抵达', '第 ' + r.arriveDay + ' 日（程 ' + fmt(r.km) + ' 里 · ' + r.days + ' 日行）'),
       kv('兵种关系', esc(r.counterNote)),
       kv('战斗种子', '0x' + seedHex + '（同种子必得同战报）'),
-      '<div style="margin-top:8px;color:#e8d9a8">归因：' + esc(r.attribution) + '</div>',
-      '<div class="cost" style="margin-top:4px;opacity:.75">' + esc(r.caveat) + '</div>',
-    ].join('');
+    ].join('') + tension.join('') + '<div style="margin-top:8px;color:#e8d9a8">归因：' + esc(r.attribution) + '</div>'
+      + '<div class="cost" style="margin-top:4px;opacity:.75">' + esc(r.caveat) + '</div>';
   }
 
   function warConfirmAttack(s, fromCity, army, target, route) {
@@ -2904,6 +2924,79 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         }
       }).catch(function () { toast('出兵失败：服务端无响应', false); });
     });
+  }
+
+  /* ★ M2-4 外交（GDD §5.8）：只对 NPC，全部可解释——态度是公式（理由链逐条展开），
+     拒绝必须带 {code,text,factors[]}；停战期内诸侯守约不进犯。 */
+  function warDiploPanel(s, body) {
+    var dip = (cache && cache.diplomacy) || s.diplomacy || { factions: [], day: s.day };
+    var card = el('div', 'card', '<h4 style="margin-top:0">诸侯态度</h4>'
+      + '<div class="cost">态度 = 史实基础 + 履约×5 − 背约×10 + 联姻 + 赠礼 − 边境摩擦 + 共同敌人 − 占其城×20。'
+      + '拒绝必给理由；停战期内诸侯不进犯，但停战期攻城即毁约。</div>');
+    var bar = function (v) {
+      var n = Math.round((Math.max(-100, Math.min(100, Number(v) || 0)) + 100) / 20);
+      return '<span class="cost">' + '▓'.repeat(Math.max(0, n)) + '░'.repeat(Math.max(0, 10 - n)) + '</span>';
+    };
+    if (!(dip.factions || []).length) {
+      card.appendChild(el('div', 'empty', '天下诸侯尚未登场。'));
+      body.appendChild(card);
+      return;
+    }
+    var act = function (label, faction, diploAction, extraFn, disabled) {
+      var b = mkBtn(label, disabled ? 'ghost' : '', function () {
+        var extra = (typeof extraFn === 'function') ? (extraFn() || {}) : (extraFn || {});
+        postJSON('/__slg/strategy/action', Object.assign({ action: 'diplo', diploAction: diploAction, faction: faction }, extra))
+          .then(function (rs) {
+            toast(rs.text || (rs.ok ? '外交已成' : '外交未成'), !!rs.ok);
+            fetchState().then(function (s2) { cache = s2; renderWar(cache); });
+          })
+          .catch(function () { toast('外交动作失败：服务端无响应', false); });
+      });
+      b.style.margin = '0';
+      if (disabled) b.disabled = true;
+      return b;
+    };
+    (dip.factions || []).forEach(function (f) {
+      var row = el('div', 'row');
+      var flag = [];
+      if (f.war) flag.push('<span style="color:#ff6b5e">交战</span>');
+      if (f.ally) flag.push('<span style="color:#a9e2a0">盟友</span>');
+      if (Number(f.truceUntil) > Number(dip.day || s.day)) flag.push('停战至第 ' + f.truceUntil + ' 日');
+      if (f.pass) flag.push('通行权');
+      if (f.marriage) flag.push('姻亲');
+      if (Number(f.occupied) > 0) flag.push('占其 ' + f.occupied + ' 城');
+      var factors = (f.factors || []).filter(function (x) { return x.delta; })
+        .map(function (x) { return x.label + (x.delta > 0 ? '+' : '') + x.delta; }).join('　');
+      row.innerHTML = '<span><b style="color:' + esc(f.color || '#f0d998') + '">' + esc(f.name) + '</b>'
+        + '<span class="cost">　都城 ' + esc(f.home || '—') + ' · 兵 ' + fmt(f.troops) + '（我/彼 ' + f.troopsRatio + '）'
+        + (flag.length ? ' · ' + flag.join(' · ') : '') + '</span>'
+        + '<div class="cost">态度 ' + bar(f.attitude) + ' <b>' + f.attitude + '</b>'
+        + (factors ? '<div style="opacity:.65">' + esc(factors) + '</div>' : '') + '</div></span>';
+      var ops = el('div', '');
+      ops.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 10px;align-items:center;';
+      ops.appendChild(act('停战(1500金)', f.id, 'truce', null, f.gates.truce && !f.gates.truce.ok));
+      ops.appendChild(act('通行权(800金)', f.id, 'pass', null, f.gates.pass && !f.gates.pass.ok));
+      ops.appendChild(act('结盟', f.id, 'ally', null, f.gates.ally && !f.gates.ally.ok));
+      ops.appendChild(act('联姻(3000金)', f.id, 'marriage', null, f.gates.marriage && !f.gates.marriage.ok));
+      if (f.gates.requestAttack && f.gates.requestAttack.ok) {
+        var sel = el('select');
+        sel.style.cssText = 'max-width:104px';
+        (dip.factions || []).concat([{ id: 'han', name: '汉廷' }]).forEach(function (t) {
+          if (t.id === f.id || t.id === 'player') return;
+          var o = el('option'); o.value = t.id; o.textContent = t.name; sel.appendChild(o);
+        });
+        ops.appendChild(sel);
+        ops.appendChild(act('请攻(2000金)', f.id, 'requestAttack', function () { return { target: sel.value }; }, false));
+      } else {
+        ops.appendChild(act('请攻(2000金)', f.id, 'requestAttack', null, true));
+      }
+      ops.appendChild(act('劝降', f.id, 'surrender', null, f.gates.surrender && !f.gates.surrender.ok));
+      ops.appendChild(act('离间(800金)', f.id, 'sow', null, false));
+      ops.appendChild(act('赠礼500', f.id, 'gift', { gold: 500 }, false));
+      row.appendChild(ops);
+      card.appendChild(row);
+    });
+    body.appendChild(card);
   }
 
   /* ★ 验收 #23：行军队列可重排 + 可批量撤回。
@@ -3260,6 +3353,60 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       mkEdgeInv('侦察（选邻城）', 'scout', 200, '敌城情报 +1 档');
       mkEdgeInv('离间（选敌城）', 'sow', 800, '守军 −3%、离心 +1');
       body.appendChild(invCard);
+
+      /* ★ M2-4 委任对象化（GDD §5.6）：「我不用管，但我知道它在干什么」——
+         每旬自动派一条真实内政任务（与手动同源同价同工期）；缺金置顶暂停、金到位续办、失城中止。 */
+      var apptCard = el('div', 'card', '<h4 style="margin-top:0">长驻委任</h4>'
+        + '<div class="cost">委任后每旬自动办一条真实内政任务（产出与手动完全同源，报告写清谁涨了什么）；'
+        + '缺金时暂停并置顶提醒，金到位自动续办；城丢失自动中止。</div>');
+      var appts = ((cache && cache.appointments) || []).filter(function (a) { return Number(a.cityId) === Number(c.id); });
+      var mkAppt = function (goal, label, note) {
+        var mine = appts.find(function (a) { return a.goal === goal && a.status === 'running'; });
+        var b = mkBtn(mine ? (label + '（委任中）') : (label + '·委任'), mine ? 'ghost' : '', function () {
+          fetch('/__slg/strategy/action', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'appoint', cityId: c.id, goal: goal }),
+          }).then(function (r2) { return r2.json(); }).then(function (rs) {
+            if (rs.ok) toast(label + '委任已设：' + note, true);
+            else if (rs.reason === 'busy') toast('该城已有同目标委任在办', false);
+            else if (rs.reason === 'no_gold') toast('库金不足，本旬暂缓（下一旬自动重试）', false);
+            else toast('无法委任：' + (rs.reason || '未知'), false);
+            fetchState().then(function (s2) { cache = s2; renderCity(s2); });
+          });
+        });
+        b.style.margin = '0';
+        if (mine) b.disabled = true;
+        var r3 = el('div', 'row', '<span>' + label + '<span class="cost">　' + note + '</span></span>');
+        r3.appendChild(b);
+        apptCard.appendChild(r3);
+      };
+      mkAppt('develop', '劝农商', '开垦/招商轮转，抬农田市集');
+      mkAppt('recruit', '缮甲兵', '募兵整编，抬兵营');
+      mkAppt('defend', '固城防', '修筑城防，抬守备');
+      mkAppt('transport', '屯军粮', '屯田积谷，直入城库');
+      appts.forEach(function (a) {
+        var stTag = a.status === 'blocked'
+          ? '<span style="color:#ff9d6b">暂停：' + esc(a.blockedReason || '缺金') + '</span>'
+          : (a.status === 'done' ? '已中止（' + esc(a.blockedReason || '') + '）' : '<span style="color:#a9e2a0">运行中</span>');
+        var r4 = el('div', 'row', '<span><b style="color:#f0d998">' + esc(a.goalLabel) + '</b>'
+          + '<span class="cost">　' + stTag + ' · 已办 ' + (a.doneCount || 0) + ' 单'
+          + (a.lastTaskLabel ? ' · 当前：' + esc(a.lastTaskLabel) : '')
+          + (a.officer ? ' · 主官 ' + esc(a.officer) : '') + '</span></span>');
+        if (a.status === 'running' || a.status === 'blocked') {
+          r4.appendChild(mkBtn('取消委任', 'ghost', function () {
+            fetch('/__slg/strategy/action', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'cancelAppoint', apptId: a.id }),
+            }).then(function (r2) { return r2.json(); }).then(function (rs) {
+              if (rs.ok) toast('委任已取消（在施任务照常推进）', true);
+              else toast('无法取消：' + (rs.reason || '未知'), false);
+              fetchState().then(function (s2) { cache = s2; renderCity(s2); });
+            });
+          }));
+        }
+        apptCard.appendChild(r4);
+      });
+      body.appendChild(apptCard);
       body.appendChild(el('div', 'cost',
         '民心的作用：影响人口增长（+2%~6%/月）与粮金产量（×0.85~1.10）。'
         + '治安越高灾害越少。开发度到 100 以上收益递减，别把一座城堆到顶。'));

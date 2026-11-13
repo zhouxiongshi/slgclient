@@ -1,0 +1,9 @@
+{
+  "tiles": [],
+  "facilities": [],
+  "city": null,
+  "rules": {
+    "upkeepPerSoldier": 100
+  },
+  "story": {}
+}

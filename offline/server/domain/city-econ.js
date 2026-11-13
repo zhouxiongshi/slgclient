@@ -14,6 +14,8 @@ import { advanceInteriorTasks } from './interior-task.js';
 /* ★ U20 粮道连通与断粮：单向依赖 march（supply 不 import city-econ，无环）
  *   ★ M2 L2：军级补给线（supplyLineForArmy / armySupplyTick）与城级同模块同入口 */
 import { supplyTick, armySupplyTick } from './supply.js';
+/* ★ M2-4 委任对象化（GDD §5.6）：旬界自动派单，走 interior-task 同源（无环） */
+import { appointmentTick } from './appointment.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const MAP_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'map.json');
@@ -357,6 +359,8 @@ export function cityEconTick(state, cfg, ctx) {
   const supply = day % 10 === 0 ? supplyTick(state, cfg, ctx) : { isolated: [], recovered: [], hits: [] };
   /* ★ M2 粮道 L2：军级补给结算（通畅扣节点粮 / 断绝警告与逃兵），NPC 与玩家同入口 */
   const armySupply = day % 10 === 0 ? armySupplyTick(state, ctx) : { fed: [], cut: [] };
+  /* ★ M2-4 委任对象化（GDD §5.6）：旬界自动派单（blocked 置顶报告），产出与手动同源 */
+  const appts = day % 10 === 0 ? appointmentTick(state, cfg, ctx) : { started: [], blocked: [], resumed: [], ended: [] };
   const dev = day % 10 === 0 ? cityDevTick(state, cfg, ctx) : { gains: [], upsets: [] };
   const fired = day % 10 === 0 ? disasterTick(state, cfg, ctx) : [];
   const loyalty = day % 10 === 0 ? loyaltyTick(state, cfg, ctx) : null;
@@ -371,7 +375,7 @@ export function cityEconTick(state, cfg, ctx) {
       time: Date.now(),
     });
   }
-  return { fired, loyalty, dev, tasks, supply, armySupply };
+  return { fired, loyalty, dev, tasks, supply, armySupply, appts };
 }
 
 /** 出发行军粮：优先从出发城城库扣，不足部分吃全局池并加 25% 损耗。 */

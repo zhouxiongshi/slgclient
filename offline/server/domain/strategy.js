@@ -35,6 +35,11 @@ import {
 } from './city-econ.js';
 import { SKILLS, LEVEL_COUNT, skillById } from '../skills.js';
 import { oathOf, oathPending, oathFactionOf, factionTraitOf, protagonistStat } from './oath.js';
+/* ★ M2-4 委任对象化与外交（GDD §5.6/§5.8）：两个模块都自包含，strategy 单向引它们 */
+import { appointmentTick, appointmentListView, strategyAppoint, strategyCancelAppointment } from './appointment.js';
+import { diplomacyView, diplomacyAct, noteCityCaptured, truceActive, PLAYER_ID } from './diplomacy.js';
+/* 委任/外交动作经本模块转发给 index.js（保持 index 只 import strategy 一个入口） */
+export { strategyAppoint, strategyCancelAppointment, diplomacyAct };
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const MAP_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'map.json');
@@ -442,6 +447,34 @@ export function strategyTick(state, cfg, ctx, now = Date.now()) {
         targetName: sheet.goal.targetName || '',
       });
     }
+    /* ★ M2-4 外交（GDD §5.8 请求攻击）：玩家付定金后，把一单真实出征塞进该势力
+       本旬指令单（走 applyOrders 既有结算口，可审计）。目标=对方邻接的、
+       目标势力最弱的城；attitude < 70 视为口头答应（betray），不保证出兵质量。 */
+    const prompt = st.diploPrompt;
+    const nowDay = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+    if (prompt && prompt.faction === f.id) {
+      if ((Number(prompt.until) || 0) < nowDay) {
+        delete st.diploPrompt;
+      } else {
+        const ownCities = Object.keys(st.cities).filter((cid) => st.cities[cid].owner === f.id);
+        const foeCities = Object.keys(st.cities)
+          .filter((cid) => st.cities[cid].owner === prompt.target)
+          .map(Number)
+          .sort((a, b) => st.cities[a].troops - st.cities[b].troops);
+        let picked = null;
+        for (const foe of foeCities) {
+          const fromCity = ownCities.find((cid) => canMarchBetween(Number(cid), foe).ok);
+          if (fromCity) { picked = { from: Number(fromCity), to: foe }; break; }
+        }
+        if (picked) {
+          sheet.strategy_orders = Array.isArray(sheet.strategy_orders) ? sheet.strategy_orders : [];
+          sheet.strategy_orders.push({
+            type: '出征', target: picked.to, expect: '应盟约之请',
+            params: { fromCity: picked.from, troops: Math.min(2200, Math.round(st.cities[picked.from].troops * 0.6)), reserve: 300 },
+          });
+        }
+      }
+    }
     const applied = applyOrders(state, cfg, ctx, f, sheet);
     const res = st.resources[f.id];
     const mine = (st.draft?.moves || []).filter((m) => m.faction === f.id);
@@ -652,6 +685,12 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
       const troops = drawn ? drawn.sent : Math.max(1, Number(order.params?.troops) || 0);
       if (!troops) continue;
       if (tstate.owner === state.role?.rid || tstate.owner === 'player') {
+        /* ★ M2-4 外交（GDD §5.8）：停战期内 NPC 守约不进犯——履约是态度公式的一部分 */
+        if (truceActive(state, faction.id, 'player')) {
+          noteMove(state, { kind: '停战', faction: faction.id, who: faction.name, result: '守约', toName: target.name });
+          recordEvent(state, `${faction.name}与我有停战之约，按兵不进${target.name}。`);
+          continue;
+        }
         // 打玩家的城：换算成本地地图来犯军，走既有战报
         spawnFactionAssault(state, cfg, ctx, faction, target, troops, drawn?.fromId);
         applied.attacked_player += 1;
@@ -664,6 +703,8 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
       const atk = troops * (0.86 + r() * 0.2);
       const def = defender.troops * (1 + defender.defense);
       if (atk > def) {
+        /* ★ M2-4 外交：NPC 占城登记（归属变更前取旧主） */
+        noteCityCaptured(state, faction.id, prevOwner);
         defender.owner = faction.id;
         // 留下能守住的兵，不再把新城抽成全图最软的目标
         defender.troops = Math.max(420, Math.round(troops * 0.62));
@@ -878,24 +919,41 @@ function defenseFor(cfg, cityId, target, tstate, level) {
   };
 }
 
+/* ★ M2-5 张力守恒 #2（GDD §6.7.1）：敌将有「临阵变招」——同一编队，抵达日不同
+   敌方应对可能不同。变招由 rngFor(seed, arriveDay, 'counter') 决定，三套预案；
+   推演会展示「若敌方变招则…」。注意这是确定性表，不是每旬换：同一抵达日恒同预案。 */
+export const COUNTER_VARIANTS = [
+  { id: 'hold', name: '坚守不出', defMul: 1.12, note: '守军据城死守，兵力折算 +12%' },
+  { id: 'rush', name: '出城逆袭', defMul: 0.88, note: '守军弃垒求战，兵力折算 −12%' },
+  { id: 'phalanx', name: '奇正相持', defMul: 1.0, note: '守军稳守常规阵，兵力折算不变' },
+];
+
+/** 该城在 arriveDay 抵达时的敌方预案（玩家与 NPC 战斗同函数，确定性可回放）。 */
+export function counterVariantFor(state, cityId, arriveDay) {
+  const r = rngFor(state?.seed ?? 20261110, Math.max(1, Math.floor(Number(arriveDay) || 1)), `counter:${cityId}`).random();
+  return COUNTER_VARIANTS[Math.floor(r * COUNTER_VARIANTS.length) % COUNTER_VARIANTS.length];
+}
+
 /**
  * 一场战斗的完整落地：扣兵、给经验、写战报、推通道。
  * 战略攻城与本地清剿共用，保证「战报一定进存档」（试玩 P0-2）。
  */
-function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride, seed }) {
+function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride, seed, defMul = 1 }) {
   const before = [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(army.soldiers?.[i]) || 0)));
   const f = Math.min(1, Math.max(0.05, Number(frac) || 1));
   const commit = before.map((v) => Math.max(0, Math.round(v * f)));
   if (commit.reduce((s, n) => s + n, 0) <= 0) return { ok: false, reason: 'no_troops' };
   // ★ P0 兵种克制（三战口径 ±15%，骑→盾→弓→骑）：以双方兵力最多的槽为主兵种，
   //   克制方压制被克方——体现为守军兵力折算（不污染内核输入回填）。
+  //   ★ M2-5 张力守恒 #2：敌方预案 defMul（坚守 1.12 / 逆袭 0.88 / 常规 1.0）
+  //   与克制折算**在同一处**相乘——战报基线保持 raw 守军数，与推演口径逐位一致。
   const mainArms = (rows) => rows.indexOf(Math.max(...rows));
   const atkArms = mainArms(commit) + 1;
   const defRows = (defenseOverride?.soldiers || [0, 0, 0]).map((v) => Math.max(0, Number(v) || 0));
   const defArms = mainArms(defRows) + 1;
   const counter = armsCounter(atkArms, defArms);
   const defense2 = defenseOverride
-    ? { ...defenseOverride, soldiers: defRows.map((v) => Math.round(v * (counter > 0 ? 0.87 : counter < 0 ? 1.15 : 1))) }
+    ? { ...defenseOverride, soldiers: defRows.map((v) => Math.round(v * defMul * (counter > 0 ? 0.87 : counter < 0 ? 1.15 : 1))) }
     : defenseOverride;
   const battleArmy = { ...army, soldiers: commit };
   const result = resolveBattle({ cfg, state, army: battleArmy, x, y, defenseOverride: defense2, seed });
@@ -1135,6 +1193,9 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
     departDay, arriveDay: departDay + marchDays,
     armyId: army.id, frac: ratio, grainCost, troops: deploy,
     km: plan.km, speed: plan.speed, drillMorale,
+    /* ★ M2-5 张力守恒 #3「确认即锁」：出征瞬间锁定种子——推演多少次都行，
+       确认后不再重来；要重来只能撤军（有代价）。结算只读 lockedSeed。 */
+    lockedSeed: battleSeedFor(army.id, 8000 + id, 100 + Math.max(1, Math.min(3, target.level || 1)), departDay + marchDays),
   };
   st.marches.push(row);
   army.marchId = row.id;   // 锁队：到达前不能再出征/清剿
@@ -1206,15 +1267,22 @@ export function strategyResolveMarches(state, cfg, ctx) {
       continue;
     }
     const level = Math.max(1, Math.min(3, target.level || 1));
+    /* ★ M2-5 张力守恒 #2：实际战斗的守军折算按该抵达日的敌方预案（与推演同口径）。
+       defMul 传给 settleArmyBattle 统一相乘，dLoss 基线保持 raw 守军数。 */
+    const variant = counterVariantFor(state, mm.to, mm.arriveDay);
     const defenseOverride = defenseFor(cfg, mm.to, target, tstate, level);
     const fought = settleArmyBattle(state, cfg, ctx, {
-      army, frac: mm.frac, x: 8000 + mm.to, y: 100 + level, defenseOverride,
-      /* ★ 验收 #10：种子按「到达日」算，战前推演能算出一模一样的种子 */
-      seed: battleSeedFor(army.id, 8000 + mm.to, 100 + level, mm.arriveDay),
+      army, frac: mm.frac, x: 8000 + mm.to, y: 100 + level, defenseOverride, defMul: variant.defMul,
+      /* ★ 验收 #10：种子按「到达日」算，战前推演能算出一模一样的种子。
+         ★ 张力守恒 #3：优先用出征时锁定的 lockedSeed（确认即锁）。 */
+      seed: mm.lockedSeed ?? battleSeedFor(army.id, 8000 + mm.to, 100 + level, mm.arriveDay),
     });
     if (!fought.ok) continue;
     const win = fought.result === 2;
     if (win) {
+      /* ★ M2-4 外交：占城登记（GDD §5.8「你占了他的城×20」+ 开战/停战期毁约判定）。
+         必须在归属变更**前**取旧主。 */
+      noteCityCaptured(state, PLAYER_ID, tstate.owner);
       tstate.owner = 'player';
       tstate.troops = Math.max(200, Math.round(defenseOverride.soldiers.reduce((s, n) => s + n, 0) * 0.3));
       // ★ P2/P3 城破之殃：人口 -15%（兵源压力）；一次性掠夺入府库
@@ -1563,22 +1631,53 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
   const atkArms = mainArms(commit) + 1;
   const defArms = mainArms(defense.soldiers.map((v) => Math.max(0, Number(v) || 0))) + 1;
   const counter = armsCounter(atkArms, defArms);
-  const defense2 = {
+  /* ★ M2-5 张力守恒 #1/#4（GDD §6.7.1）：推演只对「已知量」精确——
+     情报档位决定守军估算幅度：0 传闻 ±40% / 1 估算 ±15% / 2 精确 ±0%。
+     未侦察的守军保持区间，推演不产生情报（禁止反复试错反推真值）。 */
+  const intelTier = Math.max(0, Math.min(2, Number(st.intel?.[to]) || 0));
+  const intelSpread = intelTier >= 2 ? 0 : intelTier === 1 ? 0.15 : 0.4;
+  /* ★ #2 敌将变招：抵达日决定预案，推演给出「若敌方变招则…」两条对照线 */
+  const variant = counterVariantFor(state, to, arriveDay);
+  const armsMul = counter > 0 ? 0.87 : counter < 0 ? 1.15 : 1;
+  const mkDef = (spreadMul, defMul) => ({
     ...defense,
-    soldiers: defense.soldiers.map((v) => Math.round(v * (counter > 0 ? 0.87 : counter < 0 ? 1.15 : 1))),
-  };
+    soldiers: defense.soldiers.map((v) => Math.round(v * armsMul * spreadMul * defMul)),
+  });
   const dTotal = defense.soldiers.reduce((s2, n) => s2 + n, 0);
 
   const seed = battleSeedFor(army.id, 8000 + to, 100 + level, arriveDay);
-  /* 深拷贝：预演绝不改真实存档（含队伍、战报、俘虏、资源） */
-  const sandbox = structuredClone(state);
   /* ★ M2 练兵：与 strategyAttack 同一口径——出发城有充能就算 +5% 攻击，
      否则推演会漏掉练兵加成，预演与正式结算就对不上（张力守恒 #3 前提） */
   const drill = (Number(st.cityEcon?.[from]?.drillCharges) || 0) > 0 ? 10 : 0;
-  const result = resolveBattle({
-    cfg, state: sandbox, army: { ...army, soldiers: commit, drillMorale: drill },
-    x: 8000 + to, y: 100 + level, defenseOverride: defense2, seed,
+  /* ★ 张力守恒 #3「确认即锁」：正式战斗的种子在 strategyAttack 出征时已写进
+     march 行（lockedSeed）；推演用同一 arriveDay 推同一 seed，所以
+     「今天出发」的推演与正式结算逐位一致——变招只发生在抵达日变化时。 */
+  const runB = (def2) => resolveBattle({
+    cfg, state: structuredClone(state), army: { ...army, soldiers: commit, drillMorale: drill },
+    x: 8000 + to, y: 100 + level, defenseOverride: def2, seed,
   });
+  const readB = (r2, label) => {
+    const remain2 = r2.endAttackSoldiers || [0, 0, 0];
+    const dRemain2 = r2.endDefenseSoldiers || [0, 0, 0];
+    return {
+      label,
+      code: r2.report?.result ?? 0,
+      win: r2.report?.result === 2,
+      aLoss: aTotal - remain2.reduce((s2, n) => s2 + n, 0),
+      dLoss: dTotal - dRemain2.reduce((s2, n) => s2 + n, 0),
+    };
+  };
+  const result = runB(mkDef(1, variant.defMul));
+  /* 区间与变招对照线（未侦察才有区间；精确档不重复开打） */
+  let spreadLines = [];
+  if (intelSpread > 0) {
+    const worst = readB(runB(mkDef(1 + intelSpread, variant.defMul)), '最坏');
+    const best = readB(runB(mkDef(1 - intelSpread, variant.defMul)), '最好');
+    spreadLines = [worst, best];
+  }
+  const variantLines = COUNTER_VARIANTS
+    .filter((v) => v.id !== variant.id)
+    .map((v) => ({ variant: v.name, note: v.note, ...readB(runB(mkDef(1, v.defMul)), v.name) }));
   const remain = result.endAttackSoldiers || [0, 0, 0];
   const dRemain = result.endDefenseSoldiers || [0, 0, 0];
   const aLoss = aTotal - remain.reduce((s2, n) => s2 + n, 0);
@@ -1603,11 +1702,20 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
     seed, rounds: result.report.rounds || 0,
     code, win, draw: code === 1,
     report: result.report,
+    /* ★ M2-5 张力守恒四条的下发位（GDD §6.7.1） */
+    intelTier, intelSpread,
+    intelNote: intelTier >= 2
+      ? '情报·精确：守军按已知量推演'
+      : (intelTier === 1 ? '情报·估算：守军按 ±15% 区间推演' : '未侦察：守军为 ±40% 传闻估算，先侦察可收窄区间'),
+    variant: { id: variant.id, name: variant.name, note: variant.note },
+    spreadLines, variantLines,
+    lockNote: '确认出征即锁定战局（种子已锁）；推演不限次数，确认后要重来只能撤军（有代价）。',
     summary: win
       ? `预计攻陷${target.name}：我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}，歼敌 ${dLoss}。`
       : `预计攻${target.name}不利：我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}，歼敌 ${dLoss}。`,
     attribution: attribution + `（守军 ${hold > 0 ? level : 1} 级编成；抵达第 ${arriveDay} 日）`,
-    caveat: '预演基于此刻的守军与队伍；期间敌方增援、你的队伍被改派，结算会随之改变。',
+    caveat: '预演基于此刻的守军与队伍；期间敌方增援、你的队伍被改派，结算会随之改变。'
+      + (intelTier < 2 ? ' 守军数值为情报估算，推演不产生情报。' : ''),
   };
 }
 
@@ -1865,6 +1973,9 @@ export function strategyViewState(state, cfg = null) {
     /* ★ M2-3 失败态四出路与结局判定：判定 + 出路清单一并下发，界面不再自己猜 */
     fail: failstates(state),
     ending: evaluateEnding(state),
+    /* ★ M2-4 委任对象化与外交视图（GDD §5.6/§5.8）：blocked 置顶 + 理由链 */
+    appointments: appointmentListView(state),
+    diplomacy: diplomacyView(state),
     playerCity: st.playerCity || 0,
     // ★ P4-①：举义状态随视图下发，客户端据此决定弹不弹举义页
     oath: {
