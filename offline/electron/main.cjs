@@ -77,7 +77,8 @@ function createWindow() {
     win.show();
     /* 自动化模式：置顶 + 抢焦点，避免被别的窗口盖住触发 Chromium 遮挡节流，
        否则 Cocos 的 rAF 会停掉，场景永远起不来。测试结束进程即退出，不影响用户。 */
-    const automated = process.env.SLG_SMOKE === '1' || process.env.SLG_AUDIT === '1' || process.env.SLG_MOUSE === '1';
+    const automated = process.env.SLG_SMOKE === '1' || process.env.SLG_AUDIT === '1'
+      || process.env.SLG_MOUSE === '1' || process.env.SLG_PERF === '1' || process.env.SLG_LAYOUT === '1';
     if (automated) {
       try {
         win.setAlwaysOnTop(true, 'screen-saver');
@@ -91,6 +92,10 @@ function createWindow() {
       require('./ui-audit.cjs').runAudit(win, server, app).catch(logError);
     } else if (process.env.SLG_MOUSE === '1') {
       require('./mouse-playtest.cjs').runMousePlaytest(win, server, app).catch(logError);
+    } else if (process.env.SLG_PERF === '1') {
+      require('./perf-probe.cjs').runPerf(win, server, app).catch(logError);
+    } else if (process.env.SLG_LAYOUT === '1') {
+      require('./layout-audit.cjs').runLayout(win, server, app).catch(logError);
     }
   });
 
@@ -120,16 +125,23 @@ function createWindow() {
     logError(new Error(`load failed (${code} ${desc}), retrying ${reloads}/3`));
     setTimeout(() => win && win.webContents.loadURL('http://127.0.0.1:8088/index.html'), 1500);
   });
+  /* 性能探针的「首屏」从 loadURL 这一刻算起（GDD §11.5 预算 <3s）：
+     必须含主进程起服务 + 页面加载 + Cocos 场景创建 + 注入层首帧。 */
+  global.__slgBootT0 = Date.now();
   win.loadURL('http://127.0.0.1:8088/index.html');
 }
 
 process.on('uncaughtException', logError);
 process.on('unhandledRejection', logError);
 
-// 冒烟/审计时用隔离的临时 userData，保证每轮都是全新存档 / 空 localStorage，结果可复现
-if (process.env.SLG_SMOKE === '1' || process.env.SLG_AUDIT === '1' || process.env.SLG_MOUSE === '1') {
+// 冒烟/审计/试玩/性能时用隔离的临时 userData，保证每轮都是全新存档 / 空 localStorage，结果可复现
+if (process.env.SLG_SMOKE === '1' || process.env.SLG_AUDIT === '1'
+  || process.env.SLG_MOUSE === '1' || process.env.SLG_PERF === '1' || process.env.SLG_LAYOUT === '1') {
   const os = require('node:os');
-  const kind = process.env.SLG_MOUSE === '1' ? 'mouse' : (process.env.SLG_AUDIT === '1' ? 'audit' : 'smoke');
+  const kind = process.env.SLG_MOUSE === '1' ? 'mouse'
+    : process.env.SLG_PERF === '1' ? 'perf'
+      : process.env.SLG_LAYOUT === '1' ? 'layout'
+        : (process.env.SLG_AUDIT === '1' ? 'audit' : 'smoke');
   /* ★ 只用 pid 命名不够：pid 会被系统复用，复用时会捡到上一轮留下的 save.json，
      于是「举义页」被跳过，同一份脚本跑出来的路径数在 57/59 之间抖 —— 测试就不可复现了。
      加时间戳后缀，保证每轮真的是空存档。 */
