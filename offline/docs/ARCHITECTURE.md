@@ -342,6 +342,21 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 - 引用纪律：条件里的武将名一律 ∈ heroes-240（袁谭/袁尚/曹爽/法正/甄洛/曹植不在 240 内——前者删条件字段、后者整条裁掉）。
 - 测试 `tests/m3-events.test.js` 新增 1 条：两批合计 150、跨文件 id 唯一、`campaignEvents().length === 150`；`tests/m3-scenario-runtime.test.js` 补断言：221 剧本不得触发 184 黄巾。
 
+### 9.12 M3-8 战法补量至 80 条（GDD §9 / §16）
+
+- **为什么必须扩签名**：主线 31 条已用尽 damage_rates.csv 全部真实片段模式；skill-library 128 条 = 20 种效果签名的改名皮肤（数值全同，build-library-skills.js 去重后 20 条）。新增 29 条全部来自 **patterns.csv（P01~P16）语义内的新机制组合**，cfgId 910100~910128。
+- **数据**：`tools/build-library-skills-extra.js` → `conf/library-skills-extra.json`（29 条：主动 12 / 被动 6 / 追击 5 / 指挥 6）。生成器内置自检：签名跨三表唯一（skill_class+prepare+槽序[类型/目标/控制词/增益词/available_round]）、占位对齐、lv1→lv10 双倍成长、概率纪律、效果纪律。
+- **内核生效面纪律**（battle-core/src/{rules,engine}.ts 逐条核对，generator 头注有全文）：
+  1. BUFF 词不做名字匹配，attacker.buffs 全求和进伤害链——新战法只用「攻击伤害提高/策略攻击伤害提高/防御属性提高」；
+  2. DEBUFF 挂到敌方身上后不参与任何结算（既有内核债务）——本批零 DEBUFF；
+  3. 控制状态只有「犹豫」真封锁主动——纯控制是空效果，本批控制槽一律伴随伤害，真封锁（犹豫）控制率 ≤0.3；
+  4. 追击目标强制普攻目标（nearestFoe 单目标）——追击不做群体；
+  5. available_round =「仅前 N 回合可用」真实生效（逆锋决胜/沧海横流/深沟高垒/阵前擂鼓）。
+- **内核修复（连带缺陷）**：`engine.ts cast()` 引导战法每回合重复判定/重复 push、`prepare_ready` 释放时再走 prepare 分支 → **准备战法永不释放**（一雷惊蛰同样带病）。修复：引导期间不重复 cast、释放必发（概率在引导开始判定时消耗）。battle-core 37/37 与黄金向量不受影响（向量不含 prepare 事件）。
+- **合并点**：`server/skills.js`（运行时表 81=31+1 主角+20+29）、`server/domain/panels.js PANEL_CONF.libExtraSkills`（面板层战法库）、`tools/build-panel-conf.mjs`（配方 51→80 全量重生成）。
+- **武将装配**：`build-heroes.mjs` core 60 位每人 ≥2 条 ≤3 条——专属（hero-skills.json）+ 按五维倾向从新池确定性选取（谋士配谋略/治疗、武将配兵刃；fnv1a(名字) 散列，禁随机）+ 五维总和 ≥340 配指挥/被动光环（无专属者兜底凑满 2 条）。important/minor 维持专属 1 条，缺省走 defaultLoadout 全表轮转。
+- 测试 `tests/m3-skills-80.test.js` 6 条：总量 80/81 口径、签名全局唯一、ui-kernel 同源（占位/双倍成长/目标映射）、内核纪律、装配有效性（core 全覆盖 + 引用零无效 + 新池使用 ≥15 条）、内核实跑（prepare/治疗/犹豫控制/被动/光环五类事件 + 同种子指纹）。连带更新 `tests/skills.test.js`（名录白名单加 skill-library-extra）、`tests/panels.test.js` / `tests/http-endpoints.test.js`（配方库 51→80）、`electron/smoke.cjs`（战法库 51→80）。
+
 ---
 
 ## 10. 文档地图（读哪本、信哪本）

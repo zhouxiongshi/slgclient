@@ -27,10 +27,10 @@ const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const cfg = loadConfig();
 const fresh = () => normalizeWorld(createWorld(cfg), cfg);
 
-test('战法库：51 条、每条 ≥2 条公开获取途径、研习兜底、文本与 battle-kit 原文一致', () => {
+test('战法库：80 条、每条 ≥2 条公开获取途径、研习兜底、文本与 battle-kit 原文一致', () => {
   const chk = panelSelfCheck();
   assert.equal(chk.ok, true, JSON.stringify(chk));
-  assert.equal(chk.skillCount, 51);
+  assert.equal(chk.skillCount, 80);
   assert.deepEqual(chk.missing, []);
   assert.deepEqual(chk.mismatch, []);
   assert.deepEqual(chk.overItem, []);
@@ -38,7 +38,7 @@ test('战法库：51 条、每条 ≥2 条公开获取途径、研习兜底、�
   assert.ok(all.every((r) => r.sources.some((s) => s.type === 'research')), '每条都有战功研习兜底');
   assert.ok(all.every((r) => r.sources.every((s) => s.where && s.cost && s.detail)), '配方无隐藏信息');
   // 名称/描述不得改写：与 conf 原文逐字比对
-  const raw = [...PANEL_CONF.mainSkills, ...PANEL_CONF.libSkills];
+  const raw = [...PANEL_CONF.mainSkills, ...PANEL_CONF.libSkills, ...PANEL_CONF.libExtraSkills];
   const byId = new Map(raw.map((s) => [Number(s.cfgId), s]));
   for (const s of panelState(fresh(), cfg).library) {
     const r = byId.get(s.cfgId);
@@ -94,7 +94,7 @@ test('旧档兼容：无 strategy / items / skillbook / interior 的存档也能
   assert.ok(s.skillbook.unlocked);
   assert.equal(s.interior.posts.agri, 0);
   const v = panelState(s, cfg);
-  assert.equal(v.library.length, 51);
+  assert.equal(v.library.length, 80);
   assert.equal(v.generals.length, 1);
   // 二次 normalize 不会重复赠礼（幂等）
   const before = s.items.length;
@@ -244,8 +244,8 @@ test('HTTP：index.html 运行时注入、ui.js 可下发、state/selfcheck/acti
     assert.equal(chk.ok, true);
     const st = await (await fetch(`${base}/__slg/panels/state`)).json();
     assert.equal(st.ok, true);
-    assert.equal(st.library.length, 51);
-    assert.equal(st.librarySummary.sourcesCovered, 51);
+    assert.equal(st.library.length, 80);
+    assert.equal(st.librarySummary.sourcesCovered, 80);
     assert.equal(st.forgeCatalog.length, 18);
     const action = await (await fetch(`${base}/__slg/panels/action`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },

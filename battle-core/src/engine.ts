@@ -270,15 +270,25 @@ export class BattleEngine {
       this.emit(phase, unit.unit_id, 'skill_blocked', { skill: skill.name, state: blocked }, 'E0');
       return;
     }
-    if (skill.prepare > 0) {
-      this.prepare.push({ readyRound: this.round + skill.prepare, unit, skill });
-      this.emit(phase, unit.unit_id, 'skill_prepare', {
-        skill: skill.name,
-        ready_round: this.round + skill.prepare,
-      }, 'E0');
+    if (skill.prepare > 0 && phase !== 'prepare_ready') {
+      /* ★ M3-8 修复：引导战法不得每回合重复判定/重复 push（旧实现会无限准备，
+         readyRound 到期后 cast('prepare_ready') 又走本分支 → 永不释放）。
+         引导期间本条跳过发动判定；到期由主循环 prepare_ready 释放。 */
+      const already = this.prepare.some((x) => x.unit === unit && x.skill === skill);
+      if (!already) {
+        this.prepare.push({ readyRound: this.round + skill.prepare, unit, skill });
+        this.emit(phase, unit.unit_id, 'skill_prepare', {
+          skill: skill.name,
+          ready_round: this.round + skill.prepare,
+        }, 'E0');
+      }
       return;
     }
-    const { fired, probability } = rollTrigger(skill, this.rng);
+    /* ★ M3-8：prepare_ready 释放必发（发动率在引导开始那次判定已消耗），
+       旧实现在释放时再掷一次概率，会让已判定的引导二次掷骰。 */
+    const { fired, probability } = phase === 'prepare_ready'
+      ? { fired: true, probability: 1 }
+      : rollTrigger(skill, this.rng);
     if (!fired) {
       this.emit(phase, unit.unit_id, 'skill_miss', { skill: skill.name, probability }, 'E2');
       return;

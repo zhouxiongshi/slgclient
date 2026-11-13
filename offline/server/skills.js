@@ -39,6 +39,14 @@ if (existsSync(LIBRARY)) {
     if (!TABLE.skills.some((x) => x.cfgId === s.cfgId || x.name === s.name)) TABLE.skills.push(s);
   }
 }
+/* ★ M3-8 战法补量（GDD §9）：29 条新机制组合（内核生效面逐条核对，见 generator 头注） */
+const LIBRARY_EXTRA = join(ROOT, 'conf', 'library-skills-extra.json');
+if (existsSync(LIBRARY_EXTRA)) {
+  const more = JSON.parse(readFileSync(LIBRARY_EXTRA, 'utf8'));
+  for (const s of more.skills || []) {
+    if (!TABLE.skills.some((x) => x.cfgId === s.cfgId || x.name === s.name)) TABLE.skills.push(s);
+  }
+}
 export const SKILLS = TABLE.skills;
 export const SKILL_BY_ID = new Map(SKILLS.map((s) => [s.cfgId, s]));
 export const LEVEL_COUNT = TABLE.levelCount;

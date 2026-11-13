@@ -30,7 +30,7 @@
 | **相性与关系网** | 相性 1~149 环形（势力锚点 ±12），义理 = 政治×0.6+魅力×0.4；登庸成功率拆成「基础/政治/相性/义理/三顾」构成条，与掷骰同源 |
 | **序章章节** | 40 日主线（`conf/campaign/chapter1.json`），结局后 `fired` 冻结、不再错误推进；首页提供「重开一局」（`POST /__slg/restart`） |
 | **招贤 / 武将** | 招贤返回明确原因（`no_guest` / `not_enough_gold`）+ 今日名单时段状态；武将面板、战法装配、名将替身 |
-| **战法** | 31 条真实战法（`conf/skills.json`，数据源 battle-kit 原文片段，可溯源；版本串 `battle-kit/original-fragments/v3`），四类战法 + 10 级真实数值成长 |
+| **战法** | **80 条**（主线 31 条真实片段 `conf/skills.json` 可溯源 + 库 20 条原创去重 + M3-8 新机制组合 29 条 `conf/library-skills-extra.json` 逐条对照内核生效面；运行时另含主角专属共 81），四类战法 + 10 级数值成长，描述=计算 |
 | **经济** | 产量三段合成（基础 + 设施 + 领地）、政令恢复、征收限额与 CD、集市转换、要塞建造/升级/拆除（有消耗有工期），满仓给出「已满仓」提示 |
 | **六面板（P0 原型）** | 右上角「六府」折叠按钮（默认收起，点开竖排六页）：武将四页签 / 战略决策台 / 内政委任台 / 府库分类账 / 兵刃四槽 / 战法库全库＋配方；独立模块注入，`server/skills.js` 零改动；战略台与战略层同源数据（72 城实时守军 / 行军可达 / 关隘 / 战役意图 / 出征账） |
 | **事件史** | 保留 200 条（原 50 条滚动会丢历史），带 `day`，攻陷文案写作「自XX手中攻陷XX」 |
@@ -67,11 +67,13 @@ offline/
 ├── kernel/            确定性战斗内核 TS 移植（engine/rules/rng/config/types）
 ├── conf/              配置数据
 │   ├── skills.json      31 条真实战法（battle-kit 原文片段可溯源）
+│   ├── library-skills.json      20 条原创库战法（skill-library 去重适配）
+│   ├── library-skills-extra.json 29 条 M3-8 新机制组合（内核生效面逐条核对）
 │   ├── json/            原版服务端配置副本（地图/建筑/设施/武将/兵种…）
 │   └── campaign/        章节、人物、命运、主角、战略层（strategy/map.json 72 城）、heroes-240.json / fate-groups.json / events.json
 ├── web/               原版客户端构建产物（web-desktop，磁盘逐字节不动）
 ├── electron/          Electron 壳（main.cjs + smoke.cjs 冒烟）
-├── tests/             单测 362 条 / 54 个文件（node --test）
+├── tests/             单测 368 条 / 55 个文件（node --test）
 ├── tools/             工具链
 │   ├── pack.js            打包 exe → build/SLG-Offline-win32-x64/
 │   ├── check-release.js   发行核查（75 项硬性验收，含画面指纹、合规台账与真实点击 E2E）
@@ -115,14 +117,14 @@ node tools/build-heroes.mjs      # 重新生成 M3 武将数据层（需外部�
 ## 五、当前验证状态
 
 - ✅ 画面指纹 `ee987ec2…` 与原版逐字节一致（`pack.json`：`byteIdentical: true`，1582 个文件）
-- ✅ 单元测试 **362/362**（含 `tests/panels.test.js` 11 条：六面板回归 + 与战略层的数据／层级对齐断言、`tests/playtest-fixes.test.js` 实机试玩回归、`tests/save-slots.test.js` 存档档位、`tests/m3-heroes-fates.test.js` 7 条：M3 武将数据层与宿命 24 组、`tests/m3-events.test.js` 8 条：事件 DSL/引擎/构建期校验/补量计数、`tests/m3-scenarios.test.js` 7 条：六剧本四条开局校验、`tests/m3-runtime-wiring.test.js` 7 条：M3 运行期接线、`tests/m3-scenario-runtime.test.js` 6 条：六剧本运行期接入、`tests/m3-event-ui.test.js` 3 条：事件弹窗投影与 UI 纪律）
+- ✅ 单元测试 **368/368**（含 `tests/panels.test.js` 11 条：六面板回归 + 与战略层的数据／层级对齐断言、`tests/playtest-fixes.test.js` 实机试玩回归、`tests/save-slots.test.js` 存档档位、`tests/m3-heroes-fates.test.js` 7 条：M3 武将数据层与宿命 24 组、`tests/m3-events.test.js` 8 条：事件 DSL/引擎/构建期校验/补量计数、`tests/m3-scenarios.test.js` 7 条：六剧本四条开局校验、`tests/m3-runtime-wiring.test.js` 7 条：M3 运行期接线、`tests/m3-scenario-runtime.test.js` 6 条：六剧本运行期接入、`tests/m3-event-ui.test.js` 3 条：事件弹窗投影与 UI 纪律、`tests/m3-skills-80.test.js` 6 条：M3-8 战法 80 条总量/签名唯一/ui-kernel 同源/内核纪律/武将装配/内核实跑）
 - ✅ **M3-1 武将数据层**：`heroes-240.json` 240 位（60 核心 / 100 重要 / 80 在野，源 `three-kingdoms/characters.csv` 确定性选层 + 7 位补充条目）；`fate-groups.json` 宿命 24 组（8 组完整事件链、每组带史实依据与置信度）；`domain/fate-groups.js` 零依赖叶子（active/dormant/broken 三档判定、相性环形距离、登庸相性分项）
 - ✅ **M3-2 事件系统**：`domain/event-dsl.js`（字段/算子白名单，未知字段即拒绝）+ `domain/event-engine.js`（priority 降序、每旬 ≤2 条、exclusive 组内只出 1 其余冷却、once 永久排除、效果词白名单落账）+ `events.json` 52 条（37 史实节点 / 9 条件 / 6 关系，全部带史实依据与置信度，待人工签核）+ `tools/check-events.mjs` 构建期冲突检测
 - ✅ **M3-7 事件补量至 150 条（GDD §8 上限）**：`events-extra.json` 第二批 98 条（62 史实节点 / 20 条件 / 16 关系），`campaignEvents()` 合并加载、`check-events.mjs` 默认双文件校验（id 跨文件唯一）；剧本前史过滤——剧本起点之前的史实节点不重演（`strategyEventTick` 按 `scenarioYear` 过滤 yearMin）
 - ✅ **M3-3 六剧本**：`strategy/scenarios/*.json` 六份（黄巾 184 / 讨董 190 / 官渡 200 / 赤壁 208 / 夷陵 221 / 三分 229），`tools/build-scenarios.mjs` 从史实归属表生成并通过 GDD §12.1 四条开局校验（每城必有主 / 有脑势力 1..12 城 / 玩家势力邻接 ≥2 非己城 / 任意两势力路网连通）；运行期接线属 M3-4
 - ✅ **M3-4 运行期接线**：heroes-240 全员入包（`config.js` 并表，包内同名沿用原 cfgId、新武将 240001+ 从五维派生模板，酒馆/出仕池随之扩到 505）；事件系统接线（旬 tick → 冷却/筛选 → `pendingEvents` 队列随视图下发，`/strategy/action eventChoice` 点选落账，效果词 gold/morale/loyalty/attitude/fame 全通）；宿命组合落战斗（队内 ≥2 名同组武将 → 守军折算 ×0.95/组上限 2 组，推演与正式结算同调 `fateComboDefMul`）；外交新增「事件」态度因子与 `adjustAttitudeByEvent` 落账口
 - ✅ **M3-5 六剧本运行期接入**：`/strategy/action scenario` 切换剧本（重建归属 + 势力集 + 开局决策伪事件）；`factionConfFor(state)` 剧本势力集整体替换 8 诸侯（局部 id 按 name 从基础诸侯继承 trait/startGenerals）；举义页只出剧本势力卡、`oathFactionOf` 剧本降级链保玩家特技；事件 ctx 年份从剧本起算；`strategyViewState.scenario` 下发激活剧本/清单/开局文案
-- ✅ 运行时冒烟 **28/28**（源码态 `reports/smoke-original.json`、打包态 `reports/smoke-packaged.json`，含本城页存档卡 + 六面板逐一点开/零横向溢出/51 条战法获取途径 + 六府入口层级让位与不重叠 + 战略台情报卡可见）
+- ✅ 运行时冒烟 **28/28**（源码态 `reports/smoke-original.json`、打包态 `reports/smoke-packaged.json`，含本城页存档卡 + 六面板逐一点开/零横向溢出/80 条战法获取途径 + 六府入口层级让位与不重叠 + 战略台情报卡可见）
 - ✅ 发行核查 **74/75**（含内核黄金向量、协议、画面指纹、合规台账、真实点击 E2E；唯一红项=本批改动未提交）
 - ✅ 协议穷举：73 handler × 5 = 365 用例，**0 抛异常**（35 条 "null 字段" 为设计空值：空战法槽、未解锁天赋、未选章节分支、无在店客人）
 - ✅ 战争闭环：战前推演 → 出征 → 结算 → 战报入档 → 折叠/回跳复盘。

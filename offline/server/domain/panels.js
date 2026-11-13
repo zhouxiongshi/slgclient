@@ -35,12 +35,13 @@ export const PANEL_CONF = {
   posts: load('conf/panels/posts.json'),
   mainSkills: load('conf/skills.json').skills,
   libSkills: load('conf/library-skills.json').skills,
+  libExtraSkills: (() => { try { return load('conf/library-skills-extra.json').skills; } catch { return []; } })(),
   map: (() => { try { return load('conf/campaign/strategy/map.json'); } catch { return { cities: [] }; } })(),
   factions: (() => { try { return load('conf/campaign/strategy/factions.json'); } catch { return { factions: [] }; } })(),
   protagonist: (() => { try { return load('conf/campaign/protagonist.json').general; } catch { return null; } })(),
 };
 
-const SKILLS = [...PANEL_CONF.mainSkills, ...PANEL_CONF.libSkills];
+const SKILLS = [...PANEL_CONF.mainSkills, ...PANEL_CONF.libSkills, ...PANEL_CONF.libExtraSkills];
 // ★ P6：战法描述补射程——与内核/原客户端技能面板同一函数，保证描述=计算
 import { applyRangeNote } from '../skills.js';
 for (const s of SKILLS) applyRangeNote(s);
@@ -779,7 +780,7 @@ export function panelAction(state, cfg, action = {}) {
   }
 }
 
-/** 供单测与冒烟使用的只读自检：51 条战法是否都有 ≥2 条公开获取途径、且文本未被改写。 */
+/** 供单测与冒烟使用的只读自检：全部战法（主线+库+extra）是否都有 ≥2 条公开获取途径、且文本未被改写。 */
 export function panelSelfCheck() {
   const conf = PANEL_CONF.recipes;
   const missing = conf.recipes.filter((r) => (r.sources || []).length < 2

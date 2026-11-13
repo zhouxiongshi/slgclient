@@ -6,7 +6,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -68,12 +68,12 @@ test('R1 · HTTP 管理口契约（27 类路径）', async (t) => {
       assert.ok(typeof v.day === 'number' && typeof v.turn === 'number');
     });
 
-    await t.test('六府 selfcheck：51 条配方自检全通（无缺失/无错配/无超限）', async () => {
+    await t.test('六府 selfcheck：80 条配方自检全通（无缺失/无错配/无超限）', async () => {
       const res = await get('/__slg/panels/selfcheck');
       assert.equal(res.status, 200);
       const v = await res.json();
       assert.equal(v.ok, true, `自检未通过: ${JSON.stringify(v).slice(0, 200)}`);
-      assert.equal(v.skillCount, 51, '配方库应为 51 条');
+      assert.equal(v.skillCount, 80, '配方库应为 80 条');
       assert.deepEqual(v.missing, [], '不得有缺少获取途径的配方');
       assert.deepEqual(v.mismatch, [], '不得有名称不一致');
       assert.deepEqual(v.overItem, [], '不得有单件加成超 8%');
@@ -202,8 +202,21 @@ test('R1 · HTTP 管理口契约（27 类路径）', async (t) => {
       // 规则必须被 RULE_RANGES 夹紧
       assert.ok(Number(after.rules?.upkeepPerSoldier) <= 100, 'upkeepPerSoldier 应被夹到 ≤100');
 
-      // 还原，避免污染后续轮次
-      await post('/__slg/gm/overrides', before);
+      // 还原，避免污染后续轮次。Windows 上 renameSync 原子替换可能撞上
+      // 并行测试进程读 overrides.json 的窗口（EPERM），POST 还原会静默 400——
+      // 所以先带重试，最后直写磁盘兜底，保证仓库文件永远不被测试残留污染。
+      let restored = false;
+      for (let i = 0; i < 3 && !restored; i += 1) {
+        const r = await post('/__slg/gm/overrides', before);
+        restored = (await r.json()).ok === true;
+      }
+      if (!restored) {
+        writeFileSync(
+          resolve(ROOT, 'conf/campaign/overrides.json'),
+          JSON.stringify({ tiles: [], facilities: [], city: null, rules: {}, story: {} }, null, 2),
+        );
+      }
+      assert.ok(restored, 'overrides 还原失败且直写兜底未执行');
     });
 
     await t.test('安全：路径穿越被拒、未知 /__slg 路径 404、OPTIONS 204', async () => {

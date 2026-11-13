@@ -1,0 +1,5197 @@
+{
+  "version": 1,
+  "generatedBy": "offline/tools/build-library-skills-extra.js",
+  "source": "skill-library patterns.csv (P01~P16) 语义内的原创效果组合；kernelNotes 逐条说明内核生效面",
+  "fidelity": {
+    "design": "authored",
+    "kernelSemantics": "verified"
+  },
+  "levelCount": 10,
+  "count": 29,
+  "skills": [
+    {
+      "cfgId": 910100,
+      "name": "奇佐危谋",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 910100,
+        "name": "奇佐危谋",
+        "des": "对敌军单体造成谋略伤害（伤害率%n%%）。特性：输出、爆发、单体。",
+        "trigger": 1,
+        "target": 6,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              150
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              166.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              183.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              200
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              216.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              233.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              250
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              266.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              283.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              300
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910100,
+        "name": "奇佐危谋",
+        "skill_class": "主动",
+        "prepare": 0,
+        "probability_init": 0.35,
+        "probability_max": 0.35,
+        "detail_id": 910100,
+        "effects": [
+          {
+            "detail_id": 9101000,
+            "effect_type": "STRATEGY_DAMAGE",
+            "rate_pct": 150,
+            "target_type": "enemy_single",
+            "attack_type": "chain",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P01",
+        "tags": [
+          "输出",
+          "爆发",
+          "单体"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910101,
+      "name": "惊雷贯阵",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 910101,
+        "name": "惊雷贯阵",
+        "des": "对敌军单体造成兵刃伤害（伤害率%n%%）。特性：输出、准备、爆发、单体。",
+        "trigger": 1,
+        "target": 6,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              220
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              244.44
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              268.89
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              293.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              317.78
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              342.22
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              366.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              391.11
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              415.56
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              440
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910101,
+        "name": "惊雷贯阵",
+        "skill_class": "主动",
+        "prepare": 2,
+        "probability_init": 0.35,
+        "probability_max": 0.35,
+        "detail_id": 910101,
+        "effects": [
+          {
+            "detail_id": 9101010,
+            "effect_type": "PHYSICAL_DAMAGE",
+            "rate_pct": 220,
+            "target_type": "enemy_single",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P03",
+        "tags": [
+          "输出",
+          "准备",
+          "爆发",
+          "单体"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910102,
+      "name": "燎原秘策",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 910102,
+        "name": "燎原秘策",
+        "des": "对敌军全体造成谋略伤害（伤害率%n%%）。特性：谋略、准备、群体。",
+        "trigger": 1,
+        "target": 9,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              130
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              144.44
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              158.89
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              173.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              187.78
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              202.22
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              216.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              231.11
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              245.56
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              260
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910102,
+        "name": "燎原秘策",
+        "skill_class": "主动",
+        "prepare": 1,
+        "probability_init": 0.35,
+        "probability_max": 0.35,
+        "detail_id": 910102,
+        "effects": [
+          {
+            "detail_id": 9101020,
+            "effect_type": "STRATEGY_DAMAGE",
+            "rate_pct": 130,
+            "target_type": "enemy_group",
+            "attack_type": "chain",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P03",
+        "tags": [
+          "谋略",
+          "准备",
+          "群体"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910103,
+      "name": "荡寇破阵",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 910103,
+        "name": "荡寇破阵",
+        "des": "对敌军全体造成兵刃伤害（伤害率%n%%），自身攻击伤害提高（%n%%）。特性：输出、群体、自增益。",
+        "trigger": 1,
+        "target": 9,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1,
+          2
+        ],
+        "levels": [
+          {
+            "probability": 40,
+            "effect_value": [
+              60,
+              8
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              66.67,
+              8.89
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              73.33,
+              9.78
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              80,
+              10.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              86.67,
+              11.56
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              93.33,
+              12.44
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              100,
+              13.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              106.67,
+              14.22
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              113.33,
+              15.11
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              120,
+              16
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910103,
+        "name": "荡寇破阵",
+        "skill_class": "主动",
+        "prepare": 0,
+        "probability_init": 0.4,
+        "probability_max": 0.4,
+        "detail_id": 910103,
+        "effects": [
+          {
+            "detail_id": 9101030,
+            "effect_type": "PHYSICAL_DAMAGE",
+            "rate_pct": 60,
+            "target_type": "enemy_group",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          },
+          {
+            "detail_id": 9101031,
+            "effect_type": "BUFF",
+            "rate_pct": 0,
+            "target_type": "self",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": [
+              {
+                "name": "攻击伤害提高",
+                "value": 8,
+                "op": 0
+              }
+            ]
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P01",
+        "tags": [
+          "输出",
+          "群体",
+          "自增益"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910104,
+      "name": "破胆夺气",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 910104,
+        "name": "破胆夺气",
+        "des": "对敌军单体造成兵刃伤害（伤害率%n%%），使敌军单体陷入动摇（几率%n%%）。特性：输出、控制、单体。",
+        "trigger": 1,
+        "target": 6,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1,
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              90,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              100,
+              111.11
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              110,
+              122.22
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              120,
+              133.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              130,
+              144.44
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              140,
+              155.56
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              150,
+              166.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              160,
+              177.78
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              170,
+              188.89
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              180,
+              200
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910104,
+        "name": "破胆夺气",
+        "skill_class": "主动",
+        "prepare": 0,
+        "probability_init": 0.35,
+        "probability_max": 0.35,
+        "detail_id": 910104,
+        "effects": [
+          {
+            "detail_id": 9101040,
+            "effect_type": "PHYSICAL_DAMAGE",
+            "rate_pct": 90,
+            "target_type": "enemy_single",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          },
+          {
+            "detail_id": 9101041,
+            "effect_type": "CONTROL",
+            "rate_pct": 0,
+            "target_type": "enemy_single",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": "动摇",
+            "control_probability": 1,
+            "bonus_terms": []
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P04",
+        "tags": [
+          "输出",
+          "控制",
+          "单体"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910105,
+      "name": "缚龙锁澜",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 910105,
+        "name": "缚龙锁澜",
+        "des": "对敌军单体造成谋略伤害（伤害率%n%%），使敌军单体陷入怯战（几率%n%%）。特性：谋略、控制、单体。",
+        "trigger": 1,
+        "target": 6,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1,
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              80,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              88.89,
+              111.11
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              97.78,
+              122.22
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              106.67,
+              133.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              115.56,
+              144.44
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              124.44,
+              155.56
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              133.33,
+              166.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              142.22,
+              177.78
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              151.11,
+              188.89
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              160,
+              200
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910105,
+        "name": "缚龙锁澜",
+        "skill_class": "主动",
+        "prepare": 0,
+        "probability_init": 0.35,
+        "probability_max": 0.35,
+        "detail_id": 910105,
+        "effects": [
+          {
+            "detail_id": 9101050,
+            "effect_type": "STRATEGY_DAMAGE",
+            "rate_pct": 80,
+            "target_type": "enemy_single",
+            "attack_type": "chain",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          },
+          {
+            "detail_id": 9101051,
+            "effect_type": "CONTROL",
+            "rate_pct": 0,
+            "target_type": "enemy_single",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": "怯战",
+            "control_probability": 1,
+            "bonus_terms": []
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P04",
+        "tags": [
+          "谋略",
+          "控制",
+          "单体"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910106,
+      "name": "悬壶济军",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 910106,
+        "name": "悬壶济军",
+        "des": "为我军单体恢复兵力（恢复率%n%%）。特性：治疗、单体。",
+        "trigger": 1,
+        "target": 4,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 45,
+            "effect_value": [
+              130
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 45,
+            "effect_value": [
+              144.44
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 45,
+            "effect_value": [
+              158.89
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 45,
+            "effect_value": [
+              173.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 45,
+            "effect_value": [
+              187.78
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 45,
+            "effect_value": [
+              202.22
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 45,
+            "effect_value": [
+              216.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 45,
+            "effect_value": [
+              231.11
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 45,
+            "effect_value": [
+              245.56
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 45,
+            "effect_value": [
+              260
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910106,
+        "name": "悬壶济军",
+        "skill_class": "主动",
+        "prepare": 0,
+        "probability_init": 0.45,
+        "probability_max": 0.45,
+        "detail_id": 910106,
+        "effects": [
+          {
+            "detail_id": 9101060,
+            "effect_type": "HEAL",
+            "rate_pct": 130,
+            "target_type": "ally_single",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P06",
+        "tags": [
+          "治疗",
+          "单体"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910107,
+      "name": "仁心回春",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 910107,
+        "name": "仁心回春",
+        "des": "为我军单体恢复兵力（恢复率%n%%），我军单体攻击伤害提高（%n%%）。特性：治疗、辅助、单体。",
+        "trigger": 1,
+        "target": 4,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1,
+          2
+        ],
+        "levels": [
+          {
+            "probability": 40,
+            "effect_value": [
+              100,
+              6
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              111.11,
+              6.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              122.22,
+              7.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              133.33,
+              8
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              144.44,
+              8.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              155.56,
+              9.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              166.67,
+              10
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              177.78,
+              10.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              188.89,
+              11.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              200,
+              12
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910107,
+        "name": "仁心回春",
+        "skill_class": "主动",
+        "prepare": 0,
+        "probability_init": 0.4,
+        "probability_max": 0.4,
+        "detail_id": 910107,
+        "effects": [
+          {
+            "detail_id": 9101070,
+            "effect_type": "HEAL",
+            "rate_pct": 100,
+            "target_type": "ally_single",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          },
+          {
+            "detail_id": 9101071,
+            "effect_type": "BUFF",
+            "rate_pct": 0,
+            "target_type": "ally_single",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": [
+              {
+                "name": "攻击伤害提高",
+                "value": 6,
+                "op": 0
+              }
+            ]
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P06",
+        "tags": [
+          "治疗",
+          "辅助",
+          "单体"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910108,
+      "name": "深谋远虑",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 910108,
+        "name": "深谋远虑",
+        "des": "自身策略攻击伤害提高（%n%%），对敌军单体造成谋略伤害（伤害率%n%%）。特性：谋略、爆发、自增益。",
+        "trigger": 1,
+        "target": 1,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          4,
+          1
+        ],
+        "levels": [
+          {
+            "probability": 40,
+            "effect_value": [
+              12,
+              110
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              13.33,
+              122.22
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              14.67,
+              134.44
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              16,
+              146.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              17.33,
+              158.89
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              18.67,
+              171.11
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              20,
+              183.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              21.33,
+              195.56
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              22.67,
+              207.78
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              24,
+              220
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910108,
+        "name": "深谋远虑",
+        "skill_class": "主动",
+        "prepare": 0,
+        "probability_init": 0.4,
+        "probability_max": 0.4,
+        "detail_id": 910108,
+        "effects": [
+          {
+            "detail_id": 9101080,
+            "effect_type": "BUFF",
+            "rate_pct": 0,
+            "target_type": "self",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": [
+              {
+                "name": "策略攻击伤害提高",
+                "value": 12,
+                "op": 0
+              }
+            ]
+          },
+          {
+            "detail_id": 9101081,
+            "effect_type": "STRATEGY_DAMAGE",
+            "rate_pct": 110,
+            "target_type": "enemy_single",
+            "attack_type": "chain",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P01",
+        "tags": [
+          "谋略",
+          "爆发",
+          "自增益"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910109,
+      "name": "天罗地网",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 910109,
+        "name": "天罗地网",
+        "des": "对敌军全体造成谋略伤害（伤害率%n%%），使敌军全体陷入犹豫（几率%n%%）。特性：谋略、封锁、群体。",
+        "trigger": 1,
+        "target": 9,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1,
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              70,
+              30
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              77.78,
+              33.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              85.56,
+              36.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              93.33,
+              40
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              101.11,
+              43.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              108.89,
+              46.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              116.67,
+              50
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              124.44,
+              53.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              132.22,
+              56.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              140,
+              60
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910109,
+        "name": "天罗地网",
+        "skill_class": "主动",
+        "prepare": 0,
+        "probability_init": 0.35,
+        "probability_max": 0.35,
+        "detail_id": 910109,
+        "effects": [
+          {
+            "detail_id": 9101090,
+            "effect_type": "STRATEGY_DAMAGE",
+            "rate_pct": 70,
+            "target_type": "enemy_group",
+            "attack_type": "chain",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          },
+          {
+            "detail_id": 9101091,
+            "effect_type": "CONTROL",
+            "rate_pct": 0,
+            "target_type": "enemy_group",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": "犹豫",
+            "control_probability": 0.3,
+            "bonus_terms": []
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P16",
+        "tags": [
+          "谋略",
+          "封锁",
+          "群体"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910110,
+      "name": "覆军杀将",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 910110,
+        "name": "覆军杀将",
+        "des": "对敌军单体造成谋略伤害（伤害率%n%%），自身攻击伤害提高（%n%%）。特性：谋略、群体、自增益。",
+        "trigger": 1,
+        "target": 6,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1,
+          2
+        ],
+        "levels": [
+          {
+            "probability": 40,
+            "effect_value": [
+              95,
+              6
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              105.56,
+              6.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              116.11,
+              7.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              126.67,
+              8
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              137.22,
+              8.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              147.78,
+              9.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              158.33,
+              10
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              168.89,
+              10.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              179.44,
+              11.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              190,
+              12
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910110,
+        "name": "覆军杀将",
+        "skill_class": "主动",
+        "prepare": 0,
+        "probability_init": 0.4,
+        "probability_max": 0.4,
+        "detail_id": 910110,
+        "effects": [
+          {
+            "detail_id": 9101100,
+            "effect_type": "STRATEGY_DAMAGE",
+            "rate_pct": 95,
+            "target_type": "enemy_single",
+            "attack_type": "chain",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          },
+          {
+            "detail_id": 9101101,
+            "effect_type": "BUFF",
+            "rate_pct": 0,
+            "target_type": "self",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": [
+              {
+                "name": "攻击伤害提高",
+                "value": 6,
+                "op": 0
+              }
+            ]
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P02",
+        "tags": [
+          "谋略",
+          "群体",
+          "自增益"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910111,
+      "name": "却敌固垒",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 910111,
+        "name": "却敌固垒",
+        "des": "为自身恢复兵力（恢复率%n%%），自身攻击伤害提高（%n%%）。特性：治疗、自增益、自持。",
+        "trigger": 1,
+        "target": 1,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1,
+          2
+        ],
+        "levels": [
+          {
+            "probability": 40,
+            "effect_value": [
+              90,
+              6
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              100,
+              6.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              110,
+              7.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              120,
+              8
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              130,
+              8.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              140,
+              9.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              150,
+              10
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              160,
+              10.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              170,
+              11.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              180,
+              12
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910111,
+        "name": "却敌固垒",
+        "skill_class": "主动",
+        "prepare": 0,
+        "probability_init": 0.4,
+        "probability_max": 0.4,
+        "detail_id": 910111,
+        "effects": [
+          {
+            "detail_id": 9101110,
+            "effect_type": "HEAL",
+            "rate_pct": 90,
+            "target_type": "self",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          },
+          {
+            "detail_id": 9101111,
+            "effect_type": "BUFF",
+            "rate_pct": 0,
+            "target_type": "self",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": [
+              {
+                "name": "攻击伤害提高",
+                "value": 6,
+                "op": 0
+              }
+            ]
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P06",
+        "tags": [
+          "治疗",
+          "自增益",
+          "自持"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910112,
+      "name": "百炼成钢",
+      "trigger": 2,
+      "dir": "beidong",
+      "ui": {
+        "cfgId": 910112,
+        "name": "百炼成钢",
+        "des": "自身攻击伤害提高（%n%%）。特性：常驻、输出。",
+        "trigger": 2,
+        "target": 1,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          2
+        ],
+        "levels": [
+          {
+            "probability": 100,
+            "effect_value": [
+              6
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              6.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              7.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              8
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              8.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              9.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              10
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              10.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              11.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              12
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910112,
+        "name": "百炼成钢",
+        "skill_class": "被动",
+        "prepare": 0,
+        "probability_init": 1,
+        "probability_max": 1,
+        "detail_id": 910112,
+        "effects": [
+          {
+            "detail_id": 9101120,
+            "effect_type": "BUFF",
+            "rate_pct": 0,
+            "target_type": "self",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": [
+              {
+                "name": "攻击伤害提高",
+                "value": 6,
+                "op": 0
+              }
+            ]
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P10",
+        "tags": [
+          "常驻",
+          "输出"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910113,
+      "name": "文武两全",
+      "trigger": 2,
+      "dir": "beidong",
+      "ui": {
+        "cfgId": 910113,
+        "name": "文武两全",
+        "des": "自身攻击伤害提高（%n%%），自身策略攻击伤害提高（%n%%）。特性：常驻、双修。",
+        "trigger": 2,
+        "target": 1,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          2,
+          4
+        ],
+        "levels": [
+          {
+            "probability": 100,
+            "effect_value": [
+              4,
+              4
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              4.44,
+              4.44
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              4.89,
+              4.89
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              5.33,
+              5.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              5.78,
+              5.78
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              6.22,
+              6.22
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              6.67,
+              6.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              7.11,
+              7.11
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              7.56,
+              7.56
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              8,
+              8
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910113,
+        "name": "文武两全",
+        "skill_class": "被动",
+        "prepare": 0,
+        "probability_init": 1,
+        "probability_max": 1,
+        "detail_id": 910113,
+        "effects": [
+          {
+            "detail_id": 9101130,
+            "effect_type": "BUFF",
+            "rate_pct": 0,
+            "target_type": "self",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": [
+              {
+                "name": "攻击伤害提高",
+                "value": 4,
+                "op": 0
+              }
+            ]
+          },
+          {
+            "detail_id": 9101131,
+            "effect_type": "BUFF",
+            "rate_pct": 0,
+            "target_type": "self",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": [
+              {
+                "name": "策略攻击伤害提高",
+                "value": 4,
+                "op": 0
+              }
+            ]
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P10",
+        "tags": [
+          "常驻",
+          "双修"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910114,
+      "name": "逆锋决胜",
+      "trigger": 2,
+      "dir": "beidong",
+      "ui": {
+        "cfgId": 910114,
+        "name": "逆锋决胜",
+        "des": "自身攻击伤害提高（%n%%）。特性：爆发、前期。",
+        "trigger": 2,
+        "target": 1,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          2
+        ],
+        "levels": [
+          {
+            "probability": 100,
+            "effect_value": [
+              15
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              16.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              18.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              20
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              21.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              23.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              25
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              26.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              28.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              30
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910114,
+        "name": "逆锋决胜",
+        "skill_class": "被动",
+        "prepare": 0,
+        "probability_init": 1,
+        "probability_max": 1,
+        "detail_id": 910114,
+        "effects": [
+          {
+            "detail_id": 9101140,
+            "effect_type": "BUFF",
+            "rate_pct": 0,
+            "target_type": "self",
+            "attack_type": "normal",
+            "available_round": 2,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": [
+              {
+                "name": "攻击伤害提高",
+                "value": 15,
+                "op": 0
+              }
+            ]
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P10",
+        "tags": [
+          "爆发",
+          "前期"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910115,
+      "name": "长驱直入",
+      "trigger": 2,
+      "dir": "beidong",
+      "ui": {
+        "cfgId": 910115,
+        "name": "长驱直入",
+        "des": "对敌军单体造成兵刃伤害（伤害率%n%%），自身攻击伤害提高（%n%%）。特性：输出、常驻。",
+        "trigger": 2,
+        "target": 6,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1,
+          2
+        ],
+        "levels": [
+          {
+            "probability": 100,
+            "effect_value": [
+              70,
+              5
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              77.78,
+              5.56
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              85.56,
+              6.11
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              93.33,
+              6.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              101.11,
+              7.22
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              108.89,
+              7.78
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              116.67,
+              8.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              124.44,
+              8.89
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              132.22,
+              9.44
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              140,
+              10
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910115,
+        "name": "长驱直入",
+        "skill_class": "被动",
+        "prepare": 0,
+        "probability_init": 1,
+        "probability_max": 1,
+        "detail_id": 910115,
+        "effects": [
+          {
+            "detail_id": 9101150,
+            "effect_type": "PHYSICAL_DAMAGE",
+            "rate_pct": 70,
+            "target_type": "enemy_single",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          },
+          {
+            "detail_id": 9101151,
+            "effect_type": "BUFF",
+            "rate_pct": 0,
+            "target_type": "self",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": [
+              {
+                "name": "攻击伤害提高",
+                "value": 5,
+                "op": 0
+              }
+            ]
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P12",
+        "tags": [
+          "输出",
+          "常驻"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910116,
+      "name": "火昭天罚",
+      "trigger": 2,
+      "dir": "beidong",
+      "ui": {
+        "cfgId": 910116,
+        "name": "火昭天罚",
+        "des": "对敌军单体造成谋略伤害（伤害率%n%%）。特性：谋略、常驻。",
+        "trigger": 2,
+        "target": 6,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 100,
+            "effect_value": [
+              60
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              66.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              73.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              80
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              86.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              93.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              106.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              113.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              120
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910116,
+        "name": "火昭天罚",
+        "skill_class": "被动",
+        "prepare": 0,
+        "probability_init": 1,
+        "probability_max": 1,
+        "detail_id": 910116,
+        "effects": [
+          {
+            "detail_id": 9101160,
+            "effect_type": "STRATEGY_DAMAGE",
+            "rate_pct": 60,
+            "target_type": "enemy_single",
+            "attack_type": "chain",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P12",
+        "tags": [
+          "谋略",
+          "常驻"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910117,
+      "name": "坚甲利刃",
+      "trigger": 2,
+      "dir": "beidong",
+      "ui": {
+        "cfgId": 910117,
+        "name": "坚甲利刃",
+        "des": "对敌军单体造成兵刃伤害（伤害率%n%%），自身防御属性提高（%n%%）。特性：反击、辅助。",
+        "trigger": 2,
+        "target": 6,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1,
+          2
+        ],
+        "levels": [
+          {
+            "probability": 100,
+            "effect_value": [
+              45,
+              8
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              50,
+              8.89
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              55,
+              9.78
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              60,
+              10.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              65,
+              11.56
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              70,
+              12.44
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              75,
+              13.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              80,
+              14.22
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              85,
+              15.11
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              90,
+              16
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910117,
+        "name": "坚甲利刃",
+        "skill_class": "被动",
+        "prepare": 0,
+        "probability_init": 1,
+        "probability_max": 1,
+        "detail_id": 910117,
+        "effects": [
+          {
+            "detail_id": 9101170,
+            "effect_type": "PHYSICAL_DAMAGE",
+            "rate_pct": 45,
+            "target_type": "enemy_single",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          },
+          {
+            "detail_id": 9101171,
+            "effect_type": "BUFF",
+            "rate_pct": 0,
+            "target_type": "self",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": [
+              {
+                "name": "防御属性提高",
+                "value": 8,
+                "op": 0
+              }
+            ]
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P12",
+        "tags": [
+          "反击",
+          "辅助"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910118,
+      "name": "顺风扬刃",
+      "trigger": 3,
+      "dir": "zuiji",
+      "ui": {
+        "cfgId": 910118,
+        "name": "顺风扬刃",
+        "des": "对敌军单体造成兵刃伤害（伤害率%n%%），自身攻击伤害提高（%n%%）。特性：输出、追击。",
+        "trigger": 3,
+        "target": 6,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1,
+          2
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              85,
+              5
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              94.44,
+              5.56
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              103.89,
+              6.11
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              113.33,
+              6.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              122.78,
+              7.22
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              132.22,
+              7.78
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              141.67,
+              8.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              151.11,
+              8.89
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              160.56,
+              9.44
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              170,
+              10
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910118,
+        "name": "顺风扬刃",
+        "skill_class": "追击",
+        "prepare": 0,
+        "probability_init": 0.35,
+        "probability_max": 0.35,
+        "detail_id": 910118,
+        "effects": [
+          {
+            "detail_id": 9101180,
+            "effect_type": "PHYSICAL_DAMAGE",
+            "rate_pct": 85,
+            "target_type": "enemy_single",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          },
+          {
+            "detail_id": 9101181,
+            "effect_type": "BUFF",
+            "rate_pct": 0,
+            "target_type": "self",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": [
+              {
+                "name": "攻击伤害提高",
+                "value": 5,
+                "op": 0
+              }
+            ]
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P13",
+        "tags": [
+          "输出",
+          "追击"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910119,
+      "name": "饮血飞骑",
+      "trigger": 3,
+      "dir": "zuiji",
+      "ui": {
+        "cfgId": 910119,
+        "name": "饮血飞骑",
+        "des": "为自身恢复兵力（恢复率%n%%）。特性：恢复、追击、自持。",
+        "trigger": 3,
+        "target": 1,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 40,
+            "effect_value": [
+              60
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              66.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              73.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              80
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              86.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              93.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              106.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              113.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              120
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910119,
+        "name": "饮血飞骑",
+        "skill_class": "追击",
+        "prepare": 0,
+        "probability_init": 0.4,
+        "probability_max": 0.4,
+        "detail_id": 910119,
+        "effects": [
+          {
+            "detail_id": 9101190,
+            "effect_type": "HEAL",
+            "rate_pct": 60,
+            "target_type": "self",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P13",
+        "tags": [
+          "恢复",
+          "追击",
+          "自持"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910120,
+      "name": "智取坚城",
+      "trigger": 3,
+      "dir": "zuiji",
+      "ui": {
+        "cfgId": 910120,
+        "name": "智取坚城",
+        "des": "对敌军单体造成谋略伤害（伤害率%n%%），使敌军单体陷入怯战（几率%n%%）。特性：谋略、控制、追击。",
+        "trigger": 3,
+        "target": 6,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1,
+          1
+        ],
+        "levels": [
+          {
+            "probability": 40,
+            "effect_value": [
+              75,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              83.33,
+              111.11
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              91.67,
+              122.22
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              100,
+              133.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              108.33,
+              144.44
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              116.67,
+              155.56
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              125,
+              166.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              133.33,
+              177.78
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              141.67,
+              188.89
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              150,
+              200
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910120,
+        "name": "智取坚城",
+        "skill_class": "追击",
+        "prepare": 0,
+        "probability_init": 0.4,
+        "probability_max": 0.4,
+        "detail_id": 910120,
+        "effects": [
+          {
+            "detail_id": 9101200,
+            "effect_type": "STRATEGY_DAMAGE",
+            "rate_pct": 75,
+            "target_type": "enemy_single",
+            "attack_type": "chain",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          },
+          {
+            "detail_id": 9101201,
+            "effect_type": "CONTROL",
+            "rate_pct": 0,
+            "target_type": "enemy_single",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": "怯战",
+            "control_probability": 1,
+            "bonus_terms": []
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P15",
+        "tags": [
+          "谋略",
+          "控制",
+          "追击"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910121,
+      "name": "追风逐电",
+      "trigger": 3,
+      "dir": "zuiji",
+      "ui": {
+        "cfgId": 910121,
+        "name": "追风逐电",
+        "des": "对敌军单体造成兵刃伤害（伤害率%n%%），使敌军单体陷入动摇（几率%n%%）。特性：输出、控制、追击。",
+        "trigger": 3,
+        "target": 6,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1,
+          1
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              65,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              72.22,
+              111.11
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              79.44,
+              122.22
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              86.67,
+              133.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              93.89,
+              144.44
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              101.11,
+              155.56
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              108.33,
+              166.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              115.56,
+              177.78
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              122.78,
+              188.89
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              130,
+              200
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910121,
+        "name": "追风逐电",
+        "skill_class": "追击",
+        "prepare": 0,
+        "probability_init": 0.35,
+        "probability_max": 0.35,
+        "detail_id": 910121,
+        "effects": [
+          {
+            "detail_id": 9101210,
+            "effect_type": "PHYSICAL_DAMAGE",
+            "rate_pct": 65,
+            "target_type": "enemy_single",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          },
+          {
+            "detail_id": 9101211,
+            "effect_type": "CONTROL",
+            "rate_pct": 0,
+            "target_type": "enemy_single",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": "动摇",
+            "control_probability": 1,
+            "bonus_terms": []
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P15",
+        "tags": [
+          "输出",
+          "控制",
+          "追击"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910122,
+      "name": "摧锋谋断",
+      "trigger": 3,
+      "dir": "zuiji",
+      "ui": {
+        "cfgId": 910122,
+        "name": "摧锋谋断",
+        "des": "对敌军单体造成谋略伤害（伤害率%n%%），自身策略攻击伤害提高（%n%%）。特性：谋略、追击、自增益。",
+        "trigger": 3,
+        "target": 6,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1,
+          4
+        ],
+        "levels": [
+          {
+            "probability": 40,
+            "effect_value": [
+              70,
+              5
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              77.78,
+              5.56
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              85.56,
+              6.11
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              93.33,
+              6.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              101.11,
+              7.22
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              108.89,
+              7.78
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              116.67,
+              8.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              124.44,
+              8.89
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              132.22,
+              9.44
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              140,
+              10
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910122,
+        "name": "摧锋谋断",
+        "skill_class": "追击",
+        "prepare": 0,
+        "probability_init": 0.4,
+        "probability_max": 0.4,
+        "detail_id": 910122,
+        "effects": [
+          {
+            "detail_id": 9101220,
+            "effect_type": "STRATEGY_DAMAGE",
+            "rate_pct": 70,
+            "target_type": "enemy_single",
+            "attack_type": "chain",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          },
+          {
+            "detail_id": 9101221,
+            "effect_type": "BUFF",
+            "rate_pct": 0,
+            "target_type": "self",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": [
+              {
+                "name": "策略攻击伤害提高",
+                "value": 5,
+                "op": 0
+              }
+            ]
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P14",
+        "tags": [
+          "谋略",
+          "追击",
+          "自增益"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910123,
+      "name": "虎贲督战",
+      "trigger": 4,
+      "dir": "zhihui",
+      "ui": {
+        "cfgId": 910123,
+        "name": "虎贲督战",
+        "des": "我军全体攻击伤害提高（%n%%）。特性：光环、输出。",
+        "trigger": 4,
+        "target": 5,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          2
+        ],
+        "levels": [
+          {
+            "probability": 100,
+            "effect_value": [
+              8
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              8.89
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              9.78
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              10.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              11.56
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              12.44
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              13.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              14.22
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              15.11
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              16
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910123,
+        "name": "虎贲督战",
+        "skill_class": "指挥",
+        "prepare": 0,
+        "probability_init": 1,
+        "probability_max": 1,
+        "detail_id": 910123,
+        "effects": [
+          {
+            "detail_id": 9101230,
+            "effect_type": "BUFF",
+            "rate_pct": 0,
+            "target_type": "ally_group",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": [
+              {
+                "name": "攻击伤害提高",
+                "value": 8,
+                "op": 0
+              }
+            ]
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P08",
+        "tags": [
+          "光环",
+          "输出"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910124,
+      "name": "玄襄谋阵",
+      "trigger": 4,
+      "dir": "zhihui",
+      "ui": {
+        "cfgId": 910124,
+        "name": "玄襄谋阵",
+        "des": "我军全体策略攻击伤害提高（%n%%）。特性：光环、谋略。",
+        "trigger": 4,
+        "target": 5,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          4
+        ],
+        "levels": [
+          {
+            "probability": 100,
+            "effect_value": [
+              8
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              8.89
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              9.78
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              10.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              11.56
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              12.44
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              13.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              14.22
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              15.11
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              16
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910124,
+        "name": "玄襄谋阵",
+        "skill_class": "指挥",
+        "prepare": 0,
+        "probability_init": 1,
+        "probability_max": 1,
+        "detail_id": 910124,
+        "effects": [
+          {
+            "detail_id": 9101240,
+            "effect_type": "BUFF",
+            "rate_pct": 0,
+            "target_type": "ally_group",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": [
+              {
+                "name": "策略攻击伤害提高",
+                "value": 8,
+                "op": 0
+              }
+            ]
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P08",
+        "tags": [
+          "光环",
+          "谋略"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910125,
+      "name": "沧海横流",
+      "trigger": 4,
+      "dir": "zhihui",
+      "ui": {
+        "cfgId": 910125,
+        "name": "沧海横流",
+        "des": "为我军全体恢复兵力（恢复率%n%%）。特性：恢复、前期。",
+        "trigger": 4,
+        "target": 5,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 100,
+            "effect_value": [
+              45
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              50
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              55
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              60
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              65
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              70
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              75
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              80
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              85
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              90
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910125,
+        "name": "沧海横流",
+        "skill_class": "指挥",
+        "prepare": 0,
+        "probability_init": 1,
+        "probability_max": 1,
+        "detail_id": 910125,
+        "effects": [
+          {
+            "detail_id": 9101250,
+            "effect_type": "HEAL",
+            "rate_pct": 45,
+            "target_type": "ally_group",
+            "attack_type": "normal",
+            "available_round": 3,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P09",
+        "tags": [
+          "恢复",
+          "前期"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910126,
+      "name": "深沟高垒",
+      "trigger": 4,
+      "dir": "zhihui",
+      "ui": {
+        "cfgId": 910126,
+        "name": "深沟高垒",
+        "des": "我军全体攻击伤害提高（%n%%）。特性：光环、前期、输出。",
+        "trigger": 4,
+        "target": 5,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          2
+        ],
+        "levels": [
+          {
+            "probability": 100,
+            "effect_value": [
+              5
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              5.56
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              6.11
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              6.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              7.22
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              7.78
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              8.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              8.89
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              9.44
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              10
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910126,
+        "name": "深沟高垒",
+        "skill_class": "指挥",
+        "prepare": 0,
+        "probability_init": 1,
+        "probability_max": 1,
+        "detail_id": 910126,
+        "effects": [
+          {
+            "detail_id": 9101260,
+            "effect_type": "BUFF",
+            "rate_pct": 0,
+            "target_type": "ally_group",
+            "attack_type": "normal",
+            "available_round": 2,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": [
+              {
+                "name": "攻击伤害提高",
+                "value": 5,
+                "op": 0
+              }
+            ]
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P07",
+        "tags": [
+          "光环",
+          "前期",
+          "输出"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910127,
+      "name": "举燎合围",
+      "trigger": 4,
+      "dir": "zhihui",
+      "ui": {
+        "cfgId": 910127,
+        "name": "举燎合围",
+        "des": "为我军全体恢复兵力（恢复率%n%%），我军全体攻击伤害提高（%n%%）。特性：恢复、光环。",
+        "trigger": 4,
+        "target": 5,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1,
+          2
+        ],
+        "levels": [
+          {
+            "probability": 100,
+            "effect_value": [
+              35,
+              5
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              38.89,
+              5.56
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              42.78,
+              6.11
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              46.67,
+              6.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              50.56,
+              7.22
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              54.44,
+              7.78
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              58.33,
+              8.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              62.22,
+              8.89
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              66.11,
+              9.44
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              70,
+              10
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910127,
+        "name": "举燎合围",
+        "skill_class": "指挥",
+        "prepare": 0,
+        "probability_init": 1,
+        "probability_max": 1,
+        "detail_id": 910127,
+        "effects": [
+          {
+            "detail_id": 9101270,
+            "effect_type": "HEAL",
+            "rate_pct": 35,
+            "target_type": "ally_group",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          },
+          {
+            "detail_id": 9101271,
+            "effect_type": "BUFF",
+            "rate_pct": 0,
+            "target_type": "ally_group",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": [
+              {
+                "name": "攻击伤害提高",
+                "value": 5,
+                "op": 0
+              }
+            ]
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P08",
+        "tags": [
+          "恢复",
+          "光环"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    },
+    {
+      "cfgId": 910128,
+      "name": "阵前擂鼓",
+      "trigger": 4,
+      "dir": "zhihui",
+      "ui": {
+        "cfgId": 910128,
+        "name": "阵前擂鼓",
+        "des": "为我军单体恢复兵力（恢复率%n%%）。特性：恢复、单体。",
+        "trigger": 4,
+        "target": 4,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 100,
+            "effect_value": [
+              60
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              66.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              73.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              80
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              86.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              93.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              106.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              113.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              120
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ]
+      },
+      "kernel": {
+        "cfgId": 910128,
+        "name": "阵前擂鼓",
+        "skill_class": "指挥",
+        "prepare": 0,
+        "probability_init": 1,
+        "probability_max": 1,
+        "detail_id": 910128,
+        "effects": [
+          {
+            "detail_id": 9101280,
+            "effect_type": "HEAL",
+            "rate_pct": 60,
+            "target_type": "ally_single",
+            "attack_type": "normal",
+            "available_round": 4,
+            "control_state": null,
+            "control_probability": 0,
+            "bonus_terms": []
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "skill-library-extra",
+        "source": "offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）",
+        "pattern": "P09",
+        "tags": [
+          "恢复",
+          "单体"
+        ],
+        "quality": 4,
+        "kernelNotes": [
+          "BUFF 词全部为攻击方伤害加成词（内核 attacker.buffs 全求和，真实生效）",
+          "不使用 DEBUFF（内核不结算敌方身上的词，避免描述≠计算）",
+          "控制槽一律伴随伤害；犹豫为真实封锁词且控制概率 ≤ 0.3"
+        ]
+      }
+    }
+  ]
+}

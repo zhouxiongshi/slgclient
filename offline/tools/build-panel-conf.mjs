@@ -4,13 +4,14 @@
  * 输入：
  *   conf/skills.json              31 条 battle-kit 主战法原文
  *   conf/library-skills.json      20 条 battle-kit 库战法原文
+ *   conf/library-skills-extra.json 29 条 M3-8 新机制组合
  *   conf/campaign/strategy/map.json 战略地图 72 城
  *   web/.../general.json          客户端武将名录 368 位（游戏五维）
  *   D:/WorkBuddy/three-kingdoms/characters.csv  936 位史料档案（五维/字/履历/演义）
  *
  * 输出（全部落在 conf/panels/，打进离线包）：
  *   generals-lore.json   120 位精简武将档案
- *   skill-recipes.json   51 条战法的六源公开配方
+ *   skill-recipes.json   战法的六源公开配方（主线+库+extra 全量）
  *   items.json           装备 / 材料 / 锻造配方 / 开局赠礼
  *   posts.json           五岗位 / 提案模板 / 数值红线
  *
@@ -122,10 +123,12 @@ const lore = {
 };
 write('generals-lore.json', lore);
 
-/* ---------------- 2) 51 条战法：六源公开配方 ---------------- */
+/* ---------------- 战法：六源公开配方（M3-8 起主线+库+extra 全量覆盖） ---------------- */
 const main = readJson('conf/skills.json').skills;
 const lib = readJson('conf/library-skills.json').skills;
-const all = [...main, ...lib];
+const libExtra = existsSync(resolve(ROOT, 'conf/library-skills-extra.json'))
+  ? readJson('conf/library-skills-extra.json').skills : [];
+const all = [...main, ...lib, ...libExtra];
 const heroSkills = existsSync(resolve(ROOT, 'conf/campaign/hero-skills.json'))
   ? readJson('conf/campaign/hero-skills.json') : {};
 const innateIds = new Set([19001, ...Object.values(heroSkills).map(Number)]);
@@ -228,7 +231,7 @@ const recipes = all.map((s, i) => {
 
 write('skill-recipes.json', {
   version: 1,
-  source: 'conf/skills.json + conf/library-skills.json（battle-kit 原文，名称/类型/描述不改写）',
+  source: 'conf/skills.json + conf/library-skills.json + conf/library-skills-extra.json（battle-kit 原文与原创组合，名称/类型/描述不改写）',
   principle: ['没有随机', '没有不可逆的意外', '没有死路（每条至少两条获取路径）'],
   count: recipes.length,
   recipes,

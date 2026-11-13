@@ -258,7 +258,7 @@ function cmpByMean(a, b) {
 /* ------------------------------------------------------------------ */
 /* 组装                                                                  */
 /* ------------------------------------------------------------------ */
-function assemble(layer, heroes, fateGroups, skillHeroes, cfgIdOf) {
+function assemble(layer, heroes, fateGroups, skillHeroes, cfgIdOf, extraTable) {
   return heroes.map((p) => {
     // 一人可属多个宿命组（如曹操 5 组、赵云 3 组）：fate 记首个组 id，bonds 全量铺边。
     const myGroups = fateGroups.filter((g) => g.members.includes(p.name));
@@ -274,6 +274,33 @@ function assemble(layer, heroes, fateGroups, skillHeroes, cfgIdOf) {
       if (b.b === p.name && byName.has(b.a)) bonds.push({ type: b.type, target: b.a });
     }
     const skill = skillHeroes[p.name];
+    /* ★ M3-8（GDD §9 战法 80 条 + §7 武将装配）：core 层武将从单条专属扩到 2~3 条——
+       第 1 条仍是 hero-skills.json 专属映射；第 2/3 条从 library-skills-extra 新池
+       按五维倾向确定性选取（谋士配谋略/治疗、武将配兵刃；高维配指挥/被动光环）。
+       禁随机：只走 fnv1a(名字) 稳定散列，重跑产物逐位一致。 */
+    let skills = skill ? [skill] : [];
+    if (layer === 'core' && extraTable) {
+      const fiveSum = p.five.reduce((a, b) => a + b, 0);
+      const wu = p.five[1], zhi = p.five[2];
+      // 第 2 条：按智力/武力倾向从伤害+治疗池选
+      const prefer = zhi >= wu
+        ? ['STRATEGY_DAMAGE', 'HEAL']
+        : ['PHYSICAL_DAMAGE', 'HEAL'];
+      const pool2 = extraTable.skills.filter((s) =>
+        s.kernel.effects.some((e) => prefer.includes(e.effect_type)) && !skills.includes(s.cfgId));
+      if (pool2.length) {
+        const pick2 = pool2[fnv1a(p.name) % pool2.length];
+        skills.push(pick2.cfgId);
+      }
+      // 第 3 条：五维总和高（≥340）的 core 配指挥/被动光环；无专属映射的 core 无论如何凑满 2 条
+      const pool3 = extraTable.skills.filter((s) =>
+        ['指挥', '被动'].includes(s.kernel.skill_class) && !skills.includes(s.cfgId));
+      if ((fiveSum >= 340 || skills.length < 2) && pool3.length) {
+        const pick3 = pool3[fnv1a(`${p.name}|cmd`) % pool3.length];
+        skills.push(pick3.cfgId);
+      }
+    }
+    if (!skills.length) skills = [];
     return {
       id: cfgIdOf(p),
       name: p.name,
@@ -281,7 +308,7 @@ function assemble(layer, heroes, fateGroups, skillHeroes, cfgIdOf) {
       layer,                              // core | important | minor
       five: { tong: p.five[0], wu: p.five[1], zhi: p.five[2], zheng: p.five[3], mei: p.five[4] },
       traits: traitsFor(p),
-      skills: skill ? [skill] : [],
+      skills,
       aptitude: aptitudeFor(p),
       yili: clamp100(Math.round(p.five[3] * 0.6 + p.five[4] * 0.4)),
       xiangxing: xiangxingFor(p.name, p.faction),
@@ -305,6 +332,8 @@ let byName = new Map();
 function build(srcPath) {
   const fateGroups = JSON.parse(readFileSync(resolve(ROOT, 'conf/campaign/fate-groups.json'), 'utf8')).groups;
   const skillHeroes = JSON.parse(readFileSync(resolve(ROOT, 'conf/campaign/hero-skills.json'), 'utf8'));
+  /* ★ M3-8 新战法池（conf/library-skills-extra.json，910100~910128） */
+  const extraTable = JSON.parse(readFileSync(resolve(ROOT, 'conf/library-skills-extra.json'), 'utf8'));
   const relations = JSON.parse(readFileSync(resolve(ROOT, 'conf/relations.json'), 'utf8'));
   const generalCfg = JSON.parse(readFileSync(resolve(ROOT, 'conf/json/general/general.json'), 'utf8'));
 
@@ -327,9 +356,9 @@ function build(srcPath) {
   const cfgIdOf = (p) => cfgIds.get(p.name) ?? nextCfgId++;
 
   const heroes = [
-    ...assemble('core', core, fateGroups, skillHeroes, cfgIdOf),
-    ...assemble('important', important, fateGroups, skillHeroes, cfgIdOf),
-    ...assemble('minor', minor, fateGroups, skillHeroes, cfgIdOf),
+    ...assemble('core', core, fateGroups, skillHeroes, cfgIdOf, extraTable),
+    ...assemble('important', important, fateGroups, skillHeroes, cfgIdOf, null),
+    ...assemble('minor', minor, fateGroups, skillHeroes, cfgIdOf, null),
   ];
 
   const meta = {
@@ -342,6 +371,7 @@ function build(srcPath) {
       yili: '政×0.6+魅×0.4（relations.json 规则）',
       xiangxing: '势力锚点+名字FNV散列±12，环形1..149',
       aptitude: '兵种适性按五维/籍贯/势力派生，界面须标「本作设定」',
+      skills: 'core=专属(hero-skills.json)+新池倾向2条(五维≥340再配指挥/被动)；important/minor=专属1条',
     },
   };
   return { version: 1, meta, heroes };

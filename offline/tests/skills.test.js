@@ -80,10 +80,12 @@ test('战法表：31 个 / 4 类 / 10 级真实数值成长 / 名称与伤害率
     names.add(s.name);
     assert.ok(
       BATTLE_KIT.skill_names.includes(s.name) || FRAGMENT_NAMES.has(s.name)
-      || s.provenance?.pairing === 'authored' || s.provenance?.pairing === 'skill-library',
+      || s.provenance?.pairing === 'authored' || s.provenance?.pairing === 'skill-library'
+      || s.provenance?.pairing === 'skill-library-extra',
       `${s.name} 不在 battle-kit 名录`,
     );
-    if (s.provenance?.pairing === 'authored' || s.provenance?.pairing === 'skill-library') continue;
+    if (s.provenance?.pairing === 'authored' || s.provenance?.pairing === 'skill-library'
+      || s.provenance?.pairing === 'skill-library-extra') continue;
     assert.ok(BATTLE_KIT.damage_rates_pct.includes(s.kernel.rate_pct_lv1), `${s.name} 伤害率不是包内样本`);
     const ui = s.ui;
     assert.equal(ui.levels.length, LEVEL_COUNT);

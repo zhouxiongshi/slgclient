@@ -614,7 +614,7 @@ async function runSmoke(win, server, app) {
       report.warScreenshot = `smoke-war-${tag}.png`;
     } catch (e) { report.warScreenshot = 'failed: ' + String(e && e.message || e); }
 
-    // 六面板体系 P0：真实页面里逐一点开，并核对「51 条战法每条都有获取途径」
+    // 六面板体系 P0：真实页面里逐一点开，并核对「80 条战法每条都有获取途径」（M3-8 起 51→80）
     const panels = await wc.executeJavaScript(`(async function(){
       try {
         if (!window.__slgPanels) return { ok:false, reason:'no __slgPanels (ui.js 未注入)' };
@@ -636,7 +636,7 @@ async function runSmoke(win, server, app) {
         }
         var stratOk = !!out.strategy.stratKeys && out.strategy.stratKeys.length === 5;
         var st=window.__slgPanels.state();
-        var libOk = !!st && st.library.length === 51
+        var libOk = !!st && st.library.length === 80
           && st.library.every(function(s){ return s.sources && s.sources.length >= 2; });
         window.__slgPanels.open('library');
         await new Promise(function(r){ setTimeout(r, 250); });
