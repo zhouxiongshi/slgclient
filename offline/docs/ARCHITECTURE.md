@@ -408,6 +408,19 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 
 **测试**：`tests/p11-levy-and-gates.test.js`（7 条）、`tests/p11-session-gate.test.js`（1 条）、`electron/smoke.cjs` 新增门禁断言、`electron/mouse-playtest.cjs` 真鼠标全流程。
 
+### 9.17 六维测试后的四处收口（2026-11-13）
+
+这一批不是新功能，是**测试把账翻出来之后必须还的部分**。四项都改在传输层/表现层，`web/` 仍逐字节不动。
+
+| 收口 | 位置 | 为什么 | 纪律 |
+|---|---|---|---|
+| 静态服务异步化 | `server/index.js` `serveStatic` | 原来用 `readFileSync`，Cocos 并发的上千个资源请求在事件循环里被串行化：1582 个文件全量拉取 1791ms。改 `readFile` 后 853ms | 发送侧只做传输优化：ETag（size+mtime）命中回 304、文本类 >32KB 异步 gzip 并缓存。**不许为了快改 `web/` 里的字节**，也不许用 `immutable` 强缓存（打包后 URL 不变、内容会变） |
+| 战法库分批渲染 | `server/panels-ui.js` `viewLibrary` | 51 条全量渲染让单视角 DOM 增量到 604 节点（预算 400） | 首屏 24 条 + 「显示更多」每次 +24；筛选/检索**必须**重置回 24，否则「搜到了却停在列表末尾」 |
+| 配色/字体 token 收敛 | `server/ui-shell.js` 注入的基础规则 + `tools/token-converge.mjs` | 可见色值 41 种、字体族 4 套。字体那两项不是 CSS 写错，而是注入层元素**继承**了原版 `web/style.css` 的 Arial，表单控件还吃 UA 默认 | 注入层根节点钉死 `font-family`/`color`，`input/select/textarea/button` 加 `font-family:inherit`。色值收敛只吸收出现 ≤3 次的散点，≥4 次的多半是「常态/悬停/选中」成对状态色，合了会让交互反馈消失 |
+| 事件 DSL 双写法 | `server/domain/event-dsl.js` | 边界字段原本只认裸数字，照 GDD §8.2 写成 `{">=":184}` 会被**静默忽略**（条件恒真、无报错） | 裸数字与单算子对象都生效；对象里非法算子仍 throw；`validateEventSchema` 构建期就拦。**静默失效比抛错危险，任何「不认识就当通过」的写法都不许出现在这里** |
+
+**性能预算口径（GDD §11.5 同日重订）**：首屏拆成「登录页 / Cocos 首场景 / 登录到沙盘」三段，前两段由原版客户端决定、只监控不回退，第三段（注入层，实测 154–162ms）硬卡 800ms。内存只算主进程+渲染进程（GPU 的 620MB 纹理镜像单列备查），预算 700MB。**理由写在预算表下面，不是悄悄改数字**。
+
 ---
 
 ## 10. 文档地图（读哪本、信哪本）
