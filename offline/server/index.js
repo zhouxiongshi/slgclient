@@ -12,7 +12,7 @@
  *   - 单机世界状态：JSON 存档；定时任务持久化，重启续跑
  */
 import http from 'node:http';
-import { existsSync, statSync, readFileSync, readFile, renameSync } from 'node:fs';
+import { statSync, readFileSync, readFile, renameSync } from 'node:fs';
 import { resolve, extname, join } from 'node:path';
 import { gzipSync, gzip } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
