@@ -281,7 +281,7 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 | `server/domain/knobs.js` | 全局参数表 30 knob（默认 + 允许区间）。读参一律 `knobGet(state, 名)`：存档 `state.knobs` 覆盖 > 默认，越界钳区间。已接线：`turnDays`（strategyTick）、`grainPerSoldierDay`（出征粮 + L2 军粮）、`conscriptGoldPer`（NPC 征兵）、`undoDepth`（interaction 下发）。旧魔法数字改到时切换，新代码必须走这里。 |
 | `server/domain/failstate.js` | 失败态四出路（§3.4）：`failstates` 判定（破产/兵尽/无将/都城失陷）+ 出路动作（`disarmForGold` 返 30% 兵值金、`sellGrain` 0.5 金/粮每旬 2000 上限、`emergencyConscript` 民心 −10、雇佣兵 ×3、`makeStandInGeneral` 代将五维 50、`relocateCapital` 保留 50% 资源）。**恢复感原则：每个失败态至少一条出路**。无将不再返回 `no_general`——`strategyAttack` 自动生成代将入空槽。`evaluateEnding`（§3.5）：败亡（零城）/ 统一（全州治+诸侯出局）/ 偏安（脚手架，剧本目标未落地恒 null），结局必须带 5 条关键决定回放。视图下发 `fail` / `ending`；四动作走 `/__slg/strategy/action`（disarm / sellGrain / emergencyConscript / relocateCapital）。 |
 | `tools/sim-60turns.mjs` | 平衡脚本（§9.5）：举义世界按真实路径（resolveMarches → cityEconTick → strategyTick）推进 N 旬，逐旬输出城/兵/金/粮；`runSim` / `simHash` 供测试调用，确定性由 tests/m2-failstate 锁（同种子两跑逐旬一致 + NPC 决策聊天逐字一致）。 |
-| `electron/ui-audit.cjs` | 真实点击 E2E（GDD §14.2-7）：Electron 里逐页签真点。M2 收官新增「推演→确认→战报」六步链（切城→推演→决策预览→出兵确认→队列→推进→战报），**两层弹窗协议**：出征按钮被交互层 `interceptCosts`（COST_WORDS 捕获阶段）拦截出决策预览（`.slgIx-modal`），确认后 0.9s 自动放行；出兵确认弹窗（`.modal`）的「出征」二字也是成本词，会被**再拦一次**。链路接入 check-release 7.11（审计报告必须存在且全链 ok + 零异常）。 |
+| `electron/ui-audit.cjs` | 真实点击 E2E（GDD §14.2-7）：Electron 里逐页签真点。链路为**出征八步（含门 4/门 5）**：切城→推演→决策预览→出兵确认→行军队列→**抵达挂 `pendingBattle`**→**「③ 遭遇」点确认开战**→推进结算→战报。取证纪律：`pending>0` 只证明服务端挂起了，必须先把遭遇页真的渲染出来再断言按钮可点。拦截规则见 §9.16：出征/便捷征兵带 `data-ix-allow` 直通，弹窗内按钮不二次拦截（P11 起不再套两层预览）。链路接入 check-release 7.11，**8 环全 ok + 零异常**才算过。 |
 
 ### 9.4 E2E 取证机制（M2 收官）
 

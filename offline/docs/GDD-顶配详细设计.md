@@ -1600,6 +1600,8 @@ flowchart TD
 
 **教训挂钩**：本项目曾有 4 个 P0 故障因为"26 项冒烟全部绕开真实点击"而留到很晚。所以「推演→确认→战报」必须进真实点击 E2E，不接受"单测过了就算过"。
 
+> **落地对照（P11 补注）**：表内 `playtest-e2e.mjs` 实际落地为 `electron/ui-audit.cjs`（一键入口 `tools/ui-audit.js`）。P11 把出征改为确认制后，该链路已从「推演→确认→战报」扩成 **8 环**：切城 → 推演 → 决策预览 → 出兵确认 → 行军队列 → 抵达挂 `pendingBattle` → 「③ 遭遇」点确认开战 → 结算写战报，并由 `tools/check-release.js` 7.11 强制（缺任一环或带 `not-resolved` / `no-pending-encounter` 注记即不通过）。
+
 ### 11.7 发布检查
 
 `node tools/check-release.js` 70 项必须全绿，其中一条是 **`git status` 干净**。
