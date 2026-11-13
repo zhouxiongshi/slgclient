@@ -1979,7 +1979,11 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
         + 'background:' + s.neutral.color + ';margin-right:6px;vertical-align:-1px;"></span>' + s.neutral.name + '</div>';
       html += '</div><div style="border-top:1px solid rgba(186,154,82,.25);margin-top:3px;padding-top:3px;text-align:left;">'
         + '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;'
-        + 'border:2px solid #e8c670;margin-right:5px;vertical-align:-1px;"></span>金环＝本城</div>';
+        + 'border:2px solid #e8c670;margin-right:5px;vertical-align:-1px;"></span>金环＝本城</div>'
+      /* M4-1 合规声明（GDD §10.8）：地图为等距圆柱投影示意图，非标准行政地图。 */
+        + '<div style="border-top:1px solid rgba(186,154,82,.25);margin-top:4px;padding-top:4px;'
+        + 'color:#9c9382;font-size:11px;line-height:1.6;text-align:left;">'
+        + '本图为游戏示意图（等距圆柱投影），非标准行政地图。</div>';
       legend.innerHTML = html;
     }
     // 事件与回合

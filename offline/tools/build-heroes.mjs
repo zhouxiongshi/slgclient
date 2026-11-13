@@ -320,7 +320,14 @@ function assemble(layer, heroes, fateGroups, skillHeroes, cfgIdOf, extraTable) {
       era: p.era,
       hometown: p.hometown,
       type: p.type,
-      source: { ref: p.src || '－', level: p.level || '－', dbRow: p.row ? p.idx + 2 : null, override: !!p.override },
+      source: {
+        ref: p.src || '－',
+        level: p.level || '－',
+        dbRow: p.row ? p.idx + 2 : null,
+        override: !!p.override,
+        /* M4-1 溯源口径（GDD §10.8）：史实→高，虚构/传说→低，其余→中 */
+        confidence: p.level === '史实' ? '高' : p.level === '虚构/传说' ? '低' : '中',
+      },
     };
   });
 }

@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "updated": "2026-11-13",
+  "type": "schematic_projection",
+  "projection": "equirectangular",
+  "statement": "本图为游戏示意图（等距圆柱投影），非标准行政地图。",
+  "note": "GDD §10.8 合规声明：本作战略地图为原创示意图，坐标为网格排布，不代表真实行政区划；对外宣传与截图发布时不得声称其为标准地图。声明文本由 server/skills.js 战略覆盖层图例真实渲染（check-compliance.js 双向核对）。"
+}

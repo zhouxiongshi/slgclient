@@ -106,7 +106,8 @@
     "ref": "三国志·先主传、华阳国志",
     "level": "史实",
     "dbRow": 451,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -193,7 +194,8 @@
     "ref": "三国志·关羽传、武帝纪、吕蒙传",
     "level": "史实",
     "dbRow": 480,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -272,7 +274,8 @@
     "ref": "三国志·张飞传",
     "level": "史实",
     "dbRow": 485,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -372,7 +375,8 @@
     "ref": "三国志·武帝纪、后汉书、魏书",
     "level": "史实",
     "dbRow": 328,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -428,7 +432,8 @@
     "ref": "三国志·荀彧传、后汉书",
     "level": "史实",
     "dbRow": 385,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -493,7 +498,8 @@
     "ref": "三国志·孙讨逆传、吴录、江表传",
     "level": "史实",
     "dbRow": 552,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -571,7 +577,8 @@
     "ref": "三国志·周瑜传裴注引江表传、吴主传",
     "level": "史实",
     "dbRow": 587,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -640,7 +647,8 @@
     "ref": "三国志·吕布传、后汉书",
     "level": "史实",
     "dbRow": 159,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -691,7 +699,8 @@
     "ref": "三国演义·第八回\"王司徒巧使连环计\"、三国志·吕布传（史实种子）",
     "level": "虚构/传说",
     "dbRow": 784,
-    "override": false
+    "override": false,
+    "confidence": "低"
    }
   },
   {
@@ -758,7 +767,8 @@
     "ref": "三国志·袁绍传、后汉书",
     "level": "史实",
     "dbRow": 107,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -814,7 +824,8 @@
     "ref": "三国志·关羽传、武帝纪",
     "level": "史实",
     "dbRow": 114,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -870,7 +881,8 @@
     "ref": "三国志·武帝纪、袁绍传",
     "level": "史实",
     "dbRow": 115,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -952,7 +964,8 @@
     "ref": "三国志·诸葛亮传、出师表、汉晋春秋",
     "level": "史实",
     "dbRow": 465,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -1023,7 +1036,8 @@
     "ref": "三国志·赵云传裴注引云别传",
     "level": "史实",
     "dbRow": 490,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -1078,7 +1092,8 @@
     "ref": "三国志·许褚传",
     "level": "史实",
     "dbRow": 367,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -1137,7 +1152,8 @@
     "ref": "三国志·吴主传",
     "level": "史实",
     "dbRow": 553,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -1192,7 +1208,8 @@
     "ref": "三国志·鲁肃传、吴主传裴注引魏书",
     "level": "史实",
     "dbRow": 588,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -1247,7 +1264,8 @@
     "ref": "三国志·郭嘉传、武帝纪裴注",
     "level": "史实",
     "dbRow": 387,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -1304,7 +1322,8 @@
     "ref": "三国志·吕布传裴注引英雄记",
     "level": "史实",
     "dbRow": 161,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -1370,7 +1389,8 @@
     "ref": "三国志·张辽传",
     "level": "史实",
     "dbRow": 169,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -1426,7 +1446,8 @@
     "ref": "三国志·袁绍传、后汉书",
     "level": "史实",
     "dbRow": 118,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -1482,7 +1503,8 @@
     "ref": "三国志·袁绍传裴注引献帝传、后汉书",
     "level": "史实",
     "dbRow": 119,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -1534,7 +1556,8 @@
     "ref": "三国志·孙破虏讨逆传、后汉书",
     "level": "史实",
     "dbRow": 551,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -1590,7 +1613,8 @@
     "ref": "三国志·刘表传、后汉书",
     "level": "史实",
     "dbRow": 249,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -1646,7 +1670,8 @@
     "ref": "三国志·刘表传裴注引襄阳耆旧记",
     "level": "史实",
     "dbRow": 253,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -1702,7 +1727,8 @@
     "ref": "三国志·孙坚传、吴主传、甘宁传裴注",
     "level": "史实",
     "dbRow": 264,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -1758,7 +1784,8 @@
     "ref": "三国志·刘二牧传",
     "level": "史实",
     "dbRow": 277,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -1814,7 +1841,8 @@
     "ref": "三国志·先主传裴注引益部耆旧杂记",
     "level": "史实",
     "dbRow": 285,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -1874,7 +1902,8 @@
     "ref": "三国志·张飞传裴注引华阳国志",
     "level": "史实",
     "dbRow": 290,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -1926,7 +1955,8 @@
     "ref": "三国志·马超传、武帝纪、杨阜传",
     "level": "史实",
     "dbRow": 493,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -1977,7 +2007,8 @@
     "ref": "三国志·武帝纪、张既传裴注",
     "level": "史实",
     "dbRow": 220,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -2028,7 +2059,8 @@
     "ref": "三国志·张鲁传、后汉书·刘焉传",
     "level": "史实",
     "dbRow": 310,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -2079,7 +2111,8 @@
     "ref": "三国志·张鲁传、武帝纪",
     "level": "史实",
     "dbRow": 317,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -2130,7 +2163,8 @@
     "ref": "三国志·公孙瓒传、后汉书",
     "level": "史实",
     "dbRow": 185,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -2194,7 +2228,8 @@
     "ref": "后汉书·董卓传、三国志·董卓传",
     "level": "史实",
     "dbRow": 80,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -2253,7 +2288,8 @@
     "ref": "后汉书·董卓传、三国志裴注",
     "level": "史实",
     "dbRow": 81,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -2308,7 +2344,8 @@
     "ref": "三国志·孙坚传、后汉书",
     "level": "史实",
     "dbRow": 94,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -2364,7 +2401,8 @@
     "ref": "三国志·宣帝纪（晋书）、诸葛亮传、曹爽传",
     "level": "史实",
     "dbRow": 401,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -2420,7 +2458,8 @@
     "ref": "三国志·姜维传、钟会传、华阳国志",
     "level": "史实",
     "dbRow": 498,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -2480,7 +2519,8 @@
     "ref": "sgz.wu.10 程黄韩蒋传",
     "level": "史实",
     "dbRow": null,
-    "override": true
+    "override": true,
+    "confidence": "高"
    }
   },
   {
@@ -2537,7 +2577,8 @@
     "ref": "三国志·程普传裴注引江表传",
     "level": "史实",
     "dbRow": 613,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -2588,7 +2629,8 @@
     "ref": "三国志·陆逊传",
     "level": "史实",
     "dbRow": 590,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -2639,7 +2681,8 @@
     "ref": "三国志·吕蒙传裴注引江表传、吴主传",
     "level": "史实",
     "dbRow": 589,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -2685,7 +2728,8 @@
     "ref": "三国志·邓艾传、晋书·文帝纪",
     "level": "史实",
     "dbRow": 422,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -2731,7 +2775,8 @@
     "ref": "三国志·徐晃传、武帝纪",
     "level": "史实",
     "dbRow": 365,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -2782,7 +2827,8 @@
     "ref": "三国志·曹仁传",
     "level": "史实",
     "dbRow": 356,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -2828,7 +2874,8 @@
     "ref": "三国志·张郃传",
     "level": "史实",
     "dbRow": 364,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -2874,7 +2921,8 @@
     "ref": "三国志·曹真传裴注引魏略、诸葛亮传",
     "level": "史实",
     "dbRow": 380,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -2925,7 +2973,8 @@
     "ref": "sgz.wu.4 太史慈传",
     "level": "史实",
     "dbRow": null,
-    "override": true
+    "override": true,
+    "confidence": "高"
    }
   },
   {
@@ -2971,7 +3020,8 @@
     "ref": "三国志·程昱传",
     "level": "史实",
     "dbRow": 388,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3017,7 +3067,8 @@
     "ref": "三国志·钟会传、姜维传、晋书·文帝纪",
     "level": "史实",
     "dbRow": 423,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3063,7 +3114,8 @@
     "ref": "后汉书·皇甫嵩传、三国志·武帝纪裴注",
     "level": "史实",
     "dbRow": 37,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3109,7 +3161,8 @@
     "ref": "三国志·夏侯渊传",
     "level": "史实",
     "dbRow": 348,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3155,7 +3208,8 @@
     "ref": "三国志·甘宁传、吴主传裴注引江表传",
     "level": "史实",
     "dbRow": 269,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3201,7 +3255,8 @@
     "ref": "三国志·诸葛亮传裴注引汉晋春秋、华阳国志、演义",
     "level": "史实",
     "dbRow": 535,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3247,7 +3302,8 @@
     "ref": "三国志·魏延传、杨仪传、诸葛亮传裴注引魏略",
     "level": "史实",
     "dbRow": 497,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3298,7 +3354,8 @@
     "ref": "三国志·黄忠传、先主传",
     "level": "史实",
     "dbRow": 271,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3343,7 +3400,8 @@
     "ref": "三国志·周泰传裴注引江表传",
     "level": "史实",
     "dbRow": 616,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3388,7 +3446,8 @@
     "ref": "三国志·贾诩传",
     "level": "史实",
     "dbRow": 106,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3433,7 +3492,8 @@
     "ref": "三国志·庞统传、襄阳记",
     "level": "史实",
     "dbRow": 473,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3475,7 +3535,8 @@
     "ref": "三国志·陆抗传、晋书·羊祜传",
     "level": "史实",
     "dbRow": 591,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3517,7 +3578,8 @@
     "ref": "三国志·霍峻传裴注引襄阳记、晋书·罗宪传",
     "level": "史实",
     "dbRow": 548,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3559,7 +3621,8 @@
     "ref": "三国志·陈泰传裴注引汉晋春秋、晋书",
     "level": "史实",
     "dbRow": 379,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3601,7 +3664,8 @@
     "ref": "三国志·张嶷传",
     "level": "史实",
     "dbRow": 529,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3643,7 +3707,8 @@
     "ref": "三国志·吕岱传、士燮传",
     "level": "史实",
     "dbRow": 634,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3685,7 +3750,8 @@
     "ref": "三国志·朱然传、文帝纪裴注、朱然墓考古",
     "level": "史实",
     "dbRow": 604,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3727,7 +3793,8 @@
     "ref": "三国志·贺齐传、吴主传裴注",
     "level": "史实",
     "dbRow": 633,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3769,7 +3836,8 @@
     "ref": "三国志·曹真传、诸葛亮传",
     "level": "史实",
     "dbRow": 359,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3811,7 +3879,8 @@
     "ref": "三国志·郭淮传",
     "level": "史实",
     "dbRow": 378,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3853,7 +3922,8 @@
     "ref": "三国志·三少帝纪裴注引魏略、诸葛恪传",
     "level": "史实",
     "dbRow": 381,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3895,7 +3965,8 @@
     "ref": "后汉书·皇甫嵩传",
     "level": "史实",
     "dbRow": 60,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3942,7 +4013,8 @@
     "ref": "三国志·夏侯惇传",
     "level": "史实",
     "dbRow": 347,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -3984,7 +4056,8 @@
     "ref": "三国志·李典传",
     "level": "史实",
     "dbRow": 370,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4026,7 +4099,8 @@
     "ref": "三国志·霍峻传",
     "level": "史实",
     "dbRow": 546,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4067,7 +4141,8 @@
     "ref": "后汉书·皇甫规传",
     "level": "史实",
     "dbRow": 63,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4109,7 +4184,8 @@
     "ref": "三国志·文聘传",
     "level": "史实",
     "dbRow": 268,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4151,7 +4227,8 @@
     "ref": "三国志·王平传",
     "level": "史实",
     "dbRow": 525,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4193,7 +4270,8 @@
     "ref": "三国志·朱桓传、周鲂传",
     "level": "史实",
     "dbRow": 607,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4235,7 +4313,8 @@
     "ref": "后汉书·朱儁传",
     "level": "史实",
     "dbRow": 61,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4277,7 +4356,8 @@
     "ref": "三国志·毌丘俭传、晋书·景帝纪",
     "level": "史实",
     "dbRow": 412,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4319,7 +4399,8 @@
     "ref": "晋书·王濬传、三国志·吴主传裴注",
     "level": "史实",
     "dbRow": 442,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4361,7 +4442,8 @@
     "ref": "三国志·蒋钦传裴注引江表传",
     "level": "史实",
     "dbRow": 615,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4402,7 +4484,8 @@
     "ref": "后汉书·张奂传",
     "level": "史实",
     "dbRow": 64,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4444,7 +4527,8 @@
     "ref": "三国志·庞德传",
     "level": "史实",
     "dbRow": 369,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4486,7 +4570,8 @@
     "ref": "三国志·臧霸传",
     "level": "史实",
     "dbRow": 170,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4528,7 +4613,8 @@
     "ref": "三国志·曹仁传裴注引魏书",
     "level": "史实",
     "dbRow": 357,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4570,7 +4656,8 @@
     "ref": "三国志·文帝纪",
     "level": "史实",
     "dbRow": 331,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4612,7 +4699,8 @@
     "ref": "三国志·夏侯渊传裴注引魏略、姜维传",
     "level": "史实",
     "dbRow": 349,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4654,7 +4742,8 @@
     "ref": "三国志·韩当传",
     "level": "史实",
     "dbRow": 614,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4696,7 +4785,8 @@
     "ref": "三国志·明帝纪",
     "level": "史实",
     "dbRow": 332,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4738,7 +4828,8 @@
     "ref": "三国志·于禁传、关羽传",
     "level": "史实",
     "dbRow": 363,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4780,7 +4871,8 @@
     "ref": "三国志·乐进传、武帝纪",
     "level": "史实",
     "dbRow": 362,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4821,7 +4913,8 @@
     "ref": "后汉书·段颎传",
     "level": "史实",
     "dbRow": 65,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4863,7 +4956,8 @@
     "ref": "三国志·夏侯尚传、蒋济传裴注",
     "level": "史实",
     "dbRow": 350,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4905,7 +4999,8 @@
     "ref": "晋书·武帝纪、三国志·吴主传",
     "level": "史实",
     "dbRow": 404,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4947,7 +5042,8 @@
     "ref": "三国志·武帝纪、孙破虏传、后汉书",
     "level": "史实",
     "dbRow": 92,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -4989,7 +5085,8 @@
     "ref": "三国志·曹休传、周鲂传",
     "level": "史实",
     "dbRow": 358,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5031,7 +5128,8 @@
     "ref": "三国志·徐晃传裴注引魏书、武帝纪",
     "level": "史实",
     "dbRow": 366,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5073,7 +5171,8 @@
     "ref": "三国志·三少帝纪裴注引汉晋春秋、晋书·文帝纪",
     "level": "史实",
     "dbRow": 334,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5115,7 +5214,8 @@
     "ref": "三国志·曹洪传",
     "level": "史实",
     "dbRow": 346,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5157,7 +5257,8 @@
     "ref": "三国志·袁绍传裴注引英雄记、后汉书",
     "level": "史实",
     "dbRow": 116,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5199,7 +5300,8 @@
     "ref": "三国志·三嗣主传",
     "level": "史实",
     "dbRow": 555,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5241,7 +5343,8 @@
     "ref": "三国志·三嗣主传、孙綝传",
     "level": "史实",
     "dbRow": 554,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5283,7 +5386,8 @@
     "ref": "后汉书·献帝纪、三国志·武帝纪",
     "level": "史实",
     "dbRow": 4,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5325,7 +5429,8 @@
     "ref": "三国志·后主传、汉晋春秋、晋书",
     "level": "史实",
     "dbRow": 452,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5367,7 +5472,8 @@
     "ref": "三国志·三少帝纪、晋书·武帝纪",
     "level": "史实",
     "dbRow": 335,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5409,7 +5515,8 @@
     "ref": "三国志·三嗣主传、晋书·武帝纪",
     "level": "史实",
     "dbRow": 556,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5451,7 +5558,8 @@
     "ref": "三国志·三少帝纪",
     "level": "史实",
     "dbRow": 333,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5493,7 +5601,8 @@
     "ref": "后汉书·灵帝纪、三国志·武帝纪裴注",
     "level": "史实",
     "dbRow": 2,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5534,7 +5643,8 @@
     "ref": "后汉书·少帝纪、三国志·董卓传",
     "level": "史实",
     "dbRow": 3,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5576,7 +5686,8 @@
     "ref": "三国志·武帝纪、鲍勋传裴注引魏书",
     "level": "史实",
     "dbRow": 238,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5618,7 +5729,8 @@
     "ref": "三国志·公孙度传",
     "level": "史实",
     "dbRow": 193,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5660,7 +5772,8 @@
     "ref": "三国志·公孙度传、武帝纪",
     "level": "史实",
     "dbRow": 194,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5702,7 +5815,8 @@
     "ref": "三国志·士燮传",
     "level": "史实",
     "dbRow": 321,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5744,7 +5858,8 @@
     "ref": "三国志·张燕传、后汉书",
     "level": "史实",
     "dbRow": 55,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5786,7 +5901,8 @@
     "ref": "三国志·马超传裴注引典略、武帝纪",
     "level": "史实",
     "dbRow": 219,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5828,7 +5944,8 @@
     "ref": "三国志·张杨传、武帝纪",
     "level": "史实",
     "dbRow": 183,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5875,7 +5992,8 @@
     "ref": "三国志·张绣传、武帝纪",
     "level": "史实",
     "dbRow": 103,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5917,7 +6035,8 @@
     "ref": "三国志·张绣传、后汉书",
     "level": "史实",
     "dbRow": 85,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -5959,7 +6078,8 @@
     "ref": "三国志·武帝纪、高柔传",
     "level": "史实",
     "dbRow": 112,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6000,7 +6120,8 @@
     "ref": "三国志·刘二牧传裴注引英雄记",
     "level": "史实",
     "dbRow": 78,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6042,7 +6163,8 @@
     "ref": "三国志·张邈传、武帝纪",
     "level": "史实",
     "dbRow": 244,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6084,7 +6206,8 @@
     "ref": "三国志·张邈传、臧洪传",
     "level": "史实",
     "dbRow": 245,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6126,7 +6249,8 @@
     "ref": "三国志·武帝纪裴注、典论自叙",
     "level": "史实",
     "dbRow": 248,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6168,7 +6292,8 @@
     "ref": "三国志·刘繇传、孙策传",
     "level": "史实",
     "dbRow": 298,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6209,7 +6334,8 @@
     "ref": "三国志·刘封传裴注引魏略",
     "level": "史实",
     "dbRow": 506,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6251,7 +6377,8 @@
     "ref": "三国志·公孙度传、晋书·宣帝纪",
     "level": "史实",
     "dbRow": 196,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6293,7 +6420,8 @@
     "ref": "三国志·武帝纪、夏侯渊传",
     "level": "史实",
     "dbRow": 227,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6335,7 +6463,8 @@
     "ref": "三国志·董卓传、后汉书·董卓传",
     "level": "史实",
     "dbRow": 82,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6377,7 +6506,8 @@
     "ref": "三国志·董卓传裴注、后汉书",
     "level": "史实",
     "dbRow": 84,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6419,7 +6549,8 @@
     "ref": "三国志·刘封传裴注、晋书·宣帝纪",
     "level": "史实",
     "dbRow": 507,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6461,7 +6592,8 @@
     "ref": "三国志·武帝纪、袁绍传裴注引英雄记",
     "level": "史实",
     "dbRow": 134,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6508,7 +6640,8 @@
     "ref": "三国志·吕布传、后汉书",
     "level": "史实",
     "dbRow": 182,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6550,7 +6683,8 @@
     "ref": "三国志·武帝纪裴注引英雄记",
     "level": "史实",
     "dbRow": 242,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6592,7 +6726,8 @@
     "ref": "三国志·武帝纪裴注引英雄记、谢承后汉书",
     "level": "史实",
     "dbRow": 243,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6634,7 +6769,8 @@
     "ref": "三国志·董卓传、先主传、后汉书",
     "level": "史实",
     "dbRow": 99,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6676,7 +6812,8 @@
     "ref": "三国志·孙策传裴注引吴录",
     "level": "史实",
     "dbRow": 302,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6718,7 +6855,8 @@
     "ref": "三国志·刘繇传、后汉书·陶谦传",
     "level": "史实",
     "dbRow": 300,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6760,7 +6898,8 @@
     "ref": "三国志·董卓传、后汉书",
     "level": "史实",
     "dbRow": 83,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6801,7 +6940,8 @@
     "ref": "三国志·武帝纪、张杨传",
     "level": "史实",
     "dbRow": 58,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6843,7 +6983,8 @@
     "ref": "三国志·孙策传裴注引江表传",
     "level": "史实",
     "dbRow": 155,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6884,7 +7025,8 @@
     "ref": "后汉书·献帝纪、三国志裴注",
     "level": "史实",
     "dbRow": 100,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6925,7 +7067,8 @@
     "ref": "三国志·张辽传、武帝纪",
     "level": "史实",
     "dbRow": 151,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -6967,7 +7110,8 @@
     "ref": "三国志·袁术传、后汉书",
     "level": "史实",
     "dbRow": 141,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7008,7 +7152,8 @@
     "ref": "后汉书·献帝纪",
     "level": "史实",
     "dbRow": 101,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7049,7 +7194,8 @@
     "ref": "三国志·武帝纪裴注、后汉书",
     "level": "史实",
     "dbRow": 240,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7091,7 +7237,8 @@
     "ref": "三国志·武帝纪、刘繇传",
     "level": "史实",
     "dbRow": 241,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7132,7 +7279,8 @@
     "ref": "三国志·公孙度传",
     "level": "史实",
     "dbRow": 195,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7173,7 +7321,8 @@
     "ref": "三国志·袁术传",
     "level": "史实",
     "dbRow": 150,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7215,7 +7364,8 @@
     "ref": "三国志·士燮传、吕岱传",
     "level": "史实",
     "dbRow": 325,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7256,7 +7406,8 @@
     "ref": "三国志·董卓传、后汉书",
     "level": "史实",
     "dbRow": 86,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7297,7 +7448,8 @@
     "ref": "后汉书·献帝纪",
     "level": "史实",
     "dbRow": 102,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7339,7 +7491,8 @@
     "ref": "三国志·士燮传、步骘传、先主传裴注",
     "level": "史实",
     "dbRow": 327,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7380,7 +7533,8 @@
     "ref": "三国志·先主传、黄忠传裴注",
     "level": "史实",
     "dbRow": 272,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7421,7 +7575,8 @@
     "ref": "三国志·先主传裴注、三国演义",
     "level": "史实",
     "dbRow": 273,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7462,7 +7617,8 @@
     "ref": "三国志·先主传、三国演义",
     "level": "史实",
     "dbRow": 274,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7504,7 +7660,8 @@
     "ref": "三国志·赵云传裴注引云别传",
     "level": "史实",
     "dbRow": 275,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7546,7 +7703,8 @@
     "ref": "三国志·袁绍传、武帝纪裴注",
     "level": "史实",
     "dbRow": 158,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7588,7 +7746,8 @@
     "ref": "三国志·魏书·苏则传",
     "level": "史实",
     "dbRow": 657,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7630,7 +7789,8 @@
     "ref": "三国志·魏书·杜袭传",
     "level": "史实",
     "dbRow": 651,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7672,7 +7832,8 @@
     "ref": "晋书·刘元海载记、资治通鉴·晋纪、三国志·魏书·乌丸鲜卑东夷传",
     "level": "史实",
     "dbRow": 928,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7714,7 +7875,8 @@
     "ref": "晋书·马隆传、武帝纪、资治通鉴·晋纪",
     "level": "史实",
     "dbRow": 931,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7756,7 +7918,8 @@
     "ref": "魏书·序纪、资治通鉴·魏纪/晋纪（散见）",
     "level": "史实",
     "dbRow": 930,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7798,7 +7961,8 @@
     "ref": "三国志·田豫传",
     "level": "史实",
     "dbRow": 376,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7840,7 +8004,8 @@
     "ref": "晋书·陶璜传、三国志·吴书·孙皓传",
     "level": "史实",
     "dbRow": 772,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7882,7 +8047,8 @@
     "ref": "晋书·长沙王乂传、惠帝纪、资治通鉴·晋纪",
     "level": "史实",
     "dbRow": 919,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7924,7 +8090,8 @@
     "ref": "晋书·杜预传、三国志·钟会传裴注",
     "level": "史实",
     "dbRow": 441,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -7966,7 +8133,8 @@
     "ref": "晋书·羊祜传、三国志·陆抗传裴注",
     "level": "史实",
     "dbRow": 440,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8008,7 +8176,8 @@
     "ref": "晋书·齐献王攸传、武帝纪、资治通鉴·晋纪",
     "level": "史实",
     "dbRow": 915,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8050,7 +8219,8 @@
     "ref": "三国志·马忠传、华阳国志",
     "level": "史实",
     "dbRow": 530,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8092,7 +8262,8 @@
     "ref": "晋书·吾彦传、资治通鉴·晋纪",
     "level": "史实",
     "dbRow": 771,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8134,7 +8305,8 @@
     "ref": "三国志·霍峻传裴注引汉晋春秋、晋书·陶璜传",
     "level": "史实",
     "dbRow": 547,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8176,7 +8348,8 @@
     "ref": "三国志·吕范传裴注引江表传",
     "level": "史实",
     "dbRow": 603,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8218,7 +8391,8 @@
     "ref": "三国志·魏书·张既传",
     "level": "史实",
     "dbRow": 655,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8260,7 +8434,8 @@
     "ref": "三国志·魏书·王基传",
     "level": "史实",
     "dbRow": 662,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8302,7 +8477,8 @@
     "ref": "晋书·景帝纪、三国志·毌丘俭传",
     "level": "史实",
     "dbRow": 402,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8344,7 +8520,8 @@
     "ref": "三国志·丁奉传、诸葛恪传、孙綝传",
     "level": "史实",
     "dbRow": 624,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8386,7 +8563,8 @@
     "ref": "三国志·魏书·杨阜传",
     "level": "史实",
     "dbRow": 649,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8428,7 +8606,8 @@
     "ref": "三国志·黄权传、先主传",
     "level": "史实",
     "dbRow": 502,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8470,7 +8649,8 @@
     "ref": "三国志·牵招传",
     "level": "史实",
     "dbRow": 377,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8512,7 +8692,8 @@
     "ref": "三国志·宗室传、吴主传",
     "level": "史实",
     "dbRow": 569,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8554,7 +8735,8 @@
     "ref": "三国志·魏书·孙礼传",
     "level": "史实",
     "dbRow": 646,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8596,7 +8778,8 @@
     "ref": "晋书·滕修传、三国志·吴书·孙皓传裴注",
     "level": "史实",
     "dbRow": 773,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8638,7 +8821,8 @@
     "ref": "三国志·李恢传",
     "level": "史实",
     "dbRow": 531,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8680,7 +8864,8 @@
     "ref": "三国志·凌统传裴注引江表传",
     "level": "史实",
     "dbRow": 620,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8722,7 +8907,8 @@
     "ref": "三国志·徐盛传裴注引魏氏春秋、江表传",
     "level": "史实",
     "dbRow": 625,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8764,7 +8950,8 @@
     "ref": "三国志·满宠传",
     "level": "史实",
     "dbRow": 375,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8806,7 +8993,8 @@
     "ref": "晋书·武帝纪、王浑传、三国志·吴书·孙皓传裴注引襄阳记",
     "level": "史实",
     "dbRow": 768,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8848,7 +9036,8 @@
     "ref": "三国志·钟离牧传裴注引会稽典录",
     "level": "史实",
     "dbRow": 635,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8890,7 +9079,8 @@
     "ref": "华阳国志·后贤志、晋书（散见）",
     "level": "史实",
     "dbRow": 742,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8932,7 +9122,8 @@
     "ref": "晋书·琅邪武王伷传、武帝纪、三国志·吴书·孙皓传",
     "level": "史实",
     "dbRow": 923,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -8974,7 +9165,8 @@
     "ref": "三国志·鲜卑传、田豫传",
     "level": "史实",
     "dbRow": 212,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9016,7 +9208,8 @@
     "ref": "三国志·魏书·赵俨传",
     "level": "史实",
     "dbRow": 652,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9058,7 +9251,8 @@
     "ref": "三国志·蜀书·邓芝传",
     "level": "史实",
     "dbRow": 708,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9100,7 +9294,8 @@
     "ref": "晋书·武帝纪、马隆传、秃发乌孤载记、资治通鉴·晋纪",
     "level": "史实",
     "dbRow": 929,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9142,7 +9337,8 @@
     "ref": "晋书·文帝纪、三国志·三少帝纪、钟会传",
     "level": "史实",
     "dbRow": 403,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9184,7 +9380,8 @@
     "ref": "三国志·朱治传",
     "level": "史实",
     "dbRow": 605,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9226,7 +9423,8 @@
     "ref": "三国志·魏书·王昶传",
     "level": "史实",
     "dbRow": 663,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9268,7 +9466,8 @@
     "ref": "晋书·陈骞传、三国志·陈矫传裴注",
     "level": "史实",
     "dbRow": 448,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9310,7 +9509,8 @@
     "ref": "三国志·魏书·胡质传、晋书·良吏传",
     "level": "史实",
     "dbRow": 664,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9352,7 +9552,8 @@
     "ref": "晋书·唐彬传",
     "level": "史实",
     "dbRow": 444,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9394,7 +9595,8 @@
     "ref": "三国志·张翼传、姜维传",
     "level": "史实",
     "dbRow": 527,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9436,7 +9638,8 @@
     "ref": "三国志·陈武传附、吴主五子传",
     "level": "史实",
     "dbRow": 618,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9478,7 +9681,8 @@
     "ref": "三国志·吕虔传、晋书·王祥传",
     "level": "史实",
     "dbRow": 372,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9520,7 +9724,8 @@
     "ref": "三国志·陆胤传",
     "level": "史实",
     "dbRow": 594,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9562,7 +9767,8 @@
     "ref": "晋书·王浑传、隋书经籍志、太平御览引",
     "level": "史实",
     "dbRow": 769,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9604,7 +9810,8 @@
     "ref": "三国志·宗室传、吴主传",
     "level": "史实",
     "dbRow": 568,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9646,7 +9853,8 @@
     "ref": "三国志·吕范传附、孙綝传",
     "level": "史实",
     "dbRow": 631,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9688,7 +9896,8 @@
     "ref": "晋书·周浚传、王浑传、武帝纪、资治通鉴·晋纪",
     "level": "史实",
     "dbRow": 924,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9730,7 +9939,8 @@
     "ref": "三国志·朱据传、吴主五子传",
     "level": "史实",
     "dbRow": 609,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9772,7 +9982,8 @@
     "ref": "三国志·吴书·虞翻传附、孙皓传、晋书·陶璜传",
     "level": "史实",
     "dbRow": 900,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9814,7 +10025,8 @@
     "ref": "晋书·诸葛恢传附、世说新语、三国志·诸葛诞传",
     "level": "史实",
     "dbRow": 767,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9856,7 +10068,8 @@
     "ref": "三国志·吕布传裴注引先贤行状、陈矫传",
     "level": "史实",
     "dbRow": 162,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9898,7 +10111,8 @@
     "ref": "三国志·步骘传、士燮传、陆抗传",
     "level": "史实",
     "dbRow": 601,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9940,7 +10154,8 @@
     "ref": "三国志·吴书·孙峻传裴注引吴书、晋书·景帝纪",
     "level": "史实",
     "dbRow": 764,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -9982,7 +10197,8 @@
     "ref": "近现代评话、武术谱系、现代三国游戏设定",
     "level": "虚构/传说",
     "dbRow": 887,
-    "override": false
+    "override": false,
+    "confidence": "低"
    }
   },
   {
@@ -10024,7 +10240,8 @@
     "ref": "三国志·魏书·杜畿传",
     "level": "史实",
     "dbRow": 660,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -10066,7 +10283,8 @@
     "ref": "三国志·李通传裴注引魏书",
     "level": "史实",
     "dbRow": 371,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -10108,7 +10326,8 @@
     "ref": "明成化说唱词话·花关索传、云南关索戏、地方志",
     "level": "虚构/传说",
     "dbRow": 873,
-    "override": false
+    "override": false,
+    "confidence": "低"
    }
   },
   {
@@ -10150,7 +10369,8 @@
     "ref": "三国志·贾逵传、晋书·贾充传",
     "level": "史实",
     "dbRow": 389,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -10192,7 +10412,8 @@
     "ref": "三国演义·第十五回、三国志·吴书·太史慈传（史实骨架）",
     "level": "虚构/传说",
     "dbRow": 886,
-    "override": false
+    "override": false,
+    "confidence": "低"
    }
   },
   {
@@ -10234,7 +10455,8 @@
     "ref": "三国志·陈武传裴注引江表传",
     "level": "史实",
     "dbRow": 617,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -10276,7 +10498,8 @@
     "ref": "三国志·魏书·梁习传",
     "level": "史实",
     "dbRow": 654,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -10318,7 +10541,8 @@
     "ref": "三国志·魏书·温恢传",
     "level": "史实",
     "dbRow": 656,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -10360,7 +10584,8 @@
     "ref": "周大荒·反三国演义、现代三国游戏设定",
     "level": "虚构/传说",
     "dbRow": 879,
-    "override": false
+    "override": false,
+    "confidence": "低"
    }
   },
   {
@@ -10402,7 +10627,8 @@
     "ref": "三国志·夏侯惇传裴注、武帝纪裴注引魏书",
     "level": "史实",
     "dbRow": 354,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -10444,7 +10670,8 @@
     "ref": "三国志·魏书·王观传",
     "level": "史实",
     "dbRow": 647,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -10486,7 +10713,8 @@
     "ref": "三国志·魏书·裴潜传",
     "level": "史实",
     "dbRow": 653,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -10528,7 +10756,8 @@
     "ref": "三国演义·第九十回",
     "level": "虚构/传说",
     "dbRow": 854,
-    "override": false
+    "override": false,
+    "confidence": "低"
    }
   },
   {
@@ -10570,7 +10799,8 @@
     "ref": "后汉书·卢植传、三国志·卢毓传",
     "level": "史实",
     "dbRow": 62,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -10612,7 +10842,8 @@
     "ref": "三国志·魏书·辛毗传",
     "level": "史实",
     "dbRow": 648,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -10654,7 +10885,8 @@
     "ref": "三国志·蜀书·关羽传、云南澄江地方传说",
     "level": "虚构/传说",
     "dbRow": 881,
-    "override": false
+    "override": false,
+    "confidence": "低"
    }
   },
   {
@@ -10696,7 +10928,8 @@
     "ref": "三国志·臧洪传、后汉书",
     "level": "史实",
     "dbRow": 246,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -10738,7 +10971,8 @@
     "ref": "晋书·石苞传",
     "level": "史实",
     "dbRow": 449,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -10780,7 +11014,8 @@
     "ref": "三国志·诸葛瑾传、吴主传",
     "level": "史实",
     "dbRow": 597,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -10822,7 +11057,8 @@
     "ref": "晋书·王浑传、三国志·孙皓传裴注",
     "level": "史实",
     "dbRow": 443,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -10864,7 +11100,8 @@
     "ref": "三国志·蒋琬传",
     "level": "史实",
     "dbRow": 517,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -10906,7 +11143,8 @@
     "ref": "三国志·姜维传裴注引汉晋春秋、钟会传",
     "level": "史实",
     "dbRow": 543,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -10948,7 +11186,8 @@
     "ref": "三国志·宗室传",
     "level": "史实",
     "dbRow": 565,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   },
   {
@@ -10990,7 +11229,8 @@
     "ref": "三国志·武帝纪、乌丸传",
     "level": "史实",
     "dbRow": 207,
-    "override": false
+    "override": false,
+    "confidence": "高"
    }
   }
  ]

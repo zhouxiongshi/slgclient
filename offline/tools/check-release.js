@@ -293,6 +293,23 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
   }
 }
 
+/* ---------------- 7.9b 数据溯源合规（GDD §10.8，M4-1） ---------------- */
+{
+  const provPath = join(REPORTS, 'data-provenance.json');
+  let provenance = readJson(provPath, null);
+  if (!provenance) {
+    const r = spawnSync(process.execPath, [join(ROOT, 'tools', 'check-compliance.js')], { cwd: ROOT, stdio: 'ignore' });
+    provenance = readJson(provPath, null);
+    if (!provenance && r.status !== 0) provenance = { ok: false, totals: { files: 0, entries: 0, missing: -1 } };
+  }
+  check('数据条目溯源全覆盖：source+confidence 无缺口（events/fates/heroes/scenarios/terms）',
+    provenance?.ok === true && provenance?.totals?.missing === 0 && provenance?.totals?.entries >= 500,
+    JSON.stringify(provenance?.totals));
+  check('地图示意图声明已登记且 UI 真实渲染（GDD §10.8）',
+    provenance?.totals?.mapProblems === 0 && !!provenance?.map?.declaration,
+    JSON.stringify(provenance?.map));
+}
+
 /* ---------------- 7.10 术语覆盖率（GDD §14.2-5，M0） ---------------- */
 {
   const termsReport = readJson(join(REPORTS, 'terms.json'), null);

@@ -357,6 +357,15 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 - **武将装配**：`build-heroes.mjs` core 60 位每人 ≥2 条 ≤3 条——专属（hero-skills.json）+ 按五维倾向从新池确定性选取（谋士配谋略/治疗、武将配兵刃；fnv1a(名字) 散列，禁随机）+ 五维总和 ≥340 配指挥/被动光环（无专属者兜底凑满 2 条）。important/minor 维持专属 1 条，缺省走 defaultLoadout 全表轮转。
 - 测试 `tests/m3-skills-80.test.js` 6 条：总量 80/81 口径、签名全局唯一、ui-kernel 同源（占位/双倍成长/目标映射）、内核纪律、装配有效性（core 全覆盖 + 引用零无效 + 新池使用 ≥15 条）、内核实跑（prepare/治疗/犹豫控制/被动/光环五类事件 + 同种子指纹）。连带更新 `tests/skills.test.js`（名录白名单加 skill-library-extra）、`tests/panels.test.js` / `tests/http-endpoints.test.js`（配方库 51→80）、`electron/smoke.cjs`（战法库 51→80）。
 
+### 9.13 M4-1 数据溯源合规扫描（GDD §10.8 / 验收 G5、G6）
+
+- **定位**：与 `tools/compliance-report.js`（素材台账 + 禁入物）互补——本工具管**数据条目级溯源**。`tools/check-compliance.js` 扫描 554 条（事件 150 / 宿命 24 / 武将 240 / 剧本 6 / 术语 134），输出 `reports/data-provenance.json`，缺口 exit 1。
+- **溯源口径**：source + confidence（高/中/低），事件与宿命用 `{id, confidence}` 对象；武将 `source={ref, level, dbRow, override, confidence}`（史实→高、虚构/传说→低，confidence=高 必须.level=史实——口径矛盾也抓）；剧本顶层 `source` 字符串 + `confidence` + `reviewed:false`（人工签核闸）；术语表每条 `数值来源` 非空数组。
+- **地图声明（§10.8 双向核对）**：`conf/compliance/map-declaration.json` 登记 type=schematic_projection + statement；`server/skills.js` 战略覆盖层图例真实渲染「本图为游戏示意图（等距圆柱投影），非标准行政地图。」——扫描器同时查两处，登记未渲染或渲染未登记都算缺口。
+- **测试钩子**：`COMPLIANCE_ROOT` 环境变量可把扫描器指到临时最小 conf 结构，负例测试不碰真实文件。
+- **check-release 7.9b**：两项新检查（溯源无缺口且 ≥500 条、地图声明登记且 UI 渲染），未通过不得发布。
+- 测试 `tests/m4-compliance.test.js` 4 条：全量 exit 0 / 武将口径分布（高 233 + 低 7）/ 声明双向存在 / 负例精确抓出 exit 1。
+
 ---
 
 ## 10. 文档地图（读哪本、信哪本）
