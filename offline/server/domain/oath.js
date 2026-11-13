@@ -6,16 +6,18 @@
  * （panels.js 反被 world.js 引用，strategy.js 又引 campaign.js，链路已经打满）。
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const FACTIONS_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'factions.json');
 const MAP_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'map.json');
+const SCENARIOS_DIR = resolve(ROOT, 'conf', 'campaign', 'strategy', 'scenarios');
 
 let cached = null;
 let cachedMap = null;
+let cachedScenarios = null;
 
 /** factions.json 全量（带举义卡字段：blurb/trait/startGenerals）。 */
 export function factionsConf() {
@@ -25,6 +27,26 @@ export function factionsConf() {
 
 export function factionById(id) {
   return factionsConf().factions.find((f) => f.id === id) || null;
+}
+
+/* ★ M3-5 剧本降级（GDD §12.1）：剧本势力 id 不在基础 8 诸侯里，
+ *  按 name 从基础诸侯继承 trait/startGenerals。只读文件，不引 strategy.js（防循环）。 */
+function scenarioFactionById(state, id) {
+  const sid = state?.strategy?.scenarioId || state?.scenarioId;
+  if (!sid) return null;
+  try {
+    if (!cachedScenarios) {
+      cachedScenarios = new Map();
+      for (const fn of readdirSync(SCENARIOS_DIR).filter((n) => n.endsWith('.json'))) {
+        const sc = JSON.parse(readFileSync(resolve(SCENARIOS_DIR, fn), 'utf8'));
+        cachedScenarios.set(sc.id, sc);
+      }
+    }
+    const f = cachedScenarios.get(sid)?.factions?.find((x) => x.id === id);
+    if (!f) return null;
+    const b = factionsConf().factions.find((x) => x.name === f.name);
+    return { ...f, trait: f.trait || b?.trait || null, startGenerals: f.startGenerals || b?.startGenerals || [] };
+  } catch { return null; }
 }
 
 /** 战略图上按 id 查城（给 panels 显示定都城名用，不引 strategy.js 防循环）。 */
@@ -49,7 +71,8 @@ export function oathPending(state) {
 /** 玩家举义后继承的诸侯势力卡（未举义或择了不存在的 id → null）。 */
 export function oathFactionOf(state) {
   const o = oathOf(state);
-  return o.done ? factionById(o.lord) : null;
+  if (!o.done) return null;
+  return factionById(o.lord) || scenarioFactionById(state, o.lord) || null;
 }
 
 /**

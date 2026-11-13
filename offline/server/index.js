@@ -31,6 +31,8 @@ import {
   strategyAppoint, strategyCancelAppointment, diplomacyAct,
   /* ★ M3-4 事件系统：旬 tick 触发进 pendingEvents，玩家点选走 eventChoice */
   strategyEventChoice,
+  /* ★ M3-5 剧本切换 */
+  strategySetScenario,
 } from './domain/strategy.js';
 import { panelState, panelAction, panelSelfCheck } from './domain/panels.js';
 /* 交互增强层：只读聚合（纯函数），不改 WS 协议与消息结构 */
@@ -459,6 +461,8 @@ export async function startOfflineServer(options = {}) {
           action: String(body.diploAction || body.sub || ''), faction: String(body.faction || ''),
           target: String(body.target || ''), gold: Number(body.gold) || 0,
         });
+        /* ★ M3-5 剧本切换（新游戏语义）：重建归属 + 势力集 + 开局决策伪事件 */
+        else if (act === 'scenario') result = strategySetScenario(state, String(body.scenario || body.id || ''));
         /* ★ M3-4 事件点选（GDD §8.3）：效果词白名单落账，选择写存档供结局回放 */
         else if (act === 'eventChoice') result = strategyEventChoice(state, cfg, ctx, {
           id: String(body.id || ''), choice: String(body.choice || ''),

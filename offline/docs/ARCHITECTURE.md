@@ -317,7 +317,15 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 - **事件系统接线**（`strategy.js` M3-4 段）：`strategyEventTick` 每旬一次——冷却递减（引擎落在 `st.eventSys`，与 chronicle 数组 `st.events` 物理分开，避免引擎把数组当事件域改写）→ `selectEvents`（ctx 由 `strategyEventCtx` 适配：turn/year=184+⌊(day−1)/360⌋/season/城归属/资源/flag/关系=同宿命组即 80/胜负窗=`st.battleHistory`）→ `st.pendingEvents` 队列（未决不堆叠）。点选走 `/strategy/action eventChoice`（`strategyEventChoice`），效果词落账：gold→府库、morale→逐城民心、loyalty→全军/最低者/点名、attitude→`diplomacy.adjustAttitudeByEvent`（pairData.eventAdj，attitudeOf 新增「事件」因子）、fame→`st.fame`。
 - **宿命组合落战斗**（GDD §7.5）：`fateComboDefMul(state, cfg, army)`——队内 ≥2 名同组武将 → 守军折算 ×0.95/组（上限 2 组）。`settleArmyBattle` 与 `previewAssault` **同调此函数**（与 M2-5 defMul 同一处相乘，dLoss 基线保持 raw），推演 `fateNotes` 与战报 `analysis.fateNotes` 同源。口径：只看队内成员，不查全局生死（战略层尚无武将死亡结算，注释防后来者加戏）。
 - **cityLost 口径**：`st.everOwned` 在三处入账（bindPlayerHome / chooseOath 划拨 / 克城），ctx.cityLost() = everOwned − 当前玩家城。胜负窗 `st.battleHistory`（cap 60）由 settleArmyBattle 写。
-- 测试 `tests/m3-runtime-wiring.test.js` 7 条。事件弹窗 UI 呈现（interaction 层卡片）属后续打磨；六剧本场景接入（ensureStrategy 按剧本初始化归属）见 §9.7 待办。
+- 测试 `tests/m3-runtime-wiring.test.js` 7 条。事件弹窗 UI 呈现（interaction 层卡片）属后续打磨。
+
+### 9.9 M3-5 六剧本运行期接入（GDD §12.1）
+
+- **切换**：`strategySetScenario(state, id)`（路由 `/strategy/action scenario`）——校验 id → `state.scenarioId` 置位 → 整删 `state.strategy` 重建归属（新游戏语义）→ 开局决策伪事件进 `pendingEvents`（效果全 nothing，`strategyEventChoice` 从 pendingEvents 现场合成事件对象落账，不查 events.json）。
+- **归属**：`ensureStrategy` 新建分支——`state.scenarioId` 在建档前设置时，72 城按剧本 `cityOwner` 落位，`st.scenarioId / st.scenarioYear` 入档。剧本激活且无举义记录时 `bindPlayerHome` 不夺城（剧本城是史实布局，玩家从举义页拿地；基础模式老行为不变）。
+- **势力集**：`factionConfFor(state)` 剧本优先——剧本 factions **整体替换** 8 诸侯（NPC 决策/田赋/快照/显示名全走它）；局部 id 缺 trait/startGenerals 时按 name 从基础诸侯继承（`scenarioFactionsEnriched`）。`oath.js` 是防循环叶子，自带剧本目录读取做同款降级（`oathFactionOf` 回退链）。
+- **年份**：`strategyEventCtx` 年份基准改 `(st.scenarioYear || 184) + ⌊(day−1)/360⌋`。注意：events.json 史实节点用绝对年份条件，非 184 起点的剧本下错位——补量批次再按剧本改写条件。
+- 测试 `tests/m3-scenario-runtime.test.js` 6 条（切换/势力集/举义/开局事件/ctx 年份+NPC tick/视图）。
 
 ---
 

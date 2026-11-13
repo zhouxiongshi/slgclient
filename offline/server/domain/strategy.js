@@ -6,7 +6,7 @@
  *   - 本文件 applyOrders 是唯一执行口，所有改动可审计；
  *   - NPC 诸侯打玩家的城 → 换算成本地地图的一支来犯军（复用既有战报）。
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { makeBuild, makeGeneral, makeFacilityList, nextId, mainCity } from '../world.js';
@@ -48,6 +48,90 @@ export { strategyAppoint, strategyCancelAppointment, diplomacyAct };
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const MAP_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'map.json');
 const FACTIONS_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'factions.json');
+const SCENARIOS_DIR = resolve(ROOT, 'conf', 'campaign', 'strategy', 'scenarios');
+
+/* ★ M3-5 六剧本运行期接入（GDD §12.1）：剧本 = 归属 + 势力集 + 开局决策。
+ *  剧本 JSON 自包含（tools/build-scenarios.mjs 产出），此处只做加载与降级——
+ *  局部势力 id 缺 trait/startGenerals 时按 name 从基础 8 诸侯继承。 */
+let scenarioCache = null;
+function scenarioIndex() {
+  if (!scenarioCache) {
+    scenarioCache = new Map();
+    for (const fn of readdirSync(SCENARIOS_DIR).filter((n) => n.endsWith('.json'))) {
+      const sc = JSON.parse(readFileSync(resolve(SCENARIOS_DIR, fn), 'utf8'));
+      scenarioCache.set(sc.id, sc);
+    }
+  }
+  return scenarioCache;
+}
+
+/** 全部剧本清单（举义页/设置页的剧本选择卡）。 */
+export function listScenarios() {
+  return [...scenarioIndex().values()]
+    .sort((a, b) => a.year - b.year)
+    .map((s) => ({ id: s.id, name: s.name, year: s.year, playerOptions: s.playerOptions || {}, playerDefault: s.playerDefault || [] }));
+}
+
+/** 单个剧本（含 specialRules / source / confidence），不存在返回 null。 */
+export function scenarioConf(id) {
+  return scenarioIndex().get(String(id || '')) || null;
+}
+
+/** 剧本势力集：局部 id 缺字段时按 name 从基础诸侯继承（汉廷/huangjin 无则保持空）。 */
+function scenarioFactionsEnriched(sc) {
+  const base = factionConf().factions;
+  return sc.factions.map((f) => {
+    const b = base.find((x) => x.name === f.name);
+    return {
+      ...f,
+      trait: f.trait || b?.trait || null,
+      startGenerals: f.startGenerals || b?.startGenerals || [],
+    };
+  });
+}
+
+/** 剧本视图：当前激活 + 可选清单 + 开局决策文案（举义页/设置页消费）。 */
+export function scenarioView(state) {
+  const sid = state?.strategy?.scenarioId || state?.scenarioId || null;
+  const sc = sid ? scenarioConf(sid) : null;
+  return {
+    active: sid,
+    name: sc?.name || null,
+    year: sc?.year || null,
+    specialRules: sc?.specialRules || [],
+    source: sc?.source || null,
+    confidence: sc?.confidence ?? null,
+    opening: sc?.opening || null,
+    list: listScenarios(),
+  };
+}
+
+/** 切换剧本（新游戏语义）：整体重建战略层归属，举义状态清零待重选。 */
+export function strategySetScenario(state, sid) {
+  const sc = scenarioConf(sid);
+  if (!sc) return { ok: false, code: 1, reason: 'no_scenario', available: listScenarios().map((s) => s.id) };
+  state.scenarioId = sc.id;
+  delete state.strategy;
+  delete state.oath;
+  ensureStrategy(state);
+  return { ok: true, scenario: scenarioView(state) };
+}
+
+/** 势力配置（剧本优先）：激活剧本时用剧本的势力集整体替换 8 诸侯。
+ *  state.scenarioId（未建档）/ state.strategy.scenarioId（已建档）都算激活。 */
+export function factionConfFor(state) {
+  const base = factionConf();
+  const sid = state?.strategy?.scenarioId || state?.scenarioId;
+  if (!sid) return base;
+  const sc = scenarioConf(sid);
+  if (!sc) return base;
+  const factions = scenarioFactionsEnriched(sc);
+  return {
+    ...base,
+    factions,
+    neutral: factions.find((f) => f.id === base.neutral.id) || base.neutral,
+  };
+}
 
 /** 战略层存档版本：2 起守军按城池等级分档（旧档读入时一次性重算）。 */
 const STRATEGY_VERSION = 2;
@@ -135,11 +219,17 @@ export function ensureStrategy(state) {
     if (!Array.isArray(st.battleHistory)) st.battleHistory = [];
     return st;
   }
-  const factionByState = new Map(conf.factions.map((f) => [f.id, f]));
+  /* ★ M3-5：剧本归属（GDD §12.1）——state.scenarioId 在建档前设置时，
+   * 初始 72 城直接按剧本 cityOwner 落位，年份基准也从剧本起算。 */
+  const scConf = factionConfFor(state);
+  const scInit = state.scenarioId ? scenarioConf(state.scenarioId) : null;
+  const factionByState = new Map(scConf.factions.map((f) => [f.id, f]));
   const cities = {};
   for (const c of map.cities) {
-    // 初版归属：州有诸侯则全州归他，否则归汉廷
-    const owner = factionByState.get(c.provinceId)?.id || conf.neutral.id;
+    // 初版归属：剧本优先 → 州有诸侯则全州归他 → 归汉廷
+    const owner = scInit
+      ? (scInit.cityOwner?.[String(c.id)] || conf.neutral.id)
+      : (factionByState.get(c.provinceId)?.id || conf.neutral.id);
     cities[c.id] = {
       owner,
       troops: garrisonOf(c),
@@ -152,6 +242,8 @@ export function ensureStrategy(state) {
     turn: 0,
     lastTurnDay: 0,
     events: [],
+    scenarioId: scInit?.id || null,
+    scenarioYear: scInit?.year || null,
     /* ★ M3-4 事件系统存档域（event-engine 落这里，与 chronicle 数组 st.events 分开） */
     eventSys: { fired: {}, cooldown: {} },
     pendingEvents: [],
@@ -164,8 +256,23 @@ export function ensureStrategy(state) {
     memory: {},
     chronicle: [],
     cityLogs: {},
-    resources: Object.fromEntries(conf.factions.map((f) => [f.id, { gold: 8000, grain: 12000 }])),
+    resources: Object.fromEntries(scConf.factions.map((f) => [f.id, { gold: 8000, grain: 12000 }])),
   };
+  /* ★ M3-5：剧本开局决策（GDD §12.1 opening）→ 伪事件进 pendingEvents，
+   *  与事件弹窗同一管线呈现；效果词全 nothing，只记录玩家选择。 */
+  if (scInit?.opening) {
+    state.strategy.pendingEvents.push({
+      id: `opening-${scInit.id}`,
+      title: `${scInit.name}·开局`,
+      layer: 'node',
+      priority: 100,
+      speaker: '',
+      text: [scInit.opening.text || ''],
+      choices: (scInit.opening.choices || []).map((label, i) => ({ id: `c${i + 1}`, label, preview: '' })),
+    });
+    state.strategy.flags = state.strategy.flags || {};
+    state.strategy.flags[`opening:${scInit.id}`] = true;
+  }
   bindPlayerHome(state);
   return state.strategy;
 }
@@ -178,13 +285,16 @@ export function ensureStrategy(state) {
  */
 export function bindPlayerHome(state) {
   const st = state.strategy;
-  const conf = factionConf();
+  const conf = factionConfFor(state);
   const homeName = conf.playerHome || '相';
   const home = strategyMap().cities.find((c) => c.name === homeName)
     || strategyMap().cities[0];
   if (!home) return null;
   st.playerCity = home.id;
-  if (oathPending(state)) return home;
+  /* ★ M3-5：剧本新档未举义时不夺城（剧本城归属是史实布局，玩家从举义页拿地）；
+   *  基础模式维持老行为：无举义记录视为已举义，默认城归属改玩家。 */
+  const scenarioPending = !state.oath && Boolean(state.scenarioId || st.scenarioId);
+  if (scenarioPending || oathPending(state)) return home;
   st.cities[home.id].owner = 'player';
   /* ★ M3-4：everOwned 记账（事件条件 cityLost 的口径来源） */
   if (Array.isArray(st.everOwned) && !st.everOwned.includes(home.id)) st.everOwned.push(home.id);
@@ -235,7 +345,7 @@ function candidateCities(state, f) {
 
 /** 举义页全量选项：8 张诸侯卡（势力色 + 特技 + 初始武将团 + 3 候选都）。 */
 export function oathOptions(state) {
-  const conf = factionConf();
+  const conf = factionConfFor(state);
   ensureStrategy(state);
   return {
     done: !oathPending(state),
@@ -255,7 +365,7 @@ export function oathOptions(state) {
  */
 export function chooseOath(state, cfg, ctx = {}, { lord, city } = {}) {
   if (!oathPending(state)) return { ok: false, code: 1, reason: 'already_done' };
-  const conf = factionConf();
+  const conf = factionConfFor(state);
   const f = conf.factions.find((x) => x.id === lord);
   if (!f) return { ok: false, code: 2, reason: 'no_faction' };
   const st = ensureStrategy(state);
@@ -393,8 +503,8 @@ export function strategySnapshot(state, factionId) {
       if (row && row.owner !== factionId) borderThreat += row.troops || 0;
     }
   }
-  const lords = Object.fromEntries(factionConf().factions.map((f) => [f.id, f.name]));
-  lords[factionConf().neutral.id] = factionConf().neutral.name;
+  const lords = Object.fromEntries(factionConfFor(state).factions.map((f) => [f.id, f.name]));
+  lords[factionConfFor(state).neutral.id] = factionConfFor(state).neutral.name;
   const facts = (st.events || []).slice(-8).map((e) => e.text).filter(Boolean);
   return {
     turn: st.turn,
@@ -420,7 +530,7 @@ export function strategySnapshot(state, factionId) {
     known_facts: facts,
     visible_events: facts,
     movements: st.movements || [],
-    relations: Object.fromEntries(factionConf().factions
+    relations: Object.fromEntries(factionConfFor(state).factions
       .filter((f) => f.id !== factionId)
       .map((f) => [f.id, enemies.has(f.id) ? 'enemy' : (st.relations?.[`${factionId}|${f.id}`] || 'neutral')])),
     threat: {},
@@ -429,7 +539,7 @@ export function strategySnapshot(state, factionId) {
 
 /** 月度回合：每个有脑的诸侯决策一次并执行。 */
 export function strategyTick(state, cfg, ctx, now = Date.now()) {
-  const conf = factionConf();
+  const conf = factionConfFor(state);
   const st = ensureStrategy(state);
   /* ★ M2-3：旬长走参数表（GDD §9.2 turnDays），存档 knobs 可覆盖 */
   const turnDays = knobGet(state, 'turnDays') ?? conf.turnDays ?? 10;
@@ -518,7 +628,7 @@ export function strategyTick(state, cfg, ctx, now = Date.now()) {
  * 外部若注入 state.brainRunner，仍可整段替换。
  */
 export function localBrain(faction, snapshot, state) {
-  const conf = factionConf().factions.find((f) => f.id === faction.id) || faction;
+  const conf = factionConfFor(state).factions.find((f) => f.id === faction.id) || faction;
   return planCampaign(conf, snapshot, state || {});
 }
 
@@ -830,12 +940,12 @@ function drawMarchTroops(st, faction, order, targetId) {
 }
 
 function otherName(state, factionId) {
-  return factionConf().factions.find((f) => f.id === factionId)?.name || factionId;
+  return factionConfFor(state).factions.find((f) => f.id === factionId)?.name || factionId;
 }
 
 /** 归属方显示名：玩家 / 汉廷 / 诸侯。 */
 function ownerNameOf(state, ownerId) {
-  const conf = factionConf();
+  const conf = factionConfFor(state);
   if (ownerId === 'player') return state.role?.nickName || '我军';
   if (!ownerId || ownerId === conf.neutral.id) return conf.neutral.name;
   return otherName(state, ownerId);
@@ -1889,10 +1999,11 @@ const SEASONS = ['春', '夏', '秋', '冬'];
 /** 事件 ctx 适配器：玩家视角（GDD §8.1 字段白名单 14 项全注入）。 */
 export function strategyEventCtx(state) {
   const st = ensureStrategy(state);
-  const conf = factionConf();
+  const conf = factionConfFor(state);
   const cfgMap = cfgGeneralNames(state);
   const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
-  const year = 184 + Math.floor((day - 1) / 360);           // 1 年 = 36 旬 = 360 日
+  /* ★ M3-5：剧本模式下年份从剧本起算（如 190 剧本 day=1 → year=190） */
+  const year = (st.scenarioYear || 184) + Math.floor((day - 1) / 360);           // 1 年 = 36 旬 = 360 日
   const dayOfYear = (day - 1) % 360;
   const season = SEASONS[Math.floor(dayOfYear / 90)] || '春';
   const turn = st.turn || 0;
@@ -1969,7 +2080,13 @@ export function strategyEventChoice(state, cfg, ctx, { id, choice } = {}) {
   const st = ensureStrategy(state);
   const idx = (st.pendingEvents || []).findIndex((e) => e.id === id);
   if (idx < 0) return { ok: false, reason: 'no_pending' };
-  const ev = campaignEvents().find((e) => e.id === id);
+  const ev = campaignEvents().find((e) => e.id === id)
+    /* ★ M3-5：剧本开局伪事件不在 events.json 里，从 pendingEvents 现场合成（效果全 nothing） */
+    || (st.pendingEvents || []).filter((p) => p.id === id).map((p) => ({
+      id: p.id,
+      title: p.title,
+      choices: (p.choices || []).map((c) => ({ id: c.id, effects: ['nothing'] })),
+    }))[0];
   if (!ev) return { ok: false, reason: 'unknown_event' };
   const clampInt = (n) => Math.round(Number(n) || 0);
   const api = {
@@ -2071,7 +2188,7 @@ export function strategyFateView(state, cfg) {
 export function strategyViewState(state, cfg = null) {
   const st = ensureStrategy(state);
   const map = strategyMap();
-  const conf = factionConf();
+  const conf = factionConfFor(state);
   /* ★ 修 bug-18：人口曾有两套字段同时下发（地图静态 population / 经济层动态 pop），
      几个月后概览与内政页会显示两个不同的数。统一以经济层为准，只留一个来源。 */
   const econAll = ensureCityEcon(state) || {};
@@ -2226,6 +2343,8 @@ export function strategyViewState(state, cfg = null) {
     /* ★ M3-4 事件弹窗队列与宿命组合视图（GDD §8.3/§7.5） */
     pendingEvents: st.pendingEvents || [],
     fates: strategyFateView(state, cfg),
+    /* ★ M3-5 剧本视图（GDD §12.1）：激活剧本 + 可选清单 + 开局决策 */
+    scenario: scenarioView(state),
     playerCity: st.playerCity || 0,
     // ★ P4-①：举义状态随视图下发，客户端据此决定弹不弹举义页
     oath: {
