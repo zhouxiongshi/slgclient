@@ -26,4 +26,4 @@ offline/saves/
 #//////////////////////////
 # WebStorm
 #//////////////////////////
-.idea/
+.idea/overrides.json.tmp
