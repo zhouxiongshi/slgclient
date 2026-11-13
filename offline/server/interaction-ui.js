@@ -205,7 +205,14 @@
       + '#slgIxGuide .ga{margin-top:9px;display:flex;gap:7px;justify-content:flex-end}'
       + '.slgIx input[type=text]{background:#1a2419;border:1px solid #5c6b4e;color:#e8e0cc;padding:4px 7px;font:inherit;min-height:26px}'
       + '#slgIxRoot.reduce *{transition:none!important;animation:none!important}'
-      + '@media (max-width:1100px){#slgIxAgenda,#slgIxLens{display:none}}';
+      + '@media (max-width:1100px){#slgIxAgenda,#slgIxLens{display:none}}'
+      /* M4-3（GDD §10.1 五档断点）：抽屉宽 360/380/420/460/480 随分辨率分档（fallback 380）。 */
+      + '@media (max-width:1365px){#slgIxDrawer{width:380px}}'
+      + '@media (max-width:1279px){#slgIxDrawer{width:360px}}'
+      + '@media (min-width:1920px){#slgIxDrawer{width:420px}}'
+      + '@media (min-width:2560px){#slgIxDrawer{width:460px}}'
+      + '@media (min-width:3440px){#slgIxDrawer{width:480px}}'
+      + '@media (min-width:2560px){#slgIxAgenda{width:300px}}';
     var s = el('style', '', css); s.id = 'slgIxCss'; document.head.appendChild(s);
     var root = el('div', '', ''); root.id = 'slgIxRoot'; root.className = 'slgIx' + (S.reduceMotion ? ' reduce' : '');
     document.body.appendChild(root);

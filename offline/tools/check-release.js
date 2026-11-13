@@ -310,6 +310,20 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
     JSON.stringify(provenance?.map));
 }
 
+/* ---------------- 7.9c 对比度（GDD §10.7，M4-3） ---------------- */
+{
+  const ctPath = join(REPORTS, 'contrast.json');
+  let ct = readJson(ctPath, null);
+  if (!ct) {
+    const r = spawnSync(process.execPath, [join(ROOT, 'tools', 'check-contrast.js')], { cwd: ROOT, stdio: 'ignore' });
+    ct = readJson(ctPath, null);
+    if (!ct && r.status !== 0) ct = { ok: false, checked: 0, failed: 1 };
+  }
+  check('注入 UI 色彩对比度全部达标（正文 ≥4.5:1 / 大字 ≥3:1，GDD §10.7）',
+    ct?.ok === true && ct?.checked >= 9 && ct?.failed === 0,
+    JSON.stringify(ct?.results?.filter((x) => !x.ok) || `${ct?.checked} 对`));
+}
+
 /* ---------------- 7.10 术语覆盖率（GDD §14.2-5，M0） ---------------- */
 {
   const termsReport = readJson(join(REPORTS, 'terms.json'), null);

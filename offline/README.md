@@ -73,12 +73,13 @@ offline/
 │   └── campaign/        章节、人物、命运、主角、战略层（strategy/map.json 72 城）、heroes-240.json / fate-groups.json / events.json
 ├── web/               原版客户端构建产物（web-desktop，磁盘逐字节不动）
 ├── electron/          Electron 壳（main.cjs + smoke.cjs 冒烟）
-├── tests/             单测 377 条 / 57 个文件（node --test）
+├── tests/             单测 381 条 / 58 个文件（node --test）
 ├── tools/             工具链
 │   ├── pack.js            打包 exe → build/SLG-Offline-win32-x64/
 │   ├── check-release.js   发行核查（77 项硬性验收，含画面指纹、合规台账、数据溯源与真实点击 E2E）
 │   ├── compliance-report.js 合规台账三向扫描（覆盖性/禁入物/发行包）
 │   ├── check-compliance.js  数据溯源扫描（554 条 source+confidence + 地图示意图声明，M4-1）
+│   ├── check-contrast.js  WCAG 对比度检测（9 对色彩，正文 ≥4.5:1，M4-3）
 │   ├── smoke.js           运行时冒烟（28 项，源码态 / --packaged 打包态）
 │   ├── explore-bugs.mjs   协议穷举探测（73 handler × 5 payload）
 │   ├── build-skills.js    战法表生成器（从 battle-kit 原文生成 skills.json）
@@ -119,7 +120,7 @@ node tools/build-heroes.mjs      # 重新生成 M3 武将数据层（需外部�
 ## 五、当前验证状态
 
 - ✅ 画面指纹 `ee987ec2…` 与原版逐字节一致（`pack.json`：`byteIdentical: true`，1582 个文件）
-- ✅ 单元测试 **377/377**（含 `tests/panels.test.js` 11 条：六面板回归 + 与战略层的数据／层级对齐断言、`tests/playtest-fixes.test.js` 实机试玩回归、`tests/save-slots.test.js` 存档档位、`tests/m3-heroes-fates.test.js` 7 条：M3 武将数据层与宿命 24 组、`tests/m3-events.test.js` 8 条：事件 DSL/引擎/构建期校验/补量计数、`tests/m3-scenarios.test.js` 7 条：六剧本四条开局校验、`tests/m3-runtime-wiring.test.js` 7 条：M3 运行期接线、`tests/m3-scenario-runtime.test.js` 6 条：六剧本运行期接入、`tests/m3-event-ui.test.js` 3 条：事件弹窗投影与 UI 纪律、`tests/m3-skills-80.test.js` 6 条：M3-8 战法 80 条总量/签名唯一/ui-kernel 同源/内核纪律/武将装配/内核实跑、`tests/m4-compliance.test.js` 4 条：M4-1 数据溯源合规（554 条 source+confidence 全覆盖、地图示意图声明双向核对、负例抓错）、`tests/m4-a11y.test.js` 5 条：M4-2 无障碍（字号三档制+旧值归档、G4 无鼠标出征快捷键链、G1 战报只读服务端结算、G2 零 Audio 依赖、G3 粮道/军标形状双编码+焦点可见））
+- ✅ 单元测试 **381/381**（含 `tests/panels.test.js` 11 条：六面板回归 + 与战略层的数据／层级对齐断言、`tests/playtest-fixes.test.js` 实机试玩回归、`tests/save-slots.test.js` 存档档位、`tests/m3-heroes-fates.test.js` 7 条：M3 武将数据层与宿命 24 组、`tests/m3-events.test.js` 8 条：事件 DSL/引擎/构建期校验/补量计数、`tests/m3-scenarios.test.js` 7 条：六剧本四条开局校验、`tests/m3-runtime-wiring.test.js` 7 条：M3 运行期接线、`tests/m3-scenario-runtime.test.js` 6 条：六剧本运行期接入、`tests/m3-event-ui.test.js` 3 条：事件弹窗投影与 UI 纪律、`tests/m3-skills-80.test.js` 6 条：M3-8 战法 80 条总量/签名唯一/ui-kernel 同源/内核纪律/武将装配/内核实跑、`tests/m4-compliance.test.js` 4 条：M4-1 数据溯源合规（554 条 source+confidence 全覆盖、地图示意图声明双向核对、负例抓错）、`tests/m4-a11y.test.js` 5 条：M4-2 无障碍（字号三档制+旧值归档、G4 无鼠标出征快捷键链、G1 战报只读服务端结算、G2 零 Audio 依赖、G3 粮道/军标形状双编码+焦点可见）、`tests/m4-layout.test.js` 4 条：M4-3 布局矩阵（对比度 9 对全达标、抽屉五档断点 360/380/420/460/480、dock 防溢出、字号三档与断点解耦））
 - ✅ **M3-1 武将数据层**：`heroes-240.json` 240 位（60 核心 / 100 重要 / 80 在野，源 `three-kingdoms/characters.csv` 确定性选层 + 7 位补充条目）；`fate-groups.json` 宿命 24 组（8 组完整事件链、每组带史实依据与置信度）；`domain/fate-groups.js` 零依赖叶子（active/dormant/broken 三档判定、相性环形距离、登庸相性分项）
 - ✅ **M3-2 事件系统**：`domain/event-dsl.js`（字段/算子白名单，未知字段即拒绝）+ `domain/event-engine.js`（priority 降序、每旬 ≤2 条、exclusive 组内只出 1 其余冷却、once 永久排除、效果词白名单落账）+ `events.json` 52 条（37 史实节点 / 9 条件 / 6 关系，全部带史实依据与置信度，待人工签核）+ `tools/check-events.mjs` 构建期冲突检测
 - ✅ **M3-7 事件补量至 150 条（GDD §8 上限）**：`events-extra.json` 第二批 98 条（62 史实节点 / 20 条件 / 16 关系），`campaignEvents()` 合并加载、`check-events.mjs` 默认双文件校验（id 跨文件唯一）；剧本前史过滤——剧本起点之前的史实节点不重演（`strategyEventTick` 按 `scenarioYear` 过滤 yearMin）
