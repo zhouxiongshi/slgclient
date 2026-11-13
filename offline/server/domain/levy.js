@@ -144,9 +144,11 @@ export function commitLevy(state, cityId, count) {
   return { popBefore, popAfter, popCost: popBefore - popAfter, levy: levyView(state, id) };
 }
 
-/** 春征超过上限 50% → 秋收田赋 −15%（GDD §5.5 农时冲突，提前显示在预览里）。 */
-export function farmConflictOf(state, cityId, count) {
-  const levy = levyView(state, cityId);
+/** 春征超过上限 50% → 秋收田赋 −15%（GDD §5.5 农时冲突，提前显示在预览里）。
+ *  ★ 必须在 commitLevy **之前**调用：抽丁会扣人口，人口一少 seasonalCap 就缩水，
+ *    用扣完的人口算比例会虚高（实测出现过「本次 125%」这种不可能的数）。 */
+export function farmConflictOf(state, cityId, count, opts = {}) {
+  const levy = levyView(state, cityId, opts);
   if (levy.season !== '春' || levy.seasonalCap <= 0) return null;
   const ratio = num(count, 0) / levy.seasonalCap;
   if (ratio <= 0.5) return null;

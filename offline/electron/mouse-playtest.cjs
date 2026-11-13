@@ -447,7 +447,16 @@ async function runMousePlaytest(win, server, app) {
         var c=(s.cities||[]).find(function(x){return Number(x.id)===Number(${Number(homeId)});});
         return c && c.levy ? { levied:c.levy.levied, canLevy:c.levy.canLevy, reason:c.levy.reason } : null; })()`;
       const beforeRepeat = await js(readLevied);
-      await click('#slgCityBody button[data-quick-levy="100"]', 'levy.repeat.click', '同旬第二次点征兵');
+      /* ★ 修一把「同旬再征」的判定口径：面板现在会在成功后给出在途倒计时并把
+         按钮禁用（这是玩家要的「别让我反复点、点了撞冷却」），所以「点不到」
+         本身就是拦截生效，不该记成失败。只有按钮仍可点时，才走真鼠标再点一次，
+         之后由 lev.evy.repeat 校验台账有没有变。 */
+      const repeatRect = await js(`(${RECT_OF})('#slgCityBody button[data-quick-levy="100"]')`);
+      if (repeatRect && repeatRect.ok && repeatRect.disabled) {
+        rec('levy.repeat.click', true, '同旬第二次征兵：按钮已禁用（面板拦在点击之前）', repeatRect);
+      } else {
+        await click('#slgCityBody button[data-quick-levy="100"]', 'levy.repeat.click', '同旬第二次点征兵');
+      }
       await sleep(1000);
       const afterRepeat = await js(readLevied);
       rec('levy.repeat', !!beforeRepeat && !!afterRepeat
@@ -467,9 +476,11 @@ async function runMousePlaytest(win, server, app) {
     await wait(`!!document.getElementById('slgWarWin')`, 9000, 'war.panel', '出征面板打开');
     await trace('after war.panel.wait');
     const rail = await js(`(function(){ var b=document.querySelector('#slgWarWin .body'); return b?b.textContent.slice(0,240):''; })()`);
-    rec('war.wizard', /出征四步/.test(rail), '出征四步向导可见');
+    /* ★ 用户 ④：推演改成可选，「出征」默认可用。所以这里断言的是相反的事——
+       未推演就能出征，且向导文案要说明「推演只是提前看折损」。 */
+    rec('war.wizard', /出征[三四]步/.test(rail), '出征向导步骤说明可见');
     const locked = await js(`(function(){ var b=document.getElementById('slgWarAttackBtn'); return b?b.disabled:null; })()`);
-    rec('war.gate', locked === true, '未推演前「出征」按钮被锁', { disabled: locked });
+    rec('war.gate', locked === false, '未推演前「出征」按钮即可点（推演可选）', { disabled: locked });
     /* 推演按钮：给一次性标记，避免选择器踩到别的同名按钮。
        注意出征按钮文案是「先推演一次再出征」，也含「推演一次」，所以这里必须精确匹配，
        否则会命中那个本来就 disabled 的按钮，把产品判定成「按钮被禁用」。 */

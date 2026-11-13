@@ -70,7 +70,7 @@ test('A1 · 100 组参数：预演与正式结算逐位一致', () => {
     assert.equal(report.result, p.code, `#${i} 胜负不一致：预演 ${p.code} vs 正式 ${report.result}`);
     assert.equal(report.analysis?.aLoss, p.aLoss, `#${i} 我军折损不一致`);
     assert.equal(report.analysis?.dLoss, p.dLoss, `#${i} 歼敌不一致`);
-    assert.equal(report.rounds, p.rounds, `#${i} 回合数不一致`);
+    assert.equal((state.battleLog || [])[0]?.rounds, p.rounds, `#${i} 回合数不一致`);
     checked += 1;
   }
   assert.equal(checked, 100);

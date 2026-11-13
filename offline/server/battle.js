@@ -16,6 +16,7 @@
 import { runBattle, DEFAULT_BATTLE_CONFIG, crc32Utf8 } from '../kernel/index.js';
 import { generalToArray, findGeneral, nextId } from './world.js';
 import { kernelSkillAt, reportSkillFields, SKILLS, LEVEL_COUNT, attackDistanceOf } from './skills.js';
+import { skillProfile, actSentence } from './domain/battle-narrative.js';
 
 /** 真实兵力 → 内核兵力 1:1（配合下面的 troop_factor 微调）。
  *  原先用 10 会把 1000 兵压成 100 兵，1 回合就打完；实测 1:1 + troop_factor=0.2
@@ -264,6 +265,40 @@ export function buildBattleAnim({ kernel, attackers, defense, army, beginSoldier
   const garrison = (state.garrisons || []).find((g) => g.x === x && g.y === y && !g.cleared);
   const nameD = defense.name || garrison?.name || '守军';
   const place = defense.place || garrison?.name || `(${x},${y})`;
+  /* ★ 玩家反馈「战报只有一行『谁发动了什么』」：动画里的每个动作都要带一句
+     人话（谁 → 谁、效果是什么、折了多少卒），由 domain/battle-narrative 统一生成。
+     前端只排版，不再自己拼句子 —— 否则战报详情、回放字幕、推演会各说一套。 */
+  /* 带上 lv：同一条战法在不同等级数值不同，文案必须用「这名武将实际装备的等级」，
+     否则战报会把 lv4 的健卒不殆说成 lv1 的 +40%。 */
+  const profOf = (g) => (g.skills || [])
+    .map((s) => (s && s.cfgId ? { ...skillProfile(s.cfgId, s.lv || 1), lv: s.lv || 1 } : null))
+    .filter(Boolean);
+  const units = {
+    a: attackers.map(({ g }, i) => ({
+      slot: i,
+      name: cfg.generalByCfg.get(g.cfgId)?.name || `武将${g.cfgId}`,
+      skills: profOf(g),
+    })),
+    d: defense.generals.map((g, i) => ({
+      slot: i,
+      name: cfg.generalByCfg.get(g.cfgId)?.name || `武将${g.cfgId}`,
+      skills: profOf(g),
+    })),
+  };
+  const nameOf = (ref) => {
+    if (!ref) return '';
+    const list = units[ref.s === 'd' ? 'd' : 'a'] || [];
+    const u = list[ref.i];
+    return u ? u.name : (ref.s === 'd' ? '守军' : '我军');
+  };
+  /* 该动作释放的战法在这名武将身上是几级（查不到按 1 级，绝不瞎猜高等级） */
+  const lvOf = (ref, skillName) => {
+    if (!ref) return 1;
+    const list = units[ref.s === 'd' ? 'd' : 'a'] || [];
+    const u = list[ref.i];
+    const hit = (u?.skills || []).find((s) => s.name === skillName);
+    return hit && hit.lv ? hit.lv : 1;
+  };
   const rounds = [];
   for (const [round, evs] of [...byRound.entries()].sort((a, b) => a[0] - b[0])) {
     const acts = [];
@@ -276,26 +311,38 @@ export function buildBattleAnim({ kernel, attackers, defense, army, beginSoldier
     }
     for (const ev of evs) {
       const p = ev.payload || {};
+      let act = null;
       if (ev.kind === 'skill_prepare') {
-        acts.push({ t: 'prepare', f: unitOf(ev.actor), skill: String(p.skill ?? '') });
+        act = { t: 'prepare', f: unitOf(ev.actor), skill: String(p.skill ?? '') };
       } else if (ev.kind === 'skill_trigger') {
-        acts.push({
+        act = {
           t: 'skill', f: unitOf(ev.actor), skill: String(p.skill ?? ''),
           loss: skillLoss.get(`${ev.actor}|${String(p.skill ?? '')}`) || 0,
-        });
+        };
       } else if (ev.kind === 'damage') {
-        acts.push({
+        act = {
           t: 'hit', f: unitOf(ev.actor), to: unitOf(p.target ?? 'a0'),
           loss: Math.max(0, Math.round((p.applied ?? 0) * TROOP_SCALE)),
           skill: String(p.skill ?? '普通攻击'),
-        });
+        };
       } else if (ev.kind === 'control') {
-        acts.push({ t: 'control', f: unitOf(ev.actor), to: unitOf(p.target ?? 'a0'), state: String(p.state ?? '') });
+        act = { t: 'control', f: unitOf(ev.actor), to: unitOf(p.target ?? 'a0'), state: String(p.state ?? '') };
       } else if (ev.kind === 'heal') {
-        acts.push({ t: 'heal', f: unitOf(ev.actor), to: unitOf(p.target ?? 'a0'), amount: Number(p.applied ?? p.amount ?? 0) * TROOP_SCALE });
+        const amount = Math.round((Number(p.applied ?? p.amount ?? 0)) * TROOP_SCALE);
+        /* 0 治疗没有任何信息量，只会在战报里刷「回复 0」两行（实测确有） */
+        if (amount <= 0) continue;
+        act = { t: 'heal', f: unitOf(ev.actor), to: unitOf(p.target ?? 'a0'), amount };
       } else if (ev.kind === 'unit_down') {
-        acts.push({ t: 'down', unit: unitOf(p.unit ?? 'a0') });
+        act = { t: 'down', unit: unitOf(p.unit ?? 'a0') };
       }
+      if (!act) continue;
+      act.fName = nameOf(act.f || act.unit);
+      act.toName = act.to ? nameOf(act.to) : act.fName;
+      if (act.skill) act.lv = lvOf(act.f || act.unit, act.skill);
+      const prof = act.skill ? skillProfile(act.skill, act.lv || 1) : null;
+      if (prof) { act.effect = prof.effect; act.cls = prof.cls; }
+      act.text = actSentence(act);
+      acts.push(act);
     }
     if (acts.length) rounds.push({ round, acts });
   }
@@ -306,21 +353,25 @@ export function buildBattleAnim({ kernel, attackers, defense, army, beginSoldier
     winner: resultCode,
     a: {
       name: nameA,
+      total: attackers.reduce((s, { slot }) => s + (beginSoldiers[slot] || 0), 0),
       units: attackers.map(({ slot, g }, i) => ({
         slot: i,
         armySlot: slot,
         name: cfg.generalByCfg.get(g.cfgId)?.name || `武将${g.cfgId}`,
         troops: beginSoldiers[slot] ?? 0,
         remain: attackRemain[slot] ?? 0,
+        skills: units.a[i].skills,
       })),
     },
     d: {
       name: nameD,
+      total: defense.soldiers.reduce((s, v) => s + Math.max(0, Number(v) || 0), 0),
       units: defense.generals.map((g, i) => ({
         slot: i,
         name: cfg.generalByCfg.get(g.cfgId)?.name || `武将${g.cfgId}`,
         troops: defense.soldiers[i] ?? 0,
         remain: defenseRemain[i] ?? 0,
+        skills: units.d[i].skills,
       })),
     },
     rounds,
@@ -339,7 +390,10 @@ export function battleSeedFor(armyId, x, y, day) {
   return crc32Utf8(`${armyId}:${x}:${y}:${Math.max(1, Math.floor(Number(day) || 1))}`);
 }
 
-export function resolveBattle({ cfg, state, army, x, y, seed, defenseOverride = null }) {
+export function resolveBattle({ cfg, state, army, x, y, seed, defenseOverride = null, withAnim = true }) {
+  /* withAnim=false：推演用。推演只要数值与叙事，不需要回放动作流；
+     而 buildBattleAnim 要为每个动作生成一句人话（战法档案 + 措辞），
+     一次推演要跑 4~5 场内核，累计就顶爆 GDD §6.7 的单次 ≤50ms 预算。 */
   const beginSoldiers = [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(army.soldiers?.[i]) || 0)));
   // 有武将且有余兵的槽位才上阵；slot 保留原槽位号，序号 i 才是内核 unit id
   const attackers = (army.generals || [])
@@ -437,10 +491,12 @@ export function resolveBattle({ cfg, state, army, x, y, seed, defenseOverride = 
     e_d_general: JSON.stringify(endD),
     result: resultCode,
     rounds: JSON.stringify(rounds),
-    anim: buildBattleAnim({
-      kernel, attackers, defense, army, beginSoldiers, state, cfg, x, y,
-      resultCode, attackRemain, defenseRemain,
-    }),
+    anim: withAnim
+      ? buildBattleAnim({
+        kernel, attackers, defense, army, beginSoldiers, state, cfg, x, y,
+        resultCode, attackRemain, defenseRemain,
+      })
+      : null,
     a_is_read: false,
     d_is_read: false,
     destroy: resultCode === 2 ? 100 : 0,

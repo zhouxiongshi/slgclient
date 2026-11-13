@@ -834,8 +834,14 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     '武关': [-11.0, 32.0], '雁门关': [-18.5, 32.0], '虎牢关': [-18.5, 32.6], '居庸关': [-18.5, 32.0]
   };
   var DETAIL = null, IMG = {};
-  // 分层渲染：底图 / 州名 / 路网 / 城池 / 关隘 / 城名，对应 tmx 的六层贴图
-  var LAYER = { base: true, zhou: true, road: true, city: true, pass: true, name: true };
+  /* 分层渲染：路网 / 城池 / 关隘 / 城名，对应 detail.json 的贴图层。
+   * ★ 玩家反馈「图层检索去掉十三州水墨底图和十三州部古名」：
+   *   - 底图（layer_base）不是「可关掉的图层」，它就是地图本体；
+   *     关掉只会得到一块空白米色，这种开关本身就是伪功能，直接取消，
+   *     改为永远绘制（见 draw 里的 baseImg）。
+   *   - 古名层（layer_zhou）是十三州旧名文字，只有淡淡几行、放大也读不清，
+   *     与城名标注抢位置，按反馈整层废弃，不再请求该贴图。 */
+  var LAYER = { road: true, city: true, pass: true, name: true };
 
   function layerUrl(path) {
     var p = String(path || '');
@@ -1099,28 +1105,111 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
     var btnCss = 'background:rgba(22,24,16,.88);color:#e8c670;border:1px solid #ba9a52;'
       + 'border-radius:4px;padding:3px 10px;cursor:pointer;font:13px/1.4 sans-serif;';
+    /* ★ 用户 ⑩：左上按钮坞原来是一排各写各的内联样式的方按钮，与右侧六府
+       （深底金框、字距 1px）完全是两套观感；而且「武将 / 战报 / 出征」在两边
+       各有一份，玩家不知道该点哪边。这里统一成一条「沙盘工具条」：
+         - 风格与六府同源（深墨底 / 金线 / 字距 / 同一套 hover）；
+         - 只保留沙盘专属动作（推演、出征、本城、缩放、全图、日志）；
+           武将与战报只在六府出现，去掉重复入口；
+         - 末尾挂「浮窗」开关（图层 / 透镜 / 事务），对应 ⑧ 的显示隐藏。 */
+    var dockCss = document.createElement('style');
+    dockCss.id = 'slgDockCss';
+    dockCss.textContent = ''
+      + '#slgDock{display:flex;align-items:center;gap:3px;padding:5px 7px;border-radius:9px;'
+      + 'background:linear-gradient(180deg,rgba(26,28,20,.95),rgba(13,14,10,.95));'
+      + 'border:1px solid rgba(186,154,82,.5);box-shadow:0 6px 22px rgba(0,0,0,.5);'
+      + 'font-family:"Microsoft YaHei",sans-serif}'
+      + '#slgDock .gp{color:#8d8567;font-size:10.5px;letter-spacing:2px;padding:0 3px 0 2px;user-select:none}'
+      + '#slgDock .sep{width:1px;height:16px;background:rgba(186,154,82,.28);margin:0 4px;display:inline-block}'
+      + '#slgDock button{background:transparent;color:#d9cba6;border:1px solid transparent;'
+      + 'border-radius:5px;padding:4px 9px;cursor:pointer;font:12.5px/1.35 "Microsoft YaHei",sans-serif;'
+      + 'letter-spacing:.5px;transition:background .12s,color .12s,border-color .12s}'
+      + '#slgDock button:hover{background:rgba(186,154,82,.18);color:#ffe9b0;border-color:rgba(186,154,82,.4)}'
+      + '#slgDock button.pri{background:linear-gradient(180deg,#7d6122,#513c14);color:#ffe9b0;'
+      + 'border-color:#c8a44e}'
+      + '#slgDock button.pri:hover{background:linear-gradient(180deg,#95762a,#5f4718);color:#fff6d6}'
+      + '#slgDock button.icon{padding:4px 7px;min-width:26px;font-size:13px;line-height:1}'
+      + '#slgDock button.chip{font-size:11.5px;padding:3px 8px;border-color:rgba(186,154,82,.3);color:#a89c7c}'
+      + '#slgDock button.chip.on{color:#ffe9b0;border-color:#ba9a52;background:rgba(186,154,82,.16)}'
+      + '@media (max-width:1180px){#slgDock .gp{display:none}}'
+      /* 势力面板（原「势力图例」）——与按钮坞、六府同一套色与圆角 */
+      + '#slgLegend .lg-head{display:flex;align-items:center;justify-content:space-between;'
+      + 'color:#e8c670;font-weight:bold;letter-spacing:2px;padding-bottom:5px;margin-bottom:5px;'
+      + 'border-bottom:1px solid rgba(186,154,82,.25)}'
+      + '#slgLegend .lg-btns button{background:transparent;color:#c8b88a;border:1px solid rgba(186,154,82,.4);'
+      + 'border-radius:4px;padding:0 6px;margin-left:4px;cursor:pointer;font:11px/1.6 "Microsoft YaHei",sans-serif}'
+      + '#slgLegend .lg-btns button:hover{color:#ffe9b0;border-color:#ba9a52}'
+      + '#slgLegend .lg-list{display:flex;flex-direction:column;gap:2px}'
+      + '#slgLegend .lg-row{display:flex;align-items:center;gap:5px;width:100%;text-align:left;'
+      + 'background:transparent;border:1px solid transparent;border-radius:5px;padding:2px 5px;'
+      + 'color:#d9cba6;cursor:pointer;font:12.5px/1.6 "Microsoft YaHei",sans-serif}'
+      + '#slgLegend .lg-row:hover{background:rgba(186,154,82,.16);color:#ffe9b0}'
+      + '#slgLegend .lg-row.on{background:rgba(186,154,82,.22);border-color:#ba9a52;color:#fff2cf}'
+      + '#slgLegend .lg-row i{width:9px;height:9px;border-radius:50%;flex:0 0 9px}'
+      + '#slgLegend .lg-row b{font-weight:600}'
+      + '#slgLegend .lg-n{margin-left:auto;color:#9c9382;font-size:11px;white-space:nowrap}'
+      + '#slgLegend .lg-row em{font-style:normal;font-size:10.5px;color:#e0c56a;white-space:nowrap}'
+      + '#slgLegend .lg-detail{margin-top:7px;padding:6px 7px;border-radius:6px;'
+      + 'background:rgba(90,110,70,.14);border:1px solid rgba(186,154,82,.28);font-size:11.5px;line-height:1.75}'
+      + '#slgLegend .lg-dt{color:#e8c670;font-weight:bold;margin-bottom:3px}'
+      + '#slgLegend .lg-blurb{color:#c8c2b4;margin:3px 0}'
+      + '#slgLegend .lg-hold{color:#a9a48f;margin-top:2px}'
+      + '#slgLegend .lg-clear{background:transparent;color:#e0c56a;border:1px solid rgba(186,154,82,.45);'
+      + 'border-radius:4px;padding:1px 8px;margin-top:5px;cursor:pointer;font:11px/1.7 "Microsoft YaHei",sans-serif}'
+      + '#slgLegend .lg-clear:hover{border-color:#e3c46a;color:#ffe9b0}'
+      + '#slgLegend .lg-foot{color:#9c9382;font-size:10.5px;line-height:1.6;margin-top:6px;'
+      + 'border-top:1px solid rgba(186,154,82,.25);padding-top:4px}';
+    document.head.appendChild(dockCss);
     var dock = document.createElement('div');
     dock.id = 'slgDock';
-    dock.style.cssText = 'position:absolute;top:12px;left:12px;z-index:4;display:flex;flex-wrap:wrap;gap:6px;'
-      + 'max-width:calc(100% - 780px);';
+    dock.style.cssText = 'position:absolute;top:12px;left:12px;z-index:4;display:flex;flex-wrap:wrap;'
+      + 'gap:3px;max-width:calc(100% - 320px);';
     dock.innerHTML = ''
-      + '<button id="slgStratTick" style="' + btnCss + '">推演一月</button>'
-      + '<button id="slgBtnWar" data-ix-allow="1" style="' + btnCss + '">出征</button>'
-      + '<button id="slgBtnHome" style="' + btnCss + '">本城</button>'
-      + '<button id="slgBtnGens" style="' + btnCss + '">武将</button>'
-      + '<button id="slgBtnReps" style="' + btnCss + '">战报</button>'
-      + '<button id="slgBtnZoomIn" style="' + btnCss + '">放大</button>'
-      + '<button id="slgBtnZoomOut" style="' + btnCss + '">缩小</button>'
-      + '<button id="slgBtnFit" style="' + btnCss + '">全图</button>'
-      + '<button id="slgBtnLog" style="' + btnCss + '">天下日志</button>';
+      + '<span class="gp">沙盘</span>'
+      + '<button id="slgStratTick" class="pri">推演一月</button>'
+      + '<button id="slgBtnWar" class="pri" data-ix-allow="1">出征</button>'
+      + '<button id="slgBtnHome">本城</button>'
+      + '<i class="sep"></i>'
+      + '<button id="slgBtnZoomIn" class="icon" title="放大（滚轮上）">＋</button>'
+      + '<button id="slgBtnZoomOut" class="icon" title="缩小（滚轮下）">－</button>'
+      + '<button id="slgBtnFit">全图</button>'
+      + '<i class="sep"></i>'
+      + '<span class="gp">浮窗</span>'
+      + '<button class="chip" data-float="side" title="显示 / 收起「图层与检索」">图层</button>'
+      + '<button class="chip" data-float="lens" title="显示 / 收起「地图透镜」">透镜</button>'
+      + '<button class="chip" data-float="agenda" title="显示 / 收起「当前事务」">事务</button>'
+      + '<button class="chip" data-float="legend" title="显示 / 收起「势力面板」">势力</button>'
+      + '<i class="sep"></i>'
+      + '<button id="slgBtnLog">天下日志</button>';
     Array.prototype.forEach.call(dock.querySelectorAll('button'), function (b) {
       b.style.fontFamily = '"Microsoft YaHei",sans-serif';
     });
+    /* 浮窗开关：状态只落 html[data-slg-float-*]，样式在外壳里，两边不互相引用 */
+    Array.prototype.forEach.call(dock.querySelectorAll('[data-float]'), function (chip) {
+      var name = chip.getAttribute('data-float');
+      var sync = function () {
+        var on = !(window.__slgShell && window.__slgShell.float) || window.__slgShell.float(name) !== false;
+        chip.className = 'chip' + (on ? ' on' : '');
+      };
+      chip.onclick = function () {
+        if (window.__slgShell && window.__slgShell.toggleFloat) window.__slgShell.toggleFloat(name);
+        else {
+          var el0 = document.documentElement;
+          var off = el0.getAttribute('data-slg-float-' + name) === 'off';
+          if (off) el0.removeAttribute('data-slg-float-' + name);
+          else el0.setAttribute('data-slg-float-' + name, 'off');
+        }
+        sync();
+      };
+      sync();
+      window.addEventListener('slg:float', sync);
+    });
     var legend = document.createElement('div');
     legend.id = 'slgLegend';
-    legend.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:100002;width:220px;display:none;'
-      + 'text-align:left;background:rgba(14,15,11,0.88);'
-      + 'border:1px solid rgba(186,154,82,0.45);border-radius:8px;padding:8px 12px;'
+    legend.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:100002;width:252px;display:none;'
+      + 'max-height:min(32vh,300px);overflow-y:auto;'
+      + 'text-align:left;background:rgba(14,15,11,0.9);'
+      + 'border:1px solid rgba(186,154,82,0.45);border-radius:8px;padding:8px 10px 9px;'
       + 'color:#e2d6ba;font:13px/1.7 "Microsoft YaHei",sans-serif;'
       + 'box-shadow:0 6px 20px rgba(0,0,0,.45);';
     var foot = document.createElement('div');
@@ -1168,14 +1257,8 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     document.getElementById('slgBtnHome').onclick = function () {
       if (window.__slgHomeWindow && lastState) window.__slgHomeWindow();
     };
-    document.getElementById('slgBtnGens').onclick = function () {
-      /* ★ P6：与右侧六府菜单联动——优先开六府「武将」页，旧窗口兜底 */
-      if (window.__slgPanels && window.__slgPanels.open) window.__slgPanels.open('general');
-      else if (window.__slgGeneralsWindow) window.__slgGeneralsWindow();
-    };
-    document.getElementById('slgBtnReps').onclick = function () {
-      if (window.__slgReportsWindow) window.__slgReportsWindow();
-    };
+    /* ★ 用户 ⑩：武将 / 战报在左侧坞与右侧六府各有一份，属重复入口。
+       六府是它们的家（点开就是完整面板），左侧坞只保留沙盘动作，故此处移除。 */
     document.getElementById('slgStratTick').onclick = function () { window.__slgTick(); };
     // 滚轮缩放（以光标为锚）＋拖拽平移；轻点仍是选城
     canvas.style.cursor = 'grab';
@@ -1507,13 +1590,25 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       + 'box-shadow:0 6px 20px rgba(0,0,0,.45);text-align:left;';
     var head = document.createElement('div');
     head.style.cssText = 'color:#e8c670;font-weight:bold;letter-spacing:2px;text-align:left;'
-      + 'border-bottom:1px solid rgba(186,154,82,0.25);padding-bottom:5px;margin-bottom:6px;';
-    head.textContent = '图层与检索';
+      + 'border-bottom:1px solid rgba(186,154,82,0.25);padding-bottom:5px;margin-bottom:6px;'
+      + 'display:flex;align-items:center;justify-content:space-between;cursor:move;user-select:none;';
+    head.innerHTML = '<span>图层与检索</span>'
+      + '<button data-lgside="hide" title="隐藏本面板（可从左上「浮窗」再打开）" '
+      + 'style="background:transparent;color:#c8b88a;border:1px solid rgba(186,154,82,.4);'
+      + 'border-radius:4px;padding:0 6px;cursor:pointer;font:11px/1.6 &quot;Microsoft YaHei&quot;,sans-serif;">✕</button>';
     sidePanel.appendChild(head);
+    head.querySelector('[data-lgside="hide"]').onclick = function (ev) {
+      ev.stopPropagation();
+      if (window.__slgShell && window.__slgShell.float) window.__slgShell.float('side', false);
+      else document.documentElement.setAttribute('data-slg-float-side', 'off');
+    };
 
+    /* ★ 用户 ⑦：去掉「十三州水墨底图」「十三州部古名」两项——
+       底图是地图本体（关掉只剩空白），古名层已废弃，两者都不该出现在图层列表里。
+       列表只留真正可切换的四层。 */
     var LAYER_LABEL = [
-      ['base', '十三州水墨底图'], ['zhou', '十三州部古名'], ['road', '分级路网'],
-      ['city', '城池模型'], ['pass', '八处关隘'], ['name', '城名标注'],
+      ['road', '分级路网'], ['city', '城池模型'],
+      ['pass', '八处关隘'], ['name', '城名标注'],
     ];
     LAYER_LABEL.forEach(function (pair) {
       var lab = document.createElement('label');
@@ -1657,6 +1752,141 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     };
   }
 
+  /* 十六进制色 → rgba 字符串（画势力范围柔光用，canvas 不认 #rrggbbaa） */
+  function tintA(hex, a) {
+    var m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
+    if (!m) return 'rgba(138,122,82,' + a + ')';
+    var v = parseInt(m[1], 16);
+    return 'rgba(' + ((v >> 16) & 255) + ',' + ((v >> 8) & 255) + ',' + (v & 255) + ',' + a + ')';
+  }
+
+  /* ---------------- 势力面板（原「势力图例」升级） ----------------
+   * ★ 用户 ⑪：势力面板要能「选不同势力看情报、看势力范围」，并且这个面板可以不显示。
+   *   - 数据取 s.diplomacy.factions（服务端 diplomacyView 下发的态度/兵力/都城/简介），
+   *     取不到就退回 s.factions（只有名与色），绝不自己编数字；
+   *   - 点一个势力 = 在地图上铺它的势力范围 + 下方展开情报卡；再点一次取消；
+   *   - 面板自身的显示/隐藏走外壳那套 html[data-slg-float-legend]，
+   *     与 图层/透镜/事务 一视同仁（见 ui-shell.js 的 FLOATS）。
+   * 另外：draw() 在行军时以 20fps 重绘，原来每帧都 innerHTML 重建整块图例
+   *   （13 条 + 合规声明），既费 CPU 又会吃掉点击。这里用签名比对，只有内容变了才重建。
+   */
+  var legendSel = '', legendSig = '', legendFold = false;
+
+  function renderLegend(s) {
+    var box = document.getElementById('slgLegend');
+    if (!box || !s) return;
+    var dip = (s.diplomacy && s.diplomacy.factions) || [];
+    var mine = (s.cities || []).filter(function (c) { return String(c.owner) === 'player'; });
+    var sig = [legendSel, legendFold, s.turn, s.day, (s.cities || []).length,
+      dip.map(function (f) { return [f.id, f.attitude, f.troops, f.homeCity, f.truceUntil].join(':'); }).join(','),
+      mine.length].join('|');
+    if (sig === legendSig) return;
+    legendSig = sig;
+
+    var countOf = function (fid) {
+      return (s.cities || []).filter(function (c) { return String(c.owner) === String(fid); }).length;
+    };
+    var troopOf = function (fid) {
+      var t = 0;
+      (s.cities || []).forEach(function (c) { if (String(c.owner) === String(fid)) t += Number(c.troops) || 0; });
+      return t;
+    };
+    var shortN = function (n) { return n >= 10000 ? (n / 10000).toFixed(1) + '万' : String(n); };
+
+    var rows = '';
+    var addRow = function (fid, name, color, extra, sub) {
+      var on = String(legendSel) === String(fid);
+      rows += '<button class="lg-row' + (on ? ' on' : '') + '" data-fid="' + esc(fid) + '"'
+        + ' title="' + esc(name + '：城 ' + countOf(fid) + ' 座') + '">'
+        + '<i style="background:' + esc(color || '#8a8a8a') + '"></i>'
+        + '<b>' + esc(name) + '</b>'
+        + '<span class="lg-n">' + countOf(fid) + ' 城 · ' + shortN(troopOf(fid)) + '</span>'
+        + (extra ? '<em>' + esc(extra) + '</em>' : '')
+        + (sub ? '<span class="lg-s">' + esc(sub) + '</span>' : '')
+        + '</button>';
+    };
+    addRow('player', '我军', '#e8c670', '', '');
+    dip.forEach(function (f) {
+      /* 态度：>30 亲善 / <-30 敌视，中间为中立；有停战与同盟单独标注 */
+      var att = Number(f.attitude) || 0;
+      var tag = f.war ? '交战' : (f.ally ? '同盟' : (att >= 30 ? '亲善' : (att <= -30 ? '敌视' : '中立')));
+      addRow(f.id, f.name, f.color, tag, '');
+    });
+    /* 汉廷等无主城势力（有城才算版图，没城就不列，避免空行） */
+    var html = '<div class="lg-head"><span>势力 · 版图</span>'
+      + '<span class="lg-btns">'
+      + '<button data-lg="fold" title="' + (legendFold ? '展开列表' : '只留标题') + '">'
+      + (legendFold ? '▣' : '－') + '</button>'
+      + '<button data-lg="hide" title="隐藏势力面板（可从左上「浮窗」再打开）">✕</button>'
+      + '</span></div>';
+    if (!legendFold) {
+      html += '<div class="lg-list">' + rows + '</div>';
+      /* 选中势力 → 情报卡 */
+      if (legendSel) {
+        var f2 = legendSel === 'player' ? null
+          : dip.filter(function (x) { return String(x.id) === String(legendSel); })[0];
+        var name2 = legendSel === 'player' ? '我军' : (f2 ? f2.name : legendSel);
+        var hold = (s.cities || []).filter(function (c) { return String(c.owner) === String(legendSel); })
+          .slice(0, 10).map(function (c) { return c.name; });
+        html += '<div class="lg-detail">'
+          + '<div class="lg-dt">' + esc(name2) + ' · 势力范围</div>';
+        if (f2) {
+          /* homeCity 是城市 id，home 才是城名；先按 id 查名，查不到再用配置里的名字 */
+          var homeName = '';
+          (s.cities || []).forEach(function (c) { if (String(c.id) === String(f2.homeCity)) homeName = c.name; });
+          if (!homeName) homeName = f2.home || (f2.homeCity ? ('城#' + f2.homeCity) : '—');
+          var hisTroops = Number(f2.troops) || 0;
+          html += '<div>都城　' + esc(homeName)
+            + '　态度 ' + (Number(f2.attitude) || 0)
+            + (f2.war ? '（交战）' : (f2.ally ? '（同盟）' : '')) + '</div>'
+            + '<div>兵力　' + shortN(hisTroops)
+            + (hisTroops > 0 ? ('　我/他 ' + (Number(f2.troopsRatio) || 0) + ' 倍') : '　（已无兵）')
+            + '</div>'
+            + (f2.intel ? '<div>情报档　' + f2.intel + ' 级（派斥候可提升）</div>' : '')
+            + (f2.blurb ? '<div class="lg-blurb">' + esc(f2.blurb) + '</div>' : '');
+        } else {
+          html += '<div>城池　' + mine.length + ' 座　兵力 '
+            + shortN(mine.reduce(function (a, c) { return a + (Number(c.troops) || 0); }, 0)) + '</div>';
+        }
+        html += '<div class="lg-hold">所辖：' + (hold.length ? esc(hold.join('、')) : '暂无城池')
+          + (countOf(legendSel) > hold.length ? ' 等 ' + countOf(legendSel) + ' 座' : '') + '</div>'
+          + '<button class="lg-clear" data-lg="clear">取消选中（移开势力范围）</button>'
+          + '</div>';
+      }
+      html += '<div class="lg-foot">点势力名看情报与版图；金环＝本城。'
+        + '本图为游戏示意图（等距圆柱投影），非标准行政地图。</div>';
+    }
+    box.innerHTML = html;
+    /* 选中势力后面板会变长，情报卡常在折线下——自动滚到能看见为止（只读，不改选中） */
+    var dtEl = box.querySelector('.lg-detail');
+    if (dtEl) {
+      var br = box.getBoundingClientRect(), dr = dtEl.getBoundingClientRect();
+      if (dr.bottom > br.bottom - 4) box.scrollTop = box.scrollHeight;
+    }
+
+    Array.prototype.forEach.call(box.querySelectorAll('[data-lg]'), function (b) {
+      b.onclick = function (ev) {
+        ev.stopPropagation();
+        var act = b.getAttribute('data-lg');
+        if (act === 'fold') { legendFold = !legendFold; legendSig = ''; if (lastState) draw(lastState); return; }
+        if (act === 'hide') {
+          if (window.__slgShell && window.__slgShell.float) window.__slgShell.float('legend', false);
+          else document.documentElement.setAttribute('data-slg-float-legend', 'off');
+          return;
+        }
+        if (act === 'clear') { legendSel = ''; legendSig = ''; if (lastState) draw(lastState); }
+      };
+    });
+    Array.prototype.forEach.call(box.querySelectorAll('.lg-row'), function (b) {
+      b.onclick = function () {
+        var fid = b.getAttribute('data-fid');
+        legendSel = String(legendSel) === String(fid) ? '' : fid;
+        legendSig = '';
+        if (lastState) draw(lastState);
+      };
+    });
+  }
+
   function draw(s) {
     if (!canvas) return;
     var rect = canvas.getBoundingClientRect();
@@ -1672,8 +1902,9 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     g.fillRect(0, 0, rect.width, rect.height);
 
     // 底图只用水墨层。全景合成图里已经画了路，不能拿来当底，否则调色会把线路一起洗掉。
+    // 底图现在恒绘（不再有开关）：它是地图本体，不是可选装饰。
     var hasLayers = !!(DETAIL && DETAIL.layers);
-    var baseImg = LAYER.base && hasLayers && DETAIL.layers.base
+    var baseImg = hasLayers && DETAIL.layers.base
       ? ensureImg('layer:base', layerUrl(DETAIL.layers.base)) : null;
     if (baseImg) {
       g.drawImage(baseImg, ox, oy, MAP_W * scale, MAP_H * scale);
@@ -1731,7 +1962,34 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       g.drawImage(tinted, q[0], q[1], dw, dh);
     }
 
-    drawLayer('zhou');
+    /* ★ 用户 ⑪：选中势力后画出「势力范围」——每座属城铺一团同色柔光 + 虚线界圈，
+       同色连成片即版图。画在路网与城池之前，不遮路、不挡城名。 */
+    if (legendSel) {
+      var fcol = '#8a7a52';
+      var fcities = s.cities.filter(function (c) { return String(c.owner) === String(legendSel); });
+      if (fcities.length && fcities[0].color) fcol = fcities[0].color;
+      g.save();
+      fcities.forEach(function (c) {
+        var q = P([c.x, c.y]);
+        var rr = Math.max(46, 104 * scale);
+        var rg = g.createRadialGradient(q[0], q[1], 2, q[0], q[1], rr);
+        rg.addColorStop(0, tintA(fcol, 0.34));
+        rg.addColorStop(0.6, tintA(fcol, 0.15));
+        rg.addColorStop(1, tintA(fcol, 0));
+        g.fillStyle = rg;
+        g.beginPath(); g.arc(q[0], q[1], rr, 0, 6.2832); g.fill();
+        g.beginPath();
+        g.arc(q[0], q[1], Math.max(16, 30 * scale), 0, 6.2832);
+        g.setLineDash([5 * scale, 4 * scale]);
+        g.strokeStyle = tintA(fcol, 0.78);
+        g.lineWidth = Math.max(1.2, 1.6 * scale);
+        g.stroke();
+        g.setLineDash([]);
+      });
+      g.restore();
+    }
+
+    // 旧「十三州部古名」层（layer_zhou）已废弃，不再绘制
     drawLayer('road');
 
     // 城池按原大贴上。选中只染这一座插画，裁剪不放大，免得把邻城一起染红。
@@ -1911,7 +2169,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
         }
         var walked = p * total;
         var cur = [pts[0][0], pts[0][1]];
-        var acc = 0, closed = false;
+        var acc = 0, closed = false, tang = null;
         g.save();
         // 已走部分：实线（玩家金色 / 诸侯敌红）
         g.strokeStyle = cWalk;
@@ -1925,14 +2183,17 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
             var q1 = P(p1);
             g.lineTo(q1[0], q1[1]);
             cur = [p1[0], p1[1]]; acc += L2;
+            tang = [p1[0] - p0[0], p1[1] - p0[1]];
           } else {
             var t = L2 > 0 ? (walked - acc) / L2 : 0;
             cur = [p0[0] + (p1[0] - p0[0]) * t, p0[1] + (p1[1] - p0[1]) * t];
+            tang = [p1[0] - p0[0], p1[1] - p0[1]];
             var qc = P(cur);
             g.lineTo(qc[0], qc[1]);
             g.stroke();
-            // 未走部分：同色虚线
+            // 未走部分：同色虚线（相位随时间走，像一队人还在往前挪）
             g.setLineDash([6 * scale, 5 * scale]);
+            g.lineDashOffset = -((Date.now() / 55) % (11 * scale));
             g.strokeStyle = cRest;
             g.lineWidth = Math.max(1.2, 1.6 * scale);
             g.beginPath();
@@ -1948,21 +2209,57 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
         }
         if (!closed) g.stroke();
         g.setLineDash([]);
-        // 军标：小旗插在当前位置
+        g.lineDashOffset = 0;
+        /* ★ 用户 ⑤：「在地图上看不到在途行军部队，需要动画效果」。
+           原实现只有一支 12px 小旗 + 3px 圆点，1× 视野下几乎看不见，而且是静止的。
+           现在换成：呼吸光环（脉冲）+ 兵力徽章 + 行进方向箭头 + 「→ 城名 · 余 N 日」标签，
+           由 Date.now() 驱动相位 —— 20fps 重绘时是连续动画，静帧也停在合理相位，
+           不依赖 requestAnimationFrame 是否在跑，也不会因为掉帧而闪。 */
         var qm = P(cur);
-        g.fillStyle = 'rgba(20,16,8,.55)';
-        g.beginPath(); g.arc(qm[0], qm[1] + 2 * scale, Math.max(2.5, 3.5 * scale), 0, 6.2832); g.fill();
-        var fh2 = Math.max(7, 12 * scale), fw2 = fh2 * 1.1;
-        g.fillStyle = cFlag;
+        var ph = (Date.now() % 1500) / 1500;
+        var pulse = Math.sin(ph * Math.PI * 2) * 0.5 + 0.5;
+        var R = Math.max(11, 13 * scale);
+        var rgb = isFoe ? '225,92,72' : '232,198,112';
+        /* 呼吸光环 */
         g.beginPath();
-        g.moveTo(qm[0], qm[1] - fh2);
-        g.lineTo(qm[0] + fw2, qm[1] - fh2 + fh2 * 0.3);
-        g.lineTo(qm[0], qm[1] - fh2 + fh2 * 0.62);
-        g.closePath();
-        g.fill();
-        g.strokeStyle = 'rgba(30,24,14,.8)'; g.lineWidth = Math.max(0.8, 1 * scale); g.stroke();
-        g.strokeStyle = cFlag;
-        g.beginPath(); g.moveTo(qm[0], qm[1] - fh2); g.lineTo(qm[0], qm[1]); g.stroke();
+        g.arc(qm[0], qm[1], R + 3 + pulse * 11, 0, 6.2832);
+        g.strokeStyle = 'rgba(' + rgb + ',' + (0.55 * (1 - pulse)).toFixed(3) + ')';
+        g.lineWidth = 2;
+        g.stroke();
+        /* 徽章底盘 */
+        g.beginPath(); g.arc(qm[0], qm[1], R, 0, 6.2832);
+        g.fillStyle = 'rgba(16,14,8,.86)'; g.fill();
+        g.lineWidth = 2; g.strokeStyle = cFlag; g.stroke();
+        /* 徽章里的兵力（万级压缩，字号跟着缩放走） */
+        var tsum = Math.max(0, Number(mm.troops) || 0);
+        var tmsg = tsum >= 10000 ? (tsum / 10000).toFixed(1) + '万' : String(tsum);
+        g.fillStyle = cFlag;
+        g.font = 'bold ' + Math.max(9, Math.min(12, R * 0.8)).toFixed(1) + 'px "Microsoft YaHei",sans-serif';
+        g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.fillText(tmsg, qm[0], qm[1] + 0.5);
+        /* 方向箭头：沿当前所在路段切线，告诉玩家「往哪走」 */
+        if (tang) {
+          var tl = Math.hypot(tang[0], tang[1]) || 1;
+          var dx = tang[0] / tl, dy = tang[1] / tl;
+          var ax = qm[0] + dx * (R + 10), ay = qm[1] + dy * (R + 10);
+          g.beginPath();
+          g.moveTo(ax + dx * 8, ay + dy * 8);
+          g.lineTo(ax - dy * 5 - dx * 3, ay + dx * 5 - dy * 3);
+          g.lineTo(ax + dy * 5 - dx * 3, ay - dx * 5 - dy * 3);
+          g.closePath();
+          g.fillStyle = cFlag; g.fill();
+        }
+        /* 标签：我方「→ 目标城 · 余 N 日」，敌方前置势力名 */
+        var restDay = Math.max(0, Math.ceil(mm.arriveDay - dayNow));
+        var head = isFoe ? ((mm.factionName || '诸侯军') + ' ') : '';
+        var label = head + (mm.recalled ? '撤回 ' : '→ ') + (mm.toName || '')
+          + ' · 余 ' + restDay + ' 日';
+        g.font = Math.max(10, 11.5 * scale).toFixed(1) + 'px "Microsoft YaHei",sans-serif';
+        g.textAlign = 'center'; g.textBaseline = 'top';
+        g.lineWidth = 3; g.strokeStyle = 'rgba(250,244,228,.88)';
+        g.strokeText(label, qm[0], qm[1] + R + 5);
+        g.fillStyle = isFoe ? '#9e2b1c' : '#6b4a12';
+        g.fillText(label, qm[0], qm[1] + R + 5);
         g.restore();
       });
     }
@@ -2005,27 +2302,8 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       });
     }
 
-    // 势力图例固定在游戏窗口右下角，不随地图拖动；条目左对齐
-    var legend = document.getElementById('slgLegend');
-    if (legend) {
-      var html = '<div style="color:#e8c670;font-weight:bold;letter-spacing:2px;text-align:left;">势力</div>'
-        + '<div style="display:grid;grid-template-columns:1fr 1fr;column-gap:14px;text-align:left;">';
-      for (var i = 0; i < s.factions.length; i++) {
-        var f = s.factions[i];
-        html += '<div style="text-align:left;"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;'
-          + 'background:' + f.color + ';margin-right:6px;vertical-align:-1px;"></span>' + f.name + '</div>';
-      }
-      html += '<div style="text-align:left;"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;'
-        + 'background:' + s.neutral.color + ';margin-right:6px;vertical-align:-1px;"></span>' + s.neutral.name + '</div>';
-      html += '</div><div style="border-top:1px solid rgba(186,154,82,.25);margin-top:3px;padding-top:3px;text-align:left;">'
-        + '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;'
-        + 'border:2px solid #e8c670;margin-right:5px;vertical-align:-1px;"></span>金环＝本城</div>'
-      /* M4-1 合规声明（GDD §10.8）：地图为等距圆柱投影示意图，非标准行政地图。 */
-        + '<div style="border-top:1px solid rgba(186,154,82,.25);margin-top:4px;padding-top:4px;'
-        + 'color:#9c9382;font-size:11px;line-height:1.6;text-align:left;">'
-        + '本图为游戏示意图（等距圆柱投影），非标准行政地图。</div>';
-      legend.innerHTML = html;
-    }
+    /* 势力图例/面板：内容只在变化时重建（详见 renderLegend 的头注） */
+    renderLegend(s);
     // 事件与回合
     var camp = s.campaign || {};
     var endTxt = camp.ending === 'held' ? ' · 序章已守住'
@@ -2092,269 +2370,474 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
   else boot();
 })();`;
 
-/** 战斗回放：把战报里的确定性事件流播成平铺对拼动画。 */
+/**
+ * 战斗回放 / 战报内嵌战斗画面。
+ *
+ * ★ 用户反馈「战报没有打斗画面」「只写：健卒不殆 发动，看不懂效果」。两件事一起解决：
+ *   1. 把原来「只能全屏回放」的播放器抽成可复用的 Stage —— 战报详情里直接内嵌一块
+ *      战斗画面，不必先知道要点「回放」。
+ *   2. 每个动作都带一句服务端生成的人话（domain/battle-narrative.js）：
+ *      「吕布 发动「健卒不殆」（自身普通攻击伤害 +40%）——铁骑压上，前排应声而乱」，
+ *      播放时作为字幕出现在画面下方，玩家能边看边读懂发生了什么。
+ *
+ * 工程约束：注入层独立 IIFE，不改协议、不改 web/ 产物、不用模板字符串（本文件由
+ *   Node 侧以模板串下发，内部一律字符串拼接）。
+ */
 const BATTLE_ANIM_SOURCE = `;(function () {
   if (typeof document === 'undefined') return;
-  var overlay = null, canvas = null, raf = null;
-  var anim = null, cues = [], t0 = 0, particles = [], units = {}, finished = false;
 
   var SIDE_COLOR = { a: '#c0392b', d: '#2c5f8a' };
-  var SIDE_NAME = { a: '攻方', d: '守方' };
-  var DUR = { banner: 650, prepare: 450, skill: 950, hit: 620, control: 550, heal: 550, down: 800, result: 1400 };
+  var SIDE_NAME = { a: '我军', d: '守军' };
+  var DUR = { banner: 650, prepare: 450, skill: 950, hit: 620, control: 550, heal: 550, down: 800, result: 1500 };
+
+  function fmt(n) { n = Math.round(Number(n) || 0); return n >= 10000 ? (n / 10000).toFixed(1) + '万' : String(n); }
+
+  /* ---------------- 样式（与战报/面板同一套金褐色调） ---------------- */
+  function injectCss() {
+    if (document.getElementById('slgBattleCss')) return;
+    var css = ''
+      + '.slgStage{position:relative;display:flex;flex-direction:column;background:#0e1013;'
+      + 'border:1px solid #3a3325;border-radius:6px;overflow:hidden}'
+      + '.slgStage canvas{display:block;width:100%;height:100%;flex:1;min-height:0}'
+      + '.slgStage .sub{position:absolute;left:0;right:0;bottom:40px;padding:7px 14px;'
+      + 'background:linear-gradient(180deg,rgba(10,12,8,0),rgba(10,12,8,.88));'
+      + 'color:#f0e2b8;font:12.5px/1.65 "Microsoft YaHei",sans-serif;text-align:left;'
+      + 'pointer-events:none;min-height:34px}'
+      + '.slgStage .sub b{color:#ffe9b0}'
+      + '.slgStage .bar{height:40px;flex:0 0 40px;display:flex;align-items:center;gap:8px;'
+      + 'padding:0 10px;background:rgba(18,20,14,.96);border-top:1px solid #33302a;'
+      + 'font:11.5px "Microsoft YaHei",sans-serif;color:#c8b88a}'
+      + '.slgStage .bar button{background:#20221c;color:#e8c670;border:1px solid #6a624a;'
+      + 'border-radius:4px;padding:3px 10px;cursor:pointer;font:11.5px "Microsoft YaHei",sans-serif}'
+      + '.slgStage .bar button:hover{background:#33362a;border-color:#ba9a52}'
+      + '.slgStage .bar .sp{flex:1}'
+      + '.slgStage .bar .prog{color:#9c9382}'
+      + '#slgBattleOverlay .head{position:absolute;top:0;left:0;right:0;height:38px;display:flex;'
+      + 'align-items:center;gap:12px;padding:0 12px;background:#161810;color:#e8c670;'
+      + 'font:14px "Microsoft YaHei",sans-serif;z-index:3;border-bottom:1px solid #33302a}'
+      + '#slgBattleOverlay .head button{background:#2a2c30;color:#e8c670;border:1px solid #ba9a52;'
+      + 'border-radius:4px;padding:2px 10px;cursor:pointer;font:12px "Microsoft YaHei",sans-serif}'
+      + '#slgBattleOverlay .body{position:absolute;top:38px;left:0;right:0;bottom:0;padding:10px}';
+    var st = document.createElement('style'); st.id = 'slgBattleCss'; st.textContent = css;
+    (document.head || document.documentElement).appendChild(st);
+  }
+
+  /* ---------------- Stage：一场战斗的播放器 ---------------- */
+  function createStage(anim, opt) {
+    opt = opt || {};
+    injectCss();
+    var host = document.createElement('div');
+    host.className = 'slgStage';
+    if (opt.height) host.style.height = opt.height;
+    var canvas = document.createElement('canvas');
+    var sub = document.createElement('div'); sub.className = 'sub';
+    var bar = document.createElement('div'); bar.className = 'bar';
+    host.appendChild(canvas); host.appendChild(sub); host.appendChild(bar);
+
+    var state = {
+      anim: anim, t0: 0, paused: false, speed: 1, finished: false,
+      particles: [], units: {}, cues: [], total: 0, raf: null,
+      roundBanner: null, roundUntil: 0, skillBanner: null, skillUntil: 0,
+      resultBanner: null, resultColor: null, subText: '', subUntil: 0,
+      roundNow: 0, roundTotal: (anim.rounds || []).length,
+    };
+
+    /* 参战单位：名字 / 兵力 / 战法说明 */
+    (function buildUnits() {
+      var put = function (side, list) {
+        (list || []).forEach(function (u, i) {
+          state.units[side + (u.slot == null ? i : u.slot)] = {
+            side: side, slot: u.slot == null ? i : u.slot, name: u.name,
+            skills: u.skills || [],
+            troops: Math.max(1, u.troops), cur: Math.max(0, u.remain),
+            dead: u.remain <= 0, x: 0, y: 0, lungeT: -1, flashT: -1, fallT: -1,
+            stateText: '', stateT: 0, skillT: -1,
+          };
+        });
+      };
+      put('a', anim.a && anim.a.units);
+      put('d', anim.d && anim.d.units);
+    })();
+
+    function unitKey(u) { return u ? (u.s + (u.i == null ? 0 : u.i)) : ''; }
+
+    function buildCues() {
+      var t = 380, list = [];
+      list.push({ t: 0, fn: function () {} });
+      (anim.rounds || []).forEach(function (r) {
+        list.push({
+          t: t, fn: function (c) {
+            c.roundBanner = r.round > 0 ? '第 ' + r.round + ' 回合' : '列阵 · 战法先行';
+            c.roundUntil = t + DUR.banner;
+            c.roundNow = r.round;
+          },
+        });
+        t += DUR.banner;
+        (r.acts || []).forEach(function (act) {
+          var dur = DUR[act.t] || 500;
+          list.push({
+            t: t,
+            fn: function (c) { applyAct(c, act); },
+            end: t + dur,
+          });
+          t += Math.max(200, dur * 0.55);
+        });
+      });
+      list.push({
+        t: t, fn: function (c) {
+          c.resultBanner = anim.winner === 2 ? '胜' : (anim.winner === 0 ? '败' : '平');
+          c.resultColor = anim.winner === 2 ? '#e8c670' : (anim.winner === 0 ? '#c0392b' : '#9aa0a6');
+        },
+      });
+      list.push({ t: t + DUR.result, fn: function (c) { c.finished = true; } });
+      state.total = t + DUR.result;
+      return list;
+    }
+
+    function applyAct(ctx, act) {
+      var f = state.units[unitKey(act.f)];
+      var to = state.units[unitKey(act.to || act.unit)];
+      /* 字幕：服务端已经写好的人话；没有再退回「谁 发动了什么」 */
+      var line = act.text || ((act.fName || '') + ' ' + (act.skill || ''));
+      if (act.t === 'skill' && act.effect) line = (act.fName || '') + ' 发动「' + act.skill + '」— ' + act.effect;
+      ctx.subText = line;
+      ctx.subUntil = performance.now() + Math.max(900, (DUR[act.t] || 500) * 1.2);
+      if (act.t === 'hit' && f && to && !f.dead) {
+        f.lungeT = performance.now();
+        to.flashT = performance.now();
+        damage(to, act.loss);
+        state.particles.push(mkText('-' + fmt(act.loss), to.x, to.y - 46, '#ff6b5e'));
+      } else if (act.t === 'skill' && f) {
+        state.skillBanner = (f.name || '') + ' · ' + (act.skill || '战法');
+        state.skillUntil = performance.now() + 1100;
+        f.skillT = performance.now();
+        if (act.to && to) to.flashT = performance.now();
+      } else if (act.t === 'control' && to) {
+        to.stateText = act.state;
+        to.stateT = performance.now();
+        state.particles.push(mkText(act.state || '受制', to.x, to.y - 46, '#b07ce8'));
+      } else if (act.t === 'heal' && to) {
+        var amt = Math.min(act.amount || 0, to.troops - to.cur);
+        to.cur += amt;
+        state.particles.push(mkText('+' + fmt(amt), to.x, to.y - 46, '#6fcf97'));
+      } else if (act.t === 'prepare' && f) {
+        state.skillBanner = (f.name || '') + ' · ' + (act.skill || '战法') + '（蓄）';
+        state.skillUntil = performance.now() + 800;
+      } else if (act.t === 'down' && to) {
+        to.dead = true; to.cur = 0; to.fallT = performance.now();
+      }
+    }
+
+    function damage(u, loss) {
+      if (!u || u.dead) return;
+      u.cur = Math.max(0, u.cur - loss);
+      if (u.cur <= 0) { u.dead = true; u.fallT = performance.now(); }
+    }
+
+    function mkText(text, x, y, color) {
+      return { text: text, x: x, y: y, t0: performance.now(), color: color };
+    }
+
+    /* ---- 绘制 ---- */
+    function drawFigure(g, u, now) {
+      var side = SIDE_COLOR[u.side] || '#999';
+      var x = u.x, y = u.y;
+      var lunge = 0;
+      if (u.lungeT > 0) {
+        var dt = now - u.lungeT;
+        if (dt < 620) lunge = Math.sin((dt / 620) * Math.PI) * 46 * (u.side === 'a' ? 1 : -1);
+        else u.lungeT = -1;
+      }
+      var flash = u.flashT > 0 && now - u.flashT < 260;
+      var dying = u.dead && u.fallT > 0;
+      var fall = dying ? Math.min(1, (now - u.fallT) / 700) : 0;
+      g.save();
+      g.translate(x + lunge, y);
+      if (fall > 0) { g.rotate((fall * Math.PI / 2) * (u.side === 'a' ? 1 : -1)); g.globalAlpha = 1 - fall * 0.85; }
+      if (flash) g.globalAlpha = 0.55;
+      /* 战法光晕：发动瞬间在脚下铺一圈 */
+      if (u.skillT > 0 && now - u.skillT < 900) {
+        var k = (now - u.skillT) / 900;
+        g.beginPath(); g.arc(0, 6, 20 + k * 34, 0, 6.2832);
+        g.strokeStyle = 'rgba(232,198,112,' + (0.6 * (1 - k)).toFixed(3) + ')';
+        g.lineWidth = 3; g.stroke();
+      }
+      g.fillStyle = side;
+      g.beginPath(); g.moveTo(-12, 18); g.lineTo(0, -6); g.lineTo(12, 18); g.closePath(); g.fill();
+      g.fillStyle = '#f0d9a8';
+      g.beginPath(); g.arc(0, -14, 7, 0, 6.2832); g.fill();
+      g.fillStyle = side;
+      g.beginPath(); g.arc(0, -20, 4, 0, 6.2832); g.fill();
+      g.strokeStyle = '#d8cfa8'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(10, 8); g.lineTo(26, -14); g.stroke();
+      if (flash) { g.globalAlpha = 0.9; g.fillStyle = '#fff'; g.fillRect(-14, -26, 30, 48); }
+      g.restore();
+      var count = Math.min(6, Math.ceil((u.dead ? 0 : u.cur) / Math.max(1, u.troops / 10)));
+      for (var i = 0; i < count; i++) {
+        var sx = x + (u.side === 'a' ? -1 : 1) * (26 + i * 10);
+        var sy = y + 22;
+        g.fillStyle = side; g.globalAlpha = 0.75;
+        g.beginPath(); g.arc(sx, sy, 3.4, 0, 6.2832); g.fill();
+        g.strokeStyle = '#d8cfa8'; g.lineWidth = 1;
+        g.beginPath(); g.moveTo(sx, sy - 3); g.lineTo(sx + (u.side === 'a' ? 5 : -5), sy - 12); g.stroke();
+        g.globalAlpha = 1;
+      }
+      if (!u.dead || fall < 1) {
+        g.fillStyle = '#e6dac0'; g.font = '12px "Microsoft YaHei",sans-serif'; g.textAlign = 'center';
+        g.fillText(u.name, x, y - 34);
+        var w = 74;
+        g.fillStyle = '#22252b'; g.fillRect(x - w / 2, y + 34, w, 5);
+        g.fillStyle = side; g.fillRect(x - w / 2, y + 34, w * Math.max(0, u.cur / Math.max(1, u.troops)), 5);
+        g.fillStyle = '#c8b88a'; g.font = '11px "Microsoft YaHei",sans-serif';
+        g.fillText(fmt(u.cur) + '/' + fmt(u.troops), x, y + 56);
+        if (u.stateText && now - u.stateT < 2500) {
+          g.fillStyle = '#b07ce8'; g.fillText(u.stateText, x, y - 48);
+        }
+      }
+    }
+
+    function draw(now) {
+      var rect = canvas.getBoundingClientRect();
+      if (rect.width < 4 || rect.height < 4) return;
+      var dpr = Math.min(2, window.devicePixelRatio || 1);
+      if (canvas.width !== Math.round(rect.width * dpr) || canvas.height !== Math.round(rect.height * dpr)) {
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+      }
+      var g = canvas.getContext('2d');
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      g.clearRect(0, 0, rect.width, rect.height);
+      /* 背景：夜战 / 地平线 / 双方营寨 */
+      var bg = g.createLinearGradient(0, 0, 0, rect.height);
+      bg.addColorStop(0, '#12151a'); bg.addColorStop(1, '#1a1a14');
+      g.fillStyle = bg; g.fillRect(0, 0, rect.width, rect.height);
+      g.strokeStyle = 'rgba(200,180,130,0.16)'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(0, rect.height * 0.78); g.lineTo(rect.width, rect.height * 0.78); g.stroke();
+      g.fillStyle = 'rgba(192,57,43,.10)'; g.fillRect(0, 0, rect.width * 0.34, rect.height);
+      g.fillStyle = 'rgba(44,95,138,.10)'; g.fillRect(rect.width * 0.66, 0, rect.width * 0.34, rect.height);
+      /* ★ 站位按画布高度均分：嵌入式战报只有 260~320px，用比例站位（0.34/0.58/0.82）
+         会让最后一排的兵力数字压进字幕条。这里改成「上留 46、下留 136（字幕 + 血条）」，
+         三排均分，任何高度都不会互相压字。 */
+      var topY = 46;
+      var bottomY = Math.max(topY + 60, rect.height - 136);
+      var stepY = (bottomY - topY) / 2;
+      for (var k in state.units) {
+        var u = state.units[k];
+        var row = Math.min(2, Math.max(0, u.slot == null ? 0 : u.slot));
+        u.x = rect.width * (u.side === 'a' ? 0.26 : 0.74);
+        u.y = topY + stepY * row;
+        drawFigure(g, u, now);
+      }
+      state.particles = state.particles.filter(function (p) { return now - p.t0 < 1100; });
+      state.particles.forEach(function (p) {
+        var dt = (now - p.t0) / 1100;
+        g.globalAlpha = 1 - dt;
+        g.fillStyle = p.color;
+        g.font = 'bold 15px "Microsoft YaHei",sans-serif';
+        g.textAlign = 'center';
+        g.fillText(p.text, p.x, p.y - dt * 26);
+        g.globalAlpha = 1;
+      });
+      if (state.roundBanner && now < (state.roundUntil || 0)) {
+        g.fillStyle = 'rgba(20,18,12,0.75)';
+        g.fillRect(rect.width / 2 - 90, 14, 180, 32);
+        g.fillStyle = '#e8c670'; g.font = 'bold 16px "Microsoft YaHei",sans-serif'; g.textAlign = 'center';
+        g.fillText(state.roundBanner, rect.width / 2, 36);
+      }
+      if (state.skillBanner && now < (state.skillUntil || 0)) {
+        g.fillStyle = 'rgba(30,24,10,0.88)';
+        g.fillRect(rect.width / 2 - 170, rect.height * 0.13, 340, 42);
+        g.strokeStyle = '#e8c670'; g.lineWidth = 1.5;
+        g.strokeRect(rect.width / 2 - 170, rect.height * 0.13, 340, 42);
+        g.fillStyle = '#ffe9b0'; g.font = 'bold 18px "Microsoft YaHei",sans-serif'; g.textAlign = 'center';
+        g.fillText(state.skillBanner, rect.width / 2, rect.height * 0.13 + 29);
+      }
+      if (state.resultBanner) {
+        g.fillStyle = 'rgba(16,14,8,0.72)'; g.fillRect(0, 0, rect.width, rect.height);
+        g.fillStyle = state.resultColor || '#e8c670';
+        g.font = 'bold 52px "KaiTi","Microsoft YaHei",sans-serif'; g.textAlign = 'center';
+        g.fillText(state.resultBanner, rect.width / 2, rect.height / 2);
+        g.font = '15px "Microsoft YaHei",sans-serif'; g.fillStyle = '#c8b88a';
+        var sa = 0, sd = 0;
+        for (var kk in state.units) { if (state.units[kk].side === 'a') sa += state.units[kk].cur; else sd += state.units[kk].cur; }
+        g.fillText('我军余 ' + fmt(sa) + ' · 守军余 ' + fmt(sd), rect.width / 2, rect.height / 2 + 34);
+      }
+    }
+
+    function tick() {
+      if (state.paused) { state.raf = null; return; }
+      var now = performance.now();
+      var elapsed = (now - state.t0) * state.speed;
+      if (elapsed >= state.total) state.finished = true;
+      state.cues.forEach(function (c) {
+        if (elapsed >= c.t && !c.done) { c.done = true; c.fn(state); }
+      });
+      draw(now);
+      renderSub(now);
+      renderBar();
+      if (!state.finished) state.raf = requestAnimationFrame(tick);
+      else { draw(now); renderBar(); state.raf = null; }
+    }
+
+    function renderSub(now) {
+      if (state.subText && now < state.subUntil) {
+        sub.innerHTML = state.subText;
+        sub.style.opacity = '1';
+      } else {
+        sub.style.opacity = '0';
+      }
+    }
+
+    /* ★ 原实现每帧重建整条控制栏（60fps × 建 4 个元素），长战报会把主线程占满。
+       现在只建一次，之后只改文字。 */
+    var bPlay = null, bReplay = null, bSpeed = null, progEl = null, barBuilt = false;
+    function buildBar() {
+      if (barBuilt) return;
+      barBuilt = true;
+      var mk = function (txt, fn) {
+        var b = document.createElement('button');
+        b.textContent = txt;
+        b.onclick = fn;
+        bar.appendChild(b);
+        return b;
+      };
+      bPlay = mk('⏸ 暂停', function () { if (state.paused) resume(); else pause(); });
+      bReplay = mk('⟳ 重播', function () { play(); });
+      bSpeed = mk('速度 ×1', function () {
+        state.speed = state.speed >= 4 ? 1 : state.speed * 2;
+        renderBar();
+      });
+      var sp = document.createElement('span'); sp.className = 'sp';
+      progEl = document.createElement('span'); progEl.className = 'prog';
+      bar.appendChild(sp); bar.appendChild(progEl);
+      if (opt.onClose) mk('关闭', function () { destroy(); opt.onClose(); });
+    }
+    function renderBar() {
+      buildBar();
+      bPlay.textContent = state.paused ? '▶ 继续' : '⏸ 暂停';
+      bSpeed.textContent = '速度 ×' + state.speed;
+      var pctDone = state.total
+        ? Math.min(100, Math.round(((performance.now() - state.t0) * state.speed) / state.total * 100))
+        : 0;
+      progEl.textContent = (state.roundNow > 0
+        ? '第 ' + state.roundNow + ' / ' + state.roundTotal + ' 回合' : '列阵') + '　' + pctDone + '%';
+    }
+
+    function reset() {
+      state.t0 = performance.now();
+      state.finished = false;
+      state.paused = false;
+      state.particles = [];
+      state.subText = ''; state.roundNow = 0;
+      Object.keys(state.units).forEach(function (k) {
+        var u = state.units[k];
+        u.cur = Math.max(0, u.dead ? 0 : u.cur);
+      });
+      /* 全场重放：按初始兵力重建，避免「重播时兵已经打光」 */
+      state.units = {};
+      (function rebuild() {
+        var put = function (side, list) {
+          (list || []).forEach(function (u, i) {
+            state.units[side + (u.slot == null ? i : u.slot)] = {
+              side: side, slot: u.slot == null ? i : u.slot, name: u.name, skills: u.skills || [],
+              troops: Math.max(1, u.troops), cur: Math.max(0, u.remain),
+              dead: u.remain <= 0, x: 0, y: 0, lungeT: -1, flashT: -1, fallT: -1,
+              stateText: '', stateT: 0, skillT: -1,
+            };
+          });
+        };
+        put('a', anim.a && anim.a.units); put('d', anim.d && anim.d.units);
+      })();
+      state.cues = buildCues();
+      state.resultBanner = null;
+    }
+
+    function play() {
+      reset();
+      if (state.raf) cancelAnimationFrame(state.raf);
+      state.raf = requestAnimationFrame(tick);
+    }
+    function pause() {
+      if (state.paused) return;
+      state.paused = true;
+      state.pausedAt = performance.now();
+      if (state.raf) cancelAnimationFrame(state.raf);
+      state.raf = null;
+      renderBar();
+    }
+    function resume() {
+      if (!state.paused) return;
+      state.paused = false;
+      /* 暂停 N 毫秒就把起点后移 N 毫秒，恢复后进度不会「跳一大段」 */
+      var gap = performance.now() - (state.pausedAt || performance.now());
+      state.t0 += gap;
+      state.subUntil += gap;
+      state.roundUntil += gap;
+      state.skillUntil += gap;
+      state.raf = requestAnimationFrame(tick);
+    }
+    function destroy() { if (state.raf) cancelAnimationFrame(state.raf); state.raf = null; host.remove(); }
+
+    host.style.height = opt.height || '300px';
+    renderBar();
+    if (opt.autoPlay !== false) play(); else { draw(performance.now()); }
+    return { el: host, play: play, pause: pause, destroy: destroy, anim: anim };
+  }
+
+  /* ---------------- 全屏回放（战报列表「回放」按钮） ---------------- */
+  var overlay = null;
 
   function ensureOverlay() {
     if (overlay) return;
+    injectCss();
     overlay = document.createElement('div');
     overlay.id = 'slgBattleOverlay';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:99997;display:none;background:#101216;';
-    var head = document.createElement('div');
-    head.style.cssText = 'position:absolute;top:0;left:0;right:0;height:34px;display:flex;align-items:center;'
-      + 'padding:0 12px;gap:14px;background:#161810;color:#e8c670;font:14px "Microsoft YaHei",sans-serif;z-index:3;';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99997;display:none;background:#0d0f12;';
+    var head = document.createElement('div'); head.className = 'head';
     head.innerHTML = '<b id="slgBattleTitle"></b><span style="flex:1"></span>'
-      + '<button id="slgBattleReplay" style="background:#2a2c30;color:#e8c670;border:1px solid #ba9a52;border-radius:4px;padding:2px 10px;cursor:pointer;">重播</button>'
-      + '<button id="slgBattleReport" style="background:#2a2c30;color:#e8c670;border:1px solid #ba9a52;border-radius:4px;padding:2px 10px;cursor:pointer;">战报详情</button>'
-      + '<button id="slgBattleClose" style="background:#2a2c30;color:#c9c9c9;border:1px solid #666;border-radius:4px;padding:2px 10px;cursor:pointer;">关闭</button>';
-    canvas = document.createElement('canvas');
-    canvas.style.cssText = 'position:absolute;top:34px;left:0;right:0;bottom:0;width:100%;height:calc(100% - 34px);';
-    overlay.appendChild(head); overlay.appendChild(canvas);
+      + '<span style="font-size:11.5px;color:#9c9382">看清每一回合发生了什么 · Esc 关闭</span>'
+      /* 回放只是「看」，看完要能一步进战报；这条入口是原版就有的，重写时不能丢 */
+      + '<button id="slgBattleReport" style="background:#2a2c30;color:#e8c670;'
+      + 'border:1px solid #ba9a52;border-radius:4px;padding:2px 10px;cursor:pointer;'
+      + 'font:12px &quot;Microsoft YaHei&quot;,sans-serif">战报详情</button>';
+    var body = document.createElement('div'); body.className = 'body'; body.id = 'slgBattleBody';
+    overlay.appendChild(head); overlay.appendChild(body);
     document.body.appendChild(overlay);
-    document.getElementById('slgBattleClose').onclick = hide;
-    document.getElementById('slgBattleReplay').onclick = function () { if (anim) play(anim); };
     document.getElementById('slgBattleReport').onclick = function () {
       hide();
       if (window.__slgOpenWarReport) window.__slgOpenWarReport();
+      else if (window.__slgReportsWindow) window.__slgReportsWindow();
     };
     document.addEventListener('keydown', function (ev) {
       if (ev.key === 'Escape' && overlay && overlay.style.display !== 'none') hide();
     });
   }
 
+  var current = null;
   function hide() {
     if (overlay) overlay.style.display = 'none';
-    if (raf) { cancelAnimationFrame(raf); raf = null; }
-  }
-
-  function unitKey(u) { return u ? (u.s + u.i) : ''; }
-
-  function buildUnits(a) {
-    units = {};
-    var put = function (side, list) {
-      (list || []).forEach(function (u, i) {
-        units[side + u.slot] = {
-          side: side, slot: u.slot, name: u.name,
-          troops: Math.max(1, u.troops), cur: Math.max(0, u.remain),
-          dead: u.remain <= 0, x: 0, y: 0, lungeT: -1, flashT: -1, fallT: -1,
-        };
-      });
-    };
-    put('a', a.a && a.a.units); put('d', a.d && a.d.units);
-  }
-
-  function buildCues(a) {
-    cues = [];
-    var t = 400;
-    cues.push({ t: 0, fn: function () {} });
-    a.rounds.forEach(function (r) {
-      cues.push({ t: t, fn: function (ctx) { ctx.roundBanner = '第 ' + r.round + ' 回合'; ctx.roundUntil = t + DUR.banner; } });
-      t += DUR.banner;
-      r.acts.forEach(function (act) {
-        var dur = DUR[act.t] || 500;
-        cues.push({
-          t: t, fn: function (ctx) { applyAct(ctx, act); },
-          end: t + dur,
-        });
-        t += Math.max(220, dur * 0.55);
-      });
-    });
-    cues.push({
-      t: t, fn: function (ctx) {
-        ctx.resultBanner = a.winner === 2 ? '胜' : (a.winner === 0 ? '败' : '平');
-        ctx.resultColor = a.winner === 2 ? '#e8c670' : (a.winner === 0 ? '#c0392b' : '#9aa0a6');
-      },
-    });
-    cues.push({ t: t + DUR.result, fn: function (ctx) { ctx.finished = true; } });
-    return t + DUR.result;
-  }
-
-  function applyAct(ctx, act) {
-    var f = units[unitKey(act.f)];
-    var to = units[unitKey(act.to || act.unit)];
-    if (act.t === 'hit' && f && to && !f.dead) {
-      f.lungeT = performance.now();
-      f.lungeTarget = to;
-      to.flashT = performance.now();
-      damage(to, act.loss);
-      particles.push(mkText('-' + fmt(act.loss), to.x, to.y - 46, '#ff6b5e'));
-    } else if (act.t === 'skill' && f) {
-      // 战法伤害已由同回合的 hit 动作结算，这里只做演出，不重复扣兵
-      ctx.skillBanner = (f.name || '') + ' · ' + (act.skill || '战法');
-      ctx.skillUntil = performance.now() + 900;
-      f.skillT = performance.now();
-      if (act.to && to) to.flashT = performance.now();
-    } else if (act.t === 'control' && to) {
-      to.stateText = act.state;
-      to.stateT = performance.now();
-      particles.push(mkText(act.state || '受制', to.x, to.y - 46, '#b07ce8'));
-    } else if (act.t === 'heal' && to) {
-      var amt = Math.min(act.amount || 0, to.troops - to.cur);
-      to.cur += amt;
-      particles.push(mkText('+' + fmt(amt), to.x, to.y - 46, '#6fcf97'));
-    } else if (act.t === 'prepare' && f) {
-      ctx.skillBanner = (f.name || '') + ' · ' + (act.skill || '战法') + '（蓄）';
-      ctx.skillUntil = performance.now() + 700;
-    } else if (act.t === 'down' && to) {
-      to.dead = true; to.cur = 0; to.fallT = performance.now();
-    }
-  }
-
-  function damage(u, loss) {
-    if (!u || u.dead) return;
-    u.cur = Math.max(0, u.cur - loss);
-    if (u.cur <= 0) { u.dead = true; u.fallT = performance.now(); }
-  }
-
-  function fmt(n) { n = Math.round(n || 0); return n >= 10000 ? (n / 10000).toFixed(1) + '万' : String(n); }
-  function mkText(text, x, y, color) { return { text: text, x: x, y: y, t0: performance.now(), color: color }; }
-
-  function play(data) {
-    ensureOverlay();
-    overlay.style.display = 'block';
-    anim = data;
-    finished = false;
-    document.getElementById('slgBattleTitle').textContent =
-      (data.a.name || '') + ' ⚔ ' + (data.d.name || '') + '　@ (' + data.x + ',' + data.y + ')';
-    buildUnits(data);
-    var total = buildCues(data);
-    particles = [];
-    t0 = performance.now();
-    if (raf) cancelAnimationFrame(raf);
-    var loop = function () {
-      var now = performance.now();
-      if (now - t0 >= total) { finished = true; }
-      var ctxState = { roundBanner: null, skillBanner: null, resultBanner: null, finished: finished };
-      for (var i = 0; i < cues.length; i++) {
-        var c = cues[i];
-        if (now - t0 >= c.t && !c.done) { c.done = true; c.fn(ctxState); }
-      }
-      draw(now, ctxState);
-      if (now - t0 < total) raf = requestAnimationFrame(loop);
-      else { draw(now, ctxState); raf = null; }
-    };
-    raf = requestAnimationFrame(loop);
-  }
-
-  function drawFigure(g, u, now) {
-    var side = SIDE_COLOR[u.side] || '#999';
-    var isGen = true;
-    var x = u.x, y = u.y;
-    var lunge = 0;
-    if (u.lungeT > 0) {
-      var dt = now - u.lungeT;
-      if (dt < 620) {
-        var p = dt / 620;
-        lunge = Math.sin(p * Math.PI) * 46 * (u.side === 'a' ? 1 : -1);
-      } else u.lungeT = -1;
-    }
-    var flash = u.flashT > 0 && now - u.flashT < 260;
-    var dying = u.dead && u.fallT > 0;
-    var fall = dying ? Math.min(1, (now - u.fallT) / 700) : 0;
-    g.save();
-    g.translate(x + lunge, y);
-    if (fall > 0) { g.rotate(fall * Math.PI / 2 * (u.side === 'a' ? 1 : -1)); g.globalAlpha = 1 - fall * 0.85; }
-    if (flash) { g.globalAlpha = 0.55; }
-    // 主将：披风+盔缨的小像
-    g.fillStyle = side;
-    g.beginPath();
-    g.moveTo(-12, 18); g.lineTo(0, -6); g.lineTo(12, 18); g.closePath(); g.fill();
-    g.fillStyle = '#f0d9a8';
-    g.beginPath(); g.arc(0, -14, 7, 0, 6.2832); g.fill();
-    g.fillStyle = side;
-    g.beginPath(); g.arc(0, -20, 4, 0, 6.2832); g.fill();
-    g.strokeStyle = '#d8cfa8'; g.lineWidth = 2;
-    g.beginPath(); g.moveTo(10, 8); g.lineTo(26, -14); g.stroke();
-    if (flash) { g.globalAlpha = 0.9; g.fillStyle = '#fff'; g.fillRect(-14, -26, 30, 48); }
-    g.restore();
-    // 随队小兵：兵力折算，最多 12 个
-    var count = Math.min(12, Math.ceil((u.dead ? 0 : u.cur) / Math.max(1, u.troops / 10)));
-    for (var i = 0; i < count; i++) {
-      var sx = x + (u.side === 'a' ? -1 : 1) * (26 + (i % 4) * 12);
-      var sy = y + 20 + Math.floor(i / 4) * 11;
-      g.fillStyle = side; g.globalAlpha = 0.75;
-      g.beginPath(); g.arc(sx, sy, 3.4, 0, 6.2832); g.fill();
-      g.strokeStyle = '#d8cfa8'; g.lineWidth = 1;
-      g.beginPath(); g.moveTo(sx, sy - 3); g.lineTo(sx + (u.side === 'a' ? 5 : -5), sy - 12); g.stroke();
-      g.globalAlpha = 1;
-    }
-    // 名字与兵力条
-    if (!u.dead || fall < 1) {
-      g.fillStyle = '#e6dac0'; g.font = '12px "Microsoft YaHei",sans-serif'; g.textAlign = 'center';
-      g.fillText(u.name, x, y - 34);
-      var w = 74;
-      g.fillStyle = '#22252b'; g.fillRect(x - w / 2, y + 34, w, 5);
-      g.fillStyle = side; g.fillRect(x - w / 2, y + 34, w * Math.max(0, u.cur / Math.max(1, u.troops)), 5);
-      g.fillStyle = '#c8b88a'; g.font = '11px "Microsoft YaHei",sans-serif';
-      g.fillText(fmt(u.cur) + '/' + fmt(u.troops), x, y + 56);
-      if (u.stateText && now - u.stateT < 2500) {
-        g.fillStyle = '#b07ce8';
-        g.fillText(u.stateText, x, y - 48);
-      }
-    }
-  }
-
-  function draw(now, ctxState) {
-    if (!canvas || !anim) return;
-    var rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width; canvas.height = rect.height;
-    var g = canvas.getContext('2d');
-    g.fillStyle = '#101216'; g.fillRect(0, 0, rect.width, rect.height);
-    g.strokeStyle = 'rgba(200,180,130,0.18)'; g.lineWidth = 2;
-    g.beginPath(); g.moveTo(0, rect.height * 0.78); g.lineTo(rect.width, rect.height * 0.78); g.stroke();
-    var slots = [0.34, 0.58, 0.82];
-    for (var k in units) {
-      var u = units[k];
-      u.x = rect.width * (u.side === 'a' ? 0.26 : 0.74);
-      u.y = rect.height * slots[u.slot % 3];
-      drawFigure(g, u, now);
-    }
-    // 粒子文字
-    particles = particles.filter(function (p) { return now - p.t0 < 1100; });
-    particles.forEach(function (p) {
-      var dt = (now - p.t0) / 1100;
-      g.globalAlpha = 1 - dt;
-      g.fillStyle = p.color;
-      g.font = 'bold 15px "Microsoft YaHei",sans-serif';
-      g.fillText(p.text, p.x, p.y - dt * 26);
-      g.globalAlpha = 1;
-    });
-    if (ctxState.roundBanner) {
-      g.fillStyle = 'rgba(20,18,12,0.75)';
-      g.fillRect(rect.width / 2 - 90, 16, 180, 34);
-      g.fillStyle = '#e8c670'; g.font = 'bold 17px "Microsoft YaHei",sans-serif'; g.textAlign = 'center';
-      g.fillText(ctxState.roundBanner, rect.width / 2, 40);
-    }
-    if (ctxState.skillBanner && now < (ctxState.skillUntil || 0)) {
-      g.fillStyle = 'rgba(30,24,10,0.85)';
-      g.fillRect(rect.width / 2 - 170, rect.height * 0.16, 340, 44);
-      g.strokeStyle = '#e8c670'; g.lineWidth = 1.5;
-      g.strokeRect(rect.width / 2 - 170, rect.height * 0.16, 340, 44);
-      g.fillStyle = '#ffe9b0'; g.font = 'bold 19px "Microsoft YaHei",sans-serif'; g.textAlign = 'center';
-      g.fillText(ctxState.skillBanner, rect.width / 2, rect.height * 0.16 + 30);
-    }
-    if (ctxState.resultBanner) {
-      g.fillStyle = 'rgba(16,14,8,0.7)'; g.fillRect(0, 0, rect.width, rect.height);
-      g.fillStyle = ctxState.resultColor || '#e8c670';
-      g.font = 'bold 52px "KaiTi","Microsoft YaHei",sans-serif'; g.textAlign = 'center';
-      g.fillText(ctxState.resultBanner, rect.width / 2, rect.height / 2);
-      g.font = '15px "Microsoft YaHei",sans-serif'; g.fillStyle = '#c8b88a';
-      var sa = 0, sd = 0;
-      for (var k in units) { if (units[k].side === 'a') sa += units[k].cur; else sd += units[k].cur; }
-      g.fillText('我军余 ' + fmt(sa) + ' · 敌军余 ' + fmt(sd), rect.width / 2, rect.height / 2 + 34);
-    }
+    if (current) { current.destroy(); current = null; }
   }
 
   window.__slgPlayBattle = function (data) {
-    if (!data || !data.rounds) return;
-    play(data);
+    if (!data || !data.rounds || !data.rounds.length) return;
+    ensureOverlay();
+    if (current) { current.destroy(); current = null; }
+    overlay.style.display = 'block';
+    document.getElementById('slgBattleTitle').textContent =
+      (data.a && data.a.name ? data.a.name : '我军') + ' 攻 ' + (data.place || '') + '（守军 ' + (data.d && data.d.name ? data.d.name : '') + '）';
+    var body = document.getElementById('slgBattleBody');
+    body.innerHTML = '';
+    current = createStage(data, { autoPlay: true, height: 'calc(100vh - 58px)', onClose: hide });
+    body.appendChild(current.el);
+  };
+
+  /* 战报详情里内嵌用：把播放器挂到指定容器，返回句柄（含 destroy） */
+  window.__slgBattleStage = function (container, data, opt) {
+    if (!container || !data || !data.rounds || !data.rounds.length) return null;
+    var s = createStage(data, opt || { autoPlay: true, height: '300px' });
+    container.appendChild(s.el);
+    return s;
   };
 })();`;
 
@@ -2365,6 +2848,9 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
   var cache = null, tab = 'overview', currentCity = 0, neighbors = {};
   /* ★ 出征面板状态：出发城 / 目标城 / 队伍 / 比例 / 页签。玩家在面板里选一次就记住。 */
   var war = { from: 0, target: 0, armyId: 0, frac: 1, tab: 'go' };
+  /* 一键征兵的「在途」状态（城市 → 数量 → 入营时刻）。放在面板层而不是服务端：
+     服务端只管 con_times 与结算，界面需要的是「还要等几秒、这旬还能不能再点」。 */
+  var levyPending = null;
   /* ★ 验收 #18：出征面板的「未完成输入」（出发城/目标城/队伍/出兵比例/页签）
      跨面板开关与页面刷新保持——选到一半切去内政看粮，回来不必重选。 */
   var WAR_KEY = 'slg.war.state';
@@ -2450,6 +2936,31 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     '#slgUIv2 input.n{width:80px;background:#101208;color:#f0d998;border:1px solid #4a4436;',
     'border-radius:4px;padding:3px 8px;font:13px "Microsoft YaHei",sans-serif;}',
     '#slgUIv2 .empty{opacity:.6;padding:20px 0;text-align:center;}',
+    /* ★ 战前推演结果（替代原来那串 JSON）：结论条 / 数字表 / 建议 / 双方阵容 */
+    '#slgUIv2 .warpv{text-align:left;}',
+    '#slgUIv2 .warpv-head{border-left:3px solid #e0c56a;background:rgba(186,154,82,.08);'
+      + 'padding:9px 12px;border-radius:4px;margin:6px 0 10px;}',
+    '#slgUIv2 .warpv-verdict{font:600 17px/1.4 "KaiTi","STKaiti",serif;letter-spacing:3px;}',
+    '#slgUIv2 .warpv-line{font-size:12.5px;line-height:1.75;margin-top:3px;color:#e6dac0;}',
+    '#slgUIv2 .warpv-rows{display:grid;grid-template-columns:1fr 1fr;gap:1px 16px;margin-bottom:10px;}',
+    '#slgUIv2 .warpv-row{display:flex;gap:8px;font-size:12px;'
+      + 'border-bottom:1px dotted rgba(186,154,82,.18);padding:4px 0;}',
+    '#slgUIv2 .warpv-row .k{color:#9c9382;flex:0 0 70px;}',
+    '#slgUIv2 .warpv-row .v{color:#f0d998;flex:1;min-width:0;}',
+    '#slgUIv2 .warpv-tips{border-left:2px solid #6a5a32;padding:4px 0 4px 10px;'
+      + 'margin-bottom:10px;font-size:12px;line-height:1.8;}',
+    '#slgUIv2 .warpv-tips b{color:#cbb477;font-size:11.5px;letter-spacing:1px;}',
+    '#slgUIv2 .warpv-tips .ti{color:#cfc2a6;}',
+    '#slgUIv2 .warpv-forces{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:8px;}',
+    '#slgUIv2 .warpv-force .ft{font-size:11px;letter-spacing:2px;'
+      + 'border-bottom:1px solid rgba(186,154,82,.22);padding-bottom:3px;margin-bottom:5px;}',
+    '#slgUIv2 .warpv-force .fg{margin-bottom:7px;}',
+    '#slgUIv2 .warpv-force .fg b{color:#f0d998;font-size:12.5px;}',
+    '#slgUIv2 .warpv-force .fs{font-size:11px;color:#b6ab92;line-height:1.7;}',
+    '#slgUIv2 .warpv-detail{margin-top:6px;font-size:11px;color:#9c9382;}',
+    '#slgUIv2 .warpv-detail summary{cursor:pointer;color:#c8b88a;font-size:11.5px;padding:3px 0;}',
+    '#slgUIv2 .warpv-detail div{padding:2px 0;line-height:1.7;word-break:break-word;}',
+    '@media (max-width:760px){#slgUIv2 .warpv-rows,#slgUIv2 .warpv-forces{grid-template-columns:1fr}}',
     '#slgUIv2 h4{color:#c8b88a;font-size:12px;margin:10px 0 6px;letter-spacing:2px;}',
     /* ★ P11 城市内部页：点地图城池即「进城」，整屏一页，不再叠浮窗 */
     '#slgUIv2 .citypage{position:fixed;inset:0;z-index:100420;display:flex;flex-direction:column;'
@@ -2910,15 +3421,14 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
 
   function warGoPanel(s, fromCity, idle, body) {
     var own = warOwnCities(s);
-    /* ★ P11 出征向导：选出发城 → 选队伍/目标 → 补给与推演 → 确认。
-       任何一项改变都要求重新推演，避免「推演 A 城、实打 B 城」。 */
-    var sig = [war.from, war.armyId, war.target, war.frac].join('/');
-    if (war.previewSig !== sig) { war.previewSig = sig; war.previewDone = false; }
+    /* ★ 出征向导：选出发城 → 选队伍/目标 → 看补给（推演可选）→ 确认。
+       用户明确要求：推演不是强制前置，不看也能直接打。 */
     var rail = el('div', 'card',
-      '<h4 style="margin-top:0">出征四步 · ' + (war.previewDone ? '<span style="color:#a9e2a0">已就绪</span>' : '<span style="color:#e0c56a">待推演</span>') + '</h4>'
+      '<h4 style="margin-top:0">出征三步 · 选好就能打</h4>'
       + '<div class="cost" style="line-height:1.9">'
-      + '① 选出发城与队伍　→　② 选目标城与出兵比例　→　③ 看补给预览并<b style="color:#f0d998">推演一次</b>　→　④ 确认出征<br>'
-      + '<span style="opacity:.8">抵达后进入「遭遇」页，可再次推演、确认开战或收兵；战胜后到「消化」页安置新城。</span></div>');
+      + '① 选出发城与队伍　→　② 选目标城与出兵比例　→　③ 确认出征'
+      + '<br><span style="opacity:.8">「战前推演」是可选参谋：想先看会死多少人再打就点一次；'
+      + '不想看直接出征也完全可以。抵达后先进入「遭遇」页，可再次推演、确认开战或收兵。</span></div>');
     body.appendChild(rail);
     var fromCard = el('div', 'card', '<h4 style="margin-top:0">出发城</h4>');
     if (own.length > 1) {
@@ -3099,17 +3609,18 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         : deploy >= theirs * 0.9 ? '<span style="color:#e0c56a">胜负参半，看武将与兵种</span>'
           : '<span style="color:#ff6b5e">兵力偏少，建议先增兵或换小城</span>')));
 
-    /* ★ P11 / GDD §2.2：第 4 门「推演」是留存的门，不推演不许出兵。 */
-    var atkBtn = mkBtn(war.previewDone ? ('出征 ' + target.name) : '先推演一次再出征', '', function () {
-      if (!war.previewDone) { toast('请先在「战前推演」点一次推演，确认胜算后再出兵', false); return; }
+    /* ★ 用户 2026-11-14：出征前允许不推演直接出征。旧实现把推演当第 4 道门，
+       不推演按钮就是灰的 —— 那是把「参谋」做成了「关卡」。现在默认可用。 */
+    var atkBtn = mkBtn('出征 ' + target.name, '', function () {
       warConfirmAttack(s, fromCity, army, target, route);
     });
     atkBtn.id = 'slgWarAttackBtn';
-    atkBtn.disabled = !war.previewDone;
-    /* ★ P11：本按钮点下去已经有「出兵确认」弹框，交互层不要再套一层成本预览——
+    /* ★ 本按钮点下去已经有「出兵确认」弹框，交互层不要再套一层成本预览——
        连点两次确认正是用户说的「操作繁琐」。 */
     atkBtn.setAttribute('data-ix-allow', '1');
     sum.appendChild(atkBtn);
+    sum.appendChild(el('div', 'cost',
+      '直接点「出征」即可，不必先推演；推演只用来提前看折损。'));
     body.appendChild(sum);
     body.appendChild(warPreviewCard(s, fromCity, army, target));
   }
@@ -3117,16 +3628,18 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
   /* ★ 验收 #10 战前推演：服务端 previewAssault 走 structuredClone 沙盒 + 与正式结算同一套
      resolveBattle / defenseFor / battleSeedFor(…, arriveDay)，所以推演与真打逐位一致。
      这里允许多次点：每次重掷都是同一结果（同种子），点「改比例」再推演才变——可无限次回退重试，
-     因为 preview 动作在 index.js 里被明确要求不 save()，绝不写存档。 */
+     因为 preview 动作在 index.js 里被明确要求不 save()，绝不写存档。
+     ★ 重要：推演是「可选的参谋」，不是出征的前置门。玩家想直接打就直接打。 */
   function warPreviewCard(s, fromCity, army, target) {
-    var card = el('div', 'card', '<h4 style="margin-top:0">战前推演</h4>');
-    card.appendChild(el('div', 'cost',
-      '沙盒推演：与正式结算同一战斗内核、同一战斗种子，不耗粮、不动兵、不写存档；换出兵比例后可反复推演。'));
+    var card = el('div', 'card');
+    card.innerHTML = '<h4 style="margin-top:0">战前推演 <span class="cost" style="font-weight:normal">（可选）</span></h4>'
+      + '<div class="cost">沙盒里按现行阵容打一遍：不耗粮、不动兵、不写存档。'
+      + '不想推演也可以直接出征，推演只是让你提前知道会死多少人。</div>';
     var out = el('div', '');
     card.appendChild(out);
     var btn = mkBtn('推演一次', 'ghost', function () {
       btn.disabled = true; btn.textContent = '推演中…';
-      out.innerHTML = '<div class="cost">按现行比例于沙盒内演算一次…</div>';
+      out.innerHTML = '<div class="cost">按现行阵容于沙盒内演算…</div>';
       postJSON('/__slg/strategy/action', {
         action: 'preview', cityId: target.id, armyId: army.id,
         frac: war.frac, fromCityId: fromCity.id,
@@ -3135,20 +3648,13 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         out.innerHTML = rs && rs.ok
           ? warPreviewHtml(rs)
           : '<div class="cost" style="color:#ff9d6b">推演失败：' + esc(warReason(rs && rs.reason)) + '</div>';
-        /* ★ P11：推演成功才解锁出征按钮；改出发城/队伍/目标/比例会重置这把锁 */
-        if (rs && rs.ok) {
-          war.previewDone = true;
-          var atk = document.getElementById('slgWarAttackBtn');
-          if (atk) { atk.disabled = false; atk.textContent = '出征 ' + target.name; }
-          var tt = document.querySelector('#slgWarWin .card h4');
-          if (tt) tt.innerHTML = '出征四步 · <span style="color:#a9e2a0">已就绪</span>';
-        }
       }).catch(function () {
         btn.disabled = false; btn.textContent = '再推演一次';
         out.innerHTML = '<div class="cost" style="color:#ff9d6b">推演失败：服务端无响应</div>';
       });
     });
     btn.style.marginTop = '6px';
+    btn.setAttribute('data-war-preview', '1');
     card.appendChild(btn);
     return card;
   }
@@ -3157,40 +3663,70 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     return (a || []).reduce(function (n, v) { return n + Math.max(0, Number(v) || 0); }, 0);
   }
 
+  /**
+   * 推演结果 = 结论条 + 关键数字 + 胜负手 + 双方阵容 + 技术明细（折叠）。
+   * 文案全部来自服务端 narrative（domain/battle-narrative.js），前端只排版。
+   * 旧实现把 r.rounds（其实是 report.rounds 的 JSON 字符串）直接打进「判定」行，
+   * 玩家看到的就是一屏 [{"b":[{"a_id":950081...] —— 这次从数据源上修掉。
+   */
   function warPreviewHtml(r) {
-    var tone = r.win ? '#a9e2a0' : (r.draw ? '#e0c56a' : '#ff6b5e');
-    var tag = r.win ? '预计可下' : (r.draw ? '预计相持' : '预计难下');
-    var seedHex = (Number(r.seed) >>> 0).toString(16).toUpperCase();
-    /* ★ M2-5 张力守恒（GDD §6.7.1）：情报区间 / 敌将变招 / 确认即锁，三条都要让玩家看见 */
-    var tension = [];
-    if (r.intelNote) tension.push(kv('情报档位', esc(r.intelNote)));
-    if (r.variant) tension.push(kv('敌方预案', '<b style="color:#f0d998">' + esc(r.variant.name) + '</b>　' + esc(r.variant.note || '')));
-    if (r.spreadLines && r.spreadLines.length) {
+    var n = r.narrative || {};
+    var tone = n.tone === 'ok' ? '#a9e2a0' : (n.tone === 'warn' ? '#e0c56a' : '#ff6b5e');
+    var html = '<div class="warpv">';
+    html += '<div class="warpv-head" style="border-color:' + tone + '">'
+      + '<div class="warpv-verdict" style="color:' + tone + '">' + esc(n.verdict || '推演完成') + '</div>'
+      + '<div class="warpv-line">' + esc(n.headline || r.attribution || '') + '</div></div>';
+
+    html += '<div class="warpv-rows">' + (n.rows || [
+      { k: '投入兵力', v: '我军 ' + fmt(r.aTotal) + ' / 守军 ' + fmt(r.dTotal) },
+      { k: '预计折损', v: '我军 −' + fmt(r.aLoss) + ' / 歼敌 ' + fmt(r.dLoss) },
+    ]).map(function (row) {
+      return '<div class="warpv-row"><span class="k">' + esc(row.k) + '</span><span class="v">' + esc(row.v) + '</span></div>';
+    }).join('') + '</div>';
+
+    if ((n.tips || []).length) {
+      html += '<div class="warpv-tips"><b>该怎么打</b>'
+        + n.tips.map(function (t) { return '<div class="ti">· ' + esc(t) + '</div>'; }).join('') + '</div>';
+    }
+
+    var force = function (title, list, color) {
+      if (!list || !list.length) return '';
+      return '<div class="warpv-force"><div class="ft" style="color:' + color + '">' + title + '</div>'
+        + list.map(function (g) {
+          return '<div class="fg"><b>' + esc(g.name) + '</b>'
+            + (g.skills && g.skills.length
+              ? g.skills.map(function (sk) {
+                return '<div class="fs">「' + esc(sk.name) + '」' + esc(sk.effect || '') + '</div>';
+              }).join('')
+              : '<div class="fs" style="opacity:.6">无战法</div>')
+            + '</div>';
+        }).join('') + '</div>';
+    };
+    var forces = force('我军阵容', n.myNotes, '#e8c670') + force('守军阵容', n.defenderNotes, '#e08a7a');
+    if (forces) html += '<div class="warpv-forces">' + forces + '</div>';
+
+    /* 技术明细：战报码/种子/回合数这类东西只给想核对的人，默认折叠 */
+    var detail = [];
+    detail.push('判定结果码 ' + r.code + '（2=胜 / 1=相持 / 0=败）　演算 ' + (r.rounds || 0) + ' 回合');
+    detail.push('战斗种子 0x' + ((Number(r.seed) >>> 0).toString(16).toUpperCase()) + '（同种子必得同战报）');
+    if (r.intelNote) detail.push('情报：' + r.intelNote);
+    if (r.variant) detail.push('敌方预案：' + r.variant.name + '　' + (r.variant.note || ''));
+    if (r.spreadLines && r.spreadLines.length === 2) {
       var w0 = r.spreadLines[0], b0 = r.spreadLines[1];
-      tension.push(kv('守军区间',
-        '最坏（守军偏多）：' + (w0.win ? '<span style="color:#a9e2a0">可下</span>' : '<span style="color:#ff6b5e">难下</span>')
-        + ' 折损 −' + fmt(w0.aLoss)
-        + '　最好（守军偏少）：' + (b0.win ? '<span style="color:#a9e2a0">可下</span>' : '<span style="color:#ff6b5e">难下</span>')
-        + ' 折损 −' + fmt(b0.aLoss)));
+      detail.push('守军区间：最坏折 ' + fmt(w0.aLoss) + '（' + (w0.win ? '可下' : '难下') + '）'
+        + '　最好折 ' + fmt(b0.aLoss) + '（' + (b0.win ? '可下' : '难下') + '）');
     }
     if (r.variantLines && r.variantLines.length) {
-      tension.push(kv('若敌方变招', r.variantLines.map(function (v) {
-        return esc(v.variant) + '：' + (v.win ? '<span style="color:#a9e2a0">我胜</span>' : '<span style="color:#ff6b5e">我负</span>')
-          + ' 折损 −' + fmt(v.aLoss) + ' / 歼敌 ' + fmt(v.dLoss);
-      }).join('　')));
+      detail.push('若敌方变招：' + r.variantLines.map(function (v) {
+        return v.variant + (v.win ? ' 我胜' : ' 我负') + '（折 ' + fmt(v.aLoss) + '）';
+      }).join('　'));
     }
-    if (r.lockNote) tension.push('<div class="cost" style="margin-top:2px">' + esc(r.lockNote) + '</div>');
-    return [
-      kv('判定', '<span style="color:' + tone + '">' + tag + '</span>　战报码 ' + r.code
-        + '　' + r.rounds + ' 回合'),
-      kv('投入兵力', '我军 ' + fmt(r.aTotal) + ' / 守军 ' + fmt(r.dTotal)),
-      kv('预计折损', '我军 −' + fmt(r.aLoss) + ' / 守军 −' + fmt(r.dLoss)),
-      kv('战后残余', '我军 ' + fmt(warSum3(r.remain)) + ' / 守军 ' + fmt(warSum3(r.dRemain))),
-      kv('抵达', '第 ' + r.arriveDay + ' 日（程 ' + fmt(r.km) + ' 里 · ' + r.days + ' 日行）'),
-      kv('兵种关系', esc(r.counterNote)),
-      kv('战斗种子', '0x' + seedHex + '（同种子必得同战报）'),
-    ].join('') + tension.join('') + '<div style="margin-top:8px;color:#e8d9a8">归因：' + esc(r.attribution) + '</div>'
-      + '<div class="cost" style="margin-top:4px;opacity:.75">' + esc(r.caveat) + '</div>';
+    if (r.lockNote) detail.push(r.lockNote);
+    if (r.caveat) detail.push(r.caveat);
+    html += '<details class="warpv-detail"><summary>演算明细（战报码 / 种子 / 区间）</summary>'
+      + detail.map(function (t) { return '<div>' + esc(t) + '</div>'; }).join('') + '</details>';
+    html += '</div>';
+    return html;
   }
 
   function warConfirmAttack(s, fromCity, army, target, route) {
@@ -3468,6 +4004,22 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     if (!c) return;
     if (document.getElementById('slgCityPage')) renderCityPage(data, c);
     else renderCity(data);
+  }
+  /* ★ 征兵/内政这类会改服务端状态的操作，必须「重新取一次 state 再重绘」。
+     旧实现直接拿面板手里的旧 city 对象重绘，「本旬可征 / 已征户」全是旧值，
+     玩家再点一次一键征兵必然撞 cooldown —— 看起来就是「一键征兵失败」。 */
+  function reloadCityView() {
+    return fetch('/__slg/strategy/state', { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (s2) {
+        if (!s2 || !s2.cities) return;
+        cache = s2; lastState = s2;
+        var c2 = cityOf(s2, currentCity);
+        if (!c2) return;
+        if (document.getElementById('slgCityPage')) renderCityPage(s2, c2);
+        else renderCity(s2);
+      })
+      .catch(function () { /* 服务重启瞬间：保留当前画面 */ });
   }
   function renderCity(s) {
     var c = cityOf(s, currentCity);
@@ -4345,17 +4897,67 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
             if ((ga.generals || [])[qp] && !ga.marching) { firstSlot = { army: ga, pos: qp }; break; }
           }
         }
+        /* ★ 一键征兵的三条硬约束，全部在点之前就算清楚（用户报的「一键征兵失败」根因）：
+             ① 每旬只能征一次 → 已在征兵中就必须锁按钮，否则二次点击必然撞 cooldown 报错；
+             ② 兵源上限 quota；
+             ③ 资源（木/铁/粮/金）能支撑多少丁 —— 旧实现只拿 quota 当数量，
+                资源不够时服务端拒绝，玩家看到的是「失败了但不知道差多少」。
+           把「能征多少」提前算出来，按钮上直接写这个数。 */
+        var costOf = function (n) {
+          return {
+            wood: n * (Number(per.wood) || 0), iron: n * (Number(per.iron) || 0),
+            grain: n * (Number(per.grain) || 0), gold: n * (Number(per.gold) || 0),
+          };
+        };
+        var maxAffordable = function () {
+          var caps = [];
+          [['wood', per.wood], ['iron', per.iron], ['grain', per.grain], ['gold', per.gold]].forEach(function (pair) {
+            var each = Number(pair[1]) || 0;
+            if (each > 0) caps.push(Math.floor((Number(res[pair[0]]) || 0) / each));
+          });
+          return caps.length ? Math.min.apply(null, caps) : 0;
+        };
+        var quotaN = lv ? Math.max(0, Number(lv.quota) || 0) : 0;
+        var afford = Math.max(0, maxAffordable());
+        var pending = levyPending && levyPending.cityId === cid && levyPending.until > Date.now()
+          ? levyPending : null;
+        var canGo = function () { return !!(firstSlot && quotaN > 0 && afford > 0 && !pending); };
+        var pendingEl = el('div', 'cost', '');
+        if (pending) {
+          pendingEl.innerHTML = '<span style="color:#e0c56a">征兵中：' + fmt(pending.amount)
+            + ' 丁正在路上，约 <b data-levy-sec="1">' + Math.ceil((pending.until - Date.now()) / 1000)
+            + '</b> 秒后入营（本旬不可再征）</span>';
+          levyCard.appendChild(pendingEl);
+          if (levyPending.timer) clearInterval(levyPending.timer);
+          levyPending.timer = setInterval(function () {
+            var left = Math.ceil((pending.until - Date.now()) / 1000);
+            var secEl = pendingEl.querySelector('[data-levy-sec]');
+            if (left > 0) { if (secEl) secEl.textContent = String(left); return; }
+            clearInterval(levyPending.timer);
+            levyPending = null;
+            reloadCityView();
+          }, 1000);
+        } else if (quotaN > 0 && afford < quotaN) {
+          levyCard.appendChild(el('div', 'cost', '<span style="color:#e0c56a">'
+            + '资源只够征 ' + fmt(afford) + ' 丁（本旬可征 ' + fmt(quotaN) + ' 丁）：'
+            + '每兵需 木' + per.wood + ' 铁' + per.iron + ' 粮' + per.grain + ' 金' + per.gold + '。</span>'));
+        }
         var doQuick = function (amount) {
           if (!firstSlot) { toast('先给一个槽位配上武将，再一键征兵', false); return; }
+          if (pending) { toast('本旬已在征兵中，等兵入营或推进到下一旬', false); return; }
+          var n0 = Math.max(0, Math.min(Math.floor(amount), quotaN, afford));
+          if (n0 <= 0) { toast('本旬无兵可征：兵源或资源不足', false); return; }
           var cnts = [0, 0, 0];
-          cnts[firstSlot.pos] = Math.max(1, Math.floor(amount));
+          cnts[firstSlot.pos] = n0;
           send('army.conscript', { armyId: firstSlot.army.id, cnts: cnts }).then(function (rsp) {
             if (rsp.code === 0) {
               var eta = (rsp.msg && rsp.msg.etaSec) || 2;
               var fc = (rsp.msg && rsp.msg.farmConflict) || null;
-              toast('征兵 ' + cnts[firstSlot.pos] + ' 丁，约 ' + eta + ' 秒后入营'
-                + (fc ? '（' + fc.note + '）' : ''), true);
-              setTimeout(function () { tabArmy(body, c); }, (eta + 1) * 1000);
+              toast('征兵 ' + n0 + ' 丁，约 ' + eta + ' 秒后入营' + (fc ? '（' + fc.note + '）' : ''), true);
+              /* ★ 立刻按服务端新状态重绘：不这样做，面板会继续显示旧的 quota/已征户，
+                 玩家再点一次就撞 cooldown，看着就是「一键征兵失败」。 */
+              levyPending = { cityId: cid, amount: n0, until: Date.now() + Math.max(1, eta) * 1000 };
+              setTimeout(function () { reloadCityView(); }, 120);
             } else {
               var rs = (rsp.msg && rsp.msg.reason) || '';
               var msg = {
@@ -4366,16 +4968,18 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
                 no_population: '此城无人口', res_not_enough: '资源不足',
               }[rs] || errText(rsp);
               toast('征兵失败：' + msg, false);
+              reloadCityView();
             }
           });
         };
-        var quotaN = lv ? lv.quota : 0;
-        [['征 100 丁', 100], ['征 300 丁', 300], ['一键征满（' + fmt(quotaN) + '）', quotaN]].forEach(function (q) {
+        var quick = [['征 100 丁', 100], ['征 300 丁', 300],
+          ['一键征满（' + fmt(Math.min(quotaN, afford || quotaN)) + '）', Math.min(quotaN, afford)]];
+        quick.forEach(function (q) {
           var b = mkBtn(q[0], '', function () { doQuick(q[1]); });
           b.setAttribute('data-quick-levy', String(q[1]));
-          /* 便捷征兵就是「一键」，旁边已写清人口代价；再弹一次决策预览等于把便捷又变繁琐 */
+          /* 便捷征兵就是「一键」，旁边已写清人口与资源代价；再弹一次决策预览等于把便捷又变繁琐 */
           b.setAttribute('data-ix-allow', '1');
-          if (!firstSlot || !quotaN || q[1] > quotaN) b.disabled = true;
+          if (!canGo() || q[1] > Math.min(quotaN, afford)) b.disabled = true;
           quickRow.appendChild(b);
         });
         levyCard.appendChild(quickRow);
@@ -4574,6 +5178,17 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     });
   }
 
+  /** 战报里「守军 N → M」的 M。
+   *  ★ 内核允许治疗把兵力顶回原数之上，直接累加余兵会出现「守军 1982 → 2148」
+   *    这种自相矛盾的显示（同一屏还写着歼敌 72）。展示口径按「不超过投入」夹住，
+   *    歼敌数仍取服务端的 dLoss，不改判定。 */
+  function dRemainShown(an) {
+    if (!an) return 0;
+    var sum = (an.dRemain || []).reduce(function (a, b) { return a + Number(b || 0); }, 0);
+    var cap = Number(an.dTotal) || 0;
+    return cap > 0 ? Math.min(sum, cap) : sum;
+  }
+
   function renderReportsInto(hostEl, city) {
     hostEl.innerHTML = '<div class="empty">读取中…</div>';
     send('war.report', {}).then(function (rsp) {
@@ -4615,7 +5230,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
           + (r.analysis ? ('<div class="cost">我军 ' + fmt(r.analysis.aTotal) + ' → '
             + fmt((r.analysis.aRemain || []).reduce(function (a, b) { return a + Number(b || 0); }, 0))
             + '　守军 ' + fmt(r.analysis.dTotal) + ' → '
-            + fmt((r.analysis.dRemain || []).reduce(function (a, b) { return a + Number(b || 0); }, 0))
+            + fmt(dRemainShown(r.analysis))
             + (r.analysis.aLoss != null ? ('　折损 ' + fmt(r.analysis.aLoss) + ' / 歼敌 ' + fmt(r.analysis.dLoss)) : '')
             + '</div>') : '')
           + (r.ctime ? ('<div class="cost">' + new Date(r.ctime).toLocaleString('zh-CN') + '</div>') : '');
@@ -4644,40 +5259,98 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     });
   }
 
-  /** 战报详情（DOM）：胜负、双方兵力、逐回合动作与战法名，全部来自同一份确定性事件流。 */
+  /** 战报详情（DOM）：打斗画面 + 战果 + 战法效果 + 逐回合人话。
+   *
+   *  ★ 玩家反馈两件事：① 战报没有打斗画面；② 只写「吕布 发动 健卒不殆」，看不懂这战法干嘛。
+   *    这次不在前端补文案，而是：
+   *      1) 详情顶部直接内嵌 createStage 的战斗画面（跟全屏回放同一套），
+   *         打开战报就能看双方对冲，不必先知道要点「回放」；
+   *      2) 战法效果说明取服务端 battle-narrative 的 skillProfile（与推演、回放字幕同源），
+   *         前端只排版，绝不自造数值；
+   *      3) 逐回合日志直接用 act.text（服务端 actSentence 产出），删掉前端那套拼句逻辑
+   *         —— 否则同一个动作在回放、详情、推演里会有三种说法。
+   */
   function openReportDetail(r) {
     var tag = r.result === 2 ? ['胜', '#6fcf97'] : (r.result === 0 ? ['败', '#ff6b5e'] : ['平', '#c8b88a']);
     var anim = r.anim || { a: { units: [] }, d: { units: [] }, rounds: [] };
+    var stage = null;
     var body = makeWindow('slgRepDetail',
       '战报 #' + r.id + ' · <span style="color:' + tag[1] + '">' + tag[0] + '</span>',
       '<div class="sub">' + (anim.place || ('(' + r.x + ',' + r.y + ')'))
       + (r.ctime ? ' · ' + new Date(r.ctime).toLocaleString('zh-CN') : '') + '</div>',
       null, null, null,
-      function () { var w = document.getElementById('slgRepDetail'); if (w) w.remove(); });
+      function () {
+        /* 关窗时必须停掉 rAF，否则关掉的战报还在后台逐帧画 */
+        if (stage) { try { stage.destroy(); } catch (e) { /* 画布已随窗口移除 */ } stage = null; }
+        var w = document.getElementById('slgRepDetail');
+        if (w) w.remove();
+      });
+
+    /* ---- 1. 战果 ---- */
     var sum = el('div', 'card');
     sum.innerHTML = '<h4 style="margin-top:0">战果</h4><div>' + (r.summary || '（无摘要）') + '</div>'
-      + (r.analysis ? ('<div class="cost">我军 ' + r.analysis.aTotal + ' → ' + r.analysis.aRemain.reduce(function (a, b) { return a + b; }, 0)
-        + '　守军 ' + r.analysis.dTotal + '</div>') : '');
+      + (r.analysis ? ('<div class="cost">我军 ' + fmt(r.analysis.aTotal) + ' → '
+        + fmt((r.analysis.aRemain || []).reduce(function (a, b) { return a + Number(b || 0); }, 0))
+        + '　守军 ' + fmt(r.analysis.dTotal) + ' → '
+        + fmt(dRemainShown(r.analysis))
+        + (r.analysis.aLoss != null ? ('　折损 ' + fmt(r.analysis.aLoss) + ' / 歼敌 ' + fmt(r.analysis.dLoss)) : '')
+        + '</div>') : '');
     body.appendChild(sum);
 
+    /* ---- 2. 打斗画面（内嵌 Stage） ---- */
+    var rounds = anim.rounds || [];
+    if (rounds.length && window.__slgBattleStage) {
+      var sceneCard = el('div', 'card');
+      sceneCard.innerHTML = '<h4 style="margin-top:0">战斗画面</h4>'
+        + '<div class="muted">下方字幕逐句说明「谁做了什么、打出什么效果、折了多少卒」；'
+        + '可暂停 / 重播 / 倍速，也可以点「回放」看全屏。</div>';
+      var host2 = el('div', '');
+      host2.style.marginTop = '8px';
+      sceneCard.appendChild(host2);
+      body.appendChild(sceneCard);
+      stage = window.__slgBattleStage(host2, anim, { autoPlay: true, height: '340px' });
+    } else if (!rounds.length) {
+      body.appendChild(el('div', 'card',
+        '<h4 style="margin-top:0">战斗画面</h4><div class="muted">'
+        + '这张战报没有留存动作流（旧版本战报只存了结果），没法回放打斗。</div>'));
+    }
+
+    /* ---- 3. 双方阵容 + 战法效果（回答「健卒不殆到底是什么」） ---- */
     [['我军', anim.a, '#c0392b'], ['守军', anim.d, '#2c5f8a']].forEach(function (side) {
+      var units = (side[1] && side[1].units) || [];
+      if (!units.length) return;
       var card = el('div', 'card');
-      card.innerHTML = '<h4 style="margin-top:0">' + side[0] + '：' + (side[1].name || '') + '</h4>';
-      (side[1].units || []).forEach(function (u) {
-        card.appendChild(el('div', 'kv', '<span>' + (u.name || '武将') + '</span><span>'
-          + u.troops + ' → ' + u.remain + '</span>'));
+      card.innerHTML = '<h4 style="margin-top:0;color:' + side[2] + '">' + side[0]
+        + '：' + esc((side[1] && side[1].name) || '') + '</h4>';
+      units.forEach(function (u) {
+        var row = el('div', '');
+        row.style.cssText = 'padding:6px 0;border-bottom:1px dashed #2e2a22';
+        row.innerHTML = '<div><b>' + esc(u.name || '武将') + '</b>'
+          + '<span class="cost">　' + fmt(u.troops) + ' → ' + fmt(u.remain) + '</span></div>'
+          + ((u.skills || []).length
+            ? (u.skills || []).map(function (p) {
+              return '<div class="cost" style="margin-left:12px">「' + esc(p.name) + '」'
+                + (p.clsText ? '（' + esc(p.clsText) + '）' : '') + '：'
+                + esc(p.effect || '')
+                + (p.flavor ? '　<span style="color:#9c9382">' + esc(p.flavor) + '</span>' : '')
+                + '</div>';
+            }).join('')
+            : '<div class="cost" style="margin-left:12px">无战法</div>');
+        card.appendChild(row);
       });
       body.appendChild(card);
     });
 
-    // ★ P3：技能发动统计——回答「我的战法到底发挥了几成」
+    /* ---- 4. 战法发动统计：发动几次、折了多少卒、效果是什么 ---- */
     var skillStat = {};
-    (anim.rounds || []).forEach(function (rd) {
+    rounds.forEach(function (rd) {
       (rd.acts || []).forEach(function (act) {
         if (act.t === 'skill' && act.skill) {
-          var row = skillStat[act.skill] || (skillStat[act.skill] = { count: 0, loss: 0 });
-          row.count += 1;
-          row.loss += act.loss || 0;
+          var s0 = skillStat[act.skill] || (skillStat[act.skill] = { count: 0, loss: 0, effect: '', who: {} });
+          s0.count += 1;
+          s0.loss += act.loss || 0;
+          if (!s0.effect && act.effect) s0.effect = act.effect;
+          if (act.fName) s0.who[act.fName] = 1;
         }
       });
     });
@@ -4685,38 +5358,55 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     if (skeys.length) {
       var totalLoss = skeys.reduce(function (a, k) { return a + skillStat[k].loss; }, 0) || 1;
       var statCard = el('div', 'card');
-      statCard.innerHTML = '<h4 style="margin-top:0">技能发动统计</h4>'
-        + '<div class="muted">按确定性事件流汇总；伤害占比 = 该技能歼敌 / 双方技能总歼敌。</div>'
+      statCard.innerHTML = '<h4 style="margin-top:0">战法发动统计</h4>'
+        + '<div class="muted">按确定性事件流汇总；伤害占比 = 该战法歼敌 / 双方战法总歼敌。</div>'
         + skeys.map(function (k) {
           var st0 = skillStat[k];
           var pct = Math.round(st0.loss / totalLoss * 100);
-          return '<div class="kv"><span>「' + esc(k) + '」</span><span>发动 ' + st0.count
-            + ' 次 · 伤害占比 ' + pct + '%</span></div>';
+          /* 纯增益/控制类战法不造成伤害，写「伤害占比 0%」会被读成「没生效」；
+             这类只报发动次数，只有真的打出伤害的才给占比。 */
+          var tail = ' · 发动 ' + st0.count + ' 次'
+            + (st0.loss > 0 ? ' · 伤害占比 ' + pct + '%' : ' · 未造成直接伤害');
+          return '<div style="padding:5px 0;border-bottom:1px dashed #2e2a22">'
+            + '<div><b>「' + esc(k) + '」</b><span class="cost">　' + Object.keys(st0.who).join('、')
+            + tail + '</span></div>'
+            + (st0.effect ? '<div class="cost" style="margin-left:12px">效果：' + esc(st0.effect) + '</div>' : '')
+            + '</div>';
         }).join('');
       body.appendChild(statCard);
     }
 
-    (anim.rounds || []).slice(0, 12).forEach(function (rd) {
-      var card = el('div', 'card', '<h4 style="margin-top:0">第 ' + rd.round + ' 回合</h4>');
-      (rd.acts || []).forEach(function (act) {
-        var who = function (u) {
-          var list = u.s === 'a' ? (anim.a.units || []) : (anim.d.units || []);
-          var hit = list[u.i];
-          return hit ? hit.name : (u.s === 'a' ? '我军' : '守军');
-        };
-        var text = '';
-        if (act.t === 'skill') text = who(act.f) + ' 发动「' + act.skill + '」' + (act.loss ? '（歼 ' + act.loss + '）' : '');
-        else if (act.t === 'prepare') text = who(act.f) + ' 准备「' + act.skill + '」';
-        else if (act.t === 'hit') text = who(act.f) + ' → ' + who(act.to) + '　' + act.skill + ' 损 ' + act.loss;
-        else if (act.t === 'control') text = who(act.f) + ' 使 ' + who(act.to) + ' 陷入「' + act.state + '」';
-        else if (act.t === 'heal') text = who(act.f) + ' 回复 ' + Math.round(act.amount || 0);
-        else if (act.t === 'down') text = who(act.unit) + ' 溃败';
-        if (text) card.appendChild(el('div', 'cost', text));
+    /* ---- 5. 逐回合：一行一个人话动作（服务端 act.text） ---- */
+    if (rounds.length) {
+      var logCard = el('div', 'card');
+      logCard.innerHTML = '<h4 style="margin-top:0">逐回合经过</h4>';
+      rounds.slice(0, 12).forEach(function (rd) {
+        var box = el('div', '');
+        box.style.marginBottom = '8px';
+        box.innerHTML = '<div style="color:#e8c670;font-weight:bold;margin:6px 0 2px">'
+          + (rd.round > 0 ? '第 ' + rd.round + ' 回合' : '列阵') + '</div>';
+        (rd.acts || []).forEach(function (act) {
+          var line = act.text || '';
+          if (!line) return;
+          var color = act.t === 'skill' ? '#ffe9b0'
+            : (act.t === 'down' ? '#ff9d6b' : (act.t === 'heal' ? '#a9e2a0' : '#c8c2b4'));
+          var d = el('div', '');
+          d.style.cssText = 'color:' + color + ';font-size:12.5px;line-height:1.7;text-align:left';
+          d.textContent = (act.t === 'skill' ? '◆ ' : '· ') + line;
+          box.appendChild(d);
+        });
+        logCard.appendChild(box);
       });
-      body.appendChild(card);
-    });
+      if (rounds.length > 12) {
+        logCard.appendChild(el('div', 'muted', '（只显示前 12 回合，共 ' + rounds.length + ' 回合）'));
+      }
+      body.appendChild(logCard);
+    }
+
     body.appendChild(mkBtn('关闭', 'ghost', function () {
-      var w = document.getElementById('slgRepDetail'); if (w) w.remove();
+      var w = document.getElementById('slgRepDetail');
+      if (stage) { try { stage.destroy(); } catch (e) { /* ignore */ } stage = null; }
+      if (w) w.remove();
     }));
   }
 
@@ -4730,6 +5420,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       function () { document.getElementById('slgRepWin').remove(); });
     renderReportsInto(body);
   };
+  /* 回放/战报里的「战报详情」统一走这里（原版有这个钩子名，别处也按它找） */
+  window.__slgOpenWarReport = window.__slgReportsWindow;
 
   window.__slgHudTick = function () {
     var hud = document.getElementById('slgHud');

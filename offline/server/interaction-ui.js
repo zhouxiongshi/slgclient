@@ -243,6 +243,15 @@
       + 'background:rgba(8,12,8,.55);justify-content:flex-end}'
       + '.slgIxPV .acts .go{background:linear-gradient(180deg,#6d5320,#4c3a12);border-color:#c8a354;'
       + 'color:#ffe9b0;font-weight:600;letter-spacing:1px}'
+      + '.slgIxPV .acts .foldbtn{margin-right:auto;background:transparent;'
+      + 'border:1px solid rgba(186,154,82,.4);border-radius:4px;color:#c8b88a;font-size:11px;'
+      + 'padding:2px 9px;cursor:pointer}'
+      + '.slgIxPV .acts .foldbtn:hover{border-color:#e3c46a;color:#ffe9b0}'
+      /* ⑨ 收起态：只留标题条 + 操作按钮，明细全藏。玩家不想读推演也能直接确认。 */
+      + '.slgIxPV.folded .pv-strip,.slgIxPV.folded .pv-cols,'
+      + '.slgIxPV.folded .pv-term,.slgIxPV.folded .pv-sub{display:none}'
+      + '.slgIxPV.folded .pv-head{padding-bottom:10px}'
+      + '.slgIxPV.folded .pv-title{font-size:18px}'
       + '@media (max-width:760px){.slgIxPV .pv-cols{grid-template-columns:1fr}'
       + '.slgIxPV .pv-col+.pv-col{border-left:none;border-top:1px solid rgba(186,154,82,.16)}}'
       + '.slgIx input[type=text]{background:#20221c;border:1px solid #5c6b4e;color:#e8e0cc;padding:4px 7px;font:inherit;min-height:26px}'
@@ -672,6 +681,10 @@
     /* ★ P11 预览重做：以前是一列 20 行灰字，视觉上像日志，玩家根本读不下去。
        现在改成「顶部结论条 + 左收益 / 右风险」两栏，风险单独着色，底部固定操作区。 */
     box.className = 'box slgIxPV';
+    /* ⑨ 玩家不是必须读这些：收起态记住上一次的选择，下次直接给紧凑条 */
+    var pvFolded = false;
+    try { pvFolded = localStorage.getItem('slgPVFolded') === '1'; } catch (e) { /* 隐私模式 */ }
+    if (pvFolded) box.classList.add('folded');
     var normal = parts.filter(function (p) { return !p.bad; });
     var risks = parts.filter(function (p) { return !!p.bad; });
     var row = function (p) {
@@ -696,7 +709,9 @@
       + '</section></div>'
       + (m.term && BY_ID[m.term] ? '<div class="pv-term"><button data-act="term" data-id="' + esc(m.term)
         + '">查看术语「' + esc(BY_ID[m.term].名称) + '」与数值来源 →</button></div>' : '')
-      + '<div class="acts"><button data-act="cancel">取消 (Esc)</button>'
+      + '<div class="acts"><button class="foldbtn" data-act="fold">'
+      + (pvFolded ? '▣ 展开明细' : '◱ 收起明细') + '</button>'
+      + '<button data-act="cancel">取消 (Esc)</button>'
       + '<button class="go" data-act="ok">确认执行 →</button></div>';
     mask.appendChild(box);
     (document.getElementById('slgIxRoot') || document.body).appendChild(mask);
@@ -705,6 +720,13 @@
     on(box, 'click', function (e) {
       var b = e.target.closest('button'); if (!b) return;
       if (b.dataset.act === 'term') { var t = BY_ID[b.dataset.id]; if (t) showTip(t.id, window.innerWidth / 2, 120, { pinned: true }); return; }
+      if (b.dataset.act === 'fold') {
+        var nowFolded = !box.classList.contains('folded');
+        box.classList.toggle('folded', nowFolded);
+        b.textContent = nowFolded ? '▣ 展开明细' : '◱ 收起明细';
+        try { localStorage.setItem('slgPVFolded', nowFolded ? '1' : '0'); } catch (e) { /* ignore */ }
+        return;
+      }
       if (b.dataset.act === 'cancel') { close(); phase('已取消：' + m.title, 'idle'); return; }
       if (b.dataset.act === 'ok') { close(); proceed(); }
     });

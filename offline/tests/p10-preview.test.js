@@ -61,7 +61,13 @@ test('预演 == 正式结算：胜负、折损、歼敌、回合数逐项一致'
   assert.equal(report.analysis?.win, p.win, '胜负判定一致');
   assert.equal(p.aLoss, report.analysis?.aLoss, '我军折损一致');
   assert.equal(p.dLoss, report.analysis?.dLoss, '歼敌一致');
-  assert.equal(p.rounds, report.rounds, '回合数一致');
+  /* 战报上的 rounds 是「逐回合伤害表」的 JSON 串（原版 proto 结构，动不得）；
+     真正的回合数在内核结果里（battleLog.rounds）。预演下发的 rounds 已经是数字，
+     所以按数字比 —— 旧断言拿字符串比数字，等于把「界面打印一串代码」的 bug 固化进测试。 */
+  const logged = (state.battleLog || [])[0];
+  assert.ok(logged, '应留下可复核的战斗日志');
+  assert.equal(p.rounds, logged.rounds, '回合数一致');
+  assert.ok(Array.isArray(JSON.parse(report.rounds)), '战报 rounds 仍是逐回合表（原版结构）');
   assert.equal(st.cities[target].owner, p.win ? 'player' : st.cities[target].owner, '胜负应与城池归属变化对应');
 });
 

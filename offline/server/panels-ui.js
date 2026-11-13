@@ -192,18 +192,23 @@
   var CSS = [
     /* 层级让位：对方的城池窗/确认框/toast 是 100000~100003，六府入口压在它们上面会挡住按钮。
        取 99999：高于战略沙盘 overlay(99998) 仍可点，低于对方所有弹层，冲突时以对方为主。 */
-    '#slgPanelsDock{position:fixed;right:12px;top:12px;z-index:99999;display:flex;flex-direction:column;gap:5px;align-items:flex-end;}',
-    /* 六个页签竖排展开：默认横排会撑到 528px，压住战略层的分层地图与城池窗 */
-    '#slgPanelsBtns{display:flex;flex-direction:column;gap:5px;align-items:flex-end;}',
-    '#slgPanelsDock .pb{background:rgba(20,22,16,.94);color:#e8c670;border:1px solid #ba9a52;border-radius:5px;',
-    '  padding:5px 10px;min-width:88px;cursor:pointer;font:13px "Microsoft YaHei",sans-serif;text-align:left;letter-spacing:1px;}',
-    '#slgPanelsDock .pb:hover{background:#3a3325;color:#ffe6a6;}',
-    '#slgPanelsDock .pb.on{background:#6b5527;color:#fff2cf;}',
+    '#slgPanelsDock{position:fixed;right:12px;top:12px;z-index:99999;display:flex;flex-direction:column;gap:4px;',
+      '  align-items:flex-end;padding:5px 7px;border-radius:9px;',
+      '  background:linear-gradient(180deg,rgba(26,28,20,.95),rgba(13,14,10,.95));',
+      '  border:1px solid rgba(186,154,82,.5);box-shadow:0 6px 22px rgba(0,0,0,.5);}',
+    /* 分组小标题：与左上按钮坞的「沙盘 / 浮窗」同款写法，两处观感一致 */
+    '#slgPanelsDock .cap{color:#8d8567;font:10.5px "Microsoft YaHei",sans-serif;letter-spacing:2px;',
+      '  align-self:flex-end;padding:0 2px;user-select:none;}',
+    /* 七个页签竖排常驻：横排会撑到 528px，压住战略层的分层地图与城池窗 */
+    '#slgPanelsBtns{display:flex;flex-direction:column;gap:3px;align-items:stretch;}',
+    '#slgPanelsDock .pb{background:transparent;color:#d9cba6;border:1px solid transparent;border-radius:5px;',
+      '  padding:4px 9px;min-width:86px;cursor:pointer;font:12.5px/1.35 "Microsoft YaHei",sans-serif;',
+      '  text-align:left;letter-spacing:.5px;transition:background .12s,color .12s,border-color .12s;}',
+    '#slgPanelsDock .pb:hover{background:rgba(186,154,82,.18);color:#ffe9b0;border-color:rgba(186,154,82,.4);}',
+    '#slgPanelsDock .pb.on{background:rgba(186,154,82,.22);color:#fff2cf;border-color:#ba9a52;}',
     '#slgPanelsDock .pb{position:relative;}',
     '#slgPanelsDock .dot{position:absolute;right:4px;top:4px;width:8px;height:8px;border-radius:50%;'
       + 'background:#e04a3a;box-shadow:0 0 4px rgba(224,74,58,.8);display:none;}',
-    '#slgPanelsDock .fold{background:rgba(20,22,16,.9);color:#c8b88a;border:1px solid #6a624a;border-radius:5px;',
-    '  padding:2px 9px;cursor:pointer;font:12px "Microsoft YaHei",sans-serif;}',
     '#slgPanelsMask{position:fixed;inset:0;z-index:100100;background:rgba(6,8,6,.9);display:none;}',
     '#slgPanelsWin{position:absolute;inset:18px;max-width:1280px;margin:0 auto;background:#151811;',
     '  border:1px solid #75643d;border-radius:10px;box-shadow:0 18px 70px rgba(0,0,0,.8);display:flex;overflow:hidden;}',
@@ -1162,8 +1167,13 @@
 
     dock = document.createElement('div');
     dock.id = 'slgPanelsDock';
-    dock.innerHTML = '<button class="fold" data-fold="1">六府 ▸</button><div id="slgPanelsBtns">'
-      + NAV.map(function (x) {
+    /* ★ 用户 ⑩：「六府不要做成隐藏下拉菜单」，与左上按钮坞统一风格。
+       ① 去掉「六府 ▸/▾」折叠壳，七个入口常驻可见；
+       ② 出征在左上坞已有主按钮（金色强调），这里不再重复挂一份，
+          六府窗内的侧边导航仍保留「出征」，面板本身的功能一个都没少；
+       ③ 加一条「六府」小标题，和左上坞的「沙盘 / 浮窗」分组标签同一套写法。 */
+    dock.innerHTML = '<div class="cap">六府</div><div id="slgPanelsBtns">'
+      + NAV.filter(function (x) { return x[0] !== 'war'; }).map(function (x) {
         return '<button class="pb" data-id="' + x[0] + '">' + x[1] + '</button>';
       }).join('')
       /* ★ P0-2：战报入口常驻六府 dock——原「战报」按钮只在天下大势全屏地图里，
@@ -1171,12 +1181,6 @@
       + '<button class="pb" data-id="__reports">战报<span class="dot" id="slgRepDot"></span></button>'
       + '</div>';
     dock.addEventListener('click', function (e) {
-      if (e.target.hasAttribute('data-fold')) {
-        ui.dockOpen = !ui.dockOpen;
-        document.getElementById('slgPanelsBtns').style.display = ui.dockOpen ? '' : 'none';
-        e.target.textContent = ui.dockOpen ? '六府 ▾' : '六府 ▸';
-        return;
-      }
       var b = e.target.closest('.pb');
       if (!b) return;
       var id = b.getAttribute('data-id');
@@ -1188,8 +1192,9 @@
       open(id);
     });
     document.body.appendChild(dock);
-    // 折叠态是默认：只露一枚按钮；展开时按钮竖排，宽度 ≈ 100px，不侵入战略层版面
-    document.getElementById('slgPanelsBtns').style.display = ui.dockOpen ? '' : 'none';
+    // ⑦ 常驻可见，不再有折叠态
+    ui.dockOpen = true;
+    document.getElementById('slgPanelsBtns').style.display = '';
 
     mask = document.createElement('div');
     mask.id = 'slgPanelsMask';

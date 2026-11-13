@@ -85,9 +85,14 @@ test('M2-5·变招对照线：推演下发「若敌方变招则…」，且预�
   assert.equal(p.ok, true);
   assert.ok(p.variant && p.variant.name, '推演应标明当前敌方预案');
   assert.equal(p.variantLines.length, 2, '应给出另外两套预案的对照线');
-  // 变招真实影响战局：任一对照线与主线的折损不同
-  const differs = p.variantLines.some((v) => v.aLoss !== p.aLoss || v.dLoss !== p.dLoss || v.code !== p.code);
+  /* 变招真实影响战局：对照线必须与主线在「上场守军」上就不同。
+     口径说明：只比折损/歼敌不够稳——攻方被打光时，守军多 12% 也未必改变
+     双方伤亡（伤害由攻方输出决定），三条线会出现完全相同的数字。
+     dStart（该预案真正上场的守军总数）才是变招进入计算链的直接证据。 */
+  const differs = p.variantLines.some((v) => v.dStart !== p.dStart
+    || v.aLoss !== p.aLoss || v.dLoss !== p.dLoss || v.code !== p.code);
   assert.ok(differs, '变招对照线必须与主线有数值差异（不是装饰字段）');
+  assert.ok(p.dStart > 0 && p.dStart <= p.dTotal, '主线应给出实际参战守军，且不超过守军总数');
 });
 
 test('M2-5·确认即锁：出征落 lockedSeed 且与推演种子同参一致', () => {

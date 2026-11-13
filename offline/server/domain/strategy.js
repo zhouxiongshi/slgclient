@@ -36,6 +36,9 @@ import {
   cityYield, armsApt, armsCounter, ARMS_NAMES, devLevel, cityDevTick,
 } from './city-econ.js';
 import { SKILLS, LEVEL_COUNT, skillById } from '../skills.js';
+/* ★ 修「推演返回一串代码」：推演的语义（人话）由这一处统一生成，
+   前端只排版；战报/回放共用同一批战法说明。 */
+import { skillProfile, previewNarrative } from './battle-narrative.js';
 import { oathOf, oathPending, oathFactionOf, factionTraitOf, protagonistStat } from './oath.js';
 /* ★ M2-4 委任对象化与外交（GDD §5.6/§5.8）：两个模块都自包含，strategy 单向引它们 */
 import { appointmentTick, appointmentListView, strategyAppoint, strategyCancelAppointment } from './appointment.js';
@@ -1119,7 +1122,13 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride, 
   const aTotal = commit.reduce((s, n) => s + n, 0);
   const dTotal = (defenseOverride?.soldiers || []).reduce((s, n) => s + n, 0);
   const aLoss = aTotal - remain.reduce((s, n) => s + n, 0);
-  const dLoss = dTotal - (result.endDefenseSoldiers || []).reduce((s, n) => s + n, 0);
+  /* ★ 修「战报写歼敌 −166」：这里原来拿「未折算的守军总数」当分母，
+     而真正参战的是 defense2.soldiers（已叠兵种克制 ×0.87/1.15、敌方预案、宿命组合）。
+     守军被折算小时，残兵 > 原数 → 歼敌为负。真打与推演必须同一分母，
+     所以取实际参战守军作基线，并夹住不为负。 */
+  const dStart = (defense2?.soldiers || defenseOverride?.soldiers || [])
+    .reduce((s, n) => s + Math.max(0, Number(n) || 0), 0) || dTotal;
+  const dLoss = Math.max(0, dStart - (result.endDefenseSoldiers || []).reduce((s, n) => s + n, 0));
   const place = defenseOverride?.place || `(${x},${y})`;
   const win = result.report.result === 2;
   const rec = recovered.reduce((s, n) => s + n, 0);
@@ -1136,6 +1145,9 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride, 
   result.report.analysis = {
     aTotal, dTotal, aLoss, dLoss, recovered: rec, win,
     aBegin: commit, aRemain: remain,
+    /* ★ 缺 dRemain 会让战报详情显示「守军 1982 → 0」（reduce 空数组恒为 0），
+       而实际歼敌只有 72 —— 同一屏里两个数字互相打脸。这里按真实余兵下发。 */
+    dRemain: result.endDefenseSoldiers || [0, 0, 0],
     counter, atkArms, defArms, counterNote,
     fateMul: fate.mul, fateNotes: fate.notes,
   };
@@ -1879,33 +1891,54 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
   const runB = (def2) => resolveBattle({
     cfg, state: structuredClone(state), army: { ...army, soldiers: commit, drillMorale: drill },
     x: 8000 + to, y: 100 + level, defenseOverride: def2, seed,
+    /* 推演不需要回放动作流（战报才有），跳过可省一大半耗时 */
+    withAnim: false,
   });
-  const readB = (r2, label) => {
+  /* ★ 修：旧实现用「未折算的守军总数」当分母，而沙盒里打的是按
+     兵种克制 / 变招 / 宿命折算过的守军。守军被折算得比原数少时，
+     残余 > 总数 → 歼敌变成负数（实测战报写「歼敌 -166」）。 */
+  const readB = (r2, label, def2) => {
     const remain2 = r2.endAttackSoldiers || [0, 0, 0];
     const dRemain2 = r2.endDefenseSoldiers || [0, 0, 0];
+    const dStart = (def2?.soldiers || []).reduce((s2, n) => s2 + Math.max(0, Number(n) || 0), 0) || dTotal;
     return {
       label,
       code: r2.report?.result ?? 0,
       win: r2.report?.result === 2,
-      aLoss: aTotal - remain2.reduce((s2, n) => s2 + n, 0),
-      dLoss: dTotal - dRemain2.reduce((s2, n) => s2 + n, 0),
+      aLoss: Math.max(0, aTotal - remain2.reduce((s2, n) => s2 + n, 0)),
+      dLoss: Math.max(0, dStart - dRemain2.reduce((s2, n) => s2 + n, 0)),
+      /* 该预案下真正上场的守军总数：让「变招」这条对照线可核，
+         而不是只给一个看起来差不多的歼敌数（见 m2-tension 的判定口径）。 */
+      dStart,
     };
   };
-  const result = runB(mkDef(1, variant.defMul));
+  const mainDef = mkDef(1, variant.defMul);
+  const result = runB(mainDef);
   /* 区间与变招对照线（未侦察才有区间；精确档不重复开打） */
   let spreadLines = [];
   if (intelSpread > 0) {
-    const worst = readB(runB(mkDef(1 + intelSpread, variant.defMul)), '最坏');
-    const best = readB(runB(mkDef(1 - intelSpread, variant.defMul)), '最好');
-    spreadLines = [worst, best];
+    const worstDef = mkDef(1 + intelSpread, variant.defMul);
+    const bestDef = mkDef(1 - intelSpread, variant.defMul);
+    spreadLines = [
+      readB(runB(worstDef), '最坏', worstDef),
+      readB(runB(bestDef), '最好', bestDef),
+    ];
   }
   const variantLines = COUNTER_VARIANTS
     .filter((v) => v.id !== variant.id)
-    .map((v) => ({ variant: v.name, note: v.note, ...readB(runB(mkDef(1, v.defMul)), v.name) }));
+    .map((v) => {
+      const d2 = mkDef(1, v.defMul);
+      return { variant: v.name, note: v.note, ...readB(runB(d2), v.name, d2) };
+    });
   const remain = result.endAttackSoldiers || [0, 0, 0];
   const dRemain = result.endDefenseSoldiers || [0, 0, 0];
-  const aLoss = aTotal - remain.reduce((s2, n) => s2 + n, 0);
-  const dLoss = dTotal - dRemain.reduce((s2, n) => s2 + n, 0);
+  const aLoss = Math.max(0, aTotal - remain.reduce((s2, n) => s2 + n, 0));
+  /* ★ 同一处根因的第二次修正：主案的歼敌基线也必须是「实际参战守军」。
+     这里曾经写 dTotal（raw 守军），而真正上场的是 mainDef.soldiers
+     （已叠兵种克制 / 敌方变招 / 宿命组合）。基线偏大就会出现
+     「歼敌 310」而真打只有「歼敌 72」，玩家会觉得推演在骗人。 */
+  const dStartMain = (mainDef.soldiers || []).reduce((s2, n) => s2 + Math.max(0, Number(n) || 0), 0) || dTotal;
+  const dLoss = Math.max(0, dStartMain - dRemain.reduce((s2, n) => s2 + n, 0));
   const code = result.report.result;
   const win = code === 2;
   const hold = Math.max(1, Math.round((target.level || 1) * 8));
@@ -1917,17 +1950,36 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
     : (code === 1
       ? `相持：兵力 ${aTotal} : 守军 ${dTotal}，双方都打不动（${counterNote}）。补兵或换阵再试。`
       : `难下：兵力 ${aTotal} : 守军 ${dTotal}，预计折损 ${aLoss}、仅歼敌 ${dLoss}；${counterNote}。建议先增兵或换将。`);
-  return {
+
+  /* ★ 双方参战阵容（含战法说明）：推演面板要能回答「对面凭什么赢我」，
+     战报也要能解释「健卒不殆到底做了什么」。说明全部来自 battle-narrative 的唯一模板。 */
+  const profileList = (g) => (g?.skills || [])
+    .map((s) => (s && s.cfgId ? skillProfile(s.cfgId, s.lv || 1) : null))
+    .filter(Boolean)
+    .map((p) => ({ name: p.name, effect: p.effect, cls: p.cls, trigger: p.trigger }));
+  const genName = (g) => cfg.generalByCfg.get(g.cfgId)?.name || g.name || `武将${g.cfgId}`;
+  const myGenerals = (army.generals || [])
+    .map((gid) => (state.generals || []).find((g) => g.id === gid))
+    .filter(Boolean)
+    .map((g) => ({ name: genName(g), star: g.star || 0, skills: profileList(g) }));
+  const theirGenerals = (defense.generals || []).map((g) => ({
+    name: genName(g), star: g.star || 0, skills: profileList(g),
+  }));
+
+  const payload = {
     ok: true,
-    target: { id: to, name: target.name, level, owner: tstate.owner },
+    target: { id: to, name: target.name, level, owner: tstate.owner, ownerName: tstate.ownerName || '' },
     from, km, speed, days, arriveDay, today,
-    commit, aTotal, dTotal, aLoss, dLoss, remain, dRemain: dRemain.slice(),
+    commit, deploy: aTotal, aTotal, dTotal, dStart: dStartMain, aLoss, dLoss, remain, dRemain: dRemain.slice(),
     counter, atkArms, defArms, counterNote,
     /* ★ M3-4 宿命组合：预览面板显示同队加成（与正式结算同一函数） */
     fateMul: fate.mul, fateNotes: fate.notes,
-    seed, rounds: result.report.rounds || 0,
+    /* ★ 修：rounds 必须是「回合数」，不能是 report.rounds（那是 JSON 字符串）。
+       旧实现让界面打印出 `战报码 0 [{"b":[{"a_id":...` —— 玩家说的「一串代码」。 */
+    seed,
+    rounds: Number(result.kernel?.rounds) || 0,
     code, win, draw: code === 1,
-    report: result.report,
+    forces: { mine: myGenerals, theirs: theirGenerals },
     /* ★ M2-5 张力守恒四条的下发位（GDD §6.7.1） */
     intelTier, intelSpread,
     intelNote: intelTier >= 2
@@ -1943,6 +1995,9 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
     caveat: '预演基于此刻的守军与队伍；期间敌方增援、你的队伍被改派，结算会随之改变。'
       + (intelTier < 2 ? ' 守军数值为情报估算，推演不产生情报。' : ''),
   };
+  /* 人话版一起下发：前端不会自己拼语句，界面才可能一致 */
+  payload.narrative = previewNarrative(payload);
+  return payload;
 }
 
 /** ★ P6 招降：押着的敌将，金 + 政治判定成功率；失败忠诚 -10，低于 0 越狱逃走。

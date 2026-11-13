@@ -61,9 +61,10 @@ child.on('exit', (code) => {
   console.log('');
   console.log('[slg-offline:perf] ── GDD §11.5 预算实测 ──');
   for (const it of r.items) {
-    const mark = it.ok === true ? '✓' : it.ok === false ? '✗' : '?';
+    const info = it.budget == null;
+    const mark = info ? '·' : it.ok === true ? '✓' : it.ok === false ? '✗' : '?';
     console.log(`  ${mark} ${it.id} ${it.name}：${it.value == null ? '未测到' : it.value + it.unit}`
-      + `（预算 ${it.budget}${it.unit}）${it.note ? ' · ' + it.note : ''}`);
+      + (info ? '（仅记录）' : `（预算 ${it.budget}${it.unit}）`) + (it.note ? ' · ' + it.note : ''));
   }
   console.log(`[slg-offline:perf] ${tag}: passed=${r.passed} over=[${(r.overBudget || []).join(',')}]`
     + ` pageErrors=${(r.pageErrors || []).length} consoleErrors=${(r.consoleErrors || []).length}`);

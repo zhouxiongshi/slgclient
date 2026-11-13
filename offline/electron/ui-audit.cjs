@@ -550,10 +550,16 @@ const WALK = `(async function(){
 
   var side = document.getElementById('slgStratSide');
   var boxes = side ? side.querySelectorAll('input[type="checkbox"]') : [];
+  /* ★ 用户 ⑦ 明确要去掉「十三州水墨底图」「十三州部古名」两项：
+     可切换图层从 6 降到 4。这里同时正向校验那两项已不在列表里，
+     否则「删了但又加回来」不会被任何断言发现。 */
+  var layerText = side ? txt(side) : '';
+  var legacyLeft = /水墨底图|部古名/.test(layerText);
   rec('map.layers', ['图层'], {
-    visible: vis(side) && boxes.length >= 6,
-    text: (side ? txt(side) : '') + ' checkboxes=' + boxes.length,
-    note: boxes.length >= 6 ? '' : 'layer-checkboxes-missing',
+    visible: vis(side) && boxes.length >= 4 && !legacyLeft,
+    text: layerText + ' checkboxes=' + boxes.length,
+    note: (boxes.length >= 4 ? '' : 'layer-checkboxes-missing')
+      + (legacyLeft ? ' legacy-layer-still-listed' : ''),
   });
 
   // 切换一个图层，确认不抛错且能点回来

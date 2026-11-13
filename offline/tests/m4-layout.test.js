@@ -36,7 +36,11 @@ test('M4-3·抽屉五档断点（GDD §10.1）：360/380/420/460/480', () => {
 
 test('M4-3·战略 dock 防溢出：wrap + 让位', () => {
   assert.match(SKILLS_SRC, /slgDock[\s\S]{0,200}flex-wrap:wrap/, 'dock 按钮必须可换行');
-  assert.match(SKILLS_SRC, /max-width:calc\(100% - 780px\)/, 'dock 必须给右侧资源条让位');
+  /* 让位量会随右侧入口宽度变（六府 dock 收起折叠后只需 ~130px），
+     所以断言「右侧至少留出 300px」而不是钉死 780px 这个旧魔数。 */
+  const m = /max-width:calc\(100% - (\d+)px\)/.exec(SKILLS_SRC);
+  assert.ok(m, 'dock 必须声明 max-width:calc(100% - Npx) 给右侧入口让位');
+  assert.ok(Number(m[1]) >= 300, `让位宽度 ${m[1]}px 太小，右侧六府入口会被压住`);
 });
 
 test('M4-3·字号三档制与布局断点解耦并存', () => {

@@ -1134,11 +1134,12 @@ export function handleRequest(ctx, req) {
       }
       const code = tryUseNeed(state, need, `征兵 ${total} 人`);
       if (code !== OK) { rsp.code = code; rsp.msg = { reason: 'res_not_enough', need, per }; break; }
+      /* ★ 农时冲突要在扣人口之前算（扣完人再算，分母缩水，百分比会虚高） */
+      const farmConflict = farmConflictOf(state, here, total, { rate: cfg.basic?.conscriptRate ?? 0.06 });
       /* 资源已扣，写兵役台账：本城扣人口基数（×4）、已征户 +N、本旬标记、民心下降 */
       const levyCommit = strict || econ?.[here]
         ? commitLevy(state, here, total)
         : null;
-      const farmConflict = farmConflictOf(state, here, total);
       /* ★ P7 兵营与民心：兵营等级越高征兵越快，民心低则征不动 */
       const secRaw = conscriptSec(total, c.cost_time);
       const cf = conscriptFactor(state, army.cityId || mainCity(state)?.cityId || 1);
