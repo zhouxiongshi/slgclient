@@ -1,0 +1,153 @@
+{
+ "id": "guandu-200",
+ "name": "官渡 200",
+ "year": 200,
+ "playerDefault": [
+  "caocao"
+ ],
+ "playerOptions": {
+  "caocao": "曹操（弱势守方）",
+  "yuanshao": "袁绍（强势攻方）"
+ },
+ "factions": [
+  {
+   "id": "caocao",
+   "name": "曹操",
+   "persona": "曹操",
+   "color": "#1d4ed8",
+   "home": "濮阳",
+   "brain": true,
+   "blurb": "奉天子以令不臣，兵少而精，粮仅支一年。",
+   "reuse": true
+  },
+  {
+   "id": "yuanshao",
+   "name": "袁绍",
+   "persona": "袁绍",
+   "color": "#6d28d9",
+   "home": "邺",
+   "brain": true,
+   "blurb": "据冀幽青并四州，带甲十万，粮多而谋缓。",
+   "reuse": true
+  },
+  {
+   "id": "sunce",
+   "name": "孙策",
+   "persona": "孙策",
+   "color": "#b91c1c",
+   "home": "吴",
+   "brain": true,
+   "blurb": "已定江东，密谋袭许迎天子——历史上遇刺而止。"
+  },
+  {
+   "id": "han",
+   "name": "汉廷",
+   "persona": "刘表 / 刘璋 / 公孙度等",
+   "color": "#8a7a52",
+   "home": "相",
+   "brain": false,
+   "blurb": "荆州益州辽东交州各守其境，无脑。",
+   "reuse": true
+  }
+ ],
+ "cityOwner": {
+  "1": "han",
+  "2": "caocao",
+  "3": "han",
+  "4": "han",
+  "6": "caocao",
+  "7": "caocao",
+  "8": "yuanshao",
+  "9": "han",
+  "10": "caocao",
+  "11": "caocao",
+  "12": "yuanshao",
+  "13": "yuanshao",
+  "14": "caocao",
+  "15": "sunce",
+  "18": "han",
+  "19": "han",
+  "20": "han",
+  "21": "han",
+  "27": "han",
+  "28": "han",
+  "33": "caocao",
+  "37": "han",
+  "38": "han",
+  "40": "han",
+  "41": "han",
+  "42": "yuanshao",
+  "43": "yuanshao",
+  "44": "caocao",
+  "45": "han",
+  "46": "han",
+  "49": "sunce",
+  "51": "sunce",
+  "52": "sunce",
+  "53": "sunce",
+  "55": "sunce",
+  "62": "han",
+  "66": "yuanshao",
+  "68": "caocao",
+  "69": "han",
+  "70": "han",
+  "71": "han",
+  "72": "han",
+  "73": "caocao",
+  "74": "yuanshao",
+  "75": "yuanshao",
+  "76": "yuanshao",
+  "77": "yuanshao",
+  "78": "han",
+  "79": "han",
+  "80": "han",
+  "81": "han",
+  "82": "han",
+  "83": "han",
+  "84": "han",
+  "85": "han",
+  "86": "han",
+  "87": "han",
+  "88": "yuanshao",
+  "89": "han",
+  "90": "han",
+  "91": "yuanshao",
+  "92": "sunce",
+  "93": "han",
+  "94": "han",
+  "95": "han",
+  "96": "han",
+  "97": "han",
+  "98": "han",
+  "99": "han",
+  "100": "han",
+  "101": "caocao",
+  "102": "caocao"
+ },
+ "opening": {
+  "decision": "grain",
+  "text": "袁军压境而我粮仅支一年：先征粮还是先破延津？乌巢粮仓是袁军命门。",
+  "choices": [
+   "坚壁清野守官渡",
+   "袭延津试锋",
+   "回防许都护粮道"
+  ]
+ },
+ "specialRules": [
+  "乌巢粮仓为特殊节点，焚毁则袁军全线断粮"
+ ],
+ "source": "三国志·武帝纪 / 袁绍传（200 布局，乌巢前置）",
+ "confidence": "高",
+ "reviewed": false,
+ "meta": {
+  "cityCount": 72,
+  "factionCityCounts": {
+   "han": 41,
+   "caocao": 12,
+   "yuanshao": 12,
+   "sunce": 7
+  },
+  "validatedAt": "2026-11-13",
+  "validator": "tools/build-scenarios.mjs (V1..V4)"
+ }
+}

@@ -304,6 +304,13 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 - `tools/check-events.mjs`：构建期校验（失败即构建失败）——schema/引用有效性/资源 kind 白名单/once-flag 一设一清冲突/exclusive 引用完整/禁入词（eval、Function、require 等）。
 - **tick 接线待 M3-4**：strategy 旬循环里调 `eventCooldownTick` + `selectEvents`（ctx 适配器从 strategy state 取 turn/year/season/faction/resource/flag/general），弹窗呈现走 interaction 层。当前引擎只被测试与冒烟消费。
 
+### 9.7 M3-3 六剧本城池分配（GDD §4.5 / §12.1）
+
+- `tools/build-scenarios.mjs`：内嵌「史实归属表」（州级基准 + 城级修正）→ 生成 `conf/campaign/strategy/scenarios/*.json` 六份（黄巾 184 / 讨董 190 / 官渡 200 / 赤壁 208 / 夷陵 221 / 三分 229）。**四条开局校验失败即构建失败**：V1 每城必有主；V2 有脑势力 1..12 城（汉廷 han 是无主归集，豁免上限——GDD §12.1 规则 1「无主城默认归汉廷」）；V3 玩家可选势力开局邻接 ≥2 非己方城；V4 任意两势力路网连通（含汉廷，BFS）。
+- 剧本 JSON 是自包含的：`factions` 带剧本期人格（如 221 的 sunquan persona 是陆逊、229 的 liubei persona 是诸葛亮）、`cityOwner` 72 城归属、`playerDefault`/`playerOptions`、`opening`（开局三旬必做的决定：grain/siege/ally）、`specialRules`、`source`+`confidence`+`reviewed:false`（出戏防线第 4 闸）。复用既有 8 势力 id（sili/yanzhou/jizhou/youzhou/bingzhou/xuzhou/yangzhou/jingzhou）以便 M3-4 接线时 trait 查找走 factionConf 回退；剧本专属势力（huangjin/sunjian/sunce）为局部 id。
+- 踩坑：州级基准整州划给一方极易撞 12 城上限（190 董卓、200 袁绍都曾 21 城）——归属表一律「基准归 han、修正给有脑势力」；92 城 id 键类型是数字，测试里 `delete('72')` 删不掉 Map 数字键。
+- **运行期接线待 M3-4**：`ensureStrategy` 初始归属按激活剧本的 `cityOwner` 生成（现在是州→诸侯映射）；`factionConf` 在有剧本时优先用 `scenario.factions`；开局决策弹窗消费 `scenario.opening`。
+
 ---
 
 ## 10. 文档地图（读哪本、信哪本）

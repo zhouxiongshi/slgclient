@@ -1,0 +1,131 @@
+{
+ "id": "huangjin-184",
+ "name": "黄巾 184",
+ "year": 184,
+ "playerDefault": [
+  "han"
+ ],
+ "playerOptions": {
+  "han": "汉廷（皇甫嵩 / 卢植 / 朱儁 三选一视角）"
+ },
+ "factions": [
+  {
+   "id": "han",
+   "name": "汉廷",
+   "persona": "皇甫嵩",
+   "color": "#8a7a52",
+   "home": "相",
+   "brain": false,
+   "blurb": "184 年朝廷平叛视角。刘备/曹操此时皆在其麾下为义军。",
+   "reuse": true
+  },
+  {
+   "id": "huangjin",
+   "name": "黄巾",
+   "persona": "张角",
+   "color": "#b45309",
+   "home": "甘陵",
+   "brain": true,
+   "blurb": "苍天已死，岁在甲子。冀州南阳豫州三十六方同日而起。",
+   "special": "黄巾城不可常规开发，靠「圣所」产兵，镇压后转民城。"
+  }
+ ],
+ "cityOwner": {
+  "1": "han",
+  "2": "han",
+  "3": "han",
+  "4": "han",
+  "6": "han",
+  "7": "han",
+  "8": "han",
+  "9": "han",
+  "10": "han",
+  "11": "han",
+  "12": "han",
+  "13": "han",
+  "14": "han",
+  "15": "han",
+  "18": "han",
+  "19": "han",
+  "20": "han",
+  "21": "han",
+  "27": "han",
+  "28": "han",
+  "33": "han",
+  "37": "han",
+  "38": "han",
+  "40": "han",
+  "41": "han",
+  "42": "han",
+  "43": "han",
+  "44": "han",
+  "45": "han",
+  "46": "han",
+  "49": "han",
+  "51": "han",
+  "52": "han",
+  "53": "han",
+  "55": "han",
+  "62": "han",
+  "66": "han",
+  "68": "han",
+  "69": "han",
+  "70": "han",
+  "71": "han",
+  "72": "huangjin",
+  "73": "han",
+  "74": "han",
+  "75": "huangjin",
+  "76": "huangjin",
+  "77": "huangjin",
+  "78": "han",
+  "79": "han",
+  "80": "han",
+  "81": "han",
+  "82": "han",
+  "83": "han",
+  "84": "han",
+  "85": "han",
+  "86": "han",
+  "87": "han",
+  "88": "han",
+  "89": "han",
+  "90": "han",
+  "91": "han",
+  "92": "han",
+  "93": "han",
+  "94": "han",
+  "95": "han",
+  "96": "han",
+  "97": "han",
+  "98": "han",
+  "99": "han",
+  "100": "han",
+  "101": "han",
+  "102": "huangjin"
+ },
+ "opening": {
+  "decision": "siege",
+  "text": "黄巾三十六方同日而起：冀州张角主力、南阳张曼成、豫州波才。先救哪一路？",
+  "choices": [
+   "北上冀州",
+   "南下南阳",
+   "先固守本城"
+  ]
+ },
+ "specialRules": [
+  "黄巾城不可常规开发，靠「圣所」产兵，镇压后转民城"
+ ],
+ "source": "后汉书·皇甫嵩传 / 三国志·武帝纪（184 布局）",
+ "confidence": "高",
+ "reviewed": false,
+ "meta": {
+  "cityCount": 72,
+  "factionCityCounts": {
+   "han": 67,
+   "huangjin": 5
+  },
+  "validatedAt": "2026-11-13",
+  "validator": "tools/build-scenarios.mjs (V1..V4)"
+ }
+}
