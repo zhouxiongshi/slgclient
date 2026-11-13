@@ -11,6 +11,10 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { makeBuild, makeGeneral, makeFacilityList, nextId, mainCity } from '../world.js';
 import { rngFor } from './strategy-rng.js';
+/* ★ M2-3 全局参数表（GDD §9.2）：零依赖叶子，所有新数值一律从这里读 */
+import { knobGet } from './knobs.js';
+/* ★ M2-3 失败态与结局（GDD §3.4/§3.5）：零依赖叶子 */
+import { failstates, evaluateEnding, makeStandInGeneral } from './failstate.js';
 import { beginInteriorTask, cancelInteriorTask, interiorTaskView, roadEdgeKey } from './interior-task.js';
 /* ★ U20 粮道（supply 只依赖 march，不反向 import 本文件） */
 import { supplyMap, marchSupplyEstimate } from './supply.js';
@@ -398,7 +402,8 @@ export function strategySnapshot(state, factionId) {
 export function strategyTick(state, cfg, ctx, now = Date.now()) {
   const conf = factionConf();
   const st = ensureStrategy(state);
-  const turnDays = conf.turnDays ?? 10;
+  /* ★ M2-3：旬长走参数表（GDD §9.2 turnDays），存档 knobs 可覆盖 */
+  const turnDays = knobGet(state, 'turnDays') ?? conf.turnDays ?? 10;
   if (state.clock.day - st.lastTurnDay < turnDays) return null;
   st.lastTurnDay = state.clock.day;
   st.turn += 1;
@@ -561,7 +566,8 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
   for (const order of [...diploFirst, ...afterDiplo]) {
     if (order.type === '征兵') {
       const count = Math.max(0, Number(order.params?.count) || 0);
-      const cost = count * 2;
+      /* ★ M2-3：征兵成本走参数表（GDD §9.2 conscriptGoldPer） */
+      const cost = count * knobGet(state, 'conscriptGoldPer');
       if (count > 0) {
         const own = Object.keys(st.cities).filter((id) => st.cities[id].owner === faction.id);
         const want = order.params?.cityId != null ? String(order.params.cityId) : '';
@@ -1006,7 +1012,7 @@ const MARCH_DAYS_MIN = 1;
    率土/三战里跨州远征本来就是十几到几十日，这里放宽到 40 日，
    并由 marchSupplyStops 给出「途中休整」提示，长线不再和邻城一个耗时。 */
 const MARCH_DAYS_MAX = 40;
-const GRAIN_PER_TROOP = 0.1;
+/* ★ M2-3：粮耗口径已并入全局参数表（knobs.grainPerSoldierDay，默认 0.1） */
 /** 辎重队速度固定：车马慢，比最慢的步卒还慢一截。 */
 const TRANSPORT_SPEED = 70;
 
@@ -1089,14 +1095,22 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
   const army = pickArmy(state, armyId, home);
   if (!army) return { ok: false, code: 4, reason: 'no_army' };
   if (!army.cityId) army.cityId = home;   // 旧队补驻城，后续驻城逻辑才有依据
-  if ((army.generals || []).every((g) => !g)) return { ok: false, code: 4, reason: 'no_general' };
+  if ((army.generals || []).every((g) => !g)) {
+    /* ★ M2-3 失败态出路（GDD §3.4 无将）：出征前无将不再卡死——自动生成代将
+       （五维 50、无战法、不可培养、不触发宿命；在有名将可用的城里会被玩家换掉） */
+    const standin = makeStandInGeneral(state, home);
+    (state.generals || (state.generals = [])).push(standin);
+    army.generals[0] = standin.id;
+    recordEvent(state, `帐下无将，以代将${standin.name}权充先锋（五维 50、无战法）。`);
+    ctx.push?.('general.push', standin);
+  }
   if ((army.soldiers || []).every((n) => !(n > 0))) return { ok: false, code: 4, reason: 'no_troops' };
   // 行军粮：按**实际出战**兵力 × 0.1/程（bug-5：旧实现按整队算粮，界面又说按比例出兵）
   // 优先从出发城城库扣（前线囤粮，三国志14 补给线口径），城库不足吃全局池并 +25% 损耗
   const troopsTotal = (army.soldiers || []).reduce((s, v) => s + Math.max(0, Number(v) || 0), 0);
   const ratio = Math.max(0.01, Math.min(1, Number(frac) || 1));
   const deploy = Math.max(1, Math.round(troopsTotal * ratio));
-  const grainCost = Math.ceil(deploy * GRAIN_PER_TROOP);
+  const grainCost = Math.ceil(deploy * knobGet(state, 'grainPerSoldierDay'));
   const pay = consumeMarchGrain(state, home, grainCost);
   if (!pay.enough) {
     return { ok: false, code: 5, reason: 'no_grain', need: grainCost };
@@ -1848,6 +1862,9 @@ export function strategyViewState(state, cfg = null) {
         };
       })() : {}),
     })),
+    /* ★ M2-3 失败态四出路与结局判定：判定 + 出路清单一并下发，界面不再自己猜 */
+    fail: failstates(state),
+    ending: evaluateEnding(state),
     playerCity: st.playerCity || 0,
     // ★ P4-①：举义状态随视图下发，客户端据此决定弹不弹举义页
     oath: {

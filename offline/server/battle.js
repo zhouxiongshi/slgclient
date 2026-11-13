@@ -52,6 +52,16 @@ function loadoutFor(g) {
 
 /** 把原 general.json 的武将属性映射成内核 Hero（属性数值直接来源于原配置）。 */
 function makeHero(g, cfg) {
+  /* ★ M2-3 代将（GDD §3.4）：五维 50、无战法、不可培养——防止连环阵亡后无法出征的兜底 */
+  if (g.isStandIn) {
+    return {
+      heroid: g.id, name: g.name || '代将', level: g.level || 1,
+      hero_type: 'normal', hit_range: 1, country: '', quality: 1,
+      attack_base: 50, defence_base: 50, intel_base: 50, speed_base: 50, destroy_base: 50,
+      attack_grow: 3, defence_grow: 3, intel_grow: 3, speed_grow: 3, destroy_grow: 3,
+      skills: [],
+    };
+  }
   const gc = cfg.generalByCfg.get(g.cfgId) || {
     name: `武将${g.cfgId}`, force: 8000, strategy: 8000, defense: 8000,
     speed: 7000, destroy: 2000, force_grow: 30, strategy_grow: 30,

@@ -17,6 +17,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { captiveRecruitRate, captiveRateParts } from './captive-rules.js';
+import { knobGet } from './knobs.js';
 // city-econ 只依赖 economy，不反向依赖本模块，不会形成环
 import { cityYield } from './city-econ.js';
 /* ★ U20 粮道（supply → march，不反向依赖本模块）；★ U14 内政任务状（interior-task → economy） */
@@ -225,7 +226,7 @@ export function interactionState(state, cfg) {
        clearOnBattle / clearOnLoad：前端在检测到新战斗结算 / 读档回退时清空撤销栈；
        battleCount / turn：清栈检测的信号（战斗计数增加 / turn 回退）。 */
     undo: {
-      depth: 5,
+      depth: knobGet(state, 'undoDepth'),
       clearOnBattle: true,
       clearOnLoad: true,
       battleCount: Array.isArray(state.battleLog) ? state.battleLog.length : 0,

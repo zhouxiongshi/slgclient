@@ -32,6 +32,8 @@ import {
 import { panelState, panelAction, panelSelfCheck } from './domain/panels.js';
 /* 交互增强层：只读聚合（纯函数），不改 WS 协议与消息结构 */
 import { interactionState } from './domain/interaction.js';
+/* ★ M2-3 失败态四出路（GDD §3.4）：破产裁军/卖粮、兵尽紧急征兵·雇佣、无将代将、迁都 */
+import { disarmForGold, sellGrain, emergencyConscript, relocateCapital } from './domain/failstate.js';
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -427,6 +429,13 @@ export async function startOfflineServer(options = {}) {
             fromCityId: Number(body.fromCityId) || 0,
           });
         } else if (act === 'recall') result = strategyRecallMarch(state, cfg, ctx, { marchId: Number(body.marchId) });
+        /* ★ M2-3 失败态四出路（GDD §3.4）：裁军 / 卖粮 / 紧急征兵·雇佣兵 / 迁都 */
+        else if (act === 'disarm') result = disarmForGold(state, ctx, { armyId: Number(body.armyId), count: Number(body.count) });
+        else if (act === 'sellGrain') result = sellGrain(state, ctx, { grain: Number(body.grain) });
+        else if (act === 'emergencyConscript') result = emergencyConscript(state, ctx, {
+          cityId: Number(body.cityId), count: Number(body.count), mercenary: !!body.mercenary,
+        });
+        else if (act === 'relocateCapital') result = relocateCapital(state, ctx, { cityId: Number(body.cityId) });
         /* ★ 验收 #10 战前推演：与正式结算同一 resolveBattle / defenseFor / battleSeedFor，
            纯只读沙盒，可无限次回退重试；不能 save()，否则反复推演会把存档反复落盘。 */
         /* ★ 验收 #23：行军队列重排（同日抵达按队列顺序结算，所以顺序是真决策） */

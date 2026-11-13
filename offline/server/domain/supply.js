@@ -14,6 +14,8 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { canMarchBetween } from './march.js';
+/* ★ M2-3：粮耗口径走全局参数表（knobs.js 零依赖，无环） */
+import { knobGet } from './knobs.js';
 
 /* 城名只读 map.json（与 city-econ / tavern 同一口径）。本模块不能 import city-econ，
    否则 city-econ → supply → city-econ 成环。 */
@@ -124,7 +126,8 @@ export function marchSupplyEstimate(state, fromCityId, soldiers, days = 1) {
   const e = st?.cityEcon?.[Number(fromCityId)];
   const supply = supplyFor(state, fromCityId);
   const store = Number(e?.store) || 0;
-  const daily = Math.max(0.1, (Number(soldiers) || 0) * 0.1);
+  const perSoldier = knobGet(state, 'grainPerSoldierDay') ?? 0.1;
+  const daily = Math.max(perSoldier, (Number(soldiers) || 0) * perSoldier);
   const daysCanHold = Math.floor(store / daily);
   return {
     fromCityId: Number(fromCityId),
@@ -161,7 +164,7 @@ export function supplyLineForArmy(state, factionId, march) {
   if (!row || row.owner !== fid) return { connected: false, reason: 'from_lost', anchor };
   const econ = st.cityEcon || {};
   const storeOf = (id) => Math.max(0, Math.floor(Number(econ[id]?.store) || 0));
-  const need = Math.round((Number(march?.troops) || 0) * 0.1);
+  const need = Math.round((Number(march?.troops) || 0) * (knobGet(state, 'grainPerSoldierDay') ?? 0.1));
   if (storeOf(anchor) > 0) {
     return { connected: true, nodeId: anchor, hops: 0, store: storeOf(anchor), need, anchor };
   }
@@ -204,7 +207,7 @@ export function armySupplyTick(state, ctx) {
     const line = supplyLineForArmy(state, fid, mm);
     if (line.connected) {
       const e = st.cityEcon?.[line.nodeId];
-      const need = Math.round((Number(mm.troops) || 0) * 0.1);
+      const need = Math.round((Number(mm.troops) || 0) * (knobGet(state, 'grainPerSoldierDay') ?? 0.1));
       if (e && need > 0) e.store = Math.max(0, Math.floor(Number(e.store) || 0) - need);
       if ((Number(mm.supplyCutDays) || 0) > 0) {
         recordEvent(state, `${cityName(mm.from)}方向的部队补给恢复，士心安。`);
