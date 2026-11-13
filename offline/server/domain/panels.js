@@ -24,6 +24,8 @@ import { captiveRateParts, captiveRecruitRate } from './captive-rules.js';
 /* ★ U15 相性 / 义理 / 关系网（relation.js 只依赖 oath.js，不成环） */
 import { xiangxingOf, yiliOf, relationSummary, talentRecruitRate } from './relation.js';
 import { recordRes } from './economy.js';
+/* ★ P11：六府与城池内页显示同一份兵役台账（修测试报告 P3-01 的信息不对称） */
+import { levyView } from './levy.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const load = (p) => JSON.parse(readFileSync(resolve(ROOT, p), 'utf8'));
@@ -496,6 +498,8 @@ export function panelState(state, cfg) {
         const mod = e.mod && Number(state.clock?.day) <= e.mod.until ? e.mod : null;
         return {
           pop: e.pop, store: e.store,
+          /* ★ P3-01 / P11：六府也拿得到人口与兵役台账，不再与城池内页信息不对称 */
+          levy: levyView(state, c.id),
           yieldGrain: y?.grain || 0, yieldGold: y?.gold || 0,
           disaster: e.disaster || null,
           modLabel: mod ? (mod.grain < 1 ? '歉收中' : '丰产中') : '',

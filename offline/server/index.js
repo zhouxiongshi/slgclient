@@ -33,6 +33,8 @@ import {
   strategyEventChoice,
   /* ★ M3-5 剧本切换 */
   strategySetScenario,
+  /* ★ P11 / GDD §3.2 门 4→6：遭遇待决 / 确认开战 / 临阵撤军 / 新城消化 */
+  strategyConfirmBattle, strategyRetreatBattle, strategyDigestDone,
 } from './domain/strategy.js';
 import { panelState, panelAction, panelSelfCheck } from './domain/panels.js';
 /* 交互增强层：只读聚合（纯函数），不改 WS 协议与消息结构 */
@@ -56,6 +58,9 @@ export const PANELS_UI_SOURCE = readFileSync(resolve(ROOT, 'server/panels-ui.js'
 const IX_TERMS = JSON.parse(readFileSync(resolve(ROOT, 'conf/interaction/terms.json'), 'utf8'));
 export const IX_SOURCE = 'window.SLG_TERMS=' + JSON.stringify(IX_TERMS) + ';\n'
   + readFileSync(resolve(ROOT, 'server/interaction-ui.js'), 'utf8');
+
+/** ★ P11 界面外壳：登录门禁 + 一屏一窗 + 浮窗收束（纯浏览器 IIFE，随响应下发）。 */
+export const SHELL_UI_SOURCE = readFileSync(resolve(ROOT, 'server/ui-shell.js'), 'utf8');
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -106,6 +111,16 @@ export async function startOfflineServer(options = {}) {
     loaded = null;
   }
   let state = normalizeWorld(loaded || createWorld(cfg), cfg);
+  /* ★ P11：登录态只存在于本次进程内存，不写存档。
+     UI 注入层据此在「未登录」阶段隐藏全部面板——旧档/新档都以真实 WS 登录为准。 */
+  const session = { loggedInAt: 0, enteredAt: 0, username: '', logoutAt: 0 };
+  const sessionState = () => ({
+    ok: true,
+    ready: session.loggedInAt > 0 && session.loggedInAt > session.logoutAt,
+    phase: (session.loggedInAt > 0 && session.loggedInAt > session.logoutAt) ? 'game' : 'login',
+    loggedInAt: session.loggedInAt, enteredAt: session.enteredAt,
+    username: session.username, day: state.clock?.day ?? 1,
+  });
   const logs = [];
   const requestLog = [];
   const startedAt = Date.now();
@@ -287,8 +302,47 @@ export async function startOfflineServer(options = {}) {
         + 'window.addEventListener("error", rec, true);'
         + 'window.addEventListener("unhandledrejection", function(e){ rec({ message:"unhandledrejection: "+String(e&&e.reason), error:e&&e.reason, reason:e&&e.reason }); });'
         + '})();</script>';
-      const tag = errHook + '<script src="/__slg/panels/ui.js" charset="utf-8"></script>'
-        + '<script src="/__slg/interaction/ui.js" charset="utf-8"></script>';
+      /* ★ P11 登录门禁：这段必须排在所有 UI 脚本之前，首帧就把注入层藏起来。
+         以前页面一加载就渲染透镜/当前事务/推进前预览，登录页上就能看到全部游戏数据。 */
+      const gateCss = '<style id="slgGateCss">'
+        + 'html[data-slg-phase="login"] #slgUIv2,'
+        + 'html[data-slg-phase="login"] #slgPanelsDock,'
+        + 'html[data-slg-phase="login"] #slgPanelsMask,'
+        + 'html[data-slg-phase="login"] #slgPanelsToast,'
+        + 'html[data-slg-phase="login"] #slgOath,'
+        + 'html[data-slg-phase="login"] #slgFormup,'
+        + 'html[data-slg-phase="login"] #slgTransportBox,'
+        + 'html[data-slg-phase="login"] #slgIxRoot,'
+        + 'html[data-slg-phase="login"] #slgDock,'
+        + 'html[data-slg-phase="login"] #slgStrategyOverlay,'
+        + 'html[data-slg-phase="login"] #slgStratFoot,'
+        + 'html[data-slg-phase="login"] #slgStratIntro,'
+        + 'html[data-slg-phase="login"] #slgStratSide,'
+        + 'html[data-slg-phase="login"] #slgStratEvents,'
+        + 'html[data-slg-phase="login"] #slgLegend,'
+        + 'html[data-slg-phase="login"] #slgLogPanel,'
+        + 'html[data-slg-phase="login"] #slgBattleOverlay,'
+        + 'html[data-slg-phase="login"] #slgLocalCover,'
+        + 'html[data-slg-phase="login"] .slgIx-tip,'
+        + 'html[data-slg-phase="login"] .slgIx-modal,'
+        + 'html[data-slg-phase="login"] #slgIxDrawer,'
+        + 'html[data-slg-phase="login"] #slgIxGuide'
+        + '{display:none!important;visibility:hidden!important;pointer-events:none!important}'
+        + '</style>';
+      const gateBoot = '<script>(function(){'
+        + 'var h=document.documentElement;h.setAttribute("data-slg-phase","login");'
+        + 'var D=window.__slgGateDebug={polls:0,last:null,errors:[],phase:"login"};'
+        + 'function poll(){D.polls++;fetch("/__slg/session",{cache:"no-store"})'
+        + '.then(function(r){return r.json()}).then(function(d){'
+        + 'D.last=d;var p=d&&d.ready?"game":"login";'
+        + 'h.setAttribute("data-slg-phase",p);D.phase=p;})'
+        + '.catch(function(e){D.errors.push(String(e));});}'
+        + 'window.__slgGatePoll=poll;poll();setInterval(poll,1500);'
+        + '})();</script>';
+      const tag = gateCss + gateBoot + errHook
+        + '<script src="/__slg/panels/ui.js" charset="utf-8"></script>'
+        + '<script src="/__slg/interaction/ui.js" charset="utf-8"></script>'
+        + '<script src="/__slg/shell/ui.js" charset="utf-8"></script>';
       body = Buffer.from(/<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${tag}</body>`) : html + tag);
     }
     res.writeHead(200, {
@@ -331,6 +385,17 @@ export async function startOfflineServer(options = {}) {
     /* ---------------- 交互增强层：静态脚本 + 只读聚合态 ---------------- */
     if (urlPath === '/__slg/interaction/ui.js') {
       const buf = Buffer.from(IX_SOURCE, 'utf8');
+      res.writeHead(200, {
+        'Content-Type': 'text/javascript; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'Content-Length': buf.length,
+      });
+      res.end(buf);
+      return;
+    }
+    /* ★ P11 界面外壳：登录门禁 + 一屏一窗 */
+    if (urlPath === '/__slg/shell/ui.js') {
+      const buf = Buffer.from(SHELL_UI_SOURCE, 'utf8');
       res.writeHead(200, {
         'Content-Type': 'text/javascript; charset=utf-8',
         'Cache-Control': 'no-store',
@@ -394,6 +459,11 @@ export async function startOfflineServer(options = {}) {
     }
 
     // 本地调试 / 冒烟用只读端点
+    /* ★ P11 登录门禁：注入层轮询此端点，未登录时整屏隐藏所有游戏面板数据 */
+    if (urlPath === '/__slg/session') {
+      sendJson(req, res, sessionState());
+      return;
+    }
     if (urlPath === '/__slg/status') {
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({
@@ -429,7 +499,10 @@ export async function startOfflineServer(options = {}) {
     // ★ 出征面板：attack / recall 也走这里，省一条新 WS 协议
     if (urlPath === '/__slg/strategy/action' && req.method === 'POST') {
       readJson(req, 16384, (body) => {
-        const act = String(body?.action || '');
+        /* ★ P11 修：交互层事件卡发的是 {act:'eventChoice'}，旧代码只读 body.action，
+           于是每次点事件选项都返回 bad_action —— 卡片关不掉、每回合重弹，
+           玩家看到的就是「窗口反复遮挡、点了没反应」。两个字段都认。 */
+        const act = String(body?.action || body?.act || '');
         let result;
         if (act === 'formup') result = strategyFormup(state, cfg, ctx, body);
         else if (act === 'transport') result = strategyTransport(state, cfg, ctx, body);
@@ -445,8 +518,14 @@ export async function startOfflineServer(options = {}) {
             armyId: Number(body.armyId) || 0,
             frac: Number.isFinite(fracRaw) && fracRaw > 0 && fracRaw <= 1 ? fracRaw : 1,
             fromCityId: Number(body.fromCityId) || 0,
+            /* ★ P11：玩家从出征面板发的兵，抵达先进「遭遇」待决（GDD §3.2 门 4） */
+            confirmBattle: body.confirmBattle !== false,
           });
         } else if (act === 'recall') result = strategyRecallMarch(state, cfg, ctx, { marchId: Number(body.marchId) });
+        /* ★ P11 出征六门闭环：遭遇 → 推演 → 确认开战 / 临阵撤军 → 消化新城 */
+        else if (act === 'battleConfirm') result = strategyConfirmBattle(state, cfg, ctx, { marchId: Number(body.marchId) });
+        else if (act === 'battleRetreat') result = strategyRetreatBattle(state, cfg, ctx, { marchId: Number(body.marchId) });
+        else if (act === 'digest') result = strategyDigestDone(state, { cityId: Number(body.cityId) });
         /* ★ M2-3 失败态四出路（GDD §3.4）：裁军 / 卖粮 / 紧急征兵·雇佣兵 / 迁都 */
         else if (act === 'disarm') result = disarmForGold(state, ctx, { armyId: Number(body.armyId), count: Number(body.count) });
         else if (act === 'sellGrain') result = sellGrain(state, ctx, { grain: Number(body.grain) });
@@ -708,6 +787,15 @@ export async function startOfflineServer(options = {}) {
         /* ★ 修 bug-20：handler 抛异常以前吞成 code 0，客户端表现为「点了没反应」，
            日志之外没有任何线索。现在回 500 + reason，界面能提示、日志能定位。 */
         out = { code: 500, msg: { reason: 'internal', message: String(err.message || err) } };
+      }
+      /* ★ P11：只在真正登录成功后才放行注入 UI；登出立刻收回 */
+      if ((out.code ?? 0) === 0 && req.name === 'account.login') {
+        session.loggedInAt = Date.now();
+        session.username = String(req.msg?.username || state.account?.username || 'player');
+      } else if ((out.code ?? 0) === 0 && req.name === 'role.enterServer') {
+        session.enteredAt = Date.now();
+      } else if (req.name === 'account.logout') {
+        session.logoutAt = Date.now();
       }
       const body = {
         seq: out.seq ?? req.seq ?? 0,

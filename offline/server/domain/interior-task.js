@@ -63,6 +63,13 @@ export const KINDS = {
     label: '赈灾', cost: 500, field: null, total: 0, ticks: 0, stat: 'strategy', instant: true,
     note: '应急', effectText: '开仓赈济：减产解除，民心 +6、治安 +3（立即）',
   },
+  /* ★ P11 兵役制配套：人口是兵源的唯一来源，「先发展人口再征兵」这条闭环靠它落地。
+     新户入籍后可征壮丁随之增加（一户一丁），不是凭空加兵。 */
+  populate: {
+    label: '劝课生息', cost: 400, field: null, total: 0, ticks: 2, stat: 'charm',
+    popGain: 0.08, morale: 2, note: '户口',
+    effectText: '招徕流民、劝课生息：本城人口 +8%、民心 +2（新增户才有新丁可征）',
+  },
   /* ★ M2 新增 7 类（GDD §5.4「5 类 → 12 类」）。全部走同一任务对象，不新建系统；
      效果字段在 advanceInteriorTasks 完工时消费，口径见各 effectText。 */
   study: {
@@ -351,6 +358,8 @@ export function advanceInteriorTasks(state, cfg, ctx) {
       /* ★ M2 新 7 类的完工效果（效果字段唯一消费口；数值口径见 KINDS.effectText） */
       const e2 = st?.cityEcon?.[t.cityId];
       if (K?.storeGain && e2) e2.store = Math.min(20000, (Number(e2.store) || 0) + K.storeGain);
+      /* ★ P11 劝课生息完工：人口 +8%（新户带来新的适龄壮丁，兵源台账随之回升） */
+      if (K?.popGain && e2) e2.pop = Math.min(100000, Math.round((Number(e2.pop) || 0) * (1 + K.popGain)));
       if (K?.appeaseDays && e2) e2.appeaseUntil = day + K.appeaseDays;
       if (K?.drillCharge && e2) e2.drillCharges = (Number(e2.drillCharges) || 0) + 1;
       if (K?.visitBonus) {

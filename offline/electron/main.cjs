@@ -63,6 +63,10 @@ function createWindow() {
       nodeIntegration: false,
       spellcheck: false,
       webgl: true,
+      /* ★ 自动化必须关掉后台节流：窗口一旦被判定为遮挡/失焦，Chromium 会把
+         requestAnimationFrame 降到 0，Cocos 的 director 就永远不建场景
+         （FPS 0 / Draw call 0），测试看起来像「页面没加载」。 */
+      backgroundThrottling: false,
     },
   });
 
@@ -71,10 +75,22 @@ function createWindow() {
 
   win.once('ready-to-show', () => {
     win.show();
+    /* 自动化模式：置顶 + 抢焦点，避免被别的窗口盖住触发 Chromium 遮挡节流，
+       否则 Cocos 的 rAF 会停掉，场景永远起不来。测试结束进程即退出，不影响用户。 */
+    const automated = process.env.SLG_SMOKE === '1' || process.env.SLG_AUDIT === '1' || process.env.SLG_MOUSE === '1';
+    if (automated) {
+      try {
+        win.setAlwaysOnTop(true, 'screen-saver');
+        win.focus();
+        win.webContents.setBackgroundThrottling(false);
+      } catch { /* ignore */ }
+    }
     if (process.env.SLG_SMOKE === '1') {
       require('./smoke.cjs').runSmoke(win, server, app).catch(logError);
     } else if (process.env.SLG_AUDIT === '1') {
       require('./ui-audit.cjs').runAudit(win, server, app).catch(logError);
+    } else if (process.env.SLG_MOUSE === '1') {
+      require('./mouse-playtest.cjs').runMousePlaytest(win, server, app).catch(logError);
     }
   });
 
@@ -111,9 +127,9 @@ process.on('uncaughtException', logError);
 process.on('unhandledRejection', logError);
 
 // 冒烟/审计时用隔离的临时 userData，保证每轮都是全新存档 / 空 localStorage，结果可复现
-if (process.env.SLG_SMOKE === '1' || process.env.SLG_AUDIT === '1') {
+if (process.env.SLG_SMOKE === '1' || process.env.SLG_AUDIT === '1' || process.env.SLG_MOUSE === '1') {
   const os = require('node:os');
-  const kind = process.env.SLG_AUDIT === '1' ? 'audit' : 'smoke';
+  const kind = process.env.SLG_MOUSE === '1' ? 'mouse' : (process.env.SLG_AUDIT === '1' ? 'audit' : 'smoke');
   /* ★ 只用 pid 命名不够：pid 会被系统复用，复用时会捡到上一轮留下的 save.json，
      于是「举义页」被跳过，同一份脚本跑出来的路径数在 57/59 之间抖 —— 测试就不可复现了。
      加时间戳后缀，保证每轮真的是空存档。 */

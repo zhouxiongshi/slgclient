@@ -383,6 +383,31 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 - **分层口径**：用户字号三档（M4-2，偏好层）× 分辨率断点（本批，布局层）解耦并存，互不覆盖。
 - 测试 `tests/m4-layout.test.js` 4 条：对比度工具 exit 0 + 最低 ≥4.5、五档断点存在、dock 结构、两层解耦。坑：测试里 `new URL('.', import.meta.url)` 是当前文件目录不是包根——HERE 要取 `..`。
 
+### 9.16 P11 · 登录门禁、城市内部页与界面外壳
+
+**为什么单独成批**：用户 2026-11-13 提出的 8 项里，前 6 项都不是「再加一个功能」，而是**把已经堆在一起的界面重新分层**，以及把玩法口径收敛到单一事实源。所以本批先立外壳与台账，再改玩法。
+
+| 新增/改动 | 位置 | 层次 | 依赖禁令 |
+|---|---|---|---|
+| 兵役台账 | `server/domain/levy.js` | 零依赖叶子 | 不 import `strategy.js` / `city-econ.js` / `panels.js`，避免循环 |
+| 兵役结算 | `server/handlers.js` 的 `army.conscript` | 协议适配层 | 只调 `checkLevy` / `commitLevy` / `levyView`，不再自己算人口 |
+| 兵役投影 | `server/domain/panels.js` `cityBrief`、`server/domain/strategy.js` `strategyViewState` | 只读视图 | 一律 `levyView()` 同源，禁止各面板各算一份 |
+| 界面外壳 | `server/ui-shell.js` | 独立 IIFE，随 `index.html` HTTP 响应下发 | 不写存档、不碰协议、不引用领域模块，可整段摘掉 |
+| 登录门禁 | `server/index.js` 的 `session` + `/__slg/session` + `index.html` 注入 `gateBoot` | 服务入口层 | 登录态只在进程内存，不落盘；只认真实 WS 登录/登出 |
+| 城市内部页 | `server/skills.js` `renderCityPage` / `__slgCityInterior` | 注入 UI 层 | 与旧城池窗复用同一批 `tab*View` 渲染器，不产生第二套数据口径 |
+| 真鼠标试玩 | `electron/mouse-playtest.cjs` + `tools/mouse-playtest.js` | 测试工具 | 只读 + `sendInputEvent`，不写 `web/` |
+
+**两条不变量（改这块代码前先读）**：
+
+1. **登录前零数据**：首帧 `html[data-slg-phase="login"]` 由 `gateBoot` 同步写入，所有注入根节点 `display:none!important`；放行只来自服务端真实 `account.login` 成功，或 Cocos `onEnterMap` 真实进图事件（后者在 `skills.js` 的运行时补丁里，磁盘 `web/` 不动）。`account.logout` 立即收回。`window.__slgGateDebug` 留自诊断，`__slgGatePoll()` 可手动重查。
+2. **一屏一窗**：主窗口互斥放在「打开方」而不是靠观察器猜——`makeWindow()` 开新窗前 `dismissCityAndPanels()`，`renderCityPage()` 进城前清 `.win` 与六府遮罩，`panels-ui.js open()` 同理；`ui-shell.js` 的 `MutationObserver` 只做兜底与浮窗收束。旧回归资产依赖的 `#slgCityWin` 现在是**城内页主体容器**（不再是右侧浮窗），`#slgCityNav` 同时带 `.tabs` 语义类以兼容既有页签选择器，视觉由 `.citypage-nav.tabs` 的更高优先级规则兜住。
+
+**刷新入口收口**：tab 渲染器（内政/征兵/府库…）操作完成后一律调 `refreshCityView(s)`，由它按当前打开的是城内页还是旧浮窗二选一重绘。旧代码到处直接 `renderCity(s2)`，在城内页点一次按钮就会把旧浮窗再弹出来。
+
+**出征六门**：`strategyAttack` 增加 `confirmBattle`；行军抵达后 `strategyResolveMarches` 挂 `pendingBattle`，须由 `strategyConfirmBattle` 才写战报，`strategyRetreatBattle` 可临阵收兵，占城后写 `st.digest` 待办、`strategyDigestDone` 清除。协议层老调用不传该字段时仍自动结算，保持兼容。
+
+**测试**：`tests/p11-levy-and-gates.test.js`（7 条）、`tests/p11-session-gate.test.js`（1 条）、`electron/smoke.cjs` 新增门禁断言、`electron/mouse-playtest.cjs` 真鼠标全流程。
+
 ---
 
 ## 10. 文档地图（读哪本、信哪本）

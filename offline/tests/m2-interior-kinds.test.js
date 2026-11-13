@@ -52,9 +52,9 @@ function fastForward(state, days) {
 
 const state = {};   // 每个用例自带 world；这里只声明避免 lint 报未定义
 
-test('M2·KINDS：12 类齐备且新 7 类带正确依赖属性', () => {
+test('M2·KINDS：13 类齐备（12 + P11 劝课生息）且新 7 类带正确依赖属性', () => {
   const kinds = Object.keys(KINDS);
-  assert.equal(kinds.length, 12, `应有 12 类，实际 ${kinds.length}：${kinds.join(',')}`);
+  assert.equal(kinds.length, 13, `应有 13 类，实际 ${kinds.length}：${kinds.join(',')}`);
   assert.equal(KINDS.study.cost, 600);
   assert.equal(KINDS.appease.cost, 450);
   assert.equal(KINDS.tuntian.cost, 500);

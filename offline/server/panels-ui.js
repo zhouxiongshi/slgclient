@@ -538,7 +538,7 @@
             + '<td class="v">' + fmt(c.store || 0) + '</td><td>' + status + '</td>'
             + '<td><button class="btn" data-act="transport" data-city="' + c.id + '">运粮</button></td></tr>';
         }).join('') + '</tbody></table>'
-        + '<div class="muted">★ 行军粮优先从出发城城库扣（前线囤粮可省 25% 损耗）；蝗灾会蚀耗城库存粮——灾前把粮运走是保命操作。征兵每兵消耗 1 人口，人口每 30 日自然增长 4%。</div></div>';
+        + '<div class="muted">★ 行军粮优先从出发城城库扣（前线囤粮可省 25% 损耗）；蝗灾会蚀耗城库存粮——灾前把粮运走是保命操作。兵役按「一户一丁」计，每征 1 丁人口基数 −4，每旬只征一次；人口每 30 日自然增长。</div></div>';
     }
     // ★ P0 编队入口
     out += '<div class="card"><h3>队伍整编</h3>' + (s.armies || []).map(function (a) {
@@ -633,6 +633,22 @@
         return '<div><span class="k">' + p[0] + '</span> <span class="v">' + esc(p[1]) + '</span>'
           + '<div class="muted">' + p[2] + '</div></div>';
       }).join('') + '</div></div>';
+
+    /* ★ P3-01 / P11：六府·内政也要看得到逐城人口与兵役，不再与城池内页信息不对称 */
+    var ownRows = (data.strategy.cities || []).filter(function (c) { return c.owner === 'player' && c.levy; });
+    if (ownRows.length) {
+      out += '<div class="card"><h3>户口与兵役（与城池内页同源）</h3><table><thead><tr>'
+        + '<th>城池</th><th>人口</th><th>户数</th><th>适龄壮丁</th><th>已征</th><th>本旬可征</th></tr></thead><tbody>'
+        + ownRows.map(function (c) {
+          var v = c.levy;
+          return '<tr><td>' + esc(c.name) + '</td><td class="v">' + fmt(v.pop) + '</td>'
+            + '<td class="v">' + fmt(v.households) + '</td><td class="v">' + fmt(v.adultMales) + '</td>'
+            + '<td class="v">' + fmt(v.levied) + '</td>'
+            + '<td class="v">' + (v.quota > 0 ? '<span class="up">' + fmt(v.quota) + '</span>'
+              : '<span class="tag no">' + esc(v.reasonText || '需先生息') + '</span>') + '</td></tr>';
+        }).join('') + '</tbody></table>'
+        + '<div class="muted">一户一丁、妇孺老弱免征；每城每旬只征一次。兵源耗尽先在城池内页办「劝课生息」。</div></div>';
+    }
 
     out += '<h3>岗位委任（换人 delta 实时预览）</h3><div class="grid">';
     it.posts.forEach(function (p) {
@@ -860,6 +876,13 @@
   }
 
   function open(tab) {
+    /* ★ P11 一屏一窗：六府展开时收掉城市内部页与其它主窗口，避免互相遮挡 */
+    var city = document.getElementById('slgCityPage');
+    if (city) {
+      if (window.__slgCityClose) window.__slgCityClose();
+      else city.remove();
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('#slgUIv2 .win'), function (w) { w.remove(); });
     if (tab) ui.tab = tab;
     mask.style.display = 'flex';
     if (!data) fetchState(); else render();
@@ -994,7 +1017,11 @@
         .then(function (v) {
           if (v && v.ok && v.done) {
             clearInterval(poll);
+            /* ★ P11：渐隐期间这层是全屏 z-index 2147483646，摘掉 id 只是骗过
+               「元素存在性」检查，鼠标仍会被它整屏吃掉（真鼠标试玩在这里翻车）。
+               隐藏的第一帧就必须让点击穿透。 */
             el2.removeAttribute('id');
+            el2.style.pointerEvents = 'none';
             el2.style.transition = 'opacity .4s'; el2.style.opacity = '0';
             setTimeout(function () { el2.remove(); }, 420);
           }
@@ -1019,6 +1046,7 @@
     var el = document.getElementById('slgOath');
     if (!el) return;
     el.removeAttribute('id');   // 立即摘 id：外部「元素存在性」检查与渐隐动画解耦
+    el.style.pointerEvents = 'none'; // ★ P11：渐隐的 520ms 不许继续拦截鼠标
     el.style.transition = 'opacity .5s'; el.style.opacity = '0';
     setTimeout(function () { el.remove(); }, 520);
   }

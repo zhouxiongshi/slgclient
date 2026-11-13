@@ -703,7 +703,12 @@ export function patchClientBundle(source) {
             return NetManager.getInstance().send({ name: name, msg: msg || {} });
           };
         }
-        _proto.account_logout = function account_logout() {`,
+        _proto.account_logout = function account_logout() {
+          // ★ P11：登出立刻收回所有注入面板，不等轮询
+          if (typeof document !== 'undefined') {
+            document.documentElement.setAttribute('data-slg-phase', 'login');
+            if (window.__slgGateDebug) window.__slgGateDebug.phase = 'login';
+          }`,
     ],
     [
       `          EventMgr.on(LogicEvent.openGeneralRoster, this.onOpenGeneralRoster, this);`,
@@ -741,6 +746,11 @@ export function patchClientBundle(source) {
           var _this2 = this;
           // 登录进图的第一时间就盖住本地地图，不等贴图加载完
           if (typeof document !== 'undefined') {
+            // ★ P11：真实「已进图」事件是登录成功的最强信号，立即放行注入 UI。
+            // 服务端 /__slg/session 的轮询仍作为登出/异常时的权威兜底。
+            document.documentElement.setAttribute('data-slg-phase', 'game');
+            if (window.__slgGateDebug) window.__slgGateDebug.phase = 'game';
+            if (window.__slgGatePoll) window.__slgGatePoll();
             var gameDiv = document.getElementById('GameDiv');
             if (gameDiv) gameDiv.style.visibility = 'hidden';
             var coverEarly = document.getElementById('slgLocalCover');
@@ -1095,7 +1105,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       + 'max-width:calc(100% - 780px);';
     dock.innerHTML = ''
       + '<button id="slgStratTick" style="' + btnCss + '">推演一月</button>'
-      + '<button id="slgBtnWar" style="' + btnCss + '">出征</button>'
+      + '<button id="slgBtnWar" data-ix-allow="1" style="' + btnCss + '">出征</button>'
       + '<button id="slgBtnHome" style="' + btnCss + '">本城</button>'
       + '<button id="slgBtnGens" style="' + btnCss + '">武将</button>'
       + '<button id="slgBtnReps" style="' + btnCss + '">战报</button>'
@@ -1166,18 +1176,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     document.getElementById('slgBtnReps').onclick = function () {
       if (window.__slgReportsWindow) window.__slgReportsWindow();
     };
-    document.getElementById('slgStratTick').onclick = function () {
-      // ★ P0-1：推演一月现在是服务端原子推进 10 天并跑一次诸侯决策，必须给玩家回话
-      fetch('/__slg/strategy/tick', { method: 'POST' })
-        .then(function (r) { return r.json(); })
-        .then(function (res) {
-          refresh();
-          if (!window.__slgToast) return;
-          if (res.skipped) window.__slgToast('本回合已推演过，还需 ' + Math.max(1, res.need || 0) + ' 个游戏日', false);
-          else window.__slgToast('推演至第 ' + (res.month || (res.turn || 0) + 1) + ' 月 · 游戏日 ' + res.day, true);
-        })
-        .catch(function () {});
-    };
+    document.getElementById('slgStratTick').onclick = function () { window.__slgTick(); };
     // 滚轮缩放（以光标为锚）＋拖拽平移；轻点仍是选城
     canvas.style.cursor = 'grab';
     var drag = null;
@@ -1243,6 +1242,25 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
   }
 
   window.__slgStrategyShow = showMap;
+  /* ★ P11：城内页是整屏的，沙盘上的「推演」按钮被盖住，玩家在城里办完事
+     被迫先退出去才能推进回合。两个入口共用同一实现，绝不各写一份。 */
+  window.__slgTick = function () {
+    return fetch('/__slg/strategy/tick', { method: 'POST' })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        refresh();
+        /* 城内页开着就地重绘，日/旬/本旬可征 立刻跟着变 */
+        if (lastState && document.getElementById('slgCityPage')) {
+          var cc = cityOf(lastState, currentCity);
+          if (cc) renderCityPage(lastState, cc);
+        }
+        if (!window.__slgToast) return res;
+        if (res.skipped) window.__slgToast('本回合已推演过，还需 ' + Math.max(1, res.need || 0) + ' 个游戏日', false);
+        else window.__slgToast('推演至第 ' + (res.month || (res.turn || 0) + 1) + ' 月 · 游戏日 ' + res.day, true);
+        return res;
+      })
+      .catch(function () { return null; });
+  };
   /* ★ 验收 #23：战报「回跳」——把战报里的地名找回成地图上的城，居中并选中。
      战报的 place 是「襄陽城下」这类带后缀的字符串，所以按 id → 全名 → 包含 三级匹配。 */
   window.__slgFocusCity = function (nameOrId) {
@@ -1263,6 +1281,25 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     showMap();
     selectCity(hit);
     return true;
+  };
+  /* ★ P11 真鼠标验收：把战略城的投影坐标换算成屏幕坐标，供 Electron 的
+     webContents.sendInputEvent 派发真实 mousePressed/mouseReleased。
+     只做坐标换算，不代替点击——测试必须真的把鼠标按下去。 */
+  window.__slgCityScreenPos = function (cityId) {
+    if (!lastState || !canvas) return null;
+    var c = null;
+    for (var i = 0; i < lastState.cities.length; i++) {
+      if (Number(lastState.cities[i].id) === Number(cityId)) { c = lastState.cities[i]; break; }
+    }
+    if (!c) return null;
+    var rect = canvas.getBoundingClientRect();
+    var o = origin(rect), s = viewScale(rect);
+    var x = Math.round(rect.left + o[0] + c.x * s);
+    var y = Math.round(rect.top + o[1] + c.y * s);
+    return {
+      x: x, y: y, id: c.id, name: c.name,
+      inView: x > 20 && y > 20 && x < rect.right - 20 && y < rect.bottom - 20,
+    };
   };
   window.__slgZoom = function (dir) {
     var rect = canvas.getBoundingClientRect();
@@ -1420,8 +1457,11 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     pickedPass = null;
     picked = hit.city;
     if (lastState) draw(lastState);
-    showIntro(hit.city);
-    if (window.__slgCityWindow) window.__slgCityWindow(hit.city.id);
+    /* ★ P11：点城即「进城」。不再同时弹一张介绍小卡 + 一个右侧浮窗，
+       那两张和六府/透镜叠在一起正是「桌面杂乱」的来源。 */
+    if (introPanel) introPanel.style.display = 'none';
+    if (window.__slgCityInterior) window.__slgCityInterior(hit.city.id);
+    else if (window.__slgCityWindow) window.__slgCityWindow(hit.city.id);
   }
 
   function showPassIntro(p) {
@@ -2352,7 +2392,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
   var STYLE = document.createElement('style');
   STYLE.textContent = [
     '#slgUIv2 *{box-sizing:border-box;margin:0;padding:0;}',
-    '#slgUIv2 .win{position:fixed;top:12px;right:244px;bottom:12px;width:520px;z-index:100000;'
+    '#slgUIv2 .win{position:fixed;top:12px;right:244px;bottom:12px;width:520px;z-index:100560;'
     + 'background:linear-gradient(180deg,#1b1d16,#141610);border:1px solid #8a7038;border-radius:10px;'
     + 'color:#e2d6b8;font:13px/1.8 "Microsoft YaHei",sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.7);display:none;}',
     '#slgUIv2 .win-head{position:relative;padding:12px 16px 8px;border-bottom:1px solid #4a4030;background:rgba(60,48,24,.35);}',
@@ -2389,12 +2429,16 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     '#slgUIv2 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle;}',
     '#slgUIv2 .star5{color:#ffd766;}#slgUIv2 .star4{color:#c8a2ff;}#slgUIv2 .star3{color:#9fd0ff;}',
     '#slgUIv2 .winTag{color:#a89f86;}',
-    '#slgUIv2 .toast{position:fixed;top:52px;left:50%;transform:translateX(-50%);z-index:100003;',
+    /* ★ P11：.win 必须高于交互层浮窗（队列 100110 / 议程 100100 / 提示条 100240），
+       旧值 100000 会被「行军队列」这类浮窗压住，出征按钮点不到。 */
+    '#slgUIv2 .toast{position:fixed;top:52px;left:50%;transform:translateX(-50%);z-index:100880;',
     'padding:8px 22px;border-radius:6px;font:13px "Microsoft YaHei",sans-serif;',
     'box-shadow:0 4px 16px rgba(0,0,0,.6);opacity:0;transition:opacity .25s;}',
     '#slgUIv2 .toast.ok{background:#2c3e28;color:#a9e2a0;border:1px solid #4a6a42;}',
     '#slgUIv2 .toast.bad{background:#41241f;color:#ffb3a7;border:1px solid #7a4038;}',
-    '#slgUIv2 .modal{position:fixed;inset:0;z-index:100002;background:rgba(0,0,0,.55);display:flex;',
+    /* ★ P11 层级阶梯（与 interaction-ui 同一口径）：城内页 100420 < 决策预览 100760 <
+       确认框 100820 < 术语提示 100780 < toast 100880~900。旧值 100002 会被城内页盖住。 */
+    '#slgUIv2 .modal{position:fixed;inset:0;z-index:100820;background:rgba(0,0,0,.55);display:flex;',
     'align-items:center;justify-content:center;}',
     '#slgUIv2 .modal .box{width:430px;background:#1b1d16;border:1px solid #8a7038;border-radius:8px;padding:18px 20px;}',
     '#slgUIv2 .modal .box p{margin:0 0 14px;line-height:1.9;}',
@@ -2407,6 +2451,82 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     'border-radius:4px;padding:3px 8px;font:13px "Microsoft YaHei",sans-serif;}',
     '#slgUIv2 .empty{opacity:.6;padding:20px 0;text-align:center;}',
     '#slgUIv2 h4{color:#c8b88a;font-size:12px;margin:10px 0 6px;letter-spacing:2px;}',
+    /* ★ P11 城市内部页：点地图城池即「进城」，整屏一页，不再叠浮窗 */
+    '#slgUIv2 .citypage{position:fixed;inset:0;z-index:100420;display:flex;flex-direction:column;'
+      + 'background:radial-gradient(1200px 700px at 78% -20%,rgba(150,116,54,.16),transparent 70%),'
+      + 'linear-gradient(160deg,#14160f 0%,#1b1c14 48%,#12140e 100%);color:#e6dcc0;'
+      + 'font-family:"Microsoft YaHei","PingFang SC",sans-serif;animation:slgCityIn .22s ease-out;}',
+    '@keyframes slgCityIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}',
+    '#slgUIv2 .citypage-head{display:flex;align-items:center;gap:18px;padding:18px 26px 14px;'
+      + 'border-bottom:1px solid rgba(186,154,82,.32);background:rgba(10,12,8,.45);flex:0 0 auto;}',
+    '#slgUIv2 .citypage-head .ct{font:26px/1.2 "KaiTi","STKaiti",serif;letter-spacing:4px;color:#f4dfa6;}',
+    '#slgUIv2 .citypage-head .cs{font-size:12px;color:#a89f86;margin-top:5px;letter-spacing:1px;}',
+    '#slgUIv2 .citypage-head .pills{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;}',
+    '#slgUIv2 .citypage-head .pill{min-width:88px;padding:7px 12px;border:1px solid rgba(186,154,82,.35);'
+      + 'border-radius:6px;background:rgba(186,154,82,.07);text-align:left;}',
+    '#slgUIv2 .citypage-head .pill small{display:block;font-size:10px;color:#9c9382;letter-spacing:1px;}',
+    '#slgUIv2 .citypage-head .pill b{font-size:16px;color:#f0d998;font-weight:600;}',
+    '#slgUIv2 .citypage-head .back{background:rgba(109,83,32,.55);color:#ffe9b0;border:1px solid #a8863e;'
+      + 'border-radius:5px;padding:8px 15px;cursor:pointer;font-size:13px;white-space:nowrap;}',
+    '#slgUIv2 .citypage-head .back:hover{background:rgba(160,124,48,.75);}',
+    /* 城内页里的「推演一旬」：整屏页盖住了沙盘按钮，这里必须留同源入口 */
+    '#slgUIv2 .citypage-head .citypage-acts{display:flex;gap:8px;margin-left:14px;}',
+    '#slgUIv2 .citypage-head .tick{background:linear-gradient(180deg,rgba(150,113,40,.9),rgba(96,72,26,.9));'
+      + 'color:#ffe9b0;border:1px solid #c8a25a;border-radius:5px;padding:8px 15px;cursor:pointer;'
+      + 'font-size:13px;white-space:nowrap;box-shadow:0 1px 0 rgba(255,235,180,.25) inset;}',
+    '#slgUIv2 .citypage-head .tick:hover{background:linear-gradient(180deg,rgba(180,138,52,.95),rgba(120,90,32,.95));}',
+    '#slgUIv2 .citypage-main{display:flex;flex:1;min-height:0;}',
+    '#slgUIv2 .citypage-nav{width:196px;flex:0 0 196px;padding:16px 12px;border-right:1px solid rgba(186,154,82,.22);'
+      + 'background:rgba(8,10,7,.34);display:flex;flex-direction:column;gap:5px;}',
+    '#slgUIv2 .citypage-nav .nt{font-size:11px;color:#8f8676;letter-spacing:3px;padding:4px 10px 8px;}',
+    '#slgUIv2 .citypage-nav button{text-align:left;padding:10px 13px;border:1px solid transparent;border-radius:5px;'
+      + 'background:transparent;color:#b9b096;font-size:13px;cursor:pointer;letter-spacing:1px;}',
+    '#slgUIv2 .citypage-nav button:hover{background:rgba(186,154,82,.10);color:#f0d998;}',
+    '#slgUIv2 .citypage-nav button.on{background:linear-gradient(90deg,rgba(150,113,40,.42),transparent);'
+      + 'border-left:3px solid #d8b062;color:#ffe9b0;font-weight:600;}',
+    /* 兼容锚点：nav 同时带 .tabs，抵消通用横向页签条对竖排导航的影响 */
+    '#slgUIv2 .citypage-nav.tabs{background:rgba(8,10,7,.34);border-bottom:none;'
+      + 'display:flex;flex-direction:column;border-right:1px solid rgba(186,154,82,.22);}',
+    '#slgUIv2 .citypage-nav.tabs button{flex:0 0 auto;text-align:left;border-right:none;'
+      + 'border-bottom:1px solid transparent;background:transparent;color:#b9b096;'
+      + 'padding:10px 13px;border-radius:5px;font-size:13px;letter-spacing:1px;}',
+    '#slgUIv2 .citypage-nav.tabs button.on{background:linear-gradient(90deg,rgba(150,113,40,.42),transparent);'
+      + 'border-left:3px solid #d8b062;color:#ffe9b0;font-weight:600;}',
+    '#slgUIv2 .citypage-nav .spacer{flex:1;}',
+    '#slgUIv2 .citypage-nav .hint{font-size:11px;line-height:1.7;color:#8f8676;padding:10px;border-top:1px dashed rgba(186,154,82,.22);}',
+    '#slgUIv2 .citypage-body{flex:1;min-width:0;overflow-y:auto;padding:18px 24px 40px;}',
+    '#slgUIv2 .citypage-body .card{background:rgba(255,255,255,.035);border-color:rgba(186,154,82,.24);'
+      + 'border-radius:7px;padding:12px 15px;margin-bottom:12px;}',
+    '#slgUIv2 .citypage-body>.empty{font-size:13px;padding:30px;}',
+    '@media (max-width:1100px){#slgUIv2 .citypage-nav{width:150px;flex-basis:150px}'
+      + '#slgUIv2 .citypage-head .pill{min-width:70px}}',
+    /* ★ P11 整体观感：主窗口统一居中、留白、层次；不再贴右侧和六府挤在一起 */
+    '#slgUIv2 .win{right:auto;left:50%;transform:translateX(-50%);top:34px;bottom:34px;'
+      + 'width:min(820px,calc(100vw - 96px));border:1px solid #8a7038;border-radius:10px;'
+      + 'overflow:hidden;background:linear-gradient(160deg,#1a1d14,#12150f 70%);'
+      + 'box-shadow:0 20px 64px rgba(0,0,0,.66);animation:slgWinIn .18s ease-out;}',
+    '@keyframes slgWinIn{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%)}}',
+    '#slgUIv2 .win-head{padding:13px 20px 10px;background:radial-gradient(620px 140px at 12% -60%,'
+      + 'rgba(186,154,82,.24),transparent 75%);border-bottom:1px solid rgba(186,154,82,.28);}',
+    '#slgUIv2 .win-head b{font:20px/1.3 "KaiTi","STKaiti",serif;letter-spacing:3px;}',
+    '#slgUIv2 .win-head .x{top:12px;right:16px;font-size:19px;border-radius:4px;}',
+    '#slgUIv2 .win-head .x:hover{background:rgba(186,154,82,.18);color:#ffe9b0;}',
+    '#slgUIv2 .tabs{background:rgba(8,10,7,.5);border-bottom:1px solid rgba(186,154,82,.24);}',
+    '#slgUIv2 .tabs button{background:transparent;border-right:none;border-bottom:2px solid transparent;'
+      + 'color:#a89f86;padding:9px 6px;font-size:12.5px;letter-spacing:1px;}',
+    '#slgUIv2 .tabs button:hover{color:#f0d998;background:rgba(186,154,82,.07);}',
+    '#slgUIv2 .tabs button.on{background:rgba(150,113,40,.16);color:#ffe9b0;'
+      + 'border-bottom-color:#d8b062;font-weight:600;}',
+    '#slgUIv2 .win .body{top:104px;padding:16px 20px 40px;background:transparent;}',
+    '#slgUIv2 .card{background:rgba(255,255,255,.032);border:1px solid rgba(186,154,82,.22);'
+      + 'border-radius:7px;padding:12px 15px;box-shadow:inset 0 1px 0 rgba(255,255,255,.03);}',
+    '#slgUIv2 .card h4{letter-spacing:2px;color:#c8b88a;}',
+    '#slgUIv2 .kv{border-bottom:1px dashed rgba(186,154,82,.16);padding:5px 0;}',
+    '#slgUIv2 .btn{border-radius:5px;letter-spacing:1px;transition:filter .15s,transform .1s;}',
+    '#slgUIv2 .btn:active{transform:translateY(1px);}',
+    '#slgUIv2 .modal .box{border-radius:9px;background:linear-gradient(165deg,#1d241a,#141a13);'
+      + 'box-shadow:0 20px 60px rgba(0,0,0,.65);}',
+    '@media (max-width:1100px){#slgUIv2 .win{top:16px;bottom:16px;width:calc(100vw - 40px)}}',
   ].join('');
   document.head.appendChild(STYLE);
 
@@ -2506,7 +2626,24 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     return send('world.meta', {}).then(function (rsp) { metaV = rsp.msg; return rsp.msg; });
   }
 
+  /* ★ P11 一屏一窗：任何新主窗口打开前，先收掉城市内部页与六府遮罩。
+     过去「点城进城页」和「点出征开浮窗」会同时存在，互相盖住。 */
+  function dismissCityAndPanels() {
+    var city = document.getElementById('slgCityPage');
+    if (city) {
+      if (window.__slgCityClose) window.__slgCityClose();
+      else city.remove();
+    }
+    var pm = document.getElementById('slgPanelsMask');
+    if (pm) {
+      if (window.__slgPanels && window.__slgPanels.close) {
+        try { window.__slgPanels.close(); } catch (e) { /* 面板未就绪 */ }
+      }
+      pm.style.display = 'none';
+    }
+  }
   function makeWindow(id, title, subHtml, tabs, active, onTab, onClose) {
+    dismissCityAndPanels();
     var old = document.getElementById(id);
     if (old) old.remove();
     var win = el('div', 'win');
@@ -2573,7 +2710,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     tab = tabId || 'overview';
     fetchState().then(function (s) {
       cache = s; buildNeighbors(s);
-      renderCity(s);
+      refreshCityView(s);
     }).catch(function () {});
   };
   window.__slgCityClose = function () {
@@ -2623,6 +2760,11 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       .catch(function () { renderWar(s); });
   }
 
+  window.__slgWarClose = function () {
+    var w = document.getElementById('slgWarWin');
+    if (w) w.remove();
+    document.documentElement.removeAttribute('data-slg-window');
+  };
   window.__slgWarWindow = function (opts) {
     opts = opts || {};
     if (opts.from) war.from = Number(opts.from);
@@ -2658,9 +2800,16 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       war.armyId = idle.length ? idle[0].id : 0;
     }
     var queue = (s.marches || []).filter(function (m) { return m.side === 'player' && !m.resolved; });
+    var pending = s.pendingBattles || [];
+    var digest = s.digest || [];
+    /* ★ P11 / GDD §2.2 六道门：动机 → 集结 → 行军 → 遭遇 → 结算 → 消化，
+       每一道门在面板里都有对应页签，不再「打完就没有下文」。 */
     var tabs = [
-      ['go', '出击'],
-      ['queue', '行军队列' + (queue.length ? '（' + queue.length + '）' : '')],
+      ['go', '① 集结 · 出击'],
+      /* 页签保留「行军队列」全称：玩家看得懂，回归脚本也按这个词找页签 */
+      ['queue', '② 行军队列' + (queue.length ? '（' + queue.length + '）' : '')],
+      ['encounter', '③ 遭遇' + (pending.length ? '（' + pending.length + '）' : '')],
+      ['digest', '④ 消化' + (digest.length ? '（' + digest.length + '）' : '')],
       ['diplo', '外交'],
       ['log', '战报'],
     ];
@@ -2672,14 +2821,105 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     body.innerHTML = '';
     if (war.tab === 'go') warGoPanel(s, fromCity, idle, body);
     else if (war.tab === 'queue') warQueuePanel(s, queue, body);
+    else if (war.tab === 'encounter') warEncounterPanel(s, pending, body);
+    else if (war.tab === 'digest') warDigestPanel(s, digest, body);
     else if (war.tab === 'diplo') warDiploPanel(s, body);
     else warLogPanel(s, body);
     /* ★ #18：面板每次重绘都把「选到一半的输入」落一次，切走再回来原样还在 */
     saveWar();
   }
 
+  /* ★ P11 / GDD §2.2 门 4：抵城不自动开打，先挂「遭遇」，推演过才让确认。 */
+  function warEncounterPanel(s, pending, body) {
+    if (!pending.length) {
+      body.appendChild(el('div', 'empty',
+        '当前没有待决的遭遇战。出征后抵达目标城下，队伍会在此等候主公定夺：可反复推演、也可临阵收兵。'));
+      return;
+    }
+    pending.forEach(function (p) {
+      var card = el('div', 'card',
+        '<h4 style="margin-top:0">⚔ ' + esc(p.fromName) + ' → ' + esc(p.toName) + ' · 两军对阵</h4>'
+        + '<div class="grid">'
+        + kv('抵达', '第 ' + p.arriveDay + ' 日')
+        + kv('我军', fmt(p.troops) + ' 兵')
+        + kv('守军约', fmt(p.enemyTroops) + ' 兵')
+        + kv('已耗军粮', fmt(p.grainCost))
+        + '</div>'
+        + '<div class="cost" style="margin-top:6px">此战不可逆：确认后才走正式结算并写战报；撤军退还一半军粮，部队回出发城。</div>');
+      var out = el('div', '');
+      card.appendChild(out);
+      var bar = el('div', 'row');
+      bar.style.cssText = 'border:none;gap:7px;justify-content:flex-start;padding-top:8px;';
+      var pv = mkBtn('推演一次', 'ghost', function () {
+        pv.disabled = true; out.innerHTML = '<div class="cost">沙盒演算中…</div>';
+        postJSON('/__slg/strategy/action', {
+          action: 'preview', cityId: p.to, fromCityId: p.from,
+          armyId: p.armyId, frac: p.frac,
+        }).then(function (rs) {
+          pv.disabled = false;
+          out.innerHTML = rs && rs.ok
+            ? warPreviewHtml(rs)
+            : '<div class="cost" style="color:#ff9d6b">推演失败：' + esc(warReason(rs && rs.reason)) + '</div>';
+        });
+      });
+      bar.appendChild(pv);
+      bar.appendChild(mkBtn('确认开战', '', function () {
+        postJSON('/__slg/strategy/action', { action: 'battleConfirm', marchId: p.marchId })
+          .then(function (rs) {
+            if (!rs || !rs.ok) { toast('开战失败：' + warReason(rs && rs.reason), false); return; }
+            toast(rs.result === 2 ? '攻下 ' + rs.city + '！请到「消化」页安置新城' : '战斗已结算，战报已生成', rs.result === 2);
+            war.tab = 'log'; warRefresh(s);
+          });
+      }));
+      bar.appendChild(mkBtn('临阵收兵', 'ghost', function () {
+        postJSON('/__slg/strategy/action', { action: 'battleRetreat', marchId: p.marchId })
+          .then(function (rs) {
+            toast(rs && rs.ok ? ('已收兵，退粮 ' + fmt(rs.refund || 0)) : '收兵失败', !!(rs && rs.ok));
+            war.tab = 'queue'; warRefresh(s);
+          });
+      }));
+      card.appendChild(bar);
+      body.appendChild(card);
+    });
+  }
+
+  /* ★ P11 / GDD §2.2 门 6：占城之后给「这座城怎么用」的落点，不让流程断在战报。 */
+  function warDigestPanel(s, digest, body) {
+    if (!digest.length) {
+      body.appendChild(el('div', 'empty', '暂无新占城池。攻下一城后，这里会列出待安置的城。'));
+      return;
+    }
+    digest.forEach(function (d) {
+      var card = el('div', 'card',
+        '<h4 style="margin-top:0">新附 · ' + esc(d.name) + '</h4>'
+        + '<div class="cost">第 ' + d.day + ' 日入版图。城破后民心、治安、人口俱损，'
+        + '先办「劝课生息 / 赈灾 / 修城」，再考虑从此城出征。</div>');
+      var bar = el('div', 'row');
+      bar.style.cssText = 'border:none;gap:7px;justify-content:flex-start;padding-top:8px;';
+      bar.appendChild(mkBtn('进城治理', '', function () {
+        postJSON('/__slg/strategy/action', { action: 'digest', cityId: d.cityId }).then(function () {
+          window.__slgWarClose && window.__slgWarClose();
+          if (window.__slgCityInterior) window.__slgCityInterior(d.cityId, 'home');
+        });
+      }));
+      bar.appendChild(mkBtn('看战报', 'ghost', function () { war.tab = 'log'; renderWar(s); }));
+      card.appendChild(bar);
+      body.appendChild(card);
+    });
+  }
+
   function warGoPanel(s, fromCity, idle, body) {
     var own = warOwnCities(s);
+    /* ★ P11 出征向导：选出发城 → 选队伍/目标 → 补给与推演 → 确认。
+       任何一项改变都要求重新推演，避免「推演 A 城、实打 B 城」。 */
+    var sig = [war.from, war.armyId, war.target, war.frac].join('/');
+    if (war.previewSig !== sig) { war.previewSig = sig; war.previewDone = false; }
+    var rail = el('div', 'card',
+      '<h4 style="margin-top:0">出征四步 · ' + (war.previewDone ? '<span style="color:#a9e2a0">已就绪</span>' : '<span style="color:#e0c56a">待推演</span>') + '</h4>'
+      + '<div class="cost" style="line-height:1.9">'
+      + '① 选出发城与队伍　→　② 选目标城与出兵比例　→　③ 看补给预览并<b style="color:#f0d998">推演一次</b>　→　④ 确认出征<br>'
+      + '<span style="opacity:.8">抵达后进入「遭遇」页，可再次推演、确认开战或收兵；战胜后到「消化」页安置新城。</span></div>');
+    body.appendChild(rail);
     var fromCard = el('div', 'card', '<h4 style="margin-top:0">出发城</h4>');
     if (own.length > 1) {
       var selFrom = document.createElement('select');
@@ -2853,9 +3093,17 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         : deploy >= theirs * 0.9 ? '<span style="color:#e0c56a">胜负参半，看武将与兵种</span>'
           : '<span style="color:#ff6b5e">兵力偏少，建议先增兵或换小城</span>')));
 
-    sum.appendChild(mkBtn('出征 ' + target.name, '', function () {
+    /* ★ P11 / GDD §2.2：第 4 门「推演」是留存的门，不推演不许出兵。 */
+    var atkBtn = mkBtn(war.previewDone ? ('出征 ' + target.name) : '先推演一次再出征', '', function () {
+      if (!war.previewDone) { toast('请先在「战前推演」点一次推演，确认胜算后再出兵', false); return; }
       warConfirmAttack(s, fromCity, army, target, route);
-    }));
+    });
+    atkBtn.id = 'slgWarAttackBtn';
+    atkBtn.disabled = !war.previewDone;
+    /* ★ P11：本按钮点下去已经有「出兵确认」弹框，交互层不要再套一层成本预览——
+       连点两次确认正是用户说的「操作繁琐」。 */
+    atkBtn.setAttribute('data-ix-allow', '1');
+    sum.appendChild(atkBtn);
     body.appendChild(sum);
     body.appendChild(warPreviewCard(s, fromCity, army, target));
   }
@@ -2881,6 +3129,14 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         out.innerHTML = rs && rs.ok
           ? warPreviewHtml(rs)
           : '<div class="cost" style="color:#ff9d6b">推演失败：' + esc(warReason(rs && rs.reason)) + '</div>';
+        /* ★ P11：推演成功才解锁出征按钮；改出发城/队伍/目标/比例会重置这把锁 */
+        if (rs && rs.ok) {
+          war.previewDone = true;
+          var atk = document.getElementById('slgWarAttackBtn');
+          if (atk) { atk.disabled = false; atk.textContent = '出征 ' + target.name; }
+          var tt = document.querySelector('#slgWarWin .card h4');
+          if (tt) tt.innerHTML = '出征四步 · <span style="color:#a9e2a0">已就绪</span>';
+        }
       }).catch(function () {
         btn.disabled = false; btn.textContent = '再推演一次';
         out.innerHTML = '<div class="cost" style="color:#ff9d6b">推演失败：服务端无响应</div>';
@@ -2943,11 +3199,13 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       '规模：' + label + '，实出 <b>' + fmt(deploy) + '</b> 人（该队共 ' + fmt(total) + '）',
       '行军：程 ' + fmt(route.km) + ' 里 · 队速 ' + Math.round(army.speed) + ' · 预计第 ' + (s.day + days)
         + ' 日抵达 · 耗粮 ' + fmt(Math.ceil(deploy * 0.1)),
-      '<span class="cost">到达日自动开战；战败折损、溃兵归营。出征后可在「行军队列」页撤回。</span>',
+      '<span class="cost">抵达城下先进入「遭遇」待决，须主公确认开战或临阵收兵；战败折损、溃兵归营。行军途中可在「行军队列」页撤回。</span>',
     ], '出征', '取消', function () {
       postJSON('/__slg/strategy/action', {
         action: 'attack', cityId: target.id, armyId: army.id,
         frac: war.frac, fromCityId: fromCity.id,
+        /* ★ P11：抵达先进「遭遇」页，不自动开打（GDD §3.2 门 4→5） */
+        confirmBattle: true,
       }).then(function (rs) {
         if (rs && rs.ok) {
           toast('大军自' + (rs.from || fromCity.name) + '开拔，程 ' + Math.round(rs.km || route.km)
@@ -3188,14 +3446,23 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
   }
 
   window.__slgHomeWindow = function () {
+    /* ★ P11：「本城」按钮与点地图城池同一个落点，避免两套城池界面并存 */
     fetchState().then(function (s) {
       cache = s; buildNeighbors(s);
-      currentCity = s.playerCity;
-      tab = 'overview';
-      renderCity(s);
+      window.__slgCityInterior(s.playerCity || 1);
     }).catch(function () {});
   };
 
+  /* ★ P11：tab 渲染器（内政/征兵/府库…）操作完成后统一走这里刷新。
+     旧实现一律 renderCity()，在城内页里点一次按钮就会把旧的 slgCityWin 浮窗
+     又弹出来，形成两套城池界面。现在按当前实际打开的视图二选一重绘。 */
+  function refreshCityView(s) {
+    var data = s || cache;
+    var c = cityOf(data, currentCity);
+    if (!c) return;
+    if (document.getElementById('slgCityPage')) renderCityPage(data, c);
+    else renderCity(data);
+  }
   function renderCity(s) {
     var c = cityOf(s, currentCity);
     if (!c) { window.__slgCityClose(); return; }
@@ -3214,7 +3481,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         : ' · 守军约 ' + fmt(c.troops)) + '</div>',
       tabs,
       tab,
-      function (t) { tab = t; renderCity(s); },
+      function (t) { tab = t; refreshCityView(s); },
       window.__slgCityClose);
     body.innerHTML = '';
     if (tab === 'overview') tabOverview(s, c, body, isHome);
@@ -3225,6 +3492,120 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     else if (tab === 'tavern') { if (isHome) renderTavernInto(body); else tabTavernView(c, body); }
     else if (tab === 'reports') renderReportsInto(body, c);
   }
+
+  /* ==========================================================================
+   * ★ P11 · 城市内部页
+   * 以前点地图城池只弹右侧 520px 浮窗，和六府 / 透镜 / 当前事务 / 出征窗叠成一团。
+   * 现在点城即「进城」：整屏一页，左侧常驻页签，右侧内容区；己方城默认落在「内政」，
+   * 玩家一进来就能办本城的事，不用再找按钮。内容复用 renderCity 的同一批 tab 渲染器，
+   * 保证「城池窗」与「城内页」显示的是同一份数据，不产生第二套口径。
+   * ======================================================================== */
+  function cityPageTabs(s, c, isHome) {
+    var tabs = [['overview', '概览'], ['home', '内政'], ['army', '征兵'], ['gens', '武将'], ['tavern', '酒馆'], ['reports', '战报']];
+    if (isHome) tabs.push(['base', '府库']);
+    return tabs;
+  }
+  function cityPageContent(s, c, body, isHome) {
+    body.innerHTML = '';
+    if (tab === 'overview') tabOverview(s, c, body, isHome);
+    else if (tab === 'home') tabInteriorView(c, body);
+    else if (tab === 'base') tabHome(body, c);
+    else if (tab === 'army') tabArmy(body, c);
+    else if (tab === 'gens') { if (isHome) renderGensInto(body); else tabGeneralView(c, body); }
+    else if (tab === 'tavern') { if (isHome) renderTavernInto(body); else tabTavernView(c, body); }
+    else if (tab === 'reports') renderReportsInto(body, c);
+  }
+  function renderCityPage(s, c) {
+    var isHome = s.playerCity === c.id;
+    if (tab === 'base' && !isHome) tab = 'overview';
+    /* 进/切城内页时同步清掉其它主窗口，不等 MutationObserver 的 30ms 兜底 */
+    Array.prototype.forEach.call(document.querySelectorAll('#slgUIv2 .win'), function (w) { w.remove(); });
+    var pm0 = document.getElementById('slgPanelsMask');
+    if (pm0) {
+      if (window.__slgPanels && window.__slgPanels.close) {
+        try { window.__slgPanels.close(); } catch (e) { /* 面板未就绪 */ }
+      }
+      pm0.style.display = 'none';
+    }
+    var page = document.getElementById('slgCityPage');
+    if (!page) {
+      page = el('div', 'citypage');
+      page.id = 'slgCityPage';
+      host.appendChild(page);
+    }
+    var lv = c.levy || null;
+    var pill = function (k, v) { return '<div class="pill"><small>' + k + '</small><b>' + v + '</b></div>'; };
+    page.innerHTML = '<div class="citypage-head">'
+      + '<div><div class="ct">' + esc(c.name) + (c.level === 3 ? ' · 州治' : '') + '</div>'
+      + '<div class="cs">' + esc(c.province) + ' · <span style="color:' + c.color + '">' + esc(c.ownerName) + '</span>'
+      + ' · 第 ' + (s.day || 1) + ' 日' + (isHome ? ' · 都城' : '') + '</div></div>'
+      + '<div class="pills">'
+      + pill('人口', fmt(c.pop || c.population || 0))
+      + pill('城库粮', fmt(c.store || 0))
+      + pill(c.owner === 'player' ? '驻城兵' : '守军约', fmt(c.owner === 'player' ? (c.troopSum || 0) : (c.troops || 0)))
+      + pill('民心', c.morale != null ? c.morale : '—')
+      + (lv ? pill('本旬可征', fmt(lv.quota)) : '')
+      + '</div><div class="citypage-acts">'
+      + '<button class="tick" id="slgCityTick" title="与沙盘上的「推演一月」同一实现">推演一旬</button>'
+      + '<button class="back" id="slgCityBack">← 返回沙盘</button></div></div>'
+      /* id="slgCityWin" 是给既有回归资产（smoke / ui-audit 的 #slgCityWin 选择器）
+         与旧调用方留的兼容锚点：它现在是「城内页主体」，不再是右侧浮窗。
+         nav 带 .tabs 语义类，页签选择器不用改，视觉由 .citypage-nav 的更高优先级规则兜住。 */
+      + '<div class="citypage-main" id="slgCityWin"><div class="citypage-nav tabs" id="slgCityNav"></div>'
+      + '<div class="citypage-body" id="slgCityBody"></div></div>';
+    page.querySelector('#slgCityBack').onclick = function () { window.__slgCityClose(); };
+    page.querySelector('#slgCityTick').onclick = function () { window.__slgTick(); };
+    var nav = page.querySelector('#slgCityNav');
+    nav.appendChild(el('div', 'nt', '城 内 事 务'));
+    var tabs = cityPageTabs(s, c, isHome);
+    tabs.forEach(function (t) {
+      var b = el('button', tab === t[0] ? 'on' : '', esc(t[1]));
+      b.setAttribute('data-citytab', t[0]);
+      b.onclick = function () { tab = t[0]; renderCityPage(s, c); };
+      nav.appendChild(b);
+    });
+    nav.appendChild(el('div', 'spacer'));
+    if (c.owner === 'player') {
+      var war = el('button', '', '⚔ 自本城出征');
+      war.setAttribute('data-citytab', 'war');
+      war.setAttribute('data-ix-allow', '1'); // 只开面板，不是真正出征，免决策预览
+      war.onclick = function () {
+        window.__slgCityClose();
+        if (window.__slgWarWindow) window.__slgWarWindow({ cityId: c.id, from: c.id, tab: 'go' });
+      };
+      nav.appendChild(war);
+    }
+    nav.appendChild(el('div', 'hint',
+      (c.owner === 'player'
+        ? '己方城：内政与征兵均在此办理。征兵按「一户一丁」，本旬只能征一次。'
+        : '敌方城：先看概览与守军，进攻请从「自本城出征」发起。')));
+    cityPageContent(s, c, page.querySelector('#slgCityBody'), isHome);
+    document.documentElement.setAttribute('data-slg-window', 'city');
+  }
+
+  /** 点地图城池 / 任何旧入口的统一落点：进入城市内部页。 */
+  window.__slgCityInterior = function (cityId, tabId) {
+    var cid = Number(cityId) || Number(cache && cache.playerCity) || 0;
+    if (!cid) return;
+    currentCity = cid;
+    tab = tabId || 'home';
+    fetchState().then(function (s) {
+      cache = s; buildNeighbors(s);
+      var c = cityOf(s, cid);
+      if (!c) return;
+      if (!tabId) tab = c.owner === 'player' ? 'home' : 'overview';
+      renderCityPage(s, c);
+    }).catch(function () { toast('城池数据未就绪，稍后再点一次', false); });
+  };
+  /* 老调用方（六府 / 战报回跳 / 出征面板「去本城征兵」）全部改走城内页 */
+  window.__slgCityWindow = window.__slgCityInterior;
+  window.__slgCityClose = function () {
+    var p = document.getElementById('slgCityPage');
+    if (p) p.remove();
+    var w = document.getElementById('slgCityWin');
+    if (w) w.remove();
+    document.documentElement.removeAttribute('data-slg-window');
+  };
 
   function tabInteriorView(c, body) {
     /* ★ P6 己方非主城：城池内政任务（开垦/招商/募兵/修城/赈灾），每城每旬一次
@@ -3279,7 +3660,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
               }).then(function (r2) { return r2.json(); }).then(function (rs) {
                 if (rs.ok) toast(rs.refund > 0 ? ('任务已撤销，退回 ' + rs.refund + ' 金') : '任务已撤销（已投入的金不退，已到账的增量保留）', true);
                 else toast('无法撤销：' + (rs.reason || '未知'), false);
-                fetchState().then(function (s2) { cache = s2; renderCity(s2); });
+                fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
               });
             }));
           } else {
@@ -3318,7 +3699,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
                 toast(rs.instant
                   ? (label + '已完成：' + (rs.effectText || ''))
                   : (label + '已委派给 ' + (tk.officer || '无专员') + '，' + tk.ticks + ' 旬完工（第 ' + tk.endDay + ' 日），每旬 +' + tk.perTick), true);
-                fetchState().then(function (s2) { cache = s2; renderCity(s2); });
+                fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
               } else if (rs.reason === 'busy') toast('这项还在办，第 ' + rs.nextDay + ' 日完工', false);
               else if (rs.reason === 'cooldown') toast('这项内政本旬办过了，第 ' + rs.nextDay + ' 日可再办', false);
               else if (rs.reason === 'no_gold') toast('金不足（需 ' + rs.cost + '）', false);
@@ -3332,6 +3713,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         row.appendChild(b);
         invCard.appendChild(row);
       };
+      /* ★ P11 兵役制：人口是兵源根，摆在第一行，征兵页也反向链回这里 */
+      mkInv('劝课生息', 'populate', 400, '人口 +8%、民心 +2 → 新增户口才有新丁可征');
       mkInv('开垦农田', 'agri', 300, '农田 +3 → 粮产上升');
       mkInv('招商兴市', 'trade', 300, '市集 +3 → 金产上升');
       mkInv('募兵整编', 'barracks', 350, '兵营 +3 → 征兵更快，民心 +1');
@@ -3368,7 +3751,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
               if (rs.ok) {
                 var tk = rs.task || {};
                 toast(label + '已委派给 ' + (tk.officer || '无专员') + '，' + tk.ticks + ' 旬完工（第 ' + tk.endDay + ' 日）', true);
-                fetchState().then(function (s2) { cache = s2; renderCity(s2); });
+                fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
               } else if (rs.reason === 'busy') toast('这项还在办，第 ' + rs.nextDay + ' 日完工', false);
               else if (rs.reason === 'cooldown') toast('这项内政本旬办过了，第 ' + rs.nextDay + ' 日可再办', false);
               else if (rs.reason === 'no_gold') toast('金不足（需 ' + rs.cost + '）', false);
@@ -3406,7 +3789,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
             else if (rs.reason === 'busy') toast('该城已有同目标委任在办', false);
             else if (rs.reason === 'no_gold') toast('库金不足，本旬暂缓（下一旬自动重试）', false);
             else toast('无法委任：' + (rs.reason || '未知'), false);
-            fetchState().then(function (s2) { cache = s2; renderCity(s2); });
+            fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
           });
         });
         b.style.margin = '0';
@@ -3435,7 +3818,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
             }).then(function (r2) { return r2.json(); }).then(function (rs) {
               if (rs.ok) toast('委任已取消（在施任务照常推进）', true);
               else toast('无法取消：' + (rs.reason || '未知'), false);
-              fetchState().then(function (s2) { cache = s2; renderCity(s2); });
+              fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
             });
           }));
         }
@@ -3474,7 +3857,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
               send('city.upFacility', { cityId: clientCityId(), realCityId: c.id, fType: f.type }).then(function (r2) {
                 if (r2.code === 0) toast(f.name + ' 开始升级', true);
                 else toast('升级失败：' + errText(r2), false);
-                fetchState().then(function (s2) { cache = s2; renderCity(s2); });
+                fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
               });
             }));
           }
@@ -3557,7 +3940,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
               toast('入营：' + got.map(function (x) { return x.name || '武将'; }).join('、'), true);
               send('tavern.guests', { cityId: c.id }, true).then(function (r3) {
                 var m3 = r3.msg || {};
-                renderCity(cache);
+                refreshCityView(cache);
               });
             } else toast('招募失败：' + (r2.msg && r2.msg.reason === 'no_guest' ? '此人已过时辰' : r2.msg && r2.msg.reason === 'not_enough_gold' ? '金不足' : (r2.msg && r2.msg.reason) || '未知'), false);
           });
@@ -3918,15 +4301,79 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         var byOrder = {};
         armies.forEach(function (a) { byOrder[a.order] = a; });
 
-        body.appendChild(el('div', 'card',
+        /* ★ P11 兵役台账：妇孺老弱不征、一户一丁、一旬只征一次、先养人口。
+           一键征兵把原来「每槽输数字 + 点征兵」的 6 次点击压到 1 次。 */
+        var lv = (c && c.levy) || null;
+        var levyCard = el('div', 'card',
           '<b style="color:#f0d998">' + esc((c && c.name) || '本城') + ' · 编队与征兵</b>　'
-          + '<span class="winTag">人口 ' + fmt((c && c.pop) || 0) + ' · '
+          + '<span class="winTag">' + (lv ? esc(lv.season) + '季 · ' : '')
           + (c && c.owner === 'player' ? '驻城兵 ' + fmt(c.troopSum || 0) + ' · 城防 ' : '守军 ')
-          + fmt((c && c.troops) || 0) + '</span>'
-          + '<div class="cost" style="margin-top:4px">一支队伍最多三将，'
-          + '<b style="color:#f0d998">一将只能带一槽</b>：先配将，再征兵。'
-          + '每兵吃 1 人口，由名下各城分摊；人口不足则征不满。'
-          + (c && c.id !== (cache && cache.playerCity) ? '分城照样能征兵、能从这里出征。' : '') + '</div>'));
+          + fmt((c && c.troops) || 0) + '</span>');
+        if (lv) {
+          levyCard.appendChild(el('div', 'grid',
+            kv('人口', fmt(lv.pop))
+            + kv('户数（5 口/户）', fmt(lv.households))
+            + kv('适龄壮丁', fmt(lv.adultMales) + ' <span class="cost">（妇孺老弱 ' + fmt(lv.exempt) + ' 户免征）</span>')
+            + kv('已征户（一户一丁）', fmt(lv.levied))
+            + kv('本旬可征', '<b style="color:' + (lv.quota > 0 ? '#a9e2a0' : '#ff9d6b') + '">' + fmt(lv.quota) + '</b> 丁')
+            + kv('征后人口代价', '每丁 −' + lv.popCostPerSoldier + ' 口')));
+        }
+        levyCard.appendChild(el('div', 'cost',
+          '一户只出一丁，已征之户不再征；妇孺老少一律免征。每城每旬只征一次，'
+          + '兵源耗尽要先办内政「劝课生息」增殖人口。'));
+        if (lv && !lv.canLevy) {
+          levyCard.appendChild(el('div', 'cost',
+            '<span style="color:#ff9d6b">' + esc(lv.reasonText || '本旬不可征') + '。' + esc(lv.hint || '') + '</span>'));
+          var devBtn = mkBtn('去内政 · 劝课生息', 'ghost', function () {
+            window.__slgCityInterior(c.id, 'home');
+          });
+          devBtn.style.marginTop = '6px';
+          levyCard.appendChild(devBtn);
+        }
+        var quickRow = el('div', 'row');
+        quickRow.style.cssText = 'border:none;gap:6px;justify-content:flex-start;padding-top:9px;';
+        var firstSlot = null;
+        for (var qi = 0; qi < armies.length && !firstSlot; qi++) {
+          var ga = armies[qi];
+          for (var qp = 0; qp < 3; qp++) {
+            if ((ga.generals || [])[qp] && !ga.marching) { firstSlot = { army: ga, pos: qp }; break; }
+          }
+        }
+        var doQuick = function (amount) {
+          if (!firstSlot) { toast('先给一个槽位配上武将，再一键征兵', false); return; }
+          var cnts = [0, 0, 0];
+          cnts[firstSlot.pos] = Math.max(1, Math.floor(amount));
+          send('army.conscript', { armyId: firstSlot.army.id, cnts: cnts }).then(function (rsp) {
+            if (rsp.code === 0) {
+              var eta = (rsp.msg && rsp.msg.etaSec) || 2;
+              var fc = (rsp.msg && rsp.msg.farmConflict) || null;
+              toast('征兵 ' + cnts[firstSlot.pos] + ' 丁，约 ' + eta + ' 秒后入营'
+                + (fc ? '（' + fc.note + '）' : ''), true);
+              setTimeout(function () { tabArmy(body, c); }, (eta + 1) * 1000);
+            } else {
+              var rs = (rsp.msg && rsp.msg.reason) || '';
+              var msg = {
+                levy_cooldown: '本旬已征过兵，下一旬再来',
+                levy_exhausted: '各户壮丁已征尽，请先办「劝课生息」增殖人口',
+                need_population: '兵源不足，先发展人口',
+                over_quota: '超过本旬可征额（' + ((rsp.msg && rsp.msg.quota) || 0) + ' 丁）',
+                no_population: '此城无人口', res_not_enough: '资源不足',
+              }[rs] || errText(rsp);
+              toast('征兵失败：' + msg, false);
+            }
+          });
+        };
+        var quotaN = lv ? lv.quota : 0;
+        [['征 100 丁', 100], ['征 300 丁', 300], ['一键征满（' + fmt(quotaN) + '）', quotaN]].forEach(function (q) {
+          var b = mkBtn(q[0], '', function () { doQuick(q[1]); });
+          b.setAttribute('data-quick-levy', String(q[1]));
+          /* 便捷征兵就是「一键」，旁边已写清人口代价；再弹一次决策预览等于把便捷又变繁琐 */
+          b.setAttribute('data-ix-allow', '1');
+          if (!firstSlot || !quotaN || q[1] > quotaN) b.disabled = true;
+          quickRow.appendChild(b);
+        });
+        levyCard.appendChild(quickRow);
+        body.appendChild(levyCard);
         if (!gens.length) {
           body.appendChild(el('div', 'empty', '帐下无人。先去「酒馆」招募。'));
           return;

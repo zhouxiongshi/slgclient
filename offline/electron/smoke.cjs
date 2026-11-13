@@ -311,6 +311,22 @@ async function runSmoke(win, server, app) {
     }
     report.autoLogin = login;
     await sleep(9000);
+    /* ★ P11：登录门禁必须真的翻到 game，否则所有注入 UI 都藏起来 → 整屏纯色。
+       把页面属性、fetch 能力、服务端 session 一起留证，避免「黑屏」只靠猜。 */
+    report.gate = await wc.executeJavaScript(`(async function(){
+      var out = { phase: document.documentElement.getAttribute('data-slg-phase') };
+      out.debug = window.__slgGateDebug ? JSON.parse(JSON.stringify(window.__slgGateDebug)) : null;
+      out.shell = !!window.__slgShell;
+      out.fetchType = typeof window.fetch;
+      try {
+        var r = await fetch('/__slg/session', { cache: 'no-store' });
+        out.http = r.status;
+        out.session = await r.json();
+      } catch (e) { out.fetchError = String(e); }
+      return out;
+    })()`, true);
+    check('P11 登录门禁：真实 WS 登录后放行注入 UI（phase=game）',
+      report.gate?.phase === 'game' && report.gate?.session?.ready === true, report.gate);
     const status2 = server.status();
     report.statusAfterLogin = {
       requestLog: status2.requestLog,
@@ -496,6 +512,14 @@ async function runSmoke(win, server, app) {
       homePage?.ok === true && (homePage.slotRows || 0) >= 3 && homePage.hasImport === true
       && homePage.winVisible === true, homePage);
     await sleep(400);
+    /* ★ P11：城内页是整屏主窗口，按设计会收起 dock；检查 dock 层级前先返回沙盘，
+       否则量到的是「主窗口打开时有意隐藏」的 0 宽，而不是层级错误。 */
+    await wc.executeJavaScript(`(function(){
+      if (window.__slgCityClose) window.__slgCityClose();
+      Array.prototype.slice.call(document.querySelectorAll('#slgUIv2 .win')).forEach(function(w){ w.remove(); });
+      return true;
+    })()`, true);
+    await sleep(350);
 
     // 合并后检查：六府入口须让位于战略层弹层，且不与战略层左上按钮坞重叠
     const dockState = await wc.executeJavaScript(`(function(){

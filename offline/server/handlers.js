@@ -16,6 +16,8 @@ import { skillById, LEVEL_COUNT } from './skills.js';
 import { marchMs, rewindDays } from './clock.js';
 import { facilityBonus, recordRes } from './domain/economy.js';
 import { cityLayer, ensureCityEcon, conscriptFactor, cityYield, cityName } from './domain/city-econ.js';
+/* ★ P11 兵役制：一户一丁 / 妇孺免征 / 一旬一征 / 先养人口，唯一权威源 */
+import { checkLevy, commitLevy, levyView, farmConflictOf } from './domain/levy.js';
 import {
   chapterRules, settleCampaign, chooseChapter, onTileCleared, applyChoice, noticeRecruit,
 } from './domain/campaign.js';
@@ -1112,40 +1114,31 @@ export function handleRequest(ctx, req) {
         rsp.msg = { reason: 'empty_slot', slot: emptySlot, per };
         break;
       }
+      /* ★ P11 兵役制：先校验兵源，再扣资源。
+         旧实现先扣资源再查人口，人口不足时资源已被扣走（点了没反应还掉资源）；
+         而且「每兵吃 1 人口、从名下各城分摊」允许无限反复征兵，妇孺老弱也被算成丁。
+         现在统一走 domain/levy.js：人口 → 户 → 适龄壮丁 → 已征户 → 本旬可征。 */
+      const econ = ensureCityEcon(state);
+      const st = state.strategy || {};
+      const own = Object.entries(st.cities || {}).filter(([, v]) => v.owner === 'player').map(([id]) => Number(id));
+      const here = Number(army.cityId) || (own[0] || 0);
+      const strict = own.length > 0;   // 旧档/未举义无玩家城：不启用人口限制，避免锁死老存档
+      const levyCheck = checkLevy(state, here, total, { strict, rate: cfg.basic?.conscriptRate ?? 0.06 });
+      if (!levyCheck.ok) {
+        rsp.code = CODE.InvalidParam;
+        rsp.msg = {
+          reason: levyCheck.reason, cityId: here, need: total,
+          quota: levyCheck.quota, levy: levyCheck.levy,
+        };
+        break;
+      }
       const code = tryUseNeed(state, need, `征兵 ${total} 人`);
       if (code !== OK) { rsp.code = code; rsp.msg = { reason: 'res_not_enough', need, per }; break; }
-      // ★ P2 人口：征兵每兵吃 1 人口（从玩家名下城按现有人口比例分摊，总量不足则拒绝）。
-      //   兼容：玩家名下无城（旧档/未举义）不启用人口限制，行为与旧版一致。
-      {
-        const econ = ensureCityEcon(state);
-        const st = state.strategy || {};
-        const own = Object.entries(st.cities || {}).filter(([, v]) => v.owner === 'player').map(([id]) => Number(id));
-        const popRows = own.map((id) => ({ id, pop: econ?.[id]?.pop || 0 }));
-        const popTotal = popRows.reduce((s, v) => s + v.pop, 0);
-        if (popRows.length > 0 && popTotal < total) {
-          rsp.code = CODE.InvalidParam;
-          rsp.msg = { reason: 'no_population', popTotal, need: total };
-          break;
-        }
-        let left = total;
-        /* ★ P7：先吃队伍所在城的人口（分城征兵就该分城出人），再按人口从多到少分摊 */
-        const here = Number(army.cityId) || 0;
-        popRows.sort((a, b) => (b.id === here ? 1 : 0) - (a.id === here ? 1 : 0) || b.pop - a.pop);
-        popRows.forEach((row, idx) => {
-          const share = idx === popRows.length - 1
-            ? left
-            : Math.min(row.pop, Math.floor(total * row.pop / Math.max(1, popTotal)));
-          left -= share;
-          if (econ[row.id]) {
-            econ[row.id].pop = Math.max(0, row.pop - share);
-            /* ★ P7 战争系数：征兵抽丁伤民心（抽走人口的 10% ≈ 民心 -20） */
-            const bite = (share / Math.max(1, row.pop)) * 200;
-            if (bite > 0) {
-              econ[row.id].morale = Math.max(0, Math.round(((econ[row.id].morale ?? 60) - bite) * 10) / 10);
-            }
-          }
-        });
-      }
+      /* 资源已扣，写兵役台账：本城扣人口基数（×4）、已征户 +N、本旬标记、民心下降 */
+      const levyCommit = strict || econ?.[here]
+        ? commitLevy(state, here, total)
+        : null;
+      const farmConflict = farmConflictOf(state, here, total);
       /* ★ P7 兵营与民心：兵营等级越高征兵越快，民心低则征不动 */
       const secRaw = conscriptSec(total, c.cost_time);
       const cf = conscriptFactor(state, army.cityId || mainCity(state)?.cityId || 1);
@@ -1161,7 +1154,11 @@ export function handleRequest(ctx, req) {
       ctx.push('roleRes.push', roleResOf(state));
       ctx.push('army.push', army);
       ctx.save();
-      rsp.msg = { army: clone(army), role_res: roleResOf(state), etaSec: sec, need };
+      rsp.msg = {
+        army: clone(army), role_res: roleResOf(state), etaSec: sec, need,
+        levy: levyView(state, here), levyCommit, farmConflict,
+        levyNote: `本城征 ${total} 丁：一户一丁、妇孺老弱免征；本旬不可再征。`,
+      };
       break;
     }
     case 'army.assign': {

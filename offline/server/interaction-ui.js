@@ -141,7 +141,7 @@
       + '.slgIx .tag.ok{border-color:#4f8a5b;color:#a9d8ae}'
       + '.slgIx .tag.warn{border-color:#b07a3c;color:#efc189}'
       + '.slgIx .tag.bad{border-color:#a84f47;color:#f0a49c}'
-      + '#slgIxToast{position:fixed;left:50%;bottom:74px;transform:translateX(-50%);z-index:100390;'
+      + '#slgIxToast{position:fixed;left:50%;bottom:74px;transform:translateX(-50%);z-index:100900;'
       + 'padding:9px 16px;border:1px solid #ba9a52;background:rgba(22,32,20,.97);border-radius:4px;display:none;max-width:70vw}'
       + '#slgIxToast.ok{border-color:#4f8a5b}#slgIxToast.fail{border-color:#a84f47;background:rgba(58,24,20,.97)}'
       + '#slgIxPhase{position:fixed;left:12px;bottom:12px;z-index:100120;font-size:12px;padding:3px 9px;'
@@ -149,7 +149,7 @@
       + '#slgIxPhase.busy{border-color:#6f9fd0;color:#c7dcf2}'
       + '#slgIxPhase.ok{border-color:#4f8a5b;color:#a9d8ae}'
       + '#slgIxPhase.fail{border-color:#a84f47;color:#f0a49c}'
-      + '.slgIx-tip{position:fixed;z-index:100210;width:322px;max-height:340px;overflow:auto;'
+      + '.slgIx-tip{position:fixed;z-index:100780;width:322px;max-height:340px;overflow:auto;'
       + 'background:rgba(18,24,18,.985);border:1px solid #ba9a52;border-radius:4px;padding:11px 13px;'
       + 'box-shadow:0 6px 26px rgba(0,0,0,.62);pointer-events:auto}'
       + '.slgIx-tip.pinned{border-color:#e3c46a}'
@@ -187,7 +187,12 @@
       + '#slgIxDrawer table{width:100%;border-collapse:collapse;font-size:12px}'
       + '#slgIxDrawer td,#slgIxDrawer th{border-bottom:1px solid #33402f;padding:4px 5px;text-align:left}'
       + '#slgIxDrawer th{color:#a9a48f;font-weight:normal;width:38%}'
-      + '.slgIx-modal{position:fixed;inset:0;z-index:100300;background:rgba(0,0,0,.66);'
+      /* ★ P11 层级阶梯：城内页 100420 / 弹窗 100760 / 提示 100780 / toast 100900。
+         旧值 100300 低于城内页，弹窗会被整屏城内页盖住 —— 玩家点「出征」看着像没反应。
+         ★ 注意：本行注释必须写在加号之前。若写成「加号 + 注释 + 加号」，
+         会被解析成加号连着一元加号，字符串被转成 NaN，整条 .slgIx-modal 规则直接丢失
+         （弹窗退化成普通文档流元素，表现就是「按钮在，但点不到」）。 */
+      + '.slgIx-modal{position:fixed;inset:0;z-index:100760;background:rgba(0,0,0,.66);'
       + 'display:flex;align-items:center;justify-content:center}'
       + '.slgIx-modal .box{width:min(660px,90vw);max-height:82vh;overflow:auto;'
       + 'background:rgba(18,24,18,.99);border:1px solid #ba9a52;border-radius:5px;padding:16px 19px}'
@@ -203,6 +208,43 @@
       + '#slgIxGuide .gt{font-size:13px;color:#f0e2b8;margin-bottom:5px}'
       + '#slgIxGuide .gb{font-size:12px;line-height:1.6}'
       + '#slgIxGuide .ga{margin-top:9px;display:flex;gap:7px;justify-content:flex-end}'
+      /* ★ P11 决策预览重做：卡片式两栏，风险区独立着色，底部操作条固定 */
+      + '.slgIx-modal .box.slgIxPV{width:min(760px,92vw);padding:0;border:1px solid #8a7038;'
+      + 'border-radius:10px;overflow:hidden;background:linear-gradient(165deg,#1d241a,#141a13);'
+      + 'box-shadow:0 22px 70px rgba(0,0,0,.7)}'
+      + '.slgIxPV .pv-head{position:relative;padding:18px 22px 14px;border-bottom:1px solid rgba(186,154,82,.24);'
+      + 'background:radial-gradient(600px 160px at 15% -40%,rgba(186,154,82,.22),transparent 70%)}'
+      + '.slgIxPV .pv-eyebrow{font-size:10.5px;letter-spacing:3px;color:#ba9a52}'
+      + '.slgIxPV .pv-title{font:22px/1.35 "KaiTi","STKaiti",serif;color:#f4dfa6;letter-spacing:2px;margin-top:4px}'
+      + '.slgIxPV .pv-sub{font-size:11.5px;color:#a9a48f;margin-top:5px}'
+      + '.slgIxPV .pv-badge{position:absolute;right:20px;top:20px;font-size:11px;padding:4px 10px;'
+      + 'border-radius:20px;border:1px solid}'
+      + '.slgIxPV .pv-badge.ok{color:#a9d8ae;border-color:#4f8a5b;background:rgba(79,138,91,.12)}'
+      + '.slgIxPV .pv-badge.warn{color:#efc189;border-color:#b07a3c;background:rgba(176,122,60,.12)}'
+      + '.slgIxPV .pv-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;'
+      + 'background:rgba(186,154,82,.16);border-bottom:1px solid rgba(186,154,82,.16)}'
+      + '.slgIxPV .pv-stat{padding:11px 18px;background:rgba(16,22,16,.75)}'
+      + '.slgIxPV .pv-stat small{display:block;font-size:10.5px;color:#a9a48f;letter-spacing:1px}'
+      + '.slgIxPV .pv-stat b{font-size:15px;color:#f0e2b8;font-weight:600}'
+      + '.slgIxPV .pv-cols{display:grid;grid-template-columns:1fr 1fr;gap:0;max-height:46vh;overflow:auto}'
+      + '.slgIxPV .pv-col{padding:13px 18px 16px}'
+      + '.slgIxPV .pv-col+.pv-col{border-left:1px solid rgba(186,154,82,.16);background:rgba(120,40,30,.06)}'
+      + '.slgIxPV .pv-col h4{margin:0 0 9px;font-size:12px;letter-spacing:2px;color:#c8b88a;font-weight:600}'
+      + '.slgIxPV .pv-col.risk h4{color:#e6a08c}'
+      + '.slgIxPV .pv-row{padding:7px 0 7px 10px;border-left:2px solid #5c6b4e;margin-bottom:7px}'
+      + '.slgIxPV .pv-col.risk .pv-row{border-left-color:#a8564a;background:rgba(168,86,74,.08)}'
+      + '.slgIxPV .pv-row.final{border-left-color:#e3c46a}'
+      + '.slgIxPV .pv-k{font-size:10.5px;color:#a9a48f;letter-spacing:1px}'
+      + '.slgIxPV .pv-v{font-size:12px;line-height:1.65;color:#e8e0cc;margin-top:2px}'
+      + '.slgIxPV .pv-empty{font-size:11.5px;color:#8f9a86;padding:8px 0}'
+      + '.slgIxPV .pv-term{padding:0 18px 12px}'
+      + '.slgIxPV .pv-term button{background:transparent;border:none;color:#e3c46a;padding:0;font-size:11.5px}'
+      + '.slgIxPV .acts{margin:0;padding:12px 18px;border-top:1px solid rgba(186,154,82,.24);'
+      + 'background:rgba(8,12,8,.55);justify-content:flex-end}'
+      + '.slgIxPV .acts .go{background:linear-gradient(180deg,#6d5320,#4c3a12);border-color:#c8a354;'
+      + 'color:#ffe9b0;font-weight:600;letter-spacing:1px}'
+      + '@media (max-width:760px){.slgIxPV .pv-cols{grid-template-columns:1fr}'
+      + '.slgIxPV .pv-col+.pv-col{border-left:none;border-top:1px solid rgba(186,154,82,.16)}}'
       + '.slgIx input[type=text]{background:#1a2419;border:1px solid #5c6b4e;color:#e8e0cc;padding:4px 7px;font:inherit;min-height:26px}'
       + '#slgIxRoot.reduce *{transition:none!important;animation:none!important}'
       + '@media (max-width:1100px){#slgIxAgenda,#slgIxLens{display:none}}'
@@ -553,6 +595,11 @@
     if (!el0) return null;
     if (el0.dataset.ixCost) return { title: el0.dataset.ixCost, cost: el0.dataset.ixCostValue || '见预览', term: '', reversible: false };
     if (el0.dataset.ixAllow) return null;
+    /* ★ P11：页签 / 导航不是「有代价的操作」。
+       「征兵」「自本城出征」这些只是切页或开面板的按钮，以前被 COST_WORDS
+       的 /征兵|出征/ 命中 → 弹一屏决策预览并吞掉原点击，玩家点了没反应、
+       预览还堆在屏幕上不消失。导航一律免预览，真正的出征/征兵按钮仍照常预览。 */
+    if (el0.closest && el0.closest('#slgCityNav, #slgPanelsDock, .tabs, [data-citytab], [data-nav-only]')) return null;
     var txt = (el0.textContent || '').trim().slice(0, 30);
     if (!txt) return null;
     for (var i = 0; i < COST_WORDS.length; i++) if (COST_WORDS[i].re.test(txt)) return COST_WORDS[i];
@@ -562,6 +609,13 @@
     var d = S.data || {};
     var tp = d.turnPreview || {};
     var isTurn = /时间推进/.test(m.title);
+    /* ★ P11 窗口治理：预览不叠窗。开新的之前把旧的预览/弹窗收掉，
+       否则连续点几个有代价按钮会在桌面上堆出一摞半透明遮罩。 */
+    Array.prototype.forEach.call(document.querySelectorAll('.slgIx-modal'), function (old) {
+      if (old.classList && old.classList.contains('slgIxEvent')) return;
+      old.remove();
+      var idx = S.layers.indexOf(old); if (idx >= 0) S.layers.splice(idx, 1);
+    });
     var mask = el('div', '', ''); mask.className = 'slgIx-modal';
     var box = el('div', '', ''); box.className = 'box';
     var parts = [];
@@ -615,19 +669,35 @@
     })();
     parts.push({ k: '间接连锁', v: isTurn ? '结算后本回合作废，只能读档或看回合报告' : '成功后相关面板刷新，选中对象与地图视口保持不变（P4）' });
     parts.push({ k: '可逆性', v: m.reversible ? '可逆：提交前 2 秒可按 Ctrl+Z 撤销' : '不可逆：已提交结算，需读档回退' });
-    box.innerHTML = '<h3>决策前预览 · ' + esc(m.title) + '</h3>'
-      + '<div class="muted" style="font-size:11px;margin-bottom:9px">设计规格 6.2：点确认之前就知道会发生什么；'
-      + '数值按「基础 → 加成项 → 最终」拆解；服务端未提供者标注为推算值。</div>'
-      + parts.map(function (p) {
-        var cls = 'delta' + (p.final ? ' final' : '') + (p.bad ? ' bad' : '');
-        var style = p.bad ? ' style="border-color:#a33;background:rgba(170,51,51,.08)"' : '';
-        return '<div class="' + cls + '"' + style + '><span class="muted">' + esc(p.k)
-          + '：</span>' + esc(p.v) + '</div>';
-      }).join('')
-      + (m.term && BY_ID[m.term] ? '<div style="margin-top:10px"><button data-act="term" data-id="' + esc(m.term)
-        + '">查看术语「' + esc(BY_ID[m.term].名称) + '」与数值来源</button></div>' : '')
+    /* ★ P11 预览重做：以前是一列 20 行灰字，视觉上像日志，玩家根本读不下去。
+       现在改成「顶部结论条 + 左收益 / 右风险」两栏，风险单独着色，底部固定操作区。 */
+    box.className = 'box slgIxPV';
+    var normal = parts.filter(function (p) { return !p.bad; });
+    var risks = parts.filter(function (p) { return !!p.bad; });
+    var row = function (p) {
+      return '<div class="pv-row' + (p.final ? ' final' : '') + '">'
+        + '<div class="pv-k">' + esc(p.k) + '</div><div class="pv-v">' + esc(p.v) + '</div></div>';
+    };
+    box.innerHTML = ''
+      + '<div class="pv-head"><div class="pv-eyebrow">决策前预览 · 设计规格 6.2</div>'
+      + '<div class="pv-title">' + esc(m.title) + '</div>'
+      + '<div class="pv-sub">点确认之前就知道会发生什么；数值按「基础 → 加成项 → 最终」拆解。</div>'
+      + '<span class="pv-badge ' + (m.reversible ? 'ok' : 'warn') + '">'
+      + (m.reversible ? '可逆 · 2 秒内 Ctrl+Z' : '不可逆 · 需读档回退') + '</span></div>'
+      + '<div class="pv-strip">'
+      + '<div class="pv-stat"><small>直接消耗</small><b>' + esc(m.cost) + '</b></div>'
+      + '<div class="pv-stat"><small>府库现金</small><b>' + fmt((d.treasury && d.treasury.gold) || 0) + ' 金</b></div>'
+      + '<div class="pv-stat"><small>数据可信度</small><b>' + (d.ok ? '服务端实值' : '规则推算') + '</b></div>'
+      + '</div>'
+      + '<div class="pv-cols">'
+      + '<section class="pv-col"><h4>会发生什么</h4>' + (normal.length ? normal.map(row).join('') : '<div class="pv-empty">本操作无额外结算项</div>') + '</section>'
+      + '<section class="pv-col risk"><h4>风险与失败态</h4>'
+      + (risks.length ? risks.map(row).join('') : '<div class="pv-empty">当前无已知风险：资源充足、粮道通畅。</div>')
+      + '</section></div>'
+      + (m.term && BY_ID[m.term] ? '<div class="pv-term"><button data-act="term" data-id="' + esc(m.term)
+        + '">查看术语「' + esc(BY_ID[m.term].名称) + '」与数值来源 →</button></div>' : '')
       + '<div class="acts"><button data-act="cancel">取消 (Esc)</button>'
-      + '<button class="go" data-act="ok">确认执行</button></div>';
+      + '<button class="go" data-act="ok">确认执行 →</button></div>';
     mask.appendChild(box);
     (document.getElementById('slgIxRoot') || document.body).appendChild(mask);
     S.layers.push(mask);
@@ -644,6 +714,9 @@
     on(document, 'click', function (e) {
       var t = e.target.closest && e.target.closest('button, [role=button], .btn, [data-act]');
       if (!t) return;
+      /* ★ P11：弹窗内的按钮本身就是「确认」环节，再拦一次就会套娃——
+         玩家的观感是「点出征没反应，又多出一个窗」，这是桌面杂乱的主因之一。 */
+      if (t.closest('.slgIx-modal, #slgUIv2 .modal')) return;
       var m = matchCost(t);
       if (!m) return;
       /* 捕获阶段拦截：先预览，确认后才放行原点击（纯前端，不改协议） */

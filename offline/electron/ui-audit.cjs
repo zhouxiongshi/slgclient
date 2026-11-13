@@ -349,14 +349,21 @@ const WALK = `(async function(){
     if (tgtRows.length) { tgtRows[0].click(); await sleep(650); }
 
     /* ② 推演：等「战斗种子」或明确的失败原因出现（异步 fetch） */
+    /* ★ P11：出征按钮文案是「先推演一次再出征」，也含「推演一次」——
+       必须精确匹配，否则会点到那个本来就 disabled 的按钮，把链路判定成「没反应」。 */
     var pvBtn = Array.from(document.querySelectorAll('#slgWarWin button'))
-      .find(function(b){ return txt(b).indexOf('推演一次') >= 0; });
+      .find(function(b){ var t = txt(b).trim(); return t === '推演一次' || t === '再推演一次'; });
     if (pvBtn) {
       pvBtn.click();
       await wait(function(){
         var t = txt(document.getElementById('slgWarWin'));
         return t.indexOf('战斗种子') >= 0 || t.indexOf('推演失败') >= 0;
       }, 15000);
+      /* 推演成功才解锁出征（GDD §3.2 门 4）；不等这一下，后面会判定「找不到出征按钮」 */
+      await wait(function(){
+        var b = document.getElementById('slgWarAttackBtn');
+        return !!b && !b.disabled;
+      }, 12000);
     }
     var pvText = txt(document.getElementById('slgWarWin'));
     rec('war.preview.click', ['战前推演'], {
@@ -389,13 +396,18 @@ const WALK = `(async function(){
           .find(function(x){ return txt(x).indexOf('出征') >= 0; }) || null;
       }, 2500);
       var ixOk = ixModal ? ixModal.querySelector('[data-act="ok"]') : null;
-      rec('war.preview.confirm', ['出征'], {
-        visible: !!ixModal, text: ixModal ? txt(ixModal) : '',
-        note: ixModal ? (ixOk ? '' : 'no-ix-ok-btn') : 'not-intercepted',
-      });
       if (ixOk) { ixOk.click(); }
       /* 第二层：出兵确认（放行后 confirmBox 弹出） */
       var modal = await wait(function(){ return document.querySelector('.modal'); }, 4500);
+      /* ★ P11：出征按钮已带 data-ix-allow（它自身就有「出兵确认」框），
+         正常情况下不再套一层决策预览。这条只判定「确认环节存在且可达」：
+         有预览层算过，直接出确认框也算过；两层都拿不到才算失败。 */
+      rec('war.preview.confirm', ['出征'], {
+        visible: !!modal || !!ixModal,
+        text: (modal ? txt(modal) : '') + ' ' + (ixModal ? txt(ixModal) : ''),
+        note: modal ? (ixModal ? 'two-layer' : 'single-confirm（已去冗余预览层）')
+          : (ixModal ? (ixOk ? 'only-preview' : 'no-ix-ok-btn') : 'no-confirm-at-all'),
+      });
       var okBtn = null;
       if (modal) {
         okBtn = Array.from(modal.querySelectorAll('.bar button'))
@@ -475,8 +487,14 @@ const WALK = `(async function(){
   }
 
   /* ---------- 6. 沙盘交互：图层 / 缩放 / 检索 ---------- */
+  /* ★ P11：一屏一窗生效后，主窗口开着时按钮坞与浮窗会按设计让位。
+     回沙盘前必须先关掉出征窗/城内页/六府，否则会把「设计如此」误判成缺陷。 */
+  try { if (window.__slgWarClose) window.__slgWarClose(); } catch (e) {}
+  try { if (window.__slgCityClose) window.__slgCityClose(); } catch (e) {}
+  try { if (window.__slgPanels && window.__slgPanels.close) window.__slgPanels.close(); } catch (e) {}
+  try { document.querySelectorAll('#slgUIv2 .win, #slgUIv2 .modal').forEach(function (n) { n.remove(); }); } catch (e) {}
   if (typeof window.__slgStrategyShow === 'function') { try { window.__slgStrategyShow(); } catch (e) {} }
-  await sleep(700);
+  await sleep(800);
   var dock = document.getElementById('slgDock');
   rec('map.dock', ['推演'], { visible: vis(dock), text: txt(dock) });
 
@@ -601,11 +619,12 @@ async function runAudit(win, server, app) {
     const login = await wc.executeJavaScript(AUTO_LOGIN, true);
     report.autoLogin = login;
 
-    // 等沙盘外壳就绪
+    // 等门禁放行（登录前首帧所有注入 UI 都是 display:none）+ 沙盘外壳就绪
     await wc.executeJavaScript(`(async function(){
       var t0 = Date.now();
-      while (Date.now() - t0 < 20000) {
-        if (typeof window.__slgStrategyShow === 'function' && document.getElementById('slgDock')) return true;
+      while (Date.now() - t0 < 25000) {
+        var phased = document.documentElement.getAttribute('data-slg-phase') === 'game';
+        if (phased && typeof window.__slgStrategyShow === 'function' && document.getElementById('slgDock')) return true;
         await new Promise(function(r){ setTimeout(r, 200); });
       }
       return false;

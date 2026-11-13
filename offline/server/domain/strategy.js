@@ -23,6 +23,8 @@ import { captiveRecruitRate, captiveRateParts, CAPTIVE_COST } from './captive-ru
 import { canMarchBetween, marchableNeighbors, marchGraph } from './march.js';
 /* ★ 验收 #22：地图标注分级（哪座城算要城只有这一处口径） */
 import { cityLabelRank, labelPolicy } from './map-lod.js';
+/* ★ P11 兵役制：城池视图与战略动作只从 levy.js 取兵源数字，禁止另算一份 */
+import { levyView, checkLevy, commitLevy } from './levy.js';
 import { resolveBattle, battleSeedFor } from '../battle.js';
 import { planCampaign, commitBrainGoal, noteBattleOutcome, noteCityLost } from './strategy-brain.js';
 import { quoteMarch, openMonth, closeMonth, noteMove, noteCity, booksOf } from './strategy-log.js';
@@ -1274,7 +1276,7 @@ export function marchPlan(state, cfg, fromId, toId, army) {
  *  扣行军粮、锁队，`strategyResolveMarches` 在到达日走真实内核结算。
  *  frac：出兵比例（1 全军 / 0.5 半军 / 0.34 三成）。
  *  ★ P7：fromCityId 指定出发城（任意己方城），缺省回落本城 —— 分城也能出征了。 */
-export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, fromCityId = 0 }) {
+export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, fromCityId = 0, confirmBattle = false }) {
   const st = ensureStrategy(state);
   const map = strategyMap();
   const home = Number(fromCityId) || st.playerCity;
@@ -1340,6 +1342,10 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
     departDay, arriveDay: departDay + marchDays,
     armyId: army.id, frac: ratio, grainCost, troops: deploy,
     km: plan.km, speed: plan.speed, drillMorale,
+    /* ★ P11 / GDD §3.2 门 3→4→5「遭遇 → 推演 → 确认 → 结算」：
+       玩家从出征面板发的兵默认在抵达时先挂在「遭遇」待决，不自动开打。
+       协议层老调用方不传此标志，行为保持不变（测试与 NPC 不受影响）。 */
+    confirmBattle: !!confirmBattle, pendingBattle: false, confirmed: false,
     /* ★ M2-5 张力守恒 #3「确认即锁」：出征瞬间锁定种子——推演多少次都行，
        确认后不再重来；要重来只能撤军（有代价）。结算只读 lockedSeed。 */
     lockedSeed: battleSeedFor(army.id, 8000 + id, 100 + Math.max(1, Math.min(3, target.level || 1)), departDay + marchDays),
@@ -1384,6 +1390,16 @@ export function strategyResolveMarches(state, cfg, ctx) {
     }
     if (mm.resolved) continue;
     if (today < mm.arriveDay) continue;
+    /* ★ P11 门 4「遭遇」：玩家主动开启的确认制出征，抵达先挂起等玩家决策。
+       队伍仍锁在行军中（marchId 不清），此处不结算、不写战报、不改归属。 */
+    if (mm.confirmBattle && !mm.confirmed && mm.kind !== 'transport') {
+      if (!mm.pendingBattle) {
+        mm.pendingBattle = true;
+        const nm = map.cities.find((c) => c.id === mm.to)?.name || cityName(mm.to);
+        recordEvent(state, `前锋抵${nm}城下，两军对阵，请主公定夺（推演 / 开战 / 撤军）。`);
+      }
+      continue;
+    }
     // ★ P3 运输队：抵达即粮入城库，不走战斗
     if (mm.kind === 'transport') {
       mm.resolved = true;
@@ -1454,6 +1470,11 @@ export function strategyResolveMarches(state, cfg, ctx) {
         recordRes(state, 'gold', sackGold, `破城掠夺·${target.name}`, day);
         recordRes(state, 'grain', sackGrain, `破城掠夺·${target.name}`, day);
       }
+      /* ★ P11 门 6「消化」：占城不是终点，给一条可点的新城治理待办 */
+      if (!Array.isArray(st.digest)) st.digest = [];
+      if (!st.digest.some((d) => Number(d.cityId) === Number(mm.to))) {
+        st.digest.push({ cityId: mm.to, name: target.name, day, reportId: fought.report.id });
+      }
       recordEvent(state, `主公攻陷${target.name}（${target.province}），守军 ${fought.dTotal} 溃散，城入我军${sackGold ? `，掠夺金 ${sackGold} 粮 ${sackGrain}` : ''}。`);
       noteCity(state, mm.to, { kind: '出征', text: `主公攻陷${target.name}，守军 ${fought.dTotal} 溃散，城入我军。` });
       ctx.push?.('chat.push', {
@@ -1478,6 +1499,58 @@ export function strategyResolveMarches(state, cfg, ctx) {
   // 已结算且过期 3 日的行军记录清掉（客户端留了渲染窗口）
   st.marches = st.marches.filter((mm) => !(mm.resolved && today - mm.arriveDay > 3));
   return results;
+}
+
+/* ---------------------------------------------------------------------------
+ * ★ P11 / GDD §3.2 门 4→5→6：遭遇待决 / 确认开战 / 临阵撤军 / 新城消化
+ * ------------------------------------------------------------------------- */
+
+/** 门 5：玩家在「遭遇」页点确认，才真正走结算（与自动结算同一条 resolveMarches）。 */
+export function strategyConfirmBattle(state, cfg, ctx, { marchId }) {
+  const st = ensureStrategy(state);
+  const mm = (st.marches || []).find((x) => x.id === Number(marchId)
+    && x.side === 'player' && x.pendingBattle && !x.resolved);
+  if (!mm) return { ok: false, reason: 'no_pending_battle' };
+  mm.confirmed = true;
+  mm.pendingBattle = false;
+  const results = strategyResolveMarches(state, cfg, ctx);
+  const r = results.find((x) => Number(x.cityId) === Number(mm.to)) || null;
+  return {
+    ok: true, marchId: mm.id, cityId: mm.to, city: r?.city || cityName(mm.to),
+    result: r?.result ?? null, reportId: r?.reportId ?? null, summary: r?.summary || '',
+  };
+}
+
+/** 门 4 的另一条出路：不打了，全军退回出发城，行军粮退一半。 */
+export function strategyRetreatBattle(state, cfg, ctx, { marchId }) {
+  const st = ensureStrategy(state);
+  const mm = (st.marches || []).find((x) => x.id === Number(marchId)
+    && x.side === 'player' && x.pendingBattle && !x.resolved);
+  if (!mm) return { ok: false, reason: 'no_pending_battle' };
+  mm.resolved = true;
+  mm.recalled = true;
+  mm.pendingBattle = false;
+  const army = (state.armys || []).find((a) => a.id === mm.armyId);
+  if (army) {
+    delete army.marchId;
+    delete army.drillMorale;
+    army.cityId = Number(mm.from) || st.playerCity || 0;
+  }
+  const refund = Math.floor((Number(mm.grainCost) || 0) / 2);
+  const e = st.cityEcon?.[mm.from];
+  if (e && refund > 0) e.store = Math.min(20000, (Number(e.store) || 0) + refund);
+  recordEvent(state, `临阵收兵：攻${cityName(mm.to)}之役作罢，部队退回${cityName(mm.from)}，退还军粮 ${refund}。`);
+  return { ok: true, refund, cityId: mm.to };
+}
+
+/** 门 6：占城后的「消化」待办处理完就清掉（界面按钮直达新城内政页）。 */
+export function strategyDigestDone(state, { cityId }) {
+  const st = ensureStrategy(state);
+  const id = Number(cityId);
+  if (!Array.isArray(st.digest)) st.digest = [];
+  const before = st.digest.length;
+  st.digest = st.digest.filter((d) => Number(d.cityId) !== id);
+  return { ok: true, cleared: before - st.digest.length, cityId: id };
 }
 
 /**
@@ -2316,6 +2389,8 @@ export function strategyViewState(state, cfg = null) {
           armsCount: stationed.length,
           // ★ 修 bug-12：逐城内政冷却（按项目），界面据此置灰并显示可再办日
           investDays: e.investDays || {}, lastInvestDay: e.lastInvestDay || 0,
+          /* ★ P11 兵役台账：人口/户数/适龄壮丁/已征/本旬可征，界面与结算同源 */
+          levy: levyView(state, c.id, { rate: knobGet(state, 'conscriptRate') }),
           /* ★ M2 练兵充能 / 招抚期：界面显示「下次出征 +5%」与「叛逃风险 −30% 至第 N 日」 */
           drillCharges: Number(e.drillCharges) || 0,
           appeaseUntil: Number(e.appeaseUntil) || 0,
@@ -2368,6 +2443,18 @@ export function strategyViewState(state, cfg = null) {
       rate: Math.round(captiveRecruitRate(state, c) * 100),
       rateParts: captiveRateParts(state, c),
     })),
+    /* ★ P11 / GDD §3.2 门 4/6：抵达待决的战役、占城后的消化待办 */
+    pendingBattles: (st.marches || [])
+      .filter((mm) => mm.side === 'player' && mm.pendingBattle && !mm.resolved)
+      .map((mm) => ({
+        marchId: mm.id, from: mm.from, to: mm.to, armyId: mm.armyId, frac: mm.frac ?? 1,
+        fromName: map.cities.find((x) => x.id === Number(mm.from))?.name || cityName(mm.from),
+        toName: map.cities.find((x) => x.id === Number(mm.to))?.name || cityName(mm.to),
+        arriveDay: mm.arriveDay, troops: Number(mm.troops) || 0,
+        enemyTroops: Number(st.cities[mm.to]?.troops) || 0,
+        grainCost: Number(mm.grainCost) || 0, lockedSeed: mm.lockedSeed || 0,
+      })),
+    digest: (st.digest || []).slice(-8),
     // 可出征的城（已按行军校验过滤：关隘封锁即不可走；己方城不再算目标）
     marchable: marchableFrom(st.playerCity || 0, state),
     // ★ P2：行军队列与日内进度（客户端据此画行军线与移动军标）
