@@ -105,6 +105,9 @@ test('M3-5·事件 ctx 年份从剧本起算 + NPC tick 在剧本势力集下正
   const tick = strategyTick(state, cfg, { push() {} });
   assert.ok(tick, '旬 tick 应产出结果');
   assert.ok(Array.isArray(tick.results), 'tick.results 应为数组');
+  /* ★ M3-7 剧本前史过滤：221 剧本里 184 黄巾等旧史不得触发 */
+  const fired = state.strategy.eventSys.fired || {};
+  assert.ok(!fired['evt.184.zhangjiao'], '221 剧本不得触发 184 黄巾事件');
 });
 
 test('M3-5·视图下发 scenario 字段 + 六剧本清单', () => {

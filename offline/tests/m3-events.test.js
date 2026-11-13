@@ -20,6 +20,7 @@ import {
 import {
   ensureEventState, eventCooldownTick, selectEvents, applyEffects,
 } from '../server/domain/event-engine.js';
+import { campaignEvents } from '../server/domain/strategy.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..');
@@ -161,6 +162,24 @@ test('M3-2·events.json：52 条 / 三层计数 / check-events 全绿', () => {
   }
   const out = execFileSync(process.execPath, [resolve(ROOT, 'tools/check-events.mjs')], { encoding: 'utf8' });
   assert.match(out, /check-events ok/, '构建期校验应通过');
+});
+
+test('M3-7·事件补量：两批合计 150 条（GDD §8 上限）/ campaignEvents 合并加载', () => {
+  const extra = JSON.parse(readFileSync(resolve(ROOT, 'conf/campaign/events-extra.json'), 'utf8'));
+  assert.equal(extra.events.length, 98);
+  assert.equal(EVENTS.events.length + extra.events.length, 150);
+  // id 全局唯一（跨文件）
+  const ids = new Set();
+  for (const e of [...EVENTS.events, ...extra.events]) {
+    assert.ok(!ids.has(e.id), `事件 id 重复: ${e.id}`);
+    ids.add(e.id);
+  }
+  // 第二批每条也带史实依据
+  for (const e of extra.events) {
+    assert.ok(e.source.id && e.source.confidence, `${e.id} 缺史实依据`);
+  }
+  // 运行期合并加载
+  assert.equal(campaignEvents().length, 150);
 });
 
 test('M3-2·check-events：坏数据必报错（冲突抓样）', () => {

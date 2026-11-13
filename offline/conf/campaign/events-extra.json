@@ -1,0 +1,4265 @@
+{
+ "version": 2,
+ "meta": {
+  "source": "GDD-顶配详细设计.md §8.1/§8.2/§8.3 事件系统（第二批补量）",
+  "note": "第二批：与 events.json 合并加载后全量 150 条（GDD §8 上限）。每条带 source 与 confidence。reviewed=false 表示待人工抽审（出戏防线第 4 闸），tools/check-events.mjs 只警告不阻塞。",
+  "factionIds": [
+   "sili",
+   "yanzhou",
+   "jizhou",
+   "youzhou",
+   "bingzhou",
+   "xuzhou",
+   "yangzhou",
+   "jingzhou"
+  ],
+  "cityRef": "城 id 对齐 conf/campaign/strategy/map.json（本批只引用 2 雒阳/3 成都/7 陈留/8 邺/18 南郑/21 江陵/33 濮阳/43 涿/44 下邳/72 宛）"
+ },
+ "events": [
+  {
+   "id": "evt.189.hejin.dead",
+   "title": "大将军陨",
+   "layer": "史实节点",
+   "priority": 98,
+   "when": {
+    "yearMin": 189
+   },
+   "once": true,
+   "speaker": "宫使",
+   "text": [
+    "何进入宫议事，为宦官所杀。",
+    "宫门火起，京城大乱——董卓正在路上。"
+   ],
+   "choices": [
+    {
+     "id": "wait",
+     "label": "静观其变",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    },
+    {
+     "id": "prepare",
+     "label": "密整甲兵以待",
+     "preview": "金 −200 / 士气 +3",
+     "effects": [
+      "gold:-200",
+      "morale:+3"
+     ]
+    }
+   ],
+   "source": {
+    "id": "后汉书·何进传/三国志·魏书·武帝纪",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.190.hulao",
+   "title": "虎牢烽火",
+   "layer": "史实节点",
+   "priority": 90,
+   "when": {
+    "yearMin": 190
+   },
+   "once": true,
+   "speaker": "军使",
+   "text": [
+    "关东联军会盟讨董，兵锋直指虎牢、汜水。",
+    "关中军坚壁不出，相持日久。"
+   ],
+   "choices": [
+    {
+     "id": "feast",
+     "label": "犒军振气",
+     "preview": "金 −150 / 士气 +3",
+     "effects": [
+      "gold:-150",
+      "morale:+3"
+     ]
+    },
+    {
+     "id": "hold",
+     "label": "坚壁清野",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·武帝纪/演义·第五回",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.191.xiangyang",
+   "title": "岘山之伏",
+   "layer": "史实节点",
+   "priority": 88,
+   "when": {
+    "yearMin": 191,
+    "generalAlive": [
+     "孙坚"
+    ]
+   },
+   "once": true,
+   "speaker": "急使",
+   "text": [
+    "孙坚轻骑追击黄祖，单骑出岘山。",
+    "遣使来求援兵三百。"
+   ],
+   "choices": [
+    {
+     "id": "rescue",
+     "label": "发兵驰援",
+     "preview": "金 −100 / 孙坚忠诚 +10",
+     "effects": [
+      "gold:-100",
+      "loyalty:孙坚:+10"
+     ]
+    },
+    {
+     "id": "stay",
+     "label": "各为其主，不越界",
+     "preview": "对荆楚态度 −5",
+     "effects": [
+      "attitude:jingzhou:-5"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·吴书·孙破虏讨逆传（初平二年岘山遇伏）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.191.sunjian.dead",
+   "title": "玉陨岘山",
+   "layer": "史实节点",
+   "priority": 90,
+   "when": {
+    "yearMin": 191,
+    "generalDead": [
+     "孙坚"
+    ]
+   },
+   "once": true,
+   "speaker": "讣使",
+   "text": [
+    "江东猛虎殒于岘山，尸身犹握鞭。",
+    "孙策护柩还江东，江东之业悬于一少年。"
+   ],
+   "choices": [
+    {
+     "id": "console",
+     "label": "遣使抚孤",
+     "preview": "孙策忠诚 +15 / 名声 +1",
+     "effects": [
+      "loyalty:孙策:+15",
+      "fame:+1"
+     ]
+    },
+    {
+     "id": "seize",
+     "label": "江东新丧，或可图之",
+     "preview": "对扬越态度 −15",
+     "effects": [
+      "attitude:yangzhou:-15"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·吴书·孙破虏讨逆传",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.192.qingzhou",
+   "title": "青州百贼",
+   "layer": "史实节点",
+   "priority": 86,
+   "when": {
+    "yearMin": 192,
+    "faction": [
+     "yanzhou"
+    ]
+   },
+   "once": true,
+   "speaker": "军报",
+   "text": [
+    "青州黄巾百万入兖州，锋不可当。",
+    "降者三十万——是祸是兵，在一念之间。"
+   ],
+   "choices": [
+    {
+     "id": "enlist",
+     "label": "收其精锐为青州兵",
+     "preview": "金 −200 / 士气 +3",
+     "effects": [
+      "gold:-200",
+      "morale:+3"
+     ]
+    },
+    {
+     "id": "expel",
+     "label": "驱之出境",
+     "preview": "名声 −1",
+     "effects": [
+      "fame:-1"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·武帝纪（收青州兵）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.193.puyang",
+   "title": "濮阳烧营",
+   "layer": "史实节点",
+   "priority": 84,
+   "when": {
+    "yearMin": 193,
+    "cityOwned": [
+     33
+    ]
+   },
+   "once": true,
+   "speaker": "夜报",
+   "text": [
+    "吕布夜袭，濮阳城中大姓为内应，烧营及门。",
+    "主帅伤臂——营垒须重立。"
+   ],
+   "choices": [
+    {
+     "id": "rebuild",
+     "label": "重整营垒",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    },
+    {
+     "id": "move",
+     "label": "移屯别城",
+     "preview": "金 −100",
+     "effects": [
+      "gold:-100"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·武帝纪（濮阳之围）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.196.xuzhou.lost",
+   "title": "飞将夺徐",
+   "layer": "史实节点",
+   "priority": 88,
+   "when": {
+    "yearMin": 196,
+    "faction": [
+     "xuzhou"
+    ]
+   },
+   "once": true,
+   "speaker": "急报",
+   "text": [
+    "吕布夜袭下邳，徐州易主。",
+    "寄人篱下，非久居之计。"
+   ],
+   "choices": [
+    {
+     "id": "endure",
+     "label": "忍辱待时",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    },
+    {
+     "id": "counter",
+     "label": "即刻兴兵夺城",
+     "preview": "金 −300 / 士气 +2",
+     "effects": [
+      "gold:-300",
+      "morale:+2"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·吕布（张邈陈宫）传",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.198.shuiyan",
+   "title": "水灌下邳",
+   "layer": "史实节点",
+   "priority": 87,
+   "when": {
+    "yearMin": 198,
+    "cityOwned": [
+     44
+    ]
+   },
+   "once": true,
+   "speaker": "参军",
+   "text": [
+    "吕布困守下邳，城傍有沂水、泗水。",
+    "「决而灌之，城可计日而破。」"
+   ],
+   "choices": [
+    {
+     "id": "flood",
+     "label": "决水灌城",
+     "preview": "士气 +2 / 名声 +1",
+     "effects": [
+      "morale:+2",
+      "fame:+1"
+     ]
+    },
+    {
+     "id": "siege",
+     "label": "围而不打，俟其自溃",
+     "preview": "金 −100",
+     "effects": [
+      "gold:-100"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·吕布传（堑围下邳，引沂泗灌城）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.199.chenguo",
+   "title": "帝号之僭",
+   "layer": "史实节点",
+   "priority": 90,
+   "when": {
+    "yearMin": 199,
+    "generalAlive": [
+     "袁术"
+    ]
+   },
+   "once": true,
+   "speaker": "使者",
+   "text": [
+    "袁术于寿春僭号称帝，荒侈滋甚。",
+    "传檄州郡——附逆，还是讨逆？"
+   ],
+   "choices": [
+    {
+     "id": "denounce",
+     "label": "传檄共讨",
+     "preview": "名声 +2",
+     "effects": [
+      "fame:+2"
+     ]
+    },
+    {
+     "id": "silence",
+     "label": "佯装不知",
+     "preview": "名声 −1",
+     "effects": [
+      "fame:-1"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·袁术传（建安二年称帝）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.201.cangting",
+   "title": "仓亭再败",
+   "layer": "史实节点",
+   "priority": 80,
+   "when": {
+    "yearMin": 201,
+    "faction": [
+     "yanzhou"
+    ]
+   },
+   "once": true,
+   "speaker": "军报",
+   "text": [
+    "袁绍再败于仓亭，河北气沮。",
+    "河北人心思附者众。"
+   ],
+   "choices": [
+    {
+     "id": "recruit",
+     "label": "招纳河北人才",
+     "preview": "金 −150 / 名声 +1",
+     "effects": [
+      "gold:-150",
+      "fame:+1"
+     ]
+    },
+    {
+     "id": "rest",
+     "label": "休兵养民",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·武帝纪（仓亭之役）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.203.brothers",
+   "title": "兄弟阋墙",
+   "layer": "史实节点",
+   "priority": 82,
+   "when": {
+    "yearMin": 203,
+    "faction": [
+     "yanzhou"
+    ]
+   },
+   "once": true,
+   "speaker": "客卿",
+   "text": [
+    "袁谭、袁尚相攻，各遣使求援。",
+    "鹬蚌相争，渔翁得利——或，助一收一？"
+   ],
+   "choices": [
+    {
+     "id": "wait",
+     "label": "坐观成败",
+     "preview": "名声 −1",
+     "effects": [
+      "fame:-1"
+     ]
+    },
+    {
+     "id": "side",
+     "label": "择一而助",
+     "preview": "金 −100 / 士气 +2",
+     "effects": [
+      "gold:-100",
+      "morale:+2"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·袁绍传（谭尚相攻）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.204.yecheng",
+   "title": "邺城易主",
+   "layer": "史实节点",
+   "priority": 88,
+   "when": {
+    "yearMin": 204,
+    "cityOwned": [
+     8
+    ]
+   },
+   "once": true,
+   "speaker": "军使",
+   "text": [
+    "邺城破，袁氏基业一朝倾覆。",
+    "府库图籍，尽在掌握。"
+   ],
+   "choices": [
+    {
+     "id": "pacify",
+     "label": "抚定冀州，禁兵掠民",
+     "preview": "金 −300 / 名声 +2",
+     "effects": [
+      "gold:-300",
+      "fame:+2"
+     ]
+    },
+    {
+     "id": "loot",
+     "label": "尽收府库",
+     "preview": "金 +500 / 名声 −2",
+     "effects": [
+      "gold:+500",
+      "fame:-2"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·武帝纪（拔邺，领冀州牧）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.207.bailang",
+   "title": "白狼山",
+   "layer": "史实节点",
+   "priority": 82,
+   "when": {
+    "yearMin": 207,
+    "yearMax": 207,
+    "generalAlive": [
+     "郭嘉"
+    ]
+   },
+   "once": true,
+   "speaker": "参军",
+   "text": [
+    "大军出卢龙塞，直指乌桓庭。",
+    "道远粮险——郭奉孝言：「兵贵神速。」"
+   ],
+   "choices": [
+    {
+     "id": "dash",
+     "label": "轻兵兼道奇袭",
+     "preview": "士气 +3",
+     "effects": [
+      "morale:+3"
+     ]
+    },
+    {
+     "id": "slow",
+     "label": "重车徐进",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·郭嘉传/武帝纪（白狼山之战）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.209.nanjun",
+   "title": "借荆州之议",
+   "layer": "史实节点",
+   "priority": 86,
+   "when": {
+    "yearMin": 209,
+    "generalAlive": [
+     "周瑜"
+    ]
+   },
+   "once": true,
+   "speaker": "周瑜",
+   "text": [
+    "「刘备枭雄，关羽张飞熊虎之将——岂可与之地？」",
+    "鲁肃则言借地共拒北方。"
+   ],
+   "choices": [
+    {
+     "id": "lend",
+     "label": "从鲁肃议，借地结盟",
+     "preview": "对扬越态度 +10 / 金 −100",
+     "effects": [
+      "attitude:yangzhou:+10",
+      "gold:-100"
+     ]
+    },
+    {
+     "id": "refuse",
+     "label": "从周瑜议，锁之江陵",
+     "preview": "对扬越态度 −10",
+     "effects": [
+      "attitude:yangzhou:-10"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·吴书·周瑜传/鲁肃传",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.210.tongque",
+   "title": "铜雀台成",
+   "layer": "史实节点",
+   "priority": 78,
+   "when": {
+    "yearMin": 210,
+    "faction": [
+     "yanzhou"
+    ]
+   },
+   "once": true,
+   "speaker": "帖请",
+   "text": [
+    "铜雀台成于邺，曹操大会宾从，命诸子赋诗。",
+    "请柬已到——去，还是不去？"
+   ],
+   "choices": [
+    {
+     "id": "attend",
+     "label": "与宴赋诗",
+     "preview": "金 −80 / 名声 +1",
+     "effects": [
+      "gold:-80",
+      "fame:+1"
+     ]
+    },
+    {
+     "id": "skip",
+     "label": "称病不与",
+     "preview": "对中原态度 −5",
+     "effects": [
+      "attitude:yanzhou:-5"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·武帝纪注引《魏武故事》",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.208.huatuo",
+   "title": "神医蒙难",
+   "layer": "史实节点",
+   "priority": 76,
+   "when": {
+    "yearMin": 208,
+    "yearMax": 210
+   },
+   "once": true,
+   "speaker": "狱卒",
+   "text": [
+    "神医华佗以「无意于仕宦」系狱。",
+    "天下疾苦，将失其手。"
+   ],
+   "choices": [
+    {
+     "id": "save",
+     "label": "重金营救",
+     "preview": "金 −150 / 民心 +2",
+     "effects": [
+      "gold:-150",
+      "morale:+2"
+     ]
+    },
+    {
+     "id": "leave",
+     "label": "不敢开罪权贵",
+     "preview": "士气 −2",
+     "effects": [
+      "morale:-2"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·方技传·华佗传",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.213.weiwang",
+   "title": "进位魏公",
+   "layer": "史实节点",
+   "priority": 90,
+   "when": {
+    "yearMin": 213,
+    "faction": [
+     "yanzhou"
+    ],
+    "generalAlive": [
+     "荀彧"
+    ]
+   },
+   "once": true,
+   "speaker": "董昭",
+   "text": [
+    "议进魏公、备九锡。",
+    "荀令君默然——当年迎天子的本心呢？"
+   ],
+   "choices": [
+    {
+     "id": "accept",
+     "label": "受之",
+     "preview": "名声 +2 / 荀彧忠诚 −20",
+     "effects": [
+      "fame:+2",
+      "loyalty:荀彧:-20"
+     ]
+    },
+    {
+     "id": "decline",
+     "label": "固辞",
+     "preview": "荀彧忠诚 +10 / 名声 −1",
+     "effects": [
+      "loyalty:荀彧:+10",
+      "fame:-1"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·荀彧传/武帝纪（建安十八年封魏公）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.215.hanzhong",
+   "title": "汉中易手",
+   "layer": "史实节点",
+   "priority": 84,
+   "when": {
+    "yearMin": 215,
+    "cityOwned": [
+     18
+    ]
+   },
+   "once": true,
+   "speaker": "府丞",
+   "text": [
+    "张鲁封府库以降，汉中定。",
+    "教民廉耻，财货山积——封存以待发落。"
+   ],
+   "choices": [
+    {
+     "id": "fairsplit",
+     "label": "依其旧法抚众",
+     "preview": "金 −200 / 名声 +2",
+     "effects": [
+      "gold:-200",
+      "fame:+2"
+     ]
+    },
+    {
+     "id": "take",
+     "label": "入其府库",
+     "preview": "金 +400 / 民心 −2",
+     "effects": [
+      "gold:+400",
+      "morale:-2"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·张鲁传（封藏以献）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.219.dingjun",
+   "title": "定军山",
+   "layer": "史实节点",
+   "priority": 92,
+   "when": {
+    "yearMin": 219,
+    "generalAlive": [
+     "黄忠",
+     "夏侯渊"
+    ]
+   },
+   "once": true,
+   "speaker": "军报",
+   "text": [
+    "法正以势激之，黄忠推锋必进，一战斩夏侯渊。",
+    "汉中之势，逆转矣。"
+   ],
+   "choices": [
+    {
+     "id": "push",
+     "label": "乘胜尽取汉中",
+     "preview": "金 −200 / 士气 +3",
+     "effects": [
+      "gold:-200",
+      "morale:+3"
+     ]
+    },
+    {
+     "id": "steady",
+     "label": "稳扎稳打",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·黄忠传/魏书·夏侯渊传（建安二十四年定军山）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.220.chanwei",
+   "title": "受禅台",
+   "layer": "史实节点",
+   "priority": 96,
+   "when": {
+    "yearMin": 220,
+    "yearMax": 221,
+    "faction": [
+     "yanzhou"
+    ],
+    "generalAlive": [
+     "曹丕"
+    ]
+   },
+   "once": true,
+   "speaker": "诏使",
+   "text": [
+    "汉帝禅位，曹丕登受禅台。",
+    "四百年汉室，至此为魏。"
+   ],
+   "choices": [
+    {
+     "id": "congratulate",
+     "label": "上表劝进",
+     "preview": "名声 +2",
+     "effects": [
+      "fame:+2"
+     ]
+    },
+    {
+     "id": "defy",
+     "label": "不奉诏，仍用汉朔",
+     "preview": "对中原态度 −10 / 名声 +1",
+     "effects": [
+      "attitude:yanzhou:-10",
+      "fame:+1"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·文帝纪（黄初元年受禅）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.223.wu.shu",
+   "title": "盟约再续",
+   "layer": "史实节点",
+   "priority": 84,
+   "when": {
+    "yearMin": 223,
+    "generalAlive": [
+     "诸葛亮",
+     "陆逊"
+    ]
+   },
+   "once": true,
+   "speaker": "邓芝",
+   "text": [
+    "夷陵新败，邓芝使吴重修盟好。",
+    "孙权曰：「诚如是，社稷可保。」"
+   ],
+   "choices": [
+    {
+     "id": "envoy",
+     "label": "遣使报聘",
+     "preview": "对扬越态度 +10 / 金 −80",
+     "effects": [
+      "attitude:yangzhou:+10",
+      "gold:-80"
+     ]
+    },
+    {
+     "id": "cold",
+     "label": "新败未复，暂缓",
+     "preview": "对扬越态度 −10",
+     "effects": [
+      "attitude:yangzhou:-10"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·邓芝传（建兴元年使吴）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.226.cao.pi.dead",
+   "title": "曹丕早逝",
+   "layer": "史实节点",
+   "priority": 86,
+   "when": {
+    "yearMin": 226,
+    "generalDead": [
+     "曹丕"
+    ]
+   },
+   "once": true,
+   "speaker": "讣闻",
+   "text": [
+    "魏文帝崩于洛阳，年四十。",
+    "幼主新立，魏境有异动之议。"
+   ],
+   "choices": [
+    {
+     "id": "attack",
+     "label": "趁丧举兵",
+     "preview": "金 −300 / 士气 +2",
+     "effects": [
+      "gold:-300",
+      "morale:+2"
+     ]
+    },
+    {
+     "id": "mourning",
+     "label": "吊丧尽礼",
+     "preview": "名声 +1",
+     "effects": [
+      "fame:+1"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·文帝纪（黄初七年崩）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.229.qishan",
+   "title": "兵出祁山",
+   "layer": "史实节点",
+   "priority": 90,
+   "when": {
+    "yearMin": 229,
+    "generalAlive": [
+     "诸葛亮"
+    ]
+   },
+   "once": true,
+   "speaker": "军报",
+   "text": [
+    "诸葛亮复出祁山，陇右三郡响应。",
+    "魏廷震动。"
+   ],
+   "choices": [
+    {
+     "id": "cut",
+     "label": "断陇道以固胜",
+     "preview": "金 −200",
+     "effects": [
+      "gold:-200"
+     ]
+    },
+    {
+     "id": "slow",
+     "label": "持重缓进",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·诸葛亮传（二次北伐后复出祁山）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.231.lucheng",
+   "title": "卤城之捷",
+   "layer": "史实节点",
+   "priority": 86,
+   "when": {
+    "yearMin": 231,
+    "generalAlive": [
+     "诸葛亮",
+     "司马懿"
+    ]
+   },
+   "once": true,
+   "speaker": "军报",
+   "text": [
+    "魏延、高翔破魏军于卤城，获甲首三千。",
+    "司马懿敛军还保。"
+   ],
+   "choices": [
+    {
+     "id": "chase",
+     "label": "乘胜追击",
+     "preview": "金 −150 / 士气 +2",
+     "effects": [
+      "gold:-150",
+      "morale:+2"
+     ]
+    },
+    {
+     "id": "guard",
+     "label": "敛兵自守",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·诸葛亮传注引《汉晋春秋》",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.238.liaodong",
+   "title": "辽东之变",
+   "layer": "史实节点",
+   "priority": 80,
+   "when": {
+    "yearMin": 238,
+    "generalAlive": [
+     "司马懿"
+    ]
+   },
+   "once": true,
+   "speaker": "驿报",
+   "text": [
+    "公孙渊自立，魏遣司马懿四万兵征辽东。",
+    "「往百日，攻百日，还百日，以六十日为休息。」"
+   ],
+   "choices": [
+    {
+     "id": "aid",
+     "label": "供粮助役",
+     "preview": "金 −150 / 名声 +1",
+     "effects": [
+      "gold:-150",
+      "fame:+1"
+     ]
+    },
+    {
+     "id": "watch",
+     "label": "坐观成败",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·明帝纪/司马懿传（景初二年讨公孙渊）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.240.jiangwei.north",
+   "title": "姜维北伐",
+   "layer": "史实节点",
+   "priority": 80,
+   "when": {
+    "yearMin": 240,
+    "generalAlive": [
+     "姜维"
+    ]
+   },
+   "once": true,
+   "speaker": "姜维",
+   "text": [
+    "「愿继丞相遗志，出陇西以扰其边。」",
+    "朝中费祎裁抑：「才不过万人。」"
+   ],
+   "choices": [
+    {
+     "id": "grant",
+     "label": "予兵",
+     "preview": "金 −150",
+     "effects": [
+      "gold:-150"
+     ]
+    },
+    {
+     "id": "curb",
+     "label": "裁抑其军",
+     "preview": "姜维忠诚 −10",
+     "effects": [
+      "loyalty:姜维:-10"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·姜维传（费祎每裁其军）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.251.wangling",
+   "title": "淮南一叛",
+   "layer": "史实节点",
+   "priority": 84,
+   "when": {
+    "yearMin": 251,
+    "generalAlive": [
+     "司马懿"
+    ]
+   },
+   "once": true,
+   "speaker": "驿报",
+   "text": [
+    "王凌谋立楚王彪于淮南。",
+    "太傅迅疾而进——百日之内，事定。"
+   ],
+   "choices": [
+    {
+     "id": "join",
+     "label": "遣兵助讨",
+     "preview": "金 −300 / 名声 +1",
+     "effects": [
+      "gold:-300",
+      "fame:+1"
+     ]
+    },
+    {
+     "id": "wait",
+     "label": "观其胜负",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·王凌传（嘉平三年）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.254.depose",
+   "title": "废立之议",
+   "layer": "史实节点",
+   "priority": 86,
+   "when": {
+    "yearMin": 254,
+    "generalAlive": [
+     "司马师"
+    ]
+   },
+   "once": true,
+   "speaker": "诏使",
+   "text": [
+    "中护军废帝为齐王，改立高贵乡公。",
+    "朝野屏息。"
+   ],
+   "choices": [
+    {
+     "id": "comply",
+     "label": "奉表称臣",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    },
+    {
+     "id": "protest",
+     "label": "上书切谏",
+     "preview": "名声 +1 / 士气 −2",
+     "effects": [
+      "fame:+1",
+      "morale:-2"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·三少帝纪（正元初废齐王芳）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.255.huainan2",
+   "title": "淮南再叛",
+   "layer": "史实节点",
+   "priority": 84,
+   "when": {
+    "yearMin": 255,
+    "faction": [
+     "yanzhou"
+    ]
+   },
+   "once": true,
+   "speaker": "军报",
+   "text": [
+    "毌丘俭、文钦起兵淮南，矫诏讨司马氏。",
+    "兵锋甚锐，魏廷危急。"
+   ],
+   "choices": [
+    {
+     "id": "help",
+     "label": "发兵助讨",
+     "preview": "金 −300 / 士气 +2",
+     "effects": [
+      "gold:-300",
+      "morale:+2"
+     ]
+    },
+    {
+     "id": "neuter",
+     "label": "闭境自守",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·毌丘俭传（正元二年）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.258.ganlu",
+   "title": "甘露之变",
+   "layer": "史实节点",
+   "priority": 88,
+   "when": {
+    "yearMin": 258,
+    "yearMax": 260,
+    "generalAlive": [
+     "司马昭"
+    ]
+   },
+   "once": true,
+   "speaker": "宫使",
+   "text": [
+    "帝率僮仆数百，鼓噪而出讨昭。",
+    "成济抽戈犯跸——天下愕然。"
+   ],
+   "choices": [
+    {
+     "id": "settle",
+     "label": "出而定乱",
+     "preview": "金 −200 / 名声 −1",
+     "effects": [
+      "gold:-200",
+      "fame:-1"
+     ]
+    },
+    {
+     "id": "hide",
+     "label": "闭门称疾",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·三少帝纪注引《汉晋春秋》",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.263.jiangwei.hui",
+   "title": "一计害三贤",
+   "layer": "史实节点",
+   "priority": 88,
+   "when": {
+    "yearMin": 264,
+    "generalAlive": [
+     "姜维"
+    ]
+   },
+   "once": true,
+   "speaker": "密使",
+   "text": [
+    "成都出降，姜维假意降钟会，密书后主：「愿陛下忍数日之辱。」",
+    "「复社稷，使日月幽而复明。」"
+   ],
+   "choices": [
+    {
+     "id": "aid",
+     "label": "暗助其谋",
+     "preview": "金 −100",
+     "effects": [
+      "gold:-100"
+     ]
+    },
+    {
+     "id": "refuse",
+     "label": "大势已去，勿以身试",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·姜维传/华阳国志",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.264.wu.court",
+   "title": "吴宫惊变",
+   "layer": "史实节点",
+   "priority": 80,
+   "when": {
+    "yearMin": 264,
+    "faction": [
+     "yangzhou"
+    ]
+   },
+   "once": true,
+   "speaker": "内侍",
+   "text": [
+    "吴主暴崩，权臣迭起，宫闱血未干。",
+    "新主年少，政在臣下。"
+   ],
+   "choices": [
+    {
+     "id": "advise",
+     "label": "上书匡谏",
+     "preview": "名声 +1 / 士气 −2",
+     "effects": [
+      "fame:+1",
+      "morale:-2"
+     ]
+    },
+    {
+     "id": "quiet",
+     "label": "谨守边备",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·吴书·三嗣主传（永安末/元兴初之变）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.269.jiaozhi",
+   "title": "交趾之叛",
+   "layer": "史实节点",
+   "priority": 76,
+   "when": {
+    "yearMin": 269,
+    "faction": [
+     "jingzhou"
+    ]
+   },
+   "once": true,
+   "speaker": "驿报",
+   "text": [
+    "交趾吏民叛吴，遣使求内附。",
+    "南土远悬，接与不接？"
+   ],
+   "choices": [
+    {
+     "id": "accept",
+     "label": "受之，遣军南戍",
+     "preview": "金 −200 / 名声 +1",
+     "effects": [
+      "gold:-200",
+      "fame:+1"
+     ]
+    },
+    {
+     "id": "decline",
+     "label": "力不能及，婉辞",
+     "preview": "名声 −1",
+     "effects": [
+      "fame:-1"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·吴书·薛综传附（交趾之乱）/晋书·地理志",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.272.xiling",
+   "title": "西陵之变",
+   "layer": "史实节点",
+   "priority": 80,
+   "when": {
+    "yearMin": 272,
+    "faction": [
+     "yangzhou"
+    ]
+   },
+   "once": true,
+   "speaker": "军报",
+   "text": [
+    "西陵督步阐举城降北。",
+    "陆抗督军围城，晋军来援——双线告急。"
+   ],
+   "choices": [
+    {
+     "id": "focus",
+     "label": "先讨叛，缓御援",
+     "preview": "金 −150 / 士气 +2",
+     "effects": [
+      "gold:-150",
+      "morale:+2"
+     ]
+    },
+    {
+     "id": "split",
+     "label": "分兵两向",
+     "preview": "金 −250",
+     "effects": [
+      "gold:-250"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·吴书·陆抗传（凤凰元年步阐之叛）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.278.wangjun",
+   "title": "楼船既成",
+   "layer": "史实节点",
+   "priority": 82,
+   "when": {
+    "yearMin": 278,
+    "yearMax": 279
+   },
+   "once": true,
+   "speaker": "密报",
+   "text": [
+    "益州大造楼船，顺流可下建业。",
+    "「木杮蔽江而下，吴人莫觉。」"
+   ],
+   "choices": [
+    {
+     "id": "fund",
+     "label": "出资助其造船",
+     "preview": "金 −200 / 名声 +1",
+     "effects": [
+      "gold:-200",
+      "fame:+1"
+     ]
+    },
+    {
+     "id": "warn",
+     "label": "密奏其具甲兵",
+     "preview": "名声 −1",
+     "effects": [
+      "fame:-1"
+     ]
+    }
+   ],
+   "source": {
+    "id": "晋书·王濬传/三国志·吴书·吾彦传注",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.279.sixroutes",
+   "title": "六路伐吴",
+   "layer": "史实节点",
+   "priority": 92,
+   "when": {
+    "yearMin": 279,
+    "yearMax": 280
+   },
+   "once": true,
+   "speaker": "军报",
+   "text": [
+    "晋军二十余万，六路并进。",
+    "铁锁横江，王濬楼船直焚其索。"
+   ],
+   "choices": [
+    {
+     "id": "join",
+     "label": "出兵会攻",
+     "preview": "金 −300 / 名声 +2",
+     "effects": [
+      "gold:-300",
+      "fame:+2"
+     ]
+    },
+    {
+     "id": "none",
+     "label": "不与兵事",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "晋书·武帝纪（太康元年灭吴）/三国志·吴书·孙皓传",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.195.changanao",
+   "title": "长安内乱",
+   "layer": "史实节点",
+   "priority": 86,
+   "when": {
+    "yearMin": 195
+   },
+   "once": true,
+   "speaker": "流民",
+   "text": [
+    "李傕、郭汜相攻于长安，帝侧粮绝。",
+    "百官饿死于垣墙之间。"
+   ],
+   "choices": [
+    {
+     "id": "mediate",
+     "label": "传檄调停",
+     "preview": "名声 +1 / 金 −100",
+     "effects": [
+      "fame:+1",
+      "gold:-100"
+     ]
+    },
+    {
+     "id": "watch",
+     "label": "坐观虎斗",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "后汉书·董卓传/三国志·魏书·董卓传注（兴平二年）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.198.wancheng.defend",
+   "title": "淯水之痛",
+   "layer": "史实节点",
+   "priority": 82,
+   "when": {
+    "yearMin": 197,
+    "yearMax": 198,
+    "cityOwned": [
+     72
+    ]
+   },
+   "once": true,
+   "speaker": "军报",
+   "text": [
+    "张绣降而复叛，夜袭大营。",
+    "淯水为之不流——须重整残部。"
+   ],
+   "choices": [
+    {
+     "id": "rally",
+     "label": "重整残部再战",
+     "preview": "士气 +3",
+     "effects": [
+      "morale:+3"
+     ]
+    },
+    {
+     "id": "retreat",
+     "label": "退保穰城",
+     "preview": "金 −100",
+     "effects": [
+      "gold:-100"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·张绣传（建安二年宛城之变）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.208.jiangdong.terror",
+   "title": "江东主降之议",
+   "layer": "史实节点",
+   "priority": 86,
+   "when": {
+    "yearMin": 208,
+    "yearMax": 208,
+    "faction": [
+     "yangzhou"
+    ]
+   },
+   "once": true,
+   "speaker": "张昭",
+   "text": [
+    "曹操遗书：「今治水军八十万众，方与将军会猎于吴。」",
+    "群下多劝迎之——唯鲁肃不言。"
+   ],
+   "choices": [
+    {
+     "id": "fight",
+     "label": "主战",
+     "preview": "士气 +3 / 对中原态度 −10",
+     "effects": [
+      "morale:+3",
+      "attitude:yanzhou:-10"
+     ]
+    },
+    {
+     "id": "submit",
+     "label": "主降",
+     "preview": "对中原态度 +10 / 名声 −2",
+     "effects": [
+      "attitude:yanzhou:+10",
+      "fame:-2"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·吴书·周瑜传/鲁肃传注引《江表传》",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.219.hanzhong.king",
+   "title": "进位汉中王",
+   "layer": "史实节点",
+   "priority": 88,
+   "when": {
+    "yearMin": 219,
+    "yearMax": 220,
+    "generalAlive": [
+     "刘备"
+    ]
+   },
+   "once": true,
+   "speaker": "群臣",
+   "text": [
+    "群下上表推为汉中王，表于帝室。",
+    "「权宜之计，以奖大义。」"
+   ],
+   "choices": [
+    {
+     "id": "accept",
+     "label": "受之",
+     "preview": "名声 +2",
+     "effects": [
+      "fame:+2"
+     ]
+    },
+    {
+     "id": "decline",
+     "label": "三让而后受",
+     "preview": "名声 +1 / 金 −100",
+     "effects": [
+      "fame:+1",
+      "gold:-100"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·先主传（建安二十四年）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.194.shouchun.shi",
+   "title": "寿春断赏",
+   "layer": "史实节点",
+   "priority": 78,
+   "when": {
+    "yearMin": 194,
+    "yearMax": 196,
+    "generalAlive": [
+     "袁术"
+    ]
+   },
+   "once": true,
+   "speaker": "逃户",
+   "text": [
+    "袁术军纪荒侈，众情离叛。",
+    "士卒散走，就食于外者众。"
+   ],
+   "choices": [
+    {
+     "id": "recruit",
+     "label": "纳其散卒",
+     "preview": "金 −150 / 士气 +2",
+     "effects": [
+      "gold:-150",
+      "morale:+2"
+     ]
+    },
+    {
+     "id": "none",
+     "label": "遣之出境",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·袁术传（荒侈滋甚，众情离叛）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.241.liyan",
+   "title": "托孤重臣",
+   "layer": "史实节点",
+   "priority": 80,
+   "when": {
+    "yearMin": 231,
+    "faction": [
+     "xuzhou"
+    ],
+    "generalAlive": [
+     "诸葛亮"
+    ]
+   },
+   "once": true,
+   "speaker": "诏表",
+   "text": [
+    "李严运粮不继，矫诏相召。",
+    "废为民，徙梓潼——同受遗诏者，唯余一人。"
+   ],
+   "choices": [
+    {
+     "id": "punish",
+     "label": "依法废黜",
+     "preview": "名声 +1 / 民心 +1",
+     "effects": [
+      "fame:+1",
+      "morale:+1"
+     ]
+    },
+    {
+     "id": "excuse",
+     "label": "曲法宽宥",
+     "preview": "名声 −1",
+     "effects": [
+      "fame:-1"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·李严传（建兴九年）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.249.simaxi",
+   "title": "冢虎既出",
+   "layer": "史实节点",
+   "priority": 86,
+   "when": {
+    "yearMin": 249,
+    "generalDead": [
+     "司马懿"
+    ]
+   },
+   "once": true,
+   "speaker": "朝报",
+   "text": [
+    "太傅既没，二子继掌中枢。",
+    "魏之朝权，自此不在帝室。"
+   ],
+   "choices": [
+    {
+     "id": "bow",
+     "label": "暂且事之",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    },
+    {
+     "id": "plot",
+     "label": "阴结朝臣",
+     "preview": "金 −200 / 士气 +2",
+     "effects": [
+      "gold:-200",
+      "morale:+2"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·司马懿传（嘉平三年薨，师昭相继）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.258.shu.yan",
+   "title": "蜀中疲敝",
+   "layer": "史实节点",
+   "priority": 78,
+   "when": {
+    "yearMin": 258,
+    "faction": [
+     "xuzhou"
+    ],
+    "generalAlive": [
+     "姜维"
+    ]
+   },
+   "once": true,
+   "speaker": "谯周",
+   "text": [
+    "「兵久不辍，民疲土弊。」作《仇国论》讽之。",
+    "军旅数出，百姓凋瘁。"
+   ],
+   "choices": [
+    {
+     "id": "continue",
+     "label": "仍图北伐",
+     "preview": "金 −200 / 民心 −3",
+     "effects": [
+      "gold:-200",
+      "morale:-3"
+     ]
+    },
+    {
+     "id": "rest",
+     "label": "罢兵养民",
+     "preview": "姜维忠诚 −10 / 民心 +3",
+     "effects": [
+      "loyalty:姜维:-10",
+      "morale:+3"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·谯周传《仇国论》/姜维传",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.220.hanzhong.lose",
+   "title": "汉中再易手",
+   "layer": "史实节点",
+   "priority": 86,
+   "when": {
+    "yearMin": 219,
+    "yearMax": 221,
+    "cityLost": [
+     18
+    ]
+   },
+   "once": true,
+   "speaker": "急报",
+   "text": [
+    "曹操迁汉中民而弃其地。",
+    "汉中新附，人心未固。"
+   ],
+   "choices": [
+    {
+     "id": "govern",
+     "label": "轻徭薄赋抚新附",
+     "preview": "金 −200 / 民心 +3",
+     "effects": [
+      "gold:-200",
+      "morale:+3"
+     ]
+    },
+    {
+     "id": "exploit",
+     "label": "徙其民实他州",
+     "preview": "民心 −3",
+     "effects": [
+      "morale:-3"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·张既传（徙汉中民）/先主传（取汉中）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.232.manchong",
+   "title": "合肥新城",
+   "layer": "史实节点",
+   "priority": 80,
+   "when": {
+    "yearMin": 232,
+    "yearMax": 234
+   },
+   "once": true,
+   "speaker": "参军",
+   "text": [
+    "满宠议：吴屡攻合肥，请移城西三十里险处。",
+    "「贼若欲攻，当先度水——而我得以逸待劳。」"
+   ],
+   "choices": [
+    {
+     "id": "build",
+     "label": "从之筑新城",
+     "preview": "金 −300 / 民心 +1",
+     "effects": [
+      "gold:-300",
+      "morale:+1"
+     ]
+    },
+    {
+     "id": "old",
+     "label": "仍守旧城",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·满宠传（青龙元年议合肥新城）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.227.menghuo.govern",
+   "title": "南人不复反矣",
+   "layer": "史实节点",
+   "priority": 80,
+   "when": {
+    "yearMin": 225,
+    "yearMax": 228,
+    "flag": {
+     "has": [
+      "tuogu"
+     ]
+    },
+    "generalAlive": [
+     "诸葛亮"
+    ]
+   },
+   "once": true,
+   "speaker": "府吏",
+   "text": [
+    "七纵七擒，南人不复反矣。",
+    "赋出叟濮，耕战有资——北伐之资，仰于南中。"
+   ],
+   "choices": [
+    {
+     "id": "tax",
+     "label": "征其贡赋以资军",
+     "preview": "金 +400 / 民心 −2",
+     "effects": [
+      "gold:+400",
+      "morale:-2"
+     ]
+    },
+    {
+     "id": "light",
+     "label": "薄赋怀柔",
+     "preview": "金 −100 / 民心 +3",
+     "effects": [
+      "gold:-100",
+      "morale:+3"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·诸葛亮传注引《汉晋春秋》/华阳国志·南中志",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.192.xuzhou.rise",
+   "title": "陶谦让徐",
+   "layer": "史实节点",
+   "priority": 86,
+   "when": {
+    "yearMin": 194,
+    "yearMax": 195,
+    "generalAlive": [
+     "刘备"
+    ]
+   },
+   "once": true,
+   "speaker": "麋竺",
+   "text": [
+    "陶谦病笃，谓别驾麋竺：「非刘备不能安此州。」",
+    "三让徐州——得之，是福是祸？"
+   ],
+   "choices": [
+    {
+     "id": "accept",
+     "label": "领徐州牧",
+     "preview": "名声 +2",
+     "effects": [
+      "fame:+2"
+     ]
+    },
+    {
+     "id": "yield",
+     "label": "固辞",
+     "preview": "名声 +1 / 民心 −1",
+     "effects": [
+      "fame:+1",
+      "morale:-1"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·先主传（陶谦病笃让徐州）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.194.fengxian.come",
+   "title": "穷途来投",
+   "layer": "史实节点",
+   "priority": 80,
+   "when": {
+    "yearMin": 194,
+    "yearMax": 196,
+    "generalAlive": [
+     "吕布"
+    ]
+   },
+   "once": true,
+   "speaker": "吕布",
+   "text": [
+    "吕布败于兖州，穷途来投。",
+    "「布，鸷鹰饿狼耳——饱则飏去。」"
+   ],
+   "choices": [
+    {
+     "id": "take",
+     "label": "纳之",
+     "preview": "吕布忠诚 +10 / 士气 +2",
+     "effects": [
+      "loyalty:吕布:+10",
+      "morale:+2"
+     ]
+    },
+    {
+     "id": "reject",
+     "label": "礼送出境",
+     "preview": "名声 +1",
+     "effects": [
+      "fame:+1"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·吕布传/蜀书·先主传注引《英雄记》",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.201.liu.pi",
+   "title": "汝南再起",
+   "layer": "史实节点",
+   "priority": 78,
+   "when": {
+    "yearMin": 201,
+    "generalAlive": [
+     "刘备"
+    ]
+   },
+   "once": true,
+   "speaker": "军报",
+   "text": [
+    "兵败汝南，依刘表，屯新野。",
+    "「髀里肉生，老之将至而功业不建。」"
+   ],
+   "choices": [
+    {
+     "id": "train",
+     "label": "练兵于新野",
+     "preview": "金 −150 / 士气 +3",
+     "effects": [
+      "gold:-150",
+      "morale:+3"
+     ]
+    },
+    {
+     "id": "wait",
+     "label": "静待天时",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·先主传注引《九州春秋》",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.208.lu.su.plan",
+   "title": "榻上策",
+   "layer": "史实节点",
+   "priority": 80,
+   "when": {
+    "yearMin": 200,
+    "yearMax": 210,
+    "faction": [
+     "yangzhou"
+    ],
+    "generalAlive": [
+     "鲁肃"
+    ]
+   },
+   "once": true,
+   "speaker": "鲁肃",
+   "text": [
+    "「汉室不可复兴，曹操不可卒除。」",
+    "「惟有鼎足江东，以观天下之衅。」"
+   ],
+   "choices": [
+    {
+     "id": "adopt",
+     "label": "定鼎江东之策",
+     "preview": "士气 +3 / 金 −100",
+     "effects": [
+      "morale:+3",
+      "gold:-100"
+     ]
+    },
+    {
+     "id": "cautious",
+     "label": "未可遽断",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·吴书·鲁肃传（榻上策）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.200.xuchang.law",
+   "title": "许下屯田",
+   "layer": "史实节点",
+   "priority": 84,
+   "when": {
+    "yearMin": 196,
+    "yearMax": 200,
+    "cityOwned": [
+     7
+    ]
+   },
+   "once": true,
+   "speaker": "枣祗",
+   "text": [
+    "「用牛力耕，分谷于民——岁得谷百万斛。」",
+    "军粮之饶，自此始也。"
+   ],
+   "choices": [
+    {
+     "id": "tuntian",
+     "label": "大兴屯田",
+     "preview": "金 −300 / 民心 +3",
+     "effects": [
+      "gold:-300",
+      "morale:+3"
+     ]
+    },
+    {
+     "id": "rent",
+     "label": "只行民屯",
+     "preview": "金 +200 / 民心 +1",
+     "effects": [
+      "gold:+200",
+      "morale:+1"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·武帝纪注引《魏书》（许下屯田）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.221.shu.wu.xian",
+   "title": "先伐吴还是先伐魏",
+   "layer": "史实节点",
+   "priority": 88,
+   "when": {
+    "yearMin": 221,
+    "faction": [
+     "xuzhou"
+    ],
+    "generalAlive": [
+     "刘备"
+    ]
+   },
+   "once": true,
+   "speaker": "赵云",
+   "text": [
+    "「国贼是曹操，非孙权也。」",
+    "「不应置魏，先与吴战。」"
+   ],
+   "choices": [
+    {
+     "id": "wu",
+     "label": "先伐吴",
+     "preview": "对扬越态度 −10 / 士气 +2",
+     "effects": [
+      "attitude:yangzhou:-10",
+      "morale:+2"
+     ]
+    },
+    {
+     "id": "wei",
+     "label": "先图关中",
+     "preview": "对中原态度 −5",
+     "effects": [
+      "attitude:yanzhou:-5"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·赵云传注引《云别传》",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.234.du.you",
+   "title": "敌国之谊",
+   "layer": "史实节点",
+   "priority": 78,
+   "when": {
+    "yearMin": 234,
+    "yearMax": 240,
+    "generalAlive": [
+     "司马懿"
+    ]
+   },
+   "once": true,
+   "speaker": "密使",
+   "text": [
+    "「诸葛亮虽卒，魏人曰：天下奇才也。」",
+    "司马懿按行其营垒处所，叹服。"
+   ],
+   "choices": [
+    {
+     "id": "learn",
+     "label": "模写其营法",
+     "preview": "金 −100 / 士气 +3",
+     "effects": [
+      "gold:-100",
+      "morale:+3"
+     ]
+    },
+    {
+     "id": "proud",
+     "label": "不足学",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·诸葛亮传（及军退，宣王案行其营垒处所）/魏书·辛毗传注",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.212.que.fu",
+   "title": "议立太子",
+   "layer": "史实节点",
+   "priority": 80,
+   "when": {
+    "yearMin": 212,
+    "yearMax": 217,
+    "faction": [
+     "yanzhou"
+    ]
+   },
+   "once": true,
+   "speaker": "侍臣",
+   "text": [
+    "临菑侯才捷，而五官将仁孝。",
+    "「立嗣以长，古之道也。」"
+   ],
+   "choices": [
+    {
+     "id": "elder",
+     "label": "立长",
+     "preview": "名声 +1",
+     "effects": [
+      "fame:+1"
+     ]
+    },
+    {
+     "id": "young",
+     "label": "属意才捷者",
+     "preview": "民心 −2",
+     "effects": [
+      "morale:-2"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·曹丕传/曹植传注（建储之议）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.190.wu.start",
+   "title": "江东小霸王",
+   "layer": "史实节点",
+   "priority": 84,
+   "when": {
+    "yearMin": 195,
+    "yearMax": 199,
+    "generalAlive": [
+     "孙策"
+    ]
+   },
+   "once": true,
+   "speaker": "军报",
+   "text": [
+    "孙策渡江，数年之间尽定江东。",
+    "「猘儿难与争锋。」——曹公之叹。"
+   ],
+   "choices": [
+    {
+     "id": "ally",
+     "label": "遣使结好",
+     "preview": "对扬越态度 +10 / 金 −100",
+     "effects": [
+      "attitude:yangzhou:+10",
+      "gold:-100"
+     ]
+    },
+    {
+     "id": "none",
+     "label": "任其自长",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·吴书·孙策传/魏书·武帝纪注引《吴历》",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.194.xuchang.found",
+   "title": "许都既立",
+   "layer": "史实节点",
+   "priority": 86,
+   "when": {
+    "yearMin": 196,
+    "yearMax": 196,
+    "faction": [
+     "yanzhou"
+    ]
+   },
+   "once": true,
+   "speaker": "府使",
+   "text": [
+    "迎天子都许——「奉天子以令不臣」自此始。",
+    "朝堂既立，政令始出许都。"
+   ],
+   "choices": [
+    {
+     "id": "build",
+     "label": "修宫室立宗庙",
+     "preview": "金 −300 / 名声 +2",
+     "effects": [
+      "gold:-300",
+      "fame:+2"
+     ]
+    },
+    {
+     "id": "simple",
+     "label": "草创权宜",
+     "preview": "金 +100 / 名声 −1",
+     "effects": [
+      "gold:+100",
+      "fame:-1"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·武帝纪（建安元年迎天子都许）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.190.sili.reign",
+   "title": "关中桀暴",
+   "layer": "史实节点",
+   "priority": 84,
+   "when": {
+    "yearMin": 190,
+    "yearMax": 192,
+    "faction": [
+     "sili"
+    ]
+   },
+   "once": true,
+   "speaker": "流民",
+   "text": [
+    "董卓徙天子于长安，焚烧洛阳宫庙。",
+    "「铸小钱，货轻物贵，谷一斛至数十万。」"
+   ],
+   "choices": [
+    {
+     "id": "relief",
+     "label": "赈济逃户",
+     "preview": "金 −200 / 民心 +3",
+     "effects": [
+      "gold:-200",
+      "morale:+3"
+     ]
+    },
+    {
+     "id": "none",
+     "label": "闭境自保",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "后汉书·董卓传（初平元年迁都后）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.221.wu.jing.state",
+   "title": "荆楚之备",
+   "layer": "史实节点",
+   "priority": 80,
+   "when": {
+    "yearMin": 221,
+    "yearMax": 222,
+    "faction": [
+     "yangzhou"
+    ],
+    "generalAlive": [
+     "陆逊"
+    ]
+   },
+   "once": true,
+   "speaker": "陆逊",
+   "text": [
+    "刘备东下，前锋已过巫峡。",
+    "「彼缘山行军，势无展布——愿敕诸营坚守勿出。」"
+   ],
+   "choices": [
+    {
+     "id": "hold",
+     "label": "坚守不战",
+     "preview": "民心 +2 / 士气 +2",
+     "effects": [
+      "morale:+2"
+     ]
+    },
+    {
+     "id": "fight",
+     "label": "出营迎击",
+     "preview": "士气 −2",
+     "effects": [
+      "morale:-2"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·吴书·陆逊传（逊书与孙权：坚守勿出）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.208.cao.south",
+   "title": "南征之誓",
+   "layer": "史实节点",
+   "priority": 88,
+   "when": {
+    "yearMin": 208,
+    "yearMax": 208,
+    "faction": [
+     "yanzhou"
+    ]
+   },
+   "once": true,
+   "speaker": "军使",
+   "text": [
+    "秋七月，大军南征，遂并荆州。",
+    "「今北方略定，当南向以定天下。」"
+   ],
+   "choices": [
+    {
+     "id": "march",
+     "label": "移军南向",
+     "preview": "金 −300 / 士气 +3",
+     "effects": [
+      "gold:-300",
+      "morale:+3"
+     ]
+    },
+    {
+     "id": "rest",
+     "label": "先定河北余绪",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·武帝纪（建安十三年秋南征）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.214.yizhou.take",
+   "title": "益州既定",
+   "layer": "史实节点",
+   "priority": 86,
+   "when": {
+    "yearMin": 214,
+    "yearMax": 216,
+    "cityOwned": [
+     3
+    ]
+   },
+   "once": true,
+   "speaker": "府丞",
+   "text": [
+    "成都府库充实，米与黄金同价。",
+    "「赏赐无所留——然须还民田宅。」"
+   ],
+   "choices": [
+    {
+     "id": "return",
+     "label": "还田宅于民",
+     "preview": "金 −300 / 民心 +4",
+     "effects": [
+      "gold:-300",
+      "morale:+4"
+     ]
+    },
+    {
+     "id": "reward",
+     "label": "尽赏将士",
+     "preview": "金 +300 / 民心 −3",
+     "effects": [
+      "gold:+300",
+      "morale:-3"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·先主传注引《云别传》（还田宅）/刘璋传",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.223.nan.govern",
+   "title": "南中四郡",
+   "layer": "史实节点",
+   "priority": 74,
+   "when": {
+    "yearMin": 224,
+    "yearMax": 225,
+    "faction": [
+     "xuzhou"
+    ],
+    "generalAlive": [
+     "诸葛亮"
+    ]
+   },
+   "once": true,
+   "speaker": "府吏",
+   "text": [
+    "南中四郡渐次略定。",
+    "「即其渠帅而用之——不留兵，不运粮。」"
+   ],
+   "choices": [
+    {
+     "id": "native",
+     "label": "用其渠帅自治",
+     "preview": "金 −100 / 民心 +3",
+     "effects": [
+      "gold:-100",
+      "morale:+3"
+     ]
+    },
+    {
+     "id": "garrison",
+     "label": "留兵镇守",
+     "preview": "金 −250 / 民心 +1",
+     "effects": [
+      "gold:-250",
+      "morale:+1"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·诸葛亮传注引《汉晋春秋》（不留兵不运粮之议）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.cond.gold.wealthy",
+   "title": "金盈库满",
+   "layer": "条件",
+   "priority": 58,
+   "when": {
+    "resource": {
+     "gold": {
+      ">=": 12000
+     }
+    }
+   },
+   "once": false,
+   "cooldown": 8,
+   "speaker": "度支",
+   "text": [
+    "府库金缯山积。",
+    "「财散则民聚——或大兴土木以示富。」"
+   ],
+   "choices": [
+    {
+     "id": "build",
+     "label": "大兴土木",
+     "preview": "金 −2000 / 民心 +3",
+     "effects": [
+      "gold:-2000",
+      "morale:+3"
+     ]
+    },
+    {
+     "id": "reward",
+     "label": "遍赏全军",
+     "preview": "金 −1500 / 全军忠诚 +3",
+     "effects": [
+      "gold:-1500",
+      "loyalty:全军:+3"
+     ]
+    }
+   ],
+   "source": {
+    "id": "GDD §8.2（本作设定）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.cond.grain.plenty",
+   "title": "仓廪充盈",
+   "layer": "条件",
+   "priority": 56,
+   "when": {
+    "resource": {
+     "grain": {
+      ">=": 15000
+     }
+    }
+   },
+   "once": false,
+   "cooldown": 8,
+   "speaker": "仓吏",
+   "text": [
+    "仓廪充实，陈粮将腐。",
+    "「开仓放粮，则恩归明公。」"
+   ],
+   "choices": [
+    {
+     "id": "relief",
+     "label": "赈济灾民",
+     "preview": "名声 +2",
+     "effects": [
+      "fame:+2"
+     ]
+    },
+    {
+     "id": "store",
+     "label": "封仓待用",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "GDD §8.2（本作设定）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.cond.grain.rich.gold.poor",
+   "title": "谷贱金匮",
+   "layer": "条件",
+   "priority": 55,
+   "when": {
+    "resource": {
+     "grain": {
+      ">=": 5000
+     },
+     "gold": {
+      "<": 1500
+     }
+    }
+   },
+   "once": false,
+   "cooldown": 6,
+   "speaker": "粮商",
+   "text": [
+    "谷价日贱，而金匮将空。",
+    "「粜粮易金，可济一时。」"
+   ],
+   "choices": [
+    {
+     "id": "sell",
+     "label": "粜粮千斛",
+     "preview": "金 +400",
+     "effects": [
+      "gold:+400"
+     ]
+    },
+    {
+     "id": "hold",
+     "label": "宁缺金不缺粮",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "GDD §8.2（本作设定）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.cond.winter.grain",
+   "title": "冬粮见底",
+   "layer": "条件",
+   "priority": 62,
+   "when": {
+    "season": "冬",
+    "resource": {
+     "grain": {
+      "<": 1200
+     }
+    }
+   },
+   "once": false,
+   "cooldown": 4,
+   "speaker": "仓吏",
+   "text": [
+    "隆冬之月，军粮见底。",
+    "士卒日食一升——撑不过旬日。"
+   ],
+   "choices": [
+    {
+     "id": "buy",
+     "label": "重金籴粮",
+     "preview": "金 −800",
+     "effects": [
+      "gold:-800"
+     ]
+    },
+    {
+     "id": "reduce",
+     "label": "全军缩食",
+     "preview": "士气 −3",
+     "effects": [
+      "morale:-3"
+     ]
+    }
+   ],
+   "source": {
+    "id": "GDD §8.2（本作设定）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.cond.loyalty.crisis",
+   "title": "忠诚崩坏",
+   "layer": "条件",
+   "priority": 66,
+   "when": {
+    "resource": {
+     "min_loyalty": {
+      "<": 25
+     }
+    }
+   },
+   "once": false,
+   "cooldown": 6,
+   "speaker": "内侍",
+   "text": [
+    "帐下之臣，去意已决。",
+    "「赏之则嫌轻，罚之则激变。」"
+   ],
+   "choices": [
+    {
+     "id": "reward",
+     "label": "重赏收心",
+     "preview": "金 −400 / 全军忠诚 +8",
+     "effects": [
+      "gold:-400",
+      "loyalty:全军:+8"
+     ]
+    },
+    {
+     "id": "scare",
+     "label": "立威以惧众",
+     "preview": "士气 +2 / 全军忠诚 −5",
+     "effects": [
+      "morale:+2",
+      "loyalty:全军:-5"
+     ]
+    }
+   ],
+   "source": {
+    "id": "GDD §8.2（本作设定）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.cond.loyalty.high",
+   "title": "众志成城",
+   "layer": "条件",
+   "priority": 52,
+   "when": {
+    "resource": {
+     "min_loyalty": {
+      ">=": 90
+     }
+    }
+   },
+   "once": false,
+   "cooldown": 10,
+   "speaker": "参军",
+   "text": [
+    "上下同欲，众志成城。",
+    "「此天赐之众，宜常加恩养。」"
+   ],
+   "choices": [
+    {
+     "id": "feast",
+     "label": "大飨三军",
+     "preview": "金 −200 / 名声 +1",
+     "effects": [
+      "gold:-200",
+      "fame:+1"
+     ]
+    },
+    {
+     "id": "none",
+     "label": "俭以养德",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "GDD §8.2（本作设定）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.cond.prison.many",
+   "title": "俘众营满",
+   "layer": "条件",
+   "priority": 60,
+   "when": {
+    "resource": {
+     "prisoners": {
+      ">=": 3
+     }
+    }
+   },
+   "once": false,
+   "cooldown": 6,
+   "speaker": "军法吏",
+   "text": [
+    "俘虏盈营，日耗军粮。",
+    "「杀之不祥，纵之为患。」"
+   ],
+   "choices": [
+    {
+     "id": "recruit",
+     "label": "择壮者编入军中",
+     "preview": "金 −300",
+     "effects": [
+      "gold:-300"
+     ]
+    },
+    {
+     "id": "release",
+     "label": "纵归乡里",
+     "preview": "名声 +1",
+     "effects": [
+      "fame:+1"
+     ]
+    }
+   ],
+   "source": {
+    "id": "GDD §8.2（本作设定）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.cond.battle.streak",
+   "title": "四战四捷",
+   "layer": "条件",
+   "priority": 58,
+   "when": {
+    "battleWon": {
+     "count": {
+      ">=": 4
+     },
+     "withinTurn": 4
+    }
+   },
+   "once": false,
+   "cooldown": 6,
+   "speaker": "参军",
+   "text": [
+    "连战连捷，士卒气盛。",
+    "「胜而惰之，兵家所忌。」"
+   ],
+   "choices": [
+    {
+     "id": "push",
+     "label": "乘胜深入",
+     "preview": "金 −200 / 士气 +3",
+     "effects": [
+      "gold:-200",
+      "morale:+3"
+     ]
+    },
+    {
+     "id": "stop",
+     "label": "收兵固守",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "GDD §8.2（本作设定）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.cond.defeat.rout",
+   "title": "三战三北",
+   "layer": "条件",
+   "priority": 64,
+   "when": {
+    "battleLost": {
+     "count": {
+      ">=": 3
+     },
+     "withinTurn": 3
+    }
+   },
+   "once": false,
+   "cooldown": 6,
+   "speaker": "军法吏",
+   "text": [
+    "三战三北，军心动摇。",
+    "「不用法者，不足以整众。」"
+   ],
+   "choices": [
+    {
+     "id": "law",
+     "label": "行军法以整众",
+     "preview": "最低者忠诚 −15 / 士气 +2",
+     "effects": [
+      "loyalty:最低者:-15",
+      "morale:+2"
+     ]
+    },
+    {
+     "id": "soothe",
+     "label": "抚慰伤兵",
+     "preview": "金 −200",
+     "effects": [
+      "gold:-200"
+     ]
+    }
+   ],
+   "source": {
+    "id": "GDD §8.2（本作设定）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.cond.besieged.long",
+   "title": "围城日久",
+   "layer": "条件",
+   "priority": 66,
+   "when": {
+    "resource": {
+     "besieged_cities": {
+      ">=": 1
+     }
+    }
+   },
+   "once": false,
+   "cooldown": 5,
+   "speaker": "城守",
+   "text": [
+    "敌军围城，樵采路绝。",
+    "「守则待变，出则求活。」"
+   ],
+   "choices": [
+    {
+     "id": "sortie",
+     "label": "出城决死一击",
+     "preview": "士气 −2",
+     "effects": [
+      "morale:-2"
+     ]
+    },
+    {
+     "id": "hold",
+     "label": "死守待援",
+     "preview": "金 −150",
+     "effects": [
+      "gold:-150"
+     ]
+    }
+   ],
+   "source": {
+    "id": "GDD §8.2（本作设定）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.cond.supply.cut",
+   "title": "断粮之军",
+   "layer": "条件",
+   "priority": 68,
+   "when": {
+    "resource": {
+     "supply_cut_armies": {
+      ">=": 1
+     }
+    }
+   },
+   "once": false,
+   "cooldown": 4,
+   "speaker": "急使",
+   "text": [
+    "一军粮道被断，已三日。",
+    "「轻骑可走，重装必溃。」"
+   ],
+   "choices": [
+    {
+     "id": "guide",
+     "label": "金聘向导别开粮道",
+     "preview": "金 −300",
+     "effects": [
+      "gold:-300"
+     ]
+    },
+    {
+     "id": "abandon",
+     "label": "弃重装轻走",
+     "preview": "士气 −3",
+     "effects": [
+      "morale:-3"
+     ]
+    }
+   ],
+   "source": {
+    "id": "GDD §8.2（本作设定）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.cond.grain.crisis.army",
+   "title": "军粮告罄",
+   "layer": "条件",
+   "priority": 66,
+   "when": {
+    "resource": {
+     "grain": {
+      "<": 500
+     }
+    }
+   },
+   "once": false,
+   "cooldown": 5,
+   "speaker": "仓吏",
+   "text": [
+    "军粮告罄，掠乡则民心尽失。",
+    "「籴之，则金不可支。」"
+   ],
+   "choices": [
+    {
+     "id": "buy",
+     "label": "倾金籴粮",
+     "preview": "金 −800",
+     "effects": [
+      "gold:-800"
+     ]
+    },
+    {
+     "id": "plunder",
+     "label": "就食于民",
+     "preview": "民心 −4 / 名声 −2",
+     "effects": [
+      "morale:-4",
+      "fame:-2"
+     ]
+    }
+   ],
+   "source": {
+    "id": "GDD §8.2（本作设定）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.cond.city.rich",
+   "title": "商贾云集",
+   "layer": "条件",
+   "priority": 54,
+   "when": {
+    "resource": {
+     "gold": {
+      ">=": 9000
+     },
+     "grain": {
+      ">=": 8000
+     }
+    }
+   },
+   "once": false,
+   "cooldown": 10,
+   "speaker": "市令",
+   "text": [
+    "商贾云集，市肆日繁。",
+    "「税之则足用，宽之则聚人。」"
+   ],
+   "choices": [
+    {
+     "id": "market",
+     "label": "设市广招",
+     "preview": "金 −500 / 名声 +1",
+     "effects": [
+      "gold:-500",
+      "fame:+1"
+     ]
+    },
+    {
+     "id": "tax",
+     "label": "增收市税",
+     "preview": "金 +400 / 民心 −3",
+     "effects": [
+      "gold:+400",
+      "morale:-3"
+     ]
+    }
+   ],
+   "source": {
+    "id": "GDD §8.2（本作设定）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.cond.newyear.bei",
+   "title": "岁首劳军",
+   "layer": "条件",
+   "priority": 50,
+   "when": {
+    "season": "春",
+    "turnMin": 4
+   },
+   "once": false,
+   "cooldown": 30,
+   "speaker": "参军",
+   "text": [
+    "岁首行春，犒劳士卒，古之常道。",
+    "「赏不逾时，则人思效命。」"
+   ],
+   "choices": [
+    {
+     "id": "feast",
+     "label": "大飨士卒",
+     "preview": "金 −300 / 士气 +3 / 全军忠诚 +2",
+     "effects": [
+      "gold:-300",
+      "morale:+3",
+      "loyalty:全军:+2"
+     ]
+    },
+    {
+     "id": "none",
+     "label": "俭岁从简",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "GDD §8.2（本作设定）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.cond.loyalty.warn2",
+   "title": "谗言四起",
+   "layer": "条件",
+   "priority": 60,
+   "when": {
+    "resource": {
+     "min_loyalty": {
+      "<": 45
+     }
+    }
+   },
+   "once": false,
+   "cooldown": 8,
+   "speaker": "内侍",
+   "text": [
+    "军中流言：有人私通外敌。",
+    "查之则人人自危，不查则祸起肘腋。"
+   ],
+   "choices": [
+    {
+     "id": "investigate",
+     "label": "密查首告者",
+     "preview": "金 −100 / 全军忠诚 +2",
+     "effects": [
+      "gold:-100",
+      "loyalty:全军:+2"
+     ]
+    },
+    {
+     "id": "ignore",
+     "label": "流言止于智者",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "GDD §8.2（本作设定）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.cond.defeat.single",
+   "title": "新败之气",
+   "layer": "条件",
+   "priority": 56,
+   "when": {
+    "battleLost": {
+     "count": {
+      ">=": 1
+     },
+     "withinTurn": 2
+    }
+   },
+   "once": false,
+   "cooldown": 4,
+   "speaker": "参军",
+   "text": [
+    "新败之余，士有惧心。",
+    "「败而能抚，则复可用。」"
+   ],
+   "choices": [
+    {
+     "id": "soothe",
+     "label": "亲抚伤卒",
+     "preview": "金 −150 / 士气 +1",
+     "effects": [
+      "gold:-150",
+      "morale:+1"
+     ]
+    },
+    {
+     "id": "train",
+     "label": "重整训练",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "GDD §8.2（本作设定）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.cond.win.first",
+   "title": "首胜之赏",
+   "layer": "条件",
+   "priority": 50,
+   "when": {
+    "battleWon": {
+     "count": {
+      ">=": 1
+     },
+     "withinTurn": 2
+    }
+   },
+   "once": false,
+   "cooldown": 8,
+   "speaker": "参军",
+   "text": [
+    "初战告捷，宜即行赏。",
+    "「赏不逾时，所以劝有功也。」"
+   ],
+   "choices": [
+    {
+     "id": "reward",
+     "label": "即行重赏",
+     "preview": "金 −200 / 士气 +2",
+     "effects": [
+      "gold:-200",
+      "morale:+2"
+     ]
+    },
+    {
+     "id": "delay",
+     "label": "记功缓赏",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "GDD §8.2（本作设定）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.cond.gold.poor",
+   "title": "金匮将空",
+   "layer": "条件",
+   "priority": 62,
+   "when": {
+    "resource": {
+     "gold": {
+      "<": 800
+     }
+    }
+   },
+   "once": false,
+   "cooldown": 6,
+   "speaker": "度支",
+   "text": [
+    "金匮将空，俸禄将出。",
+    "「铸小钱则失信，卖珍玩则市怒。」"
+   ],
+   "choices": [
+    {
+     "id": "coin",
+     "label": "权宜铸币",
+     "preview": "金 +300 / 名声 −1",
+     "effects": [
+      "gold:+300",
+      "fame:-1"
+     ]
+    },
+    {
+     "id": "sell",
+     "label": "变卖珍玩",
+     "preview": "金 +200",
+     "effects": [
+      "gold:+200"
+     ]
+    }
+   ],
+   "source": {
+    "id": "GDD §8.2（本作设定）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.cond.siege.winter",
+   "title": "冬围苦寒",
+   "layer": "条件",
+   "priority": 58,
+   "when": {
+    "season": "冬",
+    "resource": {
+     "besieged_cities": {
+      ">=": 1
+     }
+    }
+   },
+   "once": false,
+   "cooldown": 4,
+   "speaker": "城守",
+   "text": [
+    "隆冬围城，士卒堕指。",
+    "「犒寒衣则军心安，强攻则徒伤。」"
+   ],
+   "choices": [
+    {
+     "id": "clothe",
+     "label": "遍发寒衣",
+     "preview": "金 −200 / 士气 +2",
+     "effects": [
+      "gold:-200",
+      "morale:+2"
+     ]
+    },
+    {
+     "id": "attack",
+     "label": "冒寒强攻",
+     "preview": "士气 −2",
+     "effects": [
+      "morale:-2"
+     ]
+    }
+   ],
+   "source": {
+    "id": "GDD §8.2（本作设定）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.cond.grain.gift",
+   "title": "邻邦乞籴",
+   "layer": "条件",
+   "priority": 54,
+   "when": {
+    "resource": {
+     "grain": {
+      ">=": 6000
+     }
+    }
+   },
+   "once": false,
+   "cooldown": 8,
+   "speaker": "邻使",
+   "text": [
+    "邻邦遣使乞籴，愿以金易粟。",
+    "「予之则结好，拒之则结怨。」"
+   ],
+   "choices": [
+    {
+     "id": "sell",
+     "label": "许籴",
+     "preview": "金 +300 / 名声 +1",
+     "effects": [
+      "gold:+300",
+      "fame:+1"
+     ]
+    },
+    {
+     "id": "refuse",
+     "label": "闭籴",
+     "preview": "名声 −1",
+     "effects": [
+      "fame:-1"
+     ]
+    }
+   ],
+   "source": {
+    "id": "GDD §8.2（本作设定）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.rel.liubei.zhuge",
+   "title": "鱼水之君臣",
+   "layer": "关系",
+   "priority": 78,
+   "when": {
+    "relation": {
+     "a": "刘备",
+     "b": "诸葛亮",
+     "value": {
+      ">=": 60
+     }
+    }
+   },
+   "once": true,
+   "speaker": "关羽",
+   "text": [
+    "先主与亮情好日密。",
+    "「犹鱼之有水也。」"
+   ],
+   "choices": [
+    {
+     "id": "feast",
+     "label": "设宴相庆",
+     "preview": "士气 +3",
+     "effects": [
+      "morale:+3"
+     ]
+    },
+    {
+     "id": "gift",
+     "label": "亲赐金帛",
+     "preview": "金 −150 / 诸葛亮忠诚 +10",
+     "effects": [
+      "gold:-150",
+      "loyalty:诸葛亮:+10"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·诸葛亮传（犹鱼之有水）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.rel.caocao.xunyu",
+   "title": "王佐之才",
+   "layer": "关系",
+   "priority": 76,
+   "when": {
+    "relation": {
+     "a": "曹操",
+     "b": "荀彧",
+     "value": {
+      ">=": 60
+     }
+    }
+   },
+   "once": true,
+   "speaker": "曹操",
+   "text": [
+    "「吾之子房也。」",
+    "荀令君居中持重，天下之事若无彧则不可。"
+   ],
+   "choices": [
+    {
+     "id": "trust",
+     "label": "委以中枢",
+     "preview": "荀彧忠诚 +8 / 名声 +1",
+     "effects": [
+      "loyalty:荀彧:+8",
+      "fame:+1"
+     ]
+    },
+    {
+     "id": "distant",
+     "label": "渐疏其权",
+     "preview": "荀彧忠诚 −10",
+     "effects": [
+      "loyalty:荀彧:-10"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·荀彧传（吾之子房）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.rel.sunce.zhouyu",
+   "title": "总角之好",
+   "layer": "关系",
+   "priority": 74,
+   "when": {
+    "relation": {
+     "a": "孙策",
+     "b": "周瑜",
+     "value": {
+      ">=": 60
+     }
+    }
+   },
+   "once": true,
+   "speaker": "吴人",
+   "text": [
+    "策与瑜同年，总角之好，升堂拜母。",
+    "「江东双璧，一内一外。」"
+   ],
+   "choices": [
+    {
+     "id": "ceremony",
+     "label": "升堂拜母",
+     "preview": "士气 +3 / 周瑜忠诚 +8",
+     "effects": [
+      "morale:+3",
+      "loyalty:周瑜:+8"
+     ]
+    },
+    {
+     "id": "none",
+     "label": "不必虚礼",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·吴书·周瑜传（总角之好）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.rel.sunce.taishici",
+   "title": "神亭之搏",
+   "layer": "关系",
+   "priority": 74,
+   "when": {
+    "relation": {
+     "a": "孙策",
+     "b": "太史慈",
+     "value": {
+      ">=": 60
+     }
+    }
+   },
+   "once": true,
+   "speaker": "太史慈",
+   "text": [
+    "神亭之战，策与慈独遇，驰骋相对。",
+    "策揽慈颈而笑：「今日之战，可称快哉。」"
+   ],
+   "choices": [
+    {
+     "id": "recruit",
+     "label": "解缚相待",
+     "preview": "金 −100 / 太史慈忠诚 +15",
+     "effects": [
+      "gold:-100",
+      "loyalty:太史慈:+15"
+     ]
+    },
+    {
+     "id": "magnanimous",
+     "label": "不计旧恶",
+     "preview": "名声 +1",
+     "effects": [
+      "fame:+1"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·吴书·太史慈传（神亭之战/解缚）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.rel.guan.zhang",
+   "title": "恩若兄弟",
+   "layer": "关系",
+   "priority": 72,
+   "when": {
+    "relation": {
+     "a": "关羽",
+     "b": "张飞",
+     "value": {
+      ">=": 60
+     }
+    }
+   },
+   "once": true,
+   "speaker": "军中",
+   "text": [
+    "羽与飞并在列，恩若兄弟。",
+    "而稠人广坐，侍立终日——随周旋，不避艰险。"
+   ],
+   "choices": [
+    {
+     "id": "oath",
+     "label": "申之以盟誓",
+     "preview": "士气 +3",
+     "effects": [
+      "morale:+3"
+     ]
+    },
+    {
+     "id": "none",
+     "label": "不必虚文",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·关羽传（恩若兄弟）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.rel.guan.zhao",
+   "title": "并肩之谊",
+   "layer": "关系",
+   "priority": 72,
+   "when": {
+    "relation": {
+     "a": "关羽",
+     "b": "赵云",
+     "value": {
+      ">=": 60
+     }
+    }
+   },
+   "once": true,
+   "speaker": "军中",
+   "text": [
+    "云长曰：「子龙从我于患难，心如铁石。」",
+    "「非可比臂于关张。」"
+   ],
+   "choices": [
+    {
+     "id": "promote",
+     "label": "擢其统众",
+     "preview": "金 −80 / 赵云忠诚 +10",
+     "effects": [
+      "gold:-80",
+      "loyalty:赵云:+10"
+     ]
+    },
+    {
+     "id": "none",
+     "label": "才自见用",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·赵云传注引《云别传》",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.rel.machao.pangde",
+   "title": "骁并西凉",
+   "layer": "关系",
+   "priority": 72,
+   "when": {
+    "relation": {
+     "a": "马超",
+     "b": "庞德",
+     "value": {
+      ">=": 60
+     }
+    }
+   },
+   "once": true,
+   "speaker": "军中",
+   "text": [
+    "马超恃庞德勇烈，每战以为先锋。",
+    "西凉之众，并骑突阵，所向无前。"
+   ],
+   "choices": [
+    {
+     "id": "bond",
+     "label": "深相结纳",
+     "preview": "庞德忠诚 +10 / 士气 +2",
+     "effects": [
+      "loyalty:庞德:+10",
+      "morale:+2"
+     ]
+    },
+    {
+     "id": "none",
+     "label": "各用其长",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·庞德传（每战先登）/蜀书·马超传",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.rel.zhuge.jiangwei",
+   "title": "传灯之约",
+   "layer": "关系",
+   "priority": 74,
+   "when": {
+    "relation": {
+     "a": "诸葛亮",
+     "b": "姜维",
+     "value": {
+      ">=": 60
+     }
+    }
+   },
+   "once": true,
+   "speaker": "诸葛亮",
+   "text": [
+    "亮与姜维书：「甚敏于军事，既有胆义，深解兵意。」",
+    "「凉州上士也。」"
+   ],
+   "choices": [
+    {
+     "id": "teach",
+     "label": "尽授所学",
+     "preview": "姜维忠诚 +15",
+     "effects": [
+      "loyalty:姜维:+15"
+     ]
+    },
+    {
+     "id": "test",
+     "label": "试以军务",
+     "preview": "姜维忠诚 +5",
+     "effects": [
+      "loyalty:姜维:+5"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·姜维传（亮与张裔蒋琬书）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.rel.zhuge.simayi",
+   "title": "巾帼之讽",
+   "layer": "关系",
+   "priority": 72,
+   "when": {
+    "relation": {
+     "a": "诸葛亮",
+     "b": "司马懿",
+     "value": {
+      ">=": 40
+     }
+    }
+   },
+   "once": true,
+   "speaker": "军使",
+   "text": [
+    "懿坚壁不出，亮遗之巾帼妇人之饰。",
+    "懿怒而请战，帝使卫尉持节制之。"
+   ],
+   "choices": [
+    {
+     "id": "send",
+     "label": "遣使送巾帼",
+     "preview": "士气 +2 / 名声 +1",
+     "effects": [
+      "morale:+2",
+      "fame:+1"
+     ]
+    },
+    {
+     "id": "calm",
+     "label": "不为激将",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·诸葛亮传注引《魏氏春秋》",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.rel.lidian.zhangliao",
+   "title": "折冲之谊",
+   "layer": "关系",
+   "priority": 70,
+   "when": {
+    "relation": {
+     "a": "张辽",
+     "b": "李典",
+     "value": {
+      ">=": 60
+     }
+    }
+   },
+   "once": true,
+   "speaker": "李典",
+   "text": [
+    "辽欲出击，恐典不协。",
+    "典曰：「此国家大事，顾君计何如耳——吾岂以私憾忘公义乎！」"
+   ],
+   "choices": [
+    {
+     "id": "cooperate",
+     "label": "并军出击",
+     "preview": "士气 +3",
+     "effects": [
+      "morale:+3"
+     ]
+    },
+    {
+     "id": "wait",
+     "label": "分军而守",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·李典传（合肥之战顾公义）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.rel.ganning.lingtong",
+   "title": "化解旧怨",
+   "layer": "关系",
+   "priority": 70,
+   "when": {
+    "relation": {
+     "a": "甘宁",
+     "b": "凌统",
+     "value": {
+      ">=": 60
+     }
+    }
+   },
+   "once": true,
+   "speaker": "凌统",
+   "text": [
+    "凌统怨甘宁杀其父凌操，每欲手刃之。",
+    "权令统勿仇——「今引以为右部督。」"
+   ],
+   "choices": [
+    {
+     "id": "mediation",
+     "label": "设宴解怨",
+     "preview": "金 −100 / 士气 +3",
+     "effects": [
+      "gold:-100",
+      "morale:+3"
+     ]
+    },
+    {
+     "id": "none",
+     "label": "令其各守一军",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·吴书·甘宁传/凌统传（凌操之仇）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.rel.lumeng.lusu",
+   "title": "继志之人",
+   "layer": "关系",
+   "priority": 70,
+   "when": {
+    "relation": {
+     "a": "吕蒙",
+     "b": "鲁肃",
+     "value": {
+      ">=": 60
+     }
+    }
+   },
+   "once": true,
+   "speaker": "鲁肃",
+   "text": [
+    "肃拊蒙背曰：「非复吴下阿蒙。」",
+    "蒙曰：「士别三日，即更刮目相待。」"
+   ],
+   "choices": [
+    {
+     "id": "study",
+     "label": "勉其读书",
+     "preview": "吕蒙忠诚 +10 / 名声 +1",
+     "effects": [
+      "loyalty:吕蒙:+10",
+      "fame:+1"
+     ]
+    },
+    {
+     "id": "none",
+     "label": "功名自见",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·吴书·吕蒙传注引《江表传》（吴下阿蒙）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.rel.huangzhong.weiyan",
+   "title": "老少同营",
+   "layer": "关系",
+   "priority": 70,
+   "when": {
+    "relation": {
+     "a": "黄忠",
+     "b": "魏延",
+     "value": {
+      ">=": 60
+     }
+    }
+   },
+   "once": true,
+   "speaker": "军中",
+   "text": [
+    "黄忠虽老而勇冠三军，魏延少壮敢战。",
+    "二将并营，争功相竞。"
+   ],
+   "choices": [
+    {
+     "id": "rival",
+     "label": "令并军争功",
+     "preview": "金 −100 / 士气 +2",
+     "effects": [
+      "gold:-100",
+      "morale:+2"
+     ]
+    },
+    {
+     "id": "integrate",
+     "label": "教其相协",
+     "preview": "士气 +3",
+     "effects": [
+      "morale:+3"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·黄忠传/魏延传（并营争功背景）",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.rel.xunyu.gujia",
+   "title": "颍川之英",
+   "layer": "关系",
+   "priority": 70,
+   "when": {
+    "relation": {
+     "a": "荀彧",
+     "b": "郭嘉",
+     "value": {
+      ">=": 60
+     }
+    }
+   },
+   "once": true,
+   "speaker": "荀彧",
+   "text": [
+    "彧荐嘉：「才策谋略，世之奇士。」",
+    "「计料周详，兵机深远。」"
+   ],
+   "choices": [
+    {
+     "id": "recommend",
+     "label": "同荐于朝",
+     "preview": "郭嘉忠诚 +5 / 名声 +1",
+     "effects": [
+      "loyalty:郭嘉:+5",
+      "fame:+1"
+     ]
+    },
+    {
+     "id": "none",
+     "label": "各尽其用",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·魏书·郭嘉传（彧荐嘉）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.rel.zhaoyun.liubei",
+   "title": "心如铁石",
+   "layer": "关系",
+   "priority": 72,
+   "when": {
+    "relation": {
+     "a": "刘备",
+     "b": "赵云",
+     "value": {
+      ">=": 60
+     }
+    }
+   },
+   "once": true,
+   "speaker": "赵云",
+   "text": [
+    "云曰：「从于仁政之所在，不忽于袁公而独留明公。」",
+    "「心如铁石，不背明公也。」"
+   ],
+   "choices": [
+    {
+     "id": "close",
+     "label": "同床眠卧",
+     "preview": "赵云忠诚 +15",
+     "effects": [
+      "loyalty:赵云:+15"
+     ]
+    },
+    {
+     "id": "none",
+     "label": "君臣有分",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·蜀书·赵云传注引《云别传》",
+    "confidence": "中"
+   },
+   "reviewed": false
+  },
+  {
+   "id": "evt.rel.sunquan.lumeng",
+   "title": "不看书则俗",
+   "layer": "关系",
+   "priority": 68,
+   "when": {
+    "relation": {
+     "a": "孙权",
+     "b": "吕蒙",
+     "value": {
+      ">=": 60
+     }
+    }
+   },
+   "once": true,
+   "speaker": "孙权",
+   "text": [
+    "权谓蒙及蒋钦：「卿今当涂掌事，不可不学。」",
+    "蒙始就学，笃志不倦。"
+   ],
+   "choices": [
+    {
+     "id": "push",
+     "label": "勉其向学",
+     "preview": "吕蒙忠诚 +10 / 名声 +1",
+     "effects": [
+      "loyalty:吕蒙:+10",
+      "fame:+1"
+     ]
+    },
+    {
+     "id": "none",
+     "label": "武人自足",
+     "preview": "无",
+     "effects": [
+      "nothing"
+     ]
+    }
+   ],
+   "source": {
+    "id": "三国志·吴书·吕蒙传注引《江表传》（劝学）",
+    "confidence": "高"
+   },
+   "reviewed": false
+  }
+ ]
+}

@@ -264,7 +264,7 @@ export function ensureStrategy(state) {
     state.strategy.pendingEvents.push({
       id: `opening-${scInit.id}`,
       title: `${scInit.name}·开局`,
-      layer: 'node',
+      layer: '史实节点',
       priority: 100,
       speaker: '',
       text: [scInit.opening.text || ''],
@@ -1983,13 +1983,17 @@ export function defectTick(state, cfg, ctx) {
  * ================================================================ */
 
 const EVENTS_PATH = resolve(ROOT, 'conf', 'campaign', 'events.json');
+const EVENTS_EXTRA_PATH = resolve(ROOT, 'conf', 'campaign', 'events-extra.json');
 let eventsCache = null;
 
 /** 事件数据（conf/campaign/events.json）。构建期 check-events.mjs 已校验，这里直接读。 */
 export function campaignEvents() {
   if (!eventsCache) {
     const doc = JSON.parse(readFileSync(EVENTS_PATH, 'utf8'));
-    eventsCache = Array.isArray(doc) ? doc : (doc.events || []);
+    /* ★ M3-7 补量：第二批与第一批合并（id 全局唯一，tools/check-events.mjs 分文件校验） */
+    const extra = JSON.parse(readFileSync(EVENTS_EXTRA_PATH, 'utf8'));
+    eventsCache = [...(Array.isArray(doc) ? doc : (doc.events || [])),
+      ...(Array.isArray(extra) ? extra : (extra.events || []))];
   }
   return eventsCache;
 }
@@ -2065,7 +2069,11 @@ export function strategyEventTick(state) {
   const events = campaignEvents();
   if (!events.length) return null;
   const ctx = strategyEventCtx(state);
-  const { selected, deferred } = selectEvents(events, ctx, { events: st.eventSys });
+  /* ★ M3-7 剧本前史过滤：yearMin 是下限语义，剧本起点之前的史实节点不得重演
+   *  （190 剧本 day=1 → ctx.year=190，否则 184 黄巾会立即触发）。 */
+  const y0 = st.scenarioYear || 184;
+  const pool = (y0 > 184) ? events.filter((e) => (e.when?.yearMin ?? 184) >= y0) : events;
+  const { selected, deferred } = selectEvents(pool, ctx, { events: st.eventSys });
   st.pendingEvents = selected.map((e) => ({
     id: e.id, title: e.title, layer: e.layer, priority: e.priority,
     speaker: e.speaker || '', text: e.text || [],

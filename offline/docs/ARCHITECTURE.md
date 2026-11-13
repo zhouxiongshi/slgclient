@@ -334,6 +334,14 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 - **两层弹窗协议**：选项按钮带 `data-ix-allow="1"`——事件选项文案（如「征兵讨贼」）会命中 `interceptCosts` 的成本词表，不加会被决策预览二次拦截。
 - 测试 `tests/m3-event-ui.test.js` 3 条：聚合投影 shape、UI 静态纪律（含禁 Math.random 查代码行非注释）、opening 伪事件点选入档（`st.eventSys.choices`）。
 
+### 9.11 M3-7 事件补量至 150 条（GDD §8 上限）
+
+- **数据**：`events-extra.json` 第二批 98 条（62 史实节点 / 20 条件 / 16 关系），与 `events.json` 合计恰 150 条。覆盖 184-280 全时序（宛城/虎牢/岘山/水灌下邳/帝号之僭/仓亭/邺城/白狼山/定军山/受禅台/卤城/淮南三叛/甘露之变/六路伐吴等）+ 经营/战争/内政条件层 + 宿命关系层。每条带 `source.id` 与 `confidence`，全部 `reviewed:false` 待签核。
+- **加载**：`campaignEvents()` 双文件合并（eventsCache 一次读齐）；`check-events.mjs` 默认校验两文件，id 跨文件唯一、once-flag/exclusive 跨文件查冲突；`--events` 可退回单文件模式。
+- **剧本前史过滤**（真口径债修正）：`yearMin` 是下限语义——190 剧本 day=1 时 ctx.year=190，184 黄巾（yearMin 184）会立即触发。`strategyEventTick` 现按 `st.scenarioYear` 过滤：`when.yearMin < scenarioYear` 的史实节点视为前史不重演。条件层（yearMin 无）/关系层不受影响。
+- 引用纪律：条件里的武将名一律 ∈ heroes-240（袁谭/袁尚/曹爽/法正/甄洛/曹植不在 240 内——前者删条件字段、后者整条裁掉）。
+- 测试 `tests/m3-events.test.js` 新增 1 条：两批合计 150、跨文件 id 唯一、`campaignEvents().length === 150`；`tests/m3-scenario-runtime.test.js` 补断言：221 剧本不得触发 184 黄巾。
+
 ---
 
 ## 10. 文档地图（读哪本、信哪本）

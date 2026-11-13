@@ -452,7 +452,7 @@
    *  选择是必答的（队列未决不堆叠，选完 loadState 拉下一条）；按钮带
    *  data-ix-allow，避免被 interceptCosts 成本词预览二次拦截（两层弹窗协议）。 */
   var ACT = '/__slg/strategy/action';
-  var LAYER_NAMES = { node: '史实节点', cond: '时局', rel: '关系' };
+  var LAYER_NAMES = { '史实节点': '史实节点', '条件': '时局', '关系': '人物' };
   function buildEventCards(d) {
     var list = d && Array.isArray(d.pendingEvents) ? d.pendingEvents : [];
     var cur = document.querySelector('.slgIx-modal.slgIxEvent');
