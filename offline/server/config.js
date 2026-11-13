@@ -77,6 +77,59 @@ export function loadConfig(confDir = defaultConfDir()) {
       general.list.push(protag.general);
     }
   } catch { /* 没有穿越者模板时仍用原武将表 */ }
+  /* ★ M3-4 武将数据层入包（GDD §7.1）：heroes-240.json 的 240 位并入武将表。
+     包内已有同名/同 cfgId 的沿用原条目；新武将（240001+）从五维确定性派生
+     general.json 形状的模板条目。战法按名字走 hero-skills 表（world.js innateOf），
+     无需在此登记；build-heroes.mjs 缺文件时退化为原武将表。 */
+  try {
+    const heroDoc = JSON.parse(readFileSync(resolve(confDir, 'campaign', 'heroes-240.json'), 'utf8'));
+    const cfgIds = new Set((general.list || []).map((g) => Number(g.cfgId)));
+    const names = new Set((general.list || []).map((g) => g.name));
+    const STAR = { core: 5, important: 4, minor: 3 };
+    // 适性 → 兵种 id（1步 2弓 3骑 为骨架，4-9 是衍生兵种，按适性加权取前三）
+    const APT2ARMS = [
+      [1, 'shield', 1.0], [7, 'shield', 0.9],
+      [2, 'bow', 1.0], [8, 'bow', 0.9], [5, 'bow', 0.8],
+      [3, 'cavalry', 1.0], [9, 'cavalry', 0.9], [6, 'cavalry', 0.8],
+      [4, 'base', 0.85],
+    ];
+    for (const h of heroDoc.heroes || []) {
+      if (cfgIds.has(Number(h.id)) || names.has(h.name)) continue;
+      const five = h.five || {};
+      const apt = h.aptitude || {};
+      const star = STAR[h.layer] ?? 3;
+      const arms = APT2ARMS
+        .map(([id, key, w]) => [id, (key === 'base' ? 0.85 : Number(apt[key] ?? 0.9)) * w])
+        .sort((a, b) => b[1] - a[1] || a[0] - b[0])
+        .slice(0, 3)
+        .map((x) => x[0])
+        .sort((a, b) => a - b);
+      general.list.push({
+        name: h.name,
+        cfgId: Number(h.id),
+        force: Math.round((Number(five.wu) || 50) * 100),
+        strategy: Math.round((Number(five.zhi) || 50) * 100),
+        defense: Math.round((Number(five.tong) || 50) * 100),
+        speed: Math.round(((Number(five.tong) || 50) * 0.5 + (Number(five.wu) || 50) * 0.5) * 100),
+        destroy: 500 + star * 300,
+        cost: 20 + star * 5,
+        force_grow: Math.round((Number(five.wu) || 50) / 2),
+        strategy_grow: Math.round((Number(five.zhi) || 50) / 2),
+        defense_grow: Math.round((Number(five.tong) || 50) / 2),
+        speed_grow: Math.round(((Number(five.tong) || 50) + (Number(five.wu) || 50)) / 4),
+        destroy_grow: 30 + star * 10,
+        physical_power_limit: 100,
+        cost_physical_power: 1,
+        probability: 7,
+        star,
+        arms,
+        camp: 1,
+        heroMeta: { layer: h.layer, born: h.born ?? null, died: h.died ?? null },
+      });
+      cfgIds.add(Number(h.id));
+      names.add(h.name);
+    }
+  } catch { /* heroes-240 不在时仍用原武将表（build-heroes.mjs 先行） */ }
   const generalByCfg = new Map((general.list || []).map((g) => [g.cfgId, g]));
   const armsByType = new Map((generalArms.arms || []).map((a) => [a.id, a]));
 

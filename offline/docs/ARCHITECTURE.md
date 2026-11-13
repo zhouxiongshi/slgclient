@@ -311,6 +311,14 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 - 踩坑：州级基准整州划给一方极易撞 12 城上限（190 董卓、200 袁绍都曾 21 城）——归属表一律「基准归 han、修正给有脑势力」；92 城 id 键类型是数字，测试里 `delete('72')` 删不掉 Map 数字键。
 - **运行期接线待 M3-4**：`ensureStrategy` 初始归属按激活剧本的 `cityOwner` 生成（现在是州→诸侯映射）；`factionConf` 在有剧本时优先用 `scenario.factions`；开局决策弹窗消费 `scenario.opening`。
 
+### 9.8 M3-4 运行期接线（GDD §8.3 / §7.5）
+
+- **heroes-240 入包**（`config.js`）：heroes-240.json 并入 general.list——包内同名/同 cfgId 沿用原条目，新武将（240001+）从五维确定性派生 general.json 形状的模板条目（star 按层 5/4/3、arms 按适性加权取前三、五维×100 映射四维统计）；战法按名字走 hero-skills 表（`world.js innateOf`），无需重复登记。酒馆/出仕池随之扩到 505。
+- **事件系统接线**（`strategy.js` M3-4 段）：`strategyEventTick` 每旬一次——冷却递减（引擎落在 `st.eventSys`，与 chronicle 数组 `st.events` 物理分开，避免引擎把数组当事件域改写）→ `selectEvents`（ctx 由 `strategyEventCtx` 适配：turn/year=184+⌊(day−1)/360⌋/season/城归属/资源/flag/关系=同宿命组即 80/胜负窗=`st.battleHistory`）→ `st.pendingEvents` 队列（未决不堆叠）。点选走 `/strategy/action eventChoice`（`strategyEventChoice`），效果词落账：gold→府库、morale→逐城民心、loyalty→全军/最低者/点名、attitude→`diplomacy.adjustAttitudeByEvent`（pairData.eventAdj，attitudeOf 新增「事件」因子）、fame→`st.fame`。
+- **宿命组合落战斗**（GDD §7.5）：`fateComboDefMul(state, cfg, army)`——队内 ≥2 名同组武将 → 守军折算 ×0.95/组（上限 2 组）。`settleArmyBattle` 与 `previewAssault` **同调此函数**（与 M2-5 defMul 同一处相乘，dLoss 基线保持 raw），推演 `fateNotes` 与战报 `analysis.fateNotes` 同源。口径：只看队内成员，不查全局生死（战略层尚无武将死亡结算，注释防后来者加戏）。
+- **cityLost 口径**：`st.everOwned` 在三处入账（bindPlayerHome / chooseOath 划拨 / 克城），ctx.cityLost() = everOwned − 当前玩家城。胜负窗 `st.battleHistory`（cap 60）由 settleArmyBattle 写。
+- 测试 `tests/m3-runtime-wiring.test.js` 7 条。事件弹窗 UI 呈现（interaction 层卡片）属后续打磨；六剧本场景接入（ensureStrategy 按剧本初始化归属）见 §9.7 待办。
+
 ---
 
 ## 10. 文档地图（读哪本、信哪本）

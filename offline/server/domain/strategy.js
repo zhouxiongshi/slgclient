@@ -37,7 +37,11 @@ import { SKILLS, LEVEL_COUNT, skillById } from '../skills.js';
 import { oathOf, oathPending, oathFactionOf, factionTraitOf, protagonistStat } from './oath.js';
 /* ★ M2-4 委任对象化与外交（GDD §5.6/§5.8）：两个模块都自包含，strategy 单向引它们 */
 import { appointmentTick, appointmentListView, strategyAppoint, strategyCancelAppointment } from './appointment.js';
-import { diplomacyView, diplomacyAct, noteCityCaptured, truceActive, PLAYER_ID } from './diplomacy.js';
+import { diplomacyView, diplomacyAct, noteCityCaptured, truceActive, PLAYER_ID, adjustAttitudeByEvent } from './diplomacy.js';
+/* ★ M3-4 事件系统接线（GDD §8.1-§8.3）：引擎是零依赖叶子，ctx 由本层适配 */
+import { eventCooldownTick, selectEvents, applyEffects } from './event-engine.js';
+/* ★ M3-4 宿命 24 组落战斗（GDD §7.5）：同队 ≥2 人组合生效 */
+import { loadFateGroups, fatesOfHero } from './fate-groups.js';
 /* 委任/外交动作经本模块转发给 index.js（保持 index 只 import strategy 一个入口） */
 export { strategyAppoint, strategyCancelAppointment, diplomacyAct };
 
@@ -123,6 +127,12 @@ export function ensureStrategy(state) {
     if (!st.cityLogs) st.cityLogs = {};
     // ★ P7：旧档队伍没有 cityId（那时只有本城概念），一律并到本城
     for (const a of state.armys || []) if (!a.cityId) a.cityId = st.playerCity || 0;
+    /* ★ M3-4 事件系统/宿命/事件效果的存档域（旧档补字段） */
+    if (!st.eventSys) st.eventSys = { fired: {}, cooldown: {} };
+    if (!Array.isArray(st.pendingEvents)) st.pendingEvents = [];
+    if (!st.flags) st.flags = {};
+    if (!Array.isArray(st.everOwned)) st.everOwned = [];
+    if (!Array.isArray(st.battleHistory)) st.battleHistory = [];
     return st;
   }
   const factionByState = new Map(conf.factions.map((f) => [f.id, f]));
@@ -142,6 +152,13 @@ export function ensureStrategy(state) {
     turn: 0,
     lastTurnDay: 0,
     events: [],
+    /* ★ M3-4 事件系统存档域（event-engine 落这里，与 chronicle 数组 st.events 分开） */
+    eventSys: { fired: {}, cooldown: {} },
+    pendingEvents: [],
+    flags: {},
+    everOwned: [],
+    battleHistory: [],
+    fame: 0,
     cities,
     relations: {},
     memory: {},
@@ -169,6 +186,8 @@ export function bindPlayerHome(state) {
   st.playerCity = home.id;
   if (oathPending(state)) return home;
   st.cities[home.id].owner = 'player';
+  /* ★ M3-4：everOwned 记账（事件条件 cityLost 的口径来源） */
+  if (Array.isArray(st.everOwned) && !st.everOwned.includes(home.id)) st.everOwned.push(home.id);
   return home;
 }
 
@@ -250,6 +269,11 @@ export function chooseOath(state, cfg, ctx = {}, { lord, city } = {}) {
   for (const row of Object.values(st.cities)) {
     if (row.owner === f.id) { row.owner = 'player'; transferred += 1; }
   }
+  /* ★ M3-4：everOwned 记账（举义划拨的城进 cityLost 口径） */
+  const gainedIds = Object.entries(st.cities)
+    .filter(([, row]) => row.owner === 'player')
+    .map(([id]) => Number(id));
+  st.everOwned = [...new Set([...(st.everOwned || []), ...gainedIds])];
   st.playerCity = cid;
   /* ★ 修 bug-6/21：举义时给拿到的每座城各建一套设施（键 s<战略城id>），
      分城从此有设施可升；本地主城那份键仍是数字 id，两套编号互不覆盖。 */
@@ -419,6 +443,9 @@ export function strategyTick(state, cfg, ctx, now = Date.now()) {
   captivesTick(state, ctx);
   // ★ P7 出仕：在野贤才按名声主动来投
   defectTick(state, cfg, ctx);
+  /* ★ M3-4 事件系统（GDD §8.3）：每旬冷却递减 → 条件筛 → pendingEvents 队列（弹窗层消费） */
+  const evTick = strategyEventTick(state);
+  if (evTick) st.lastEventTick = evTick;
 
   const results = [];
   const mapTick = strategyMap();
@@ -952,8 +979,11 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride, 
   const defRows = (defenseOverride?.soldiers || [0, 0, 0]).map((v) => Math.max(0, Number(v) || 0));
   const defArms = mainArms(defRows) + 1;
   const counter = armsCounter(atkArms, defArms);
+  /* ★ M3-4 宿命组合加成（GDD §7.5）：队内 ≥2 名同组武将 → 守军兵力折算 ×0.95/组。
+     与 M2-5 defMul 在同一处相乘，dLoss 基线保持 raw 守军数（推演同调此函数）。 */
+  const fate = fateComboDefMul(state, cfg, army);
   const defense2 = defenseOverride
-    ? { ...defenseOverride, soldiers: defRows.map((v) => Math.round(v * defMul * (counter > 0 ? 0.87 : counter < 0 ? 1.15 : 1))) }
+    ? { ...defenseOverride, soldiers: defRows.map((v) => Math.round(v * defMul * fate.mul * (counter > 0 ? 0.87 : counter < 0 ? 1.15 : 1))) }
     : defenseOverride;
   const battleArmy = { ...army, soldiers: commit };
   const result = resolveBattle({ cfg, state, army: battleArmy, x, y, defenseOverride: defense2, seed });
@@ -988,13 +1018,20 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride, 
   const counterNote = counter > 0
     ? `我军${ARMS_NAMES[atkArms]}克制守军${ARMS_NAMES[defArms]}（战力+15%）。`
     : (counter < 0 ? `守军${ARMS_NAMES[defArms]}克制我军${ARMS_NAMES[atkArms]}（战力-15%）。` : '');
+  const fateNote = fate.notes.length ? `${fate.notes.join('；')}。` : '';
   // 额外字段：原客户端忽略，我们自己的战报面板读它做复盘
-  result.report.summary = summary + counterNote;
+  result.report.summary = summary + counterNote + fateNote;
   result.report.analysis = {
     aTotal, dTotal, aLoss, dLoss, recovered: rec, win,
     aBegin: commit, aRemain: remain,
     counter, atkArms, defArms, counterNote,
+    fateMul: fate.mul, fateNotes: fate.notes,
   };
+  /* ★ M3-4 事件条件 battleWon/battleLost 的台账（近 N 旬胜负窗） */
+  const strat = state.strategy || ensureStrategy(state);
+  strat.battleHistory = strat.battleHistory || [];
+  strat.battleHistory.push({ turn: strat.turn || 0, win, place });
+  if (strat.battleHistory.length > 60) strat.battleHistory.splice(0, strat.battleHistory.length - 60);
 
   // ★ P3 战利品：胜则按歼敌数掠夺金粮（金=歼敌×0.5、粮=歼敌×1）
   let loot = null;
@@ -1284,6 +1321,8 @@ export function strategyResolveMarches(state, cfg, ctx) {
          必须在归属变更**前**取旧主。 */
       noteCityCaptured(state, PLAYER_ID, tstate.owner);
       tstate.owner = 'player';
+      /* ★ M3-4：everOwned 记账（克城后 cityLost 口径才成立） */
+      if (!st.everOwned.includes(mm.to)) st.everOwned.push(mm.to);
       tstate.troops = Math.max(200, Math.round(defenseOverride.soldiers.reduce((s, n) => s + n, 0) * 0.3));
       // ★ P2/P3 城破之殃：人口 -15%（兵源压力）；一次性掠夺入府库
       const econ = ensureCityEcon(state);
@@ -1639,9 +1678,11 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
   /* ★ #2 敌将变招：抵达日决定预案，推演给出「若敌方变招则…」两条对照线 */
   const variant = counterVariantFor(state, to, arriveDay);
   const armsMul = counter > 0 ? 0.87 : counter < 0 ? 1.15 : 1;
+  /* ★ M3-4 宿命组合加成：与 settleArmyBattle 同调 fateComboDefMul（描述=计算=战报同源） */
+  const fate = fateComboDefMul(state, cfg, army);
   const mkDef = (spreadMul, defMul) => ({
     ...defense,
-    soldiers: defense.soldiers.map((v) => Math.round(v * armsMul * spreadMul * defMul)),
+    soldiers: defense.soldiers.map((v) => Math.round(v * armsMul * spreadMul * defMul * fate.mul)),
   });
   const dTotal = defense.soldiers.reduce((s2, n) => s2 + n, 0);
 
@@ -1699,6 +1740,8 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
     from, km, speed, days, arriveDay, today,
     commit, aTotal, dTotal, aLoss, dLoss, remain, dRemain: dRemain.slice(),
     counter, atkArms, defArms, counterNote,
+    /* ★ M3-4 宿命组合：预览面板显示同队加成（与正式结算同一函数） */
+    fateMul: fate.mul, fateNotes: fate.notes,
     seed, rounds: result.report.rounds || 0,
     code, win, draw: code === 1,
     report: result.report,
@@ -1818,6 +1861,210 @@ export function defectTick(state, cfg, ctx) {
   });
   ctx?.push?.('general.push', g);
   return { cfgId: pick.cfgId, name: pick.name, cityId, city: cityName(cityId), fame: Math.round(fame), rate: Math.round(rate * 100) };
+}
+
+/* ================================================================ M3-4 接线
+ * 事件系统（GDD §8.1-§8.3）与宿命组合（GDD §7.5）的运行期接线。
+ * 引擎/DSL 是零依赖叶子；本段只做三件事：
+ *   1. ctx 适配器：把 strategy 存档翻译成事件条件查询（全注入，引擎不知 state 形状）；
+ *   2. 每旬 tick：冷却递减 → 条件筛 → pendingEvents 队列（弹窗层消费，玩家点选后落账）；
+ *   3. 宿命组合加成：出征队内 ≥2 名同组武将 → 守军兵力折算 ×0.95/组（上限 2 组），
+ *      推演（previewAssault）与正式结算（settleArmyBattle）同调同一函数——描述=计算=战报同源。
+ * ================================================================ */
+
+const EVENTS_PATH = resolve(ROOT, 'conf', 'campaign', 'events.json');
+let eventsCache = null;
+
+/** 事件数据（conf/campaign/events.json）。构建期 check-events.mjs 已校验，这里直接读。 */
+export function campaignEvents() {
+  if (!eventsCache) {
+    const doc = JSON.parse(readFileSync(EVENTS_PATH, 'utf8'));
+    eventsCache = Array.isArray(doc) ? doc : (doc.events || []);
+  }
+  return eventsCache;
+}
+
+const SEASONS = ['春', '夏', '秋', '冬'];
+
+/** 事件 ctx 适配器：玩家视角（GDD §8.1 字段白名单 14 项全注入）。 */
+export function strategyEventCtx(state) {
+  const st = ensureStrategy(state);
+  const conf = factionConf();
+  const cfgMap = cfgGeneralNames(state);
+  const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  const year = 184 + Math.floor((day - 1) / 360);           // 1 年 = 36 旬 = 360 日
+  const dayOfYear = (day - 1) % 360;
+  const season = SEASONS[Math.floor(dayOfYear / 90)] || '春';
+  const turn = st.turn || 0;
+  const owned = () => Object.entries(st.cities)
+    .filter(([, row]) => row.owner === 'player')
+    .map(([id]) => Number(id));
+  const lost = () => (st.everOwned || []).filter((id) => st.cities[id]?.owner !== 'player');
+  const generalNameOf = (g) => cfgMap.get(Number(g?.cfgId)) || '';
+  const recruitedNames = () => new Set((state.generals || []).map(generalNameOf).filter(Boolean));
+  return {
+    turn,
+    year,
+    season,
+    faction: 'player',
+    cityOwned: owned,
+    cityLost: lost,
+    resource: (kind) => {
+      const r = state.roleRes || {};
+      if (kind === 'gold') return Math.round(Number(r.gold) || 0);
+      if (kind === 'grain') return Math.round(Number(refreshGrainSummary(state, 'player').grain) || 0);
+      return Math.round(Number(r[kind]) || 0);
+    },
+    flag: (name) => !!(st.flags && st.flags[name]),
+    relation: (a, b) => {
+      // 关系口径：heroes-240 宿命组——两人同组即「有旧」（80），无组返回 null（不满足）
+      const ga = fatesOfHero(a);
+      return ga.some((g) => g.members.includes(b)) ? 80 : null;
+    },
+    generalAlive: (name) => !(st.deadGenerals || []).includes(name),
+    generalInTeam: (name) => recruitedNames().has(name),
+    battleLostCount: (withinTurn = 4) => (st.battleHistory || [])
+      .filter((b) => !b.win && turn - b.turn < withinTurn).length,
+    battleWonCount: (withinTurn = 4) => (st.battleHistory || [])
+      .filter((b) => b.win && turn - b.turn < withinTurn).length,
+    conf,
+  };
+}
+
+/** cfgId → 武将名（一次性缓存；heroes-240 入包后新武将也在表里）。 */
+let nameMapCache = null;
+function cfgGeneralNames(state) {
+  if (!nameMapCache) {
+    nameMapCache = new Map();
+    try {
+      const g = JSON.parse(readFileSync(resolve(ROOT, 'conf', 'json', 'general', 'general.json'), 'utf8'));
+      for (const item of g.list || []) nameMapCache.set(Number(item.cfgId), item.name);
+      const heroes = JSON.parse(readFileSync(resolve(ROOT, 'conf', 'campaign', 'heroes-240.json'), 'utf8'));
+      for (const h of heroes.heroes || []) if (!nameMapCache.has(Number(h.id))) nameMapCache.set(Number(h.id), h.name);
+    } catch { /* 表缺失时武将名查询退化为空 */ }
+  }
+  return nameMapCache;
+}
+
+/** 每旬事件 tick：冷却递减 → 筛选 → pendingEvents。未决事件不堆叠（先处理旧的）。 */
+export function strategyEventTick(state) {
+  const st = ensureStrategy(state);
+  eventCooldownTick({ events: st.eventSys });
+  if ((st.pendingEvents || []).length) return { pending: st.pendingEvents.length, deferred: 0 };
+  const events = campaignEvents();
+  if (!events.length) return null;
+  const ctx = strategyEventCtx(state);
+  const { selected, deferred } = selectEvents(events, ctx, { events: st.eventSys });
+  st.pendingEvents = selected.map((e) => ({
+    id: e.id, title: e.title, layer: e.layer, priority: e.priority,
+    speaker: e.speaker || '', text: e.text || [],
+    choices: (e.choices || []).map((c) => ({ id: c.id, label: c.label, preview: c.preview || '' })),
+  }));
+  for (const e of selected) recordEvent(state, `【事件】${e.title}`);
+  return { pending: st.pendingEvents.length, deferred: deferred.length };
+}
+
+/** 玩家点选事件（index.js 路由 strategy/action eventChoice）。效果词白名单落账。 */
+export function strategyEventChoice(state, cfg, ctx, { id, choice } = {}) {
+  const st = ensureStrategy(state);
+  const idx = (st.pendingEvents || []).findIndex((e) => e.id === id);
+  if (idx < 0) return { ok: false, reason: 'no_pending' };
+  const ev = campaignEvents().find((e) => e.id === id);
+  if (!ev) return { ok: false, reason: 'unknown_event' };
+  const clampInt = (n) => Math.round(Number(n) || 0);
+  const api = {
+    setFlag: (name) => { st.flags = st.flags || {}; st.flags[name] = true; },
+    clearFlag: (name) => { st.flags = st.flags || {}; delete st.flags[name]; },
+    addGold: (delta) => {
+      const r = state.roleRes;
+      r.gold = Math.max(0, Math.round((Number(r.gold) || 0) + clampInt(delta)));
+      recordRes(state, 'gold', clampInt(delta), `事件·${ev.title}`, Math.floor(Number(state.clock?.day) || 1));
+    },
+    addMorale: (delta) => {
+      // 民心：玩家每座城各 ±（城池经营口径 0..100）
+      const econ = ensureCityEcon(state);
+      for (const [, e] of Object.entries(econ || {})) {
+        if (e && typeof e.morale === 'number') e.morale = Math.max(0, Math.min(100, e.morale + clampInt(delta)));
+      }
+    },
+    addLoyalty: (target, delta) => {
+      const gs = state.generals || [];
+      const d = clampInt(delta);
+      let list = gs;
+      if (target === '最低者' && gs.length) {
+        const min = Math.min(...gs.map((g) => Number(g.loyal) || 0));
+        list = gs.filter((g) => (Number(g.loyal) || 0) === min);
+      } else if (target !== '全军') {
+        list = gs.filter((g) => cfgGeneralNames(state).get(Number(g.cfgId)) === target);
+        if (!list.length) return;
+      }
+      for (const g of list) g.loyal = Math.max(0, Math.min(100, (Number(g.loyal) || 0) + d));
+    },
+    addAttitude: (factionId, delta) => { adjustAttitudeByEvent(state, String(factionId), clampInt(delta)); },
+    addFame: (delta) => { st.fame = (st.fame || 0) + clampInt(delta); },
+    turn: () => st.turn || 0,
+  };
+  let applied;
+  try {
+    applied = applyEffects({ events: st.eventSys }, ev, choice, api);
+  } catch (err) {
+    return { ok: false, reason: 'bad_choice', detail: String(err && err.message || err) };
+  }
+  const appliedText = applied
+    .filter((a) => a.kind !== 'nothing')
+    .map((a) => (a.kind === 'flag' ? `立flag「${a.name}」`
+      : a.kind === 'flag-' ? `清flag「${a.name}」`
+        : a.kind === 'gold' ? `金 ${a.delta > 0 ? '+' : ''}${a.delta}`
+          : a.kind === 'morale' ? `民心 ${a.delta > 0 ? '+' : ''}${a.delta}`
+            : a.kind === 'loyalty' ? `${a.target}忠诚 ${a.delta > 0 ? '+' : ''}${a.delta}`
+              : a.kind === 'attitude' ? `${a.target}态度 ${a.delta > 0 ? '+' : ''}${a.delta}`
+                : `名声 ${a.delta > 0 ? '+' : ''}${a.delta}`))
+    .join('、');
+  recordEvent(state, `【事件·抉择】${ev.title}：${(ev.choices || []).find((c) => c.id === choice)?.label || choice}`
+    + (appliedText ? `（${appliedText}）` : ''));
+  ctx?.push?.('chat.push', {
+    rid: 0, nickName: '系统', type: 0,
+    msg: `【${ev.layer}】${ev.title}——${(ev.choices || []).find((c) => c.id === choice)?.label || choice}`,
+    time: Date.now(),
+  });
+  st.pendingEvents.splice(idx, 1);
+  return { ok: true, id, choice, applied };
+}
+
+/**
+ * 宿命组合加成（GDD §7.5）：出征队内 ≥2 名同组宿命武将 → 该组生效，
+ * 守军兵力折算 ×0.95/组（上限 2 组 ≈ ×0.9025）。
+ * 只看队内成员（不查全局生死——单机战略层尚无武将死亡结算，口径写进注释防后来者加戏）。
+ */
+export function fateComboDefMul(state, cfg, army) {
+  const names = (army?.generals || []).map((gid) => {
+    const g = state.generals?.find((x) => x.id === gid);
+    return g ? (cfg?.generalByCfg?.get(Number(g.cfgId))?.name
+      || cfgGeneralNames(state).get(Number(g.cfgId))) : null;
+  }).filter(Boolean);
+  if (names.length < 2) return { mul: 1, notes: [] };
+  const present = new Set(names);
+  const notes = [];
+  let mul = 1;
+  for (const g of loadFateGroups()) {
+    const inArmy = g.members.filter((m) => present.has(m));
+    if (inArmy.length >= 2 && notes.length < 2) {
+      mul *= 0.95;
+      notes.push(`宿命「${g.title}」同队（守军折算 ×0.95）`);
+    }
+  }
+  return { mul, notes };
+}
+
+/** 玩家已招募武将的宿命组合视图（六府/关系网展示用）。 */
+export function strategyFateView(state, cfg) {
+  const names = new Set((state.generals || []).map((g) => cfg?.generalByCfg?.get(Number(g.cfgId))?.name).filter(Boolean));
+  const out = [];
+  for (const g of loadFateGroups()) {
+    const present = g.members.filter((m) => names.has(m));
+    if (present.length >= 2) out.push({ id: g.id, title: g.title, present, effect: g.effect });
+  }
+  return out;
 }
 
 /** 供 /__slg/strategy/state 使用。cfg 可选：不给时武将只显示 #id。 */
@@ -1976,6 +2223,9 @@ export function strategyViewState(state, cfg = null) {
     /* ★ M2-4 委任对象化与外交视图（GDD §5.6/§5.8）：blocked 置顶 + 理由链 */
     appointments: appointmentListView(state),
     diplomacy: diplomacyView(state),
+    /* ★ M3-4 事件弹窗队列与宿命组合视图（GDD §8.3/§7.5） */
+    pendingEvents: st.pendingEvents || [],
+    fates: strategyFateView(state, cfg),
     playerCity: st.playerCity || 0,
     // ★ P4-①：举义状态随视图下发，客户端据此决定弹不弹举义页
     oath: {

@@ -196,6 +196,7 @@ export function attitudeOf(state, a, b) {
   add('共同敌人', common * 10);
   add('占其城池', -p.occupied * 20);
   add('离间失手', -p.sowFail * 15);
+  add('事件', p.eventAdj || 0);   // ★ M3-4 事件效果词 attitude:N 的累计（±100 内）
   const value = Math.max(-100, Math.min(100, factors.reduce((s, f) => s + f.delta, 0)));
   return { value, factors };
 }
@@ -461,6 +462,15 @@ function bestStatOf(state) {
 }
 
 /* ---------------- 状态机钩子（strategy 单向调用） ---------------- */
+
+/** ★ M3-4 事件效果词 attitude:N 的落账口（strategy.strategyEventChoice 消费）。
+ *  累计写 pairData.eventAdj，attitudeOf 的「事件」因子消费，理由链可见。 */
+export function adjustAttitudeByEvent(state, factionId, delta) {
+  if (!state?.strategy) return { ok: false, reason: 'no_state' };
+  const p = pairData(state, PLAYER_ID, String(factionId));
+  p.eventAdj = Math.max(-100, Math.min(100, (p.eventAdj || 0) + (Math.round(Number(delta)) || 0)));
+  return { ok: true, attitude: attitudeOf(state, PLAYER_ID, String(factionId)).value };
+}
 
 /** 城池易手登记（攻城结算处调用）：占城 −20、开战；停战期毁约 → 背约。 */
 export function noteCityCaptured(state, winnerId, loserId) {

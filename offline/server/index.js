@@ -29,6 +29,8 @@ import {
   rewardGeneral, strategyInvest, recruitCaptive, strategyAttack, strategyRecallMarch, cancelInvest,
   previewAssault, strategyReorderMarch,
   strategyAppoint, strategyCancelAppointment, diplomacyAct,
+  /* ★ M3-4 事件系统：旬 tick 触发进 pendingEvents，玩家点选走 eventChoice */
+  strategyEventChoice,
 } from './domain/strategy.js';
 import { panelState, panelAction, panelSelfCheck } from './domain/panels.js';
 /* 交互增强层：只读聚合（纯函数），不改 WS 协议与消息结构 */
@@ -456,6 +458,10 @@ export async function startOfflineServer(options = {}) {
         else if (act === 'diplo') result = diplomacyAct(state, cfg, ctx, {
           action: String(body.diploAction || body.sub || ''), faction: String(body.faction || ''),
           target: String(body.target || ''), gold: Number(body.gold) || 0,
+        });
+        /* ★ M3-4 事件点选（GDD §8.3）：效果词白名单落账，选择写存档供结局回放 */
+        else if (act === 'eventChoice') result = strategyEventChoice(state, cfg, ctx, {
+          id: String(body.id || ''), choice: String(body.choice || ''),
         });
         /* ★ 验收 #10 战前推演：与正式结算同一 resolveBattle / defenseFor / battleSeedFor，
            纯只读沙盒，可无限次回退重试；不能 save()，否则反复推演会把存档反复落盘。 */
