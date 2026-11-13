@@ -1,0 +1,10867 @@
+{
+ "version": 1,
+ "meta": {
+  "version": 1,
+  "generator": "tools/build-heroes.mjs",
+  "source": {
+   "csv": "D:\\WorkBuddy\\three-kingdoms\\characters.csv",
+   "rows": 936,
+   "overrides": 7
+  },
+  "selection": "core=宿命成员强制+均值降序(60) / important=类型优先级+均值(100) / minor=均值(80)",
+  "counts": {
+   "core": 60,
+   "important": 100,
+   "minor": 80,
+   "total": 240
+  },
+  "rules": {
+   "yili": "政×0.6+魅×0.4（relations.json 规则）",
+   "xiangxing": "势力锚点+名字FNV散列±12，环形1..149",
+   "aptitude": "兵种适性按五维/籍贯/势力派生，界面须标「本作设定」"
+  }
+ },
+ "heroes": [
+  {
+   "id": 100016,
+   "name": "刘备",
+   "zi": "玄德",
+   "layer": "core",
+   "five": {
+    "tong": 75,
+    "wu": 65,
+    "zhi": 85,
+    "zheng": 90,
+    "mei": 98
+   },
+   "traits": [
+    "桃园结义（演义）",
+    "三顾茅庐"
+   ],
+   "skills": [
+    910005
+   ],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 93,
+   "xiangxing": 2,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "关羽",
+     "groupId": "taoyuan"
+    },
+    {
+     "type": "fate",
+     "target": "张飞",
+     "groupId": "taoyuan"
+    },
+    {
+     "type": "fate",
+     "target": "诸葛亮",
+     "groupId": "longzhongdui"
+    },
+    {
+     "type": "义兄弟",
+     "target": "关羽"
+    },
+    {
+     "type": "义兄弟",
+     "target": "张飞"
+    },
+    {
+     "type": "君臣",
+     "target": "诸葛亮"
+    },
+    {
+     "type": "姻亲",
+     "target": "孙尚香"
+    },
+    {
+     "type": "对手",
+     "target": "陆逊"
+    },
+    {
+     "type": "君臣",
+     "target": "赵云"
+    }
+   ],
+   "fate": "taoyuan",
+   "born": 161,
+   "died": 223,
+   "faction": "蜀汉",
+   "era": "黄巾之乱至三国鼎立",
+   "hometown": "幽州涿郡涿县",
+   "type": "君主",
+   "source": {
+    "ref": "三国志·先主传、华阳国志",
+    "level": "史实",
+    "dbRow": 451,
+    "override": false
+   }
+  },
+  {
+   "id": 100026,
+   "name": "关羽",
+   "zi": "云长",
+   "layer": "core",
+   "five": {
+    "tong": 93,
+    "wu": 97,
+    "zhi": 65,
+    "zheng": 45,
+    "mei": 92
+   },
+   "traits": [
+    "白马斩颜良",
+    "挂印封金"
+   ],
+   "skills": [
+    910001
+   ],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 1.1,
+    "navy": 0.7
+   },
+   "yili": 64,
+   "xiangxing": 10,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "刘备",
+     "groupId": "taoyuan"
+    },
+    {
+     "type": "fate",
+     "target": "张飞",
+     "groupId": "taoyuan"
+    },
+    {
+     "type": "fate",
+     "target": "张飞",
+     "groupId": "sanjiang"
+    },
+    {
+     "type": "fate",
+     "target": "赵云",
+     "groupId": "sanjiang"
+    },
+    {
+     "type": "义兄弟",
+     "target": "刘备"
+    },
+    {
+     "type": "义兄弟",
+     "target": "张飞"
+    },
+    {
+     "type": "对手",
+     "target": "吕蒙"
+    },
+    {
+     "type": "亲爱",
+     "target": "黄忠"
+    },
+    {
+     "type": "亲爱",
+     "target": "张辽"
+    }
+   ],
+   "fate": "taoyuan",
+   "born": null,
+   "died": 220,
+   "faction": "蜀汉",
+   "era": "黄巾之乱至三国鼎立",
+   "hometown": "河东解",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·关羽传、武帝纪、吕蒙传",
+    "level": "史实",
+    "dbRow": 480,
+    "override": false
+   }
+  },
+  {
+   "id": 100022,
+   "name": "张飞",
+   "zi": "益德",
+   "layer": "core",
+   "five": {
+    "tong": 85,
+    "wu": 98,
+    "zhi": 55,
+    "zheng": 35,
+    "mei": 70
+   },
+   "traits": [
+    "长坂断桥",
+    "义释严颜"
+   ],
+   "skills": [
+    910002
+   ],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 49,
+   "xiangxing": 145,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "刘备",
+     "groupId": "taoyuan"
+    },
+    {
+     "type": "fate",
+     "target": "关羽",
+     "groupId": "taoyuan"
+    },
+    {
+     "type": "fate",
+     "target": "关羽",
+     "groupId": "sanjiang"
+    },
+    {
+     "type": "fate",
+     "target": "赵云",
+     "groupId": "sanjiang"
+    },
+    {
+     "type": "义兄弟",
+     "target": "刘备"
+    },
+    {
+     "type": "义兄弟",
+     "target": "关羽"
+    },
+    {
+     "type": "亲爱",
+     "target": "严颜"
+    }
+   ],
+   "fate": "taoyuan",
+   "born": null,
+   "died": 221,
+   "faction": "蜀汉",
+   "era": "黄巾之乱至三国鼎立",
+   "hometown": "幽州涿郡",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·张飞传",
+    "level": "史实",
+    "dbRow": 485,
+    "override": false
+   }
+  },
+  {
+   "id": 100023,
+   "name": "曹操",
+   "zi": "孟德",
+   "layer": "core",
+   "five": {
+    "tong": 98,
+    "wu": 72,
+    "zhi": 96,
+    "zheng": 98,
+    "mei": 92
+   },
+   "traits": [
+    "官渡",
+    "赤壁"
+   ],
+   "skills": [
+    910005
+   ],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1.1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 96,
+   "xiangxing": 149,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "荀彧",
+     "groupId": "caoxun"
+    },
+    {
+     "type": "fate",
+     "target": "许褚",
+     "groupId": "caoxuchu"
+    },
+    {
+     "type": "fate",
+     "target": "郭嘉",
+     "groupId": "caoguo"
+    },
+    {
+     "type": "fate",
+     "target": "张辽",
+     "groupId": "hefei"
+    },
+    {
+     "type": "fate",
+     "target": "司马懿",
+     "groupId": "langgu"
+    },
+    {
+     "type": "亲族",
+     "target": "夏侯惇"
+    },
+    {
+     "type": "亲族",
+     "target": "曹仁"
+    },
+    {
+     "type": "君臣",
+     "target": "荀彧"
+    },
+    {
+     "type": "君臣",
+     "target": "典韦"
+    },
+    {
+     "type": "君臣",
+     "target": "许褚"
+    },
+    {
+     "type": "憎恶",
+     "target": "张绣"
+    },
+    {
+     "type": "君臣",
+     "target": "郭嘉"
+    }
+   ],
+   "fate": "caoxun",
+   "born": 155,
+   "died": 220,
+   "faction": "曹魏·司马氏",
+   "era": "黄巾之乱至三国鼎立",
+   "hometown": "豫州沛国谯",
+   "type": "君主",
+   "source": {
+    "ref": "三国志·武帝纪、后汉书、魏书",
+    "level": "史实",
+    "dbRow": 328,
+    "override": false
+   }
+  },
+  {
+   "id": 100024,
+   "name": "荀彧",
+   "zi": "文若",
+   "layer": "core",
+   "five": {
+    "tong": 55,
+    "wu": 15,
+    "zhi": 98,
+    "zheng": 98,
+    "mei": 95
+   },
+   "traits": [
+    "奉天子以令不臣",
+    "官渡四胜论"
+   ],
+   "skills": [
+    910007
+   ],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 97,
+   "xiangxing": 5,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "曹操",
+     "groupId": "caoxun"
+    },
+    {
+     "type": "君臣",
+     "target": "曹操"
+    }
+   ],
+   "fate": "caoxun",
+   "born": 163,
+   "died": 212,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至三国鼎立",
+   "hometown": "颍川颍阴",
+   "type": "谋士·政治家",
+   "source": {
+    "ref": "三国志·荀彧传、后汉书",
+    "level": "史实",
+    "dbRow": 385,
+    "override": false
+   }
+  },
+  {
+   "id": 100450,
+   "name": "孙策",
+   "zi": "伯符",
+   "layer": "core",
+   "five": {
+    "tong": 92,
+    "wu": 96,
+    "zhi": 75,
+    "zheng": 75,
+    "mei": 90
+   },
+   "traits": [
+    "渡江平六郡",
+    "曲阿破刘繇"
+   ],
+   "skills": [
+    910009
+   ],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 1.1,
+    "navy": 1.15
+   },
+   "yili": 81,
+   "xiangxing": 144,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "周瑜",
+     "groupId": "sunzhou"
+    },
+    {
+     "type": "fate",
+     "target": "孙坚",
+     "groupId": "sunjiye"
+    },
+    {
+     "type": "亲爱",
+     "target": "周瑜"
+    },
+    {
+     "type": "亲爱",
+     "target": "太史慈"
+    }
+   ],
+   "fate": "sunzhou",
+   "born": 175,
+   "died": 200,
+   "faction": "孙吴",
+   "era": "讨董群雄至官渡赤壁",
+   "hometown": "吴郡富春",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·孙讨逆传、吴录、江表传",
+    "level": "史实",
+    "dbRow": 552,
+    "override": false
+   }
+  },
+  {
+   "id": 100031,
+   "name": "周瑜",
+   "zi": "公瑾",
+   "layer": "core",
+   "five": {
+    "tong": 97,
+    "wu": 72,
+    "zhi": 92,
+    "zheng": 80,
+    "mei": 95
+   },
+   "traits": [
+    "赤壁四患",
+    "黄盖火攻"
+   ],
+   "skills": [
+    910013
+   ],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1.1,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 86,
+   "xiangxing": 13,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "孙策",
+     "groupId": "sunzhou"
+    },
+    {
+     "type": "fate",
+     "target": "黄盖",
+     "groupId": "huogong"
+    },
+    {
+     "type": "fate",
+     "target": "程普",
+     "groupId": "huogong"
+    },
+    {
+     "type": "亲爱",
+     "target": "孙策"
+    },
+    {
+     "type": "君臣",
+     "target": "孙权"
+    },
+    {
+     "type": "君臣",
+     "target": "黄盖"
+    },
+    {
+     "type": "对手",
+     "target": "诸葛亮"
+    }
+   ],
+   "fate": "sunzhou",
+   "born": 175,
+   "died": 210,
+   "faction": "孙吴",
+   "era": "官渡赤壁",
+   "hometown": "庐江舒",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·周瑜传裴注引江表传、吴主传",
+    "level": "史实",
+    "dbRow": 587,
+    "override": false
+   }
+  },
+  {
+   "id": 100003,
+   "name": "吕布",
+   "zi": "奉先",
+   "layer": "core",
+   "five": {
+    "tong": 70,
+    "wu": 100,
+    "zhi": 35,
+    "zheng": 20,
+    "mei": 55
+   },
+   "traits": [
+    "虎牢关",
+    "濮阳之争"
+   ],
+   "skills": [
+    910002
+   ],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 34,
+   "xiangxing": 141,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "貂蝉",
+     "groupId": "lvchan"
+    },
+    {
+     "type": "fate",
+     "target": "高顺",
+     "groupId": "xianzhen"
+    },
+    {
+     "type": "fate",
+     "target": "张辽",
+     "groupId": "xianzhen"
+    },
+    {
+     "type": "憎恶",
+     "target": "董卓"
+    },
+    {
+     "type": "憎恶",
+     "target": "丁原"
+    }
+   ],
+   "fate": "lvchan",
+   "born": null,
+   "died": 198,
+   "faction": "吕布·徐州",
+   "era": "讨董群雄",
+   "hometown": "并州五原九原",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·吕布传、后汉书",
+    "level": "史实",
+    "dbRow": 159,
+    "override": false
+   }
+  },
+  {
+   "id": 100005,
+   "name": "貂蝉",
+   "zi": "－",
+   "layer": "core",
+   "five": {
+    "tong": 10,
+    "wu": 8,
+    "zhi": 88,
+    "zheng": 85,
+    "mei": 100
+   },
+   "traits": [
+    "凤仪亭",
+    "连环计"
+   ],
+   "skills": [
+    910014
+   ],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 91,
+   "xiangxing": 11,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "吕布",
+     "groupId": "lvchan"
+    }
+   ],
+   "fate": "lvchan",
+   "born": null,
+   "died": null,
+   "faction": "曹魏·司马氏",
+   "era": "黄巾之乱至汉末群雄",
+   "hometown": "－",
+   "type": "虚构·巾帼",
+   "source": {
+    "ref": "三国演义·第八回\"王司徒巧使连环计\"、三国志·吕布传（史实种子）",
+    "level": "虚构/传说",
+    "dbRow": 784,
+    "override": false
+   }
+  },
+  {
+   "id": 100006,
+   "name": "袁绍",
+   "zi": "本初",
+   "layer": "core",
+   "five": {
+    "tong": 75,
+    "wu": 60,
+    "zhi": 70,
+    "zheng": 75,
+    "mei": 85
+   },
+   "traits": [
+    "诛宦官",
+    "界桥之战"
+   ],
+   "skills": [
+    910006
+   ],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 79,
+   "xiangxing": 142,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "颜良",
+     "groupId": "yanshao"
+    },
+    {
+     "type": "fate",
+     "target": "文丑",
+     "groupId": "yanshao"
+    },
+    {
+     "type": "fate",
+     "target": "田丰",
+     "groupId": "hbei-mou"
+    },
+    {
+     "type": "fate",
+     "target": "沮授",
+     "groupId": "hbei-mou"
+    }
+   ],
+   "fate": "yanshao",
+   "born": null,
+   "died": 202,
+   "faction": "袁绍·河北",
+   "era": "讨董群雄至官渡赤壁",
+   "hometown": "汝南汝阳",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·袁绍传、后汉书",
+    "level": "史实",
+    "dbRow": 107,
+    "override": false
+   }
+  },
+  {
+   "id": 100058,
+   "name": "颜良",
+   "zi": "－",
+   "layer": "core",
+   "five": {
+    "tong": 75,
+    "wu": 93,
+    "zhi": 30,
+    "zheng": 20,
+    "mei": 45
+   },
+   "traits": [
+    "白马之战",
+    "关羽斩颜良"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 1.1,
+    "navy": 0.7
+   },
+   "yili": 30,
+   "xiangxing": 13,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "袁绍",
+     "groupId": "yanshao"
+    },
+    {
+     "type": "fate",
+     "target": "文丑",
+     "groupId": "yanshao"
+    }
+   ],
+   "fate": "yanshao",
+   "born": null,
+   "died": 200,
+   "faction": "袁绍·河北",
+   "era": "官渡赤壁",
+   "hometown": "－",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·关羽传、武帝纪",
+    "level": "史实",
+    "dbRow": 114,
+    "override": false
+   }
+  },
+  {
+   "id": 100059,
+   "name": "文丑",
+   "zi": "－",
+   "layer": "core",
+   "five": {
+    "tong": 72,
+    "wu": 92,
+    "zhi": 25,
+    "zheng": 20,
+    "mei": 40
+   },
+   "traits": [
+    "延津之战",
+    "辎重诱敌"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 1.1,
+    "navy": 0.7
+   },
+   "yili": 28,
+   "xiangxing": 149,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "袁绍",
+     "groupId": "yanshao"
+    },
+    {
+     "type": "fate",
+     "target": "颜良",
+     "groupId": "yanshao"
+    }
+   ],
+   "fate": "yanshao",
+   "born": null,
+   "died": 200,
+   "faction": "袁绍·河北",
+   "era": "官渡赤壁",
+   "hometown": "－",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·武帝纪、袁绍传",
+    "level": "史实",
+    "dbRow": 115,
+    "override": false
+   }
+  },
+  {
+   "id": 100017,
+   "name": "诸葛亮",
+   "zi": "孔明",
+   "layer": "core",
+   "five": {
+    "tong": 92,
+    "wu": 35,
+    "zhi": 100,
+    "zheng": 100,
+    "mei": 98
+   },
+   "traits": [
+    "隆中对",
+    "赤壁使吴"
+   ],
+   "skills": [
+    910004
+   ],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 99,
+   "xiangxing": 8,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "赵云",
+     "groupId": "wolong-zilong"
+    },
+    {
+     "type": "fate",
+     "target": "刘备",
+     "groupId": "longzhongdui"
+    },
+    {
+     "type": "fate",
+     "target": "姜维",
+     "groupId": "shichuan"
+    },
+    {
+     "type": "君臣",
+     "target": "刘备"
+    },
+    {
+     "type": "师徒",
+     "target": "马谡"
+    },
+    {
+     "type": "师徒",
+     "target": "姜维"
+    },
+    {
+     "type": "对手",
+     "target": "周瑜"
+    },
+    {
+     "type": "对手",
+     "target": "司马懿"
+    }
+   ],
+   "fate": "wolong-zilong",
+   "born": 181,
+   "died": 234,
+   "faction": "蜀汉",
+   "era": "官渡赤壁至三国中后期",
+   "hometown": "徐州琅邪阳都",
+   "type": "政治家·军事家",
+   "source": {
+    "ref": "三国志·诸葛亮传、出师表、汉晋春秋",
+    "level": "史实",
+    "dbRow": 465,
+    "override": false
+   }
+  },
+  {
+   "id": 100021,
+   "name": "赵云",
+   "zi": "子龙",
+   "layer": "core",
+   "five": {
+    "tong": 88,
+    "wu": 93,
+    "zhi": 75,
+    "zheng": 75,
+    "mei": 95
+   },
+   "traits": [
+    "长坂救主",
+    "截江夺斗"
+   ],
+   "skills": [
+    910000
+   ],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 1.1,
+    "navy": 0.7
+   },
+   "yili": 83,
+   "xiangxing": 14,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "诸葛亮",
+     "groupId": "wolong-zilong"
+    },
+    {
+     "type": "fate",
+     "target": "关羽",
+     "groupId": "sanjiang"
+    },
+    {
+     "type": "fate",
+     "target": "张飞",
+     "groupId": "sanjiang"
+    },
+    {
+     "type": "fate",
+     "target": "公孙瓒",
+     "groupId": "baima"
+    },
+    {
+     "type": "君臣",
+     "target": "刘备"
+    }
+   ],
+   "fate": "wolong-zilong",
+   "born": null,
+   "died": 229,
+   "faction": "蜀汉",
+   "era": "讨董群雄至三国中后期",
+   "hometown": "常山真定",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·赵云传裴注引云别传",
+    "level": "史实",
+    "dbRow": 490,
+    "override": false
+   }
+  },
+  {
+   "id": 100080,
+   "name": "许褚",
+   "zi": "仲康",
+   "layer": "core",
+   "five": {
+    "tong": 45,
+    "wu": 99,
+    "zhi": 35,
+    "zheng": 35,
+    "mei": 70
+   },
+   "traits": [
+    "倒曳牛尾",
+    "潼关护主"
+   ],
+   "skills": [
+    910011
+   ],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 1.1,
+    "navy": 0.7
+   },
+   "yili": 49,
+   "xiangxing": 143,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "曹操",
+     "groupId": "caoxuchu"
+    },
+    {
+     "type": "君臣",
+     "target": "曹操"
+    }
+   ],
+   "fate": "caoxuchu",
+   "born": null,
+   "died": null,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至三国中后期",
+   "hometown": "谯国谯",
+   "type": "猛将",
+   "source": {
+    "ref": "三国志·许褚传",
+    "level": "史实",
+    "dbRow": 367,
+    "override": false
+   }
+  },
+  {
+   "id": 100030,
+   "name": "孙权",
+   "zi": "仲谋",
+   "layer": "core",
+   "five": {
+    "tong": 80,
+    "wu": 60,
+    "zhi": 92,
+    "zheng": 95,
+    "mei": 90
+   },
+   "traits": [
+    "赤壁决策",
+    "濡须口"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 93,
+   "xiangxing": 15,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "鲁肃",
+     "groupId": "ziyu-lusu"
+    },
+    {
+     "type": "君臣",
+     "target": "周瑜"
+    },
+    {
+     "type": "君臣",
+     "target": "鲁肃"
+    }
+   ],
+   "fate": "ziyu-lusu",
+   "born": 182,
+   "died": 252,
+   "faction": "孙吴",
+   "era": "三国鼎立至三国中后期",
+   "hometown": "吴郡富春",
+   "type": "君主",
+   "source": {
+    "ref": "三国志·吴主传",
+    "level": "史实",
+    "dbRow": 553,
+    "override": false
+   }
+  },
+  {
+   "id": 100163,
+   "name": "鲁肃",
+   "zi": "子敬",
+   "layer": "core",
+   "five": {
+    "tong": 60,
+    "wu": 40,
+    "zhi": 95,
+    "zheng": 95,
+    "mei": 90
+   },
+   "traits": [
+    "榻上策",
+    "当阳结刘"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 93,
+   "xiangxing": 8,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "孙权",
+     "groupId": "ziyu-lusu"
+    },
+    {
+     "type": "君臣",
+     "target": "孙权"
+    }
+   ],
+   "fate": "ziyu-lusu",
+   "born": 172,
+   "died": 217,
+   "faction": "孙吴",
+   "era": "三国鼎立",
+   "hometown": "临淮东城",
+   "type": "战略家",
+   "source": {
+    "ref": "三国志·鲁肃传、吴主传裴注引魏书",
+    "level": "史实",
+    "dbRow": 588,
+    "override": false
+   }
+  },
+  {
+   "id": 100476,
+   "name": "郭嘉",
+   "zi": "奉孝",
+   "layer": "core",
+   "five": {
+    "tong": 20,
+    "wu": 10,
+    "zhi": 98,
+    "zheng": 80,
+    "mei": 85
+   },
+   "traits": [
+    "十胜十败",
+    "料孙策"
+   ],
+   "skills": [
+    910015
+   ],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 82,
+   "xiangxing": 146,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "曹操",
+     "groupId": "caoguo"
+    },
+    {
+     "type": "君臣",
+     "target": "曹操"
+    }
+   ],
+   "fate": "caoguo",
+   "born": 170,
+   "died": 207,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至官渡赤壁",
+   "hometown": "颍川阳翟",
+   "type": "谋士",
+   "source": {
+    "ref": "三国志·郭嘉传、武帝纪裴注",
+    "level": "史实",
+    "dbRow": 387,
+    "override": false
+   }
+  },
+  {
+   "id": 100115,
+   "name": "高顺",
+   "zi": "－",
+   "layer": "core",
+   "five": {
+    "tong": 85,
+    "wu": 82,
+    "zhi": 55,
+    "zheng": 45,
+    "mei": 75
+   },
+   "traits": [
+    "陷阵营",
+    "击夏侯惇"
+   ],
+   "skills": [
+    910001
+   ],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 57,
+   "xiangxing": 141,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "吕布",
+     "groupId": "xianzhen"
+    },
+    {
+     "type": "fate",
+     "target": "张辽",
+     "groupId": "xianzhen"
+    }
+   ],
+   "fate": "xianzhen",
+   "born": null,
+   "died": 198,
+   "faction": "吕布·徐州",
+   "era": "讨董群雄",
+   "hometown": "－",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·吕布传裴注引英雄记",
+    "level": "史实",
+    "dbRow": 161,
+    "override": false
+   }
+  },
+  {
+   "id": 100027,
+   "name": "张辽",
+   "zi": "文远",
+   "layer": "core",
+   "five": {
+    "tong": 95,
+    "wu": 92,
+    "zhi": 78,
+    "zheng": 65,
+    "mei": 80
+   },
+   "traits": [
+    "白狼山",
+    "天柱山"
+   ],
+   "skills": [
+    910000
+   ],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 71,
+   "xiangxing": 143,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "吕布",
+     "groupId": "xianzhen"
+    },
+    {
+     "type": "fate",
+     "target": "高顺",
+     "groupId": "xianzhen"
+    },
+    {
+     "type": "fate",
+     "target": "曹操",
+     "groupId": "hefei"
+    },
+    {
+     "type": "亲爱",
+     "target": "关羽"
+    }
+   ],
+   "fate": "xianzhen",
+   "born": 169,
+   "died": 222,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至三国鼎立",
+   "hometown": "并州雁门马邑",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·张辽传",
+    "level": "史实",
+    "dbRow": 169,
+    "override": false
+   }
+  },
+  {
+   "id": 100057,
+   "name": "田丰",
+   "zi": "元皓",
+   "layer": "core",
+   "five": {
+    "tong": 20,
+    "wu": 10,
+    "zhi": 95,
+    "zheng": 85,
+    "mei": 75
+   },
+   "traits": [
+    "官渡之谏",
+    "迎天子策"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 81,
+   "xiangxing": 1,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "袁绍",
+     "groupId": "hbei-mou"
+    },
+    {
+     "type": "fate",
+     "target": "沮授",
+     "groupId": "hbei-mou"
+    }
+   ],
+   "fate": "hbei-mou",
+   "born": null,
+   "died": 200,
+   "faction": "袁绍·河北",
+   "era": "讨董群雄至官渡赤壁",
+   "hometown": "钜鹿",
+   "type": "谋士",
+   "source": {
+    "ref": "三国志·袁绍传、后汉书",
+    "level": "史实",
+    "dbRow": 118,
+    "override": false
+   }
+  },
+  {
+   "id": 100120,
+   "name": "沮授",
+   "zi": "－",
+   "layer": "core",
+   "five": {
+    "tong": 25,
+    "wu": 10,
+    "zhi": 96,
+    "zheng": 88,
+    "mei": 85
+   },
+   "traits": [
+    "迎天子策",
+    "三年疲曹"
+   ],
+   "skills": [
+    910008
+   ],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 87,
+   "xiangxing": 11,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "袁绍",
+     "groupId": "hbei-mou"
+    },
+    {
+     "type": "fate",
+     "target": "田丰",
+     "groupId": "hbei-mou"
+    }
+   ],
+   "fate": "hbei-mou",
+   "born": null,
+   "died": 200,
+   "faction": "袁绍·河北",
+   "era": "讨董群雄至官渡赤壁",
+   "hometown": "广平",
+   "type": "谋士",
+   "source": {
+    "ref": "三国志·袁绍传裴注引献帝传、后汉书",
+    "level": "史实",
+    "dbRow": 119,
+    "override": false
+   }
+  },
+  {
+   "id": 100033,
+   "name": "孙坚",
+   "zi": "文台",
+   "layer": "core",
+   "five": {
+    "tong": 88,
+    "wu": 92,
+    "zhi": 65,
+    "zheng": 55,
+    "mei": 80
+   },
+   "traits": [
+    "阳人斩华雄",
+    "梁东之战"
+   ],
+   "skills": [
+    910011
+   ],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 1.1,
+    "navy": 1.15
+   },
+   "yili": 65,
+   "xiangxing": 8,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "孙策",
+     "groupId": "sunjiye"
+    }
+   ],
+   "fate": "sunjiye",
+   "born": 155,
+   "died": 191,
+   "faction": "孙吴",
+   "era": "黄巾之乱至讨董群雄",
+   "hometown": "吴郡富春",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·孙破虏讨逆传、后汉书",
+    "level": "史实",
+    "dbRow": 551,
+    "override": false
+   }
+  },
+  {
+   "id": 100107,
+   "name": "刘表",
+   "zi": "景升",
+   "layer": "core",
+   "five": {
+    "tong": 55,
+    "wu": 40,
+    "zhi": 70,
+    "zheng": 80,
+    "mei": 80
+   },
+   "traits": [
+    "单骑入荆",
+    "平宗贼"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 80,
+   "xiangxing": 3,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "蔡瑁",
+     "groupId": "jingzhou-shui"
+    },
+    {
+     "type": "fate",
+     "target": "黄祖",
+     "groupId": "jingzhou-shui"
+    }
+   ],
+   "fate": "jingzhou-shui",
+   "born": 142,
+   "died": 208,
+   "faction": "刘表·荆州",
+   "era": "讨董群雄至官渡赤壁",
+   "hometown": "山阳高平",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·刘表传、后汉书",
+    "level": "史实",
+    "dbRow": 249,
+    "override": false
+   }
+  },
+  {
+   "id": 100231,
+   "name": "蔡瑁",
+   "zi": "德珪",
+   "layer": "core",
+   "five": {
+    "tong": 55,
+    "wu": 50,
+    "zhi": 60,
+    "zheng": 65,
+    "mei": 45
+   },
+   "traits": [
+    "主降",
+    "荆州水军归曹"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 57,
+   "xiangxing": 148,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "刘表",
+     "groupId": "jingzhou-shui"
+    },
+    {
+     "type": "fate",
+     "target": "黄祖",
+     "groupId": "jingzhou-shui"
+    }
+   ],
+   "fate": "jingzhou-shui",
+   "born": null,
+   "died": null,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至官渡赤壁",
+   "hometown": "襄阳",
+   "type": "将领",
+   "source": {
+    "ref": "三国志·刘表传裴注引襄阳耆旧记",
+    "level": "史实",
+    "dbRow": 253,
+    "override": false
+   }
+  },
+  {
+   "id": 100279,
+   "name": "黄祖",
+   "zi": "－",
+   "layer": "core",
+   "five": {
+    "tong": 65,
+    "wu": 60,
+    "zhi": 40,
+    "zheng": 40,
+    "mei": 30
+   },
+   "traits": [
+    "岘山射孙坚",
+    "江夏之战"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 36,
+   "xiangxing": 14,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "刘表",
+     "groupId": "jingzhou-shui"
+    },
+    {
+     "type": "fate",
+     "target": "蔡瑁",
+     "groupId": "jingzhou-shui"
+    }
+   ],
+   "fate": "jingzhou-shui",
+   "born": null,
+   "died": 208,
+   "faction": "孙吴",
+   "era": "讨董群雄至官渡赤壁",
+   "hometown": "－",
+   "type": "将领",
+   "source": {
+    "ref": "三国志·孙坚传、吴主传、甘宁传裴注",
+    "level": "史实",
+    "dbRow": 264,
+    "override": false
+   }
+  },
+  {
+   "id": 240001,
+   "name": "刘璋",
+   "zi": "季玉",
+   "layer": "core",
+   "five": {
+    "tong": 25,
+    "wu": 15,
+    "zhi": 40,
+    "zheng": 55,
+    "mei": 60
+   },
+   "traits": [
+    "赵韪之乱",
+    "引狼入室"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.1
+   },
+   "yili": 57,
+   "xiangxing": 13,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "张任",
+     "groupId": "yizhou-shou"
+    },
+    {
+     "type": "fate",
+     "target": "严颜",
+     "groupId": "yizhou-shou"
+    }
+   ],
+   "fate": "yizhou-shou",
+   "born": null,
+   "died": null,
+   "faction": "刘璋·益州",
+   "era": "讨董群雄至三国鼎立",
+   "hometown": "江夏竟陵",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·刘二牧传",
+    "level": "史实",
+    "dbRow": 277,
+    "override": false
+   }
+  },
+  {
+   "id": 100351,
+   "name": "张任",
+   "zi": "－",
+   "layer": "core",
+   "five": {
+    "tong": 78,
+    "wu": 80,
+    "zhi": 65,
+    "zheng": 55,
+    "mei": 85
+   },
+   "traits": [
+    "涪城之拒",
+    "雒城之守"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 67,
+   "xiangxing": 147,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "刘璋",
+     "groupId": "yizhou-shou"
+    },
+    {
+     "type": "fate",
+     "target": "严颜",
+     "groupId": "yizhou-shou"
+    }
+   ],
+   "fate": "yizhou-shou",
+   "born": null,
+   "died": 213,
+   "faction": "刘璋·益州",
+   "era": "三国鼎立",
+   "hometown": "蜀郡",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·先主传裴注引益部耆旧杂记",
+    "level": "史实",
+    "dbRow": 285,
+    "override": false
+   }
+  },
+  {
+   "id": 100134,
+   "name": "严颜",
+   "zi": "－",
+   "layer": "core",
+   "five": {
+    "tong": 70,
+    "wu": 68,
+    "zhi": 60,
+    "zheng": 60,
+    "mei": 90
+   },
+   "traits": [
+    "江州被擒",
+    "断头将军"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 72,
+   "xiangxing": 4,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "刘璋",
+     "groupId": "yizhou-shou"
+    },
+    {
+     "type": "fate",
+     "target": "张任",
+     "groupId": "yizhou-shou"
+    },
+    {
+     "type": "亲爱",
+     "target": "张飞"
+    }
+   ],
+   "fate": "yizhou-shou",
+   "born": null,
+   "died": null,
+   "faction": "蜀汉",
+   "era": "三国鼎立",
+   "hometown": "巴郡临江",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·张飞传裴注引华阳国志",
+    "level": "史实",
+    "dbRow": 290,
+    "override": false
+   }
+  },
+  {
+   "id": 100013,
+   "name": "马超",
+   "zi": "孟起",
+   "layer": "core",
+   "five": {
+    "tong": 88,
+    "wu": 96,
+    "zhi": 60,
+    "zheng": 45,
+    "mei": 80
+   },
+   "traits": [
+    "潼关渭南",
+    "割须弃袍（演义）"
+   ],
+   "skills": [
+    910002
+   ],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 59,
+   "xiangxing": 7,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "韩遂",
+     "groupId": "xiliang-meng"
+    }
+   ],
+   "fate": "xiliang-meng",
+   "born": 176,
+   "died": 222,
+   "faction": "蜀汉",
+   "era": "三国鼎立",
+   "hometown": "右扶风茂陵",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·马超传、武帝纪、杨阜传",
+    "level": "史实",
+    "dbRow": 493,
+    "override": false
+   }
+  },
+  {
+   "id": 100127,
+   "name": "韩遂",
+   "zi": "文约",
+   "layer": "core",
+   "five": {
+    "tong": 72,
+    "wu": 65,
+    "zhi": 70,
+    "zheng": 70,
+    "mei": 70
+   },
+   "traits": [
+    "凉州之乱",
+    "潼关离间"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 70,
+   "xiangxing": 145,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "马超",
+     "groupId": "xiliang-meng"
+    }
+   ],
+   "fate": "xiliang-meng",
+   "born": null,
+   "died": 215,
+   "faction": "董卓·凉州",
+   "era": "黄巾之乱至三国鼎立",
+   "hometown": "金城",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·武帝纪、张既传裴注",
+    "level": "史实",
+    "dbRow": 220,
+    "override": false
+   }
+  },
+  {
+   "id": 100487,
+   "name": "张鲁",
+   "zi": "公祺",
+   "layer": "core",
+   "five": {
+    "tong": 55,
+    "wu": 35,
+    "zhi": 75,
+    "zheng": 90,
+    "mei": 85
+   },
+   "traits": [
+    "五斗米道",
+    "义舍义米"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 88,
+   "xiangxing": 13,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "阎圃",
+     "groupId": "hanzhong-wen"
+    }
+   ],
+   "fate": "hanzhong-wen",
+   "born": null,
+   "died": 216,
+   "faction": "张鲁·汉中",
+   "era": "讨董群雄至三国鼎立",
+   "hometown": "沛国丰",
+   "type": "宗教首领",
+   "source": {
+    "ref": "三国志·张鲁传、后汉书·刘焉传",
+    "level": "史实",
+    "dbRow": 310,
+    "override": false
+   }
+  },
+  {
+   "id": 240002,
+   "name": "阎圃",
+   "zi": "－",
+   "layer": "core",
+   "five": {
+    "tong": 15,
+    "wu": 10,
+    "zhi": 88,
+    "zheng": 85,
+    "mei": 75
+   },
+   "traits": [
+    "谏勿称王",
+    "劝降封库"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 81,
+   "xiangxing": 144,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "张鲁",
+     "groupId": "hanzhong-wen"
+    }
+   ],
+   "fate": "hanzhong-wen",
+   "born": null,
+   "died": null,
+   "faction": "曹魏·司马氏",
+   "era": "三国鼎立",
+   "hometown": "－",
+   "type": "谋士",
+   "source": {
+    "ref": "三国志·张鲁传、武帝纪",
+    "level": "史实",
+    "dbRow": 317,
+    "override": false
+   }
+  },
+  {
+   "id": 100521,
+   "name": "公孙瓒",
+   "zi": "伯圭",
+   "layer": "core",
+   "five": {
+    "tong": 78,
+    "wu": 80,
+    "zhi": 45,
+    "zheng": 40,
+    "mei": 55
+   },
+   "traits": [
+    "白马义从",
+    "界桥之战"
+   ],
+   "skills": [
+    910013
+   ],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 46,
+   "xiangxing": 9,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "赵云",
+     "groupId": "baima"
+    }
+   ],
+   "fate": "baima",
+   "born": null,
+   "died": 199,
+   "faction": "公孙·辽东·幽州",
+   "era": "讨董群雄",
+   "hometown": "辽西令支",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·公孙瓒传、后汉书",
+    "level": "史实",
+    "dbRow": 185,
+    "override": false
+   }
+  },
+  {
+   "id": 100009,
+   "name": "董卓",
+   "zi": "仲颖",
+   "layer": "core",
+   "five": {
+    "tong": 75,
+    "wu": 78,
+    "zhi": 60,
+    "zheng": 45,
+    "mei": 25
+   },
+   "traits": [
+    "废立",
+    "焚洛阳"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 37,
+   "xiangxing": 14,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "李儒",
+     "groupId": "weishe"
+    },
+    {
+     "type": "fate",
+     "target": "华雄",
+     "groupId": "weishe"
+    },
+    {
+     "type": "憎恶",
+     "target": "吕布"
+    },
+    {
+     "type": "君臣",
+     "target": "李儒"
+    }
+   ],
+   "fate": "weishe",
+   "born": 139,
+   "died": 192,
+   "faction": "董卓·凉州",
+   "era": "讨董群雄",
+   "hometown": "陇西临洮",
+   "type": "军阀",
+   "source": {
+    "ref": "后汉书·董卓传、三国志·董卓传",
+    "level": "史实",
+    "dbRow": 80,
+    "override": false
+   }
+  },
+  {
+   "id": 100111,
+   "name": "李儒",
+   "zi": "文优",
+   "layer": "core",
+   "five": {
+    "tong": 20,
+    "wu": 10,
+    "zhi": 85,
+    "zheng": 70,
+    "mei": 20
+   },
+   "traits": [
+    "鸩杀少帝"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 50,
+   "xiangxing": 13,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "董卓",
+     "groupId": "weishe"
+    },
+    {
+     "type": "fate",
+     "target": "华雄",
+     "groupId": "weishe"
+    },
+    {
+     "type": "君臣",
+     "target": "董卓"
+    }
+   ],
+   "fate": "weishe",
+   "born": null,
+   "died": null,
+   "faction": "董卓·凉州",
+   "era": "讨董群雄",
+   "hometown": "－",
+   "type": "谋士",
+   "source": {
+    "ref": "后汉书·董卓传、三国志裴注",
+    "level": "史实",
+    "dbRow": 81,
+    "override": false
+   }
+  },
+  {
+   "id": 100049,
+   "name": "华雄",
+   "zi": "－",
+   "layer": "core",
+   "five": {
+    "tong": 58,
+    "wu": 70,
+    "zhi": 25,
+    "zheng": 20,
+    "mei": 35
+   },
+   "traits": [
+    "阳人之战"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 1,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 26,
+   "xiangxing": 4,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "董卓",
+     "groupId": "weishe"
+    },
+    {
+     "type": "fate",
+     "target": "李儒",
+     "groupId": "weishe"
+    }
+   ],
+   "fate": "weishe",
+   "born": null,
+   "died": 190,
+   "faction": "董卓·凉州",
+   "era": "讨董群雄",
+   "hometown": "－",
+   "type": "将领",
+   "source": {
+    "ref": "三国志·孙坚传、后汉书",
+    "level": "史实",
+    "dbRow": 94,
+    "override": false
+   }
+  },
+  {
+   "id": 100472,
+   "name": "司马懿",
+   "zi": "仲达",
+   "layer": "core",
+   "five": {
+    "tong": 95,
+    "wu": 55,
+    "zhi": 98,
+    "zheng": 95,
+    "mei": 80
+   },
+   "traits": [
+    "拒诸葛五伐",
+    "五丈原"
+   ],
+   "skills": [
+    910004
+   ],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 89,
+   "xiangxing": 148,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "曹操",
+     "groupId": "langgu"
+    },
+    {
+     "type": "对手",
+     "target": "诸葛亮"
+    }
+   ],
+   "fate": "langgu",
+   "born": 179,
+   "died": 251,
+   "faction": "曹魏·司马氏",
+   "era": "三国鼎立至三国中后期",
+   "hometown": "河内温",
+   "type": "权臣·名将",
+   "source": {
+    "ref": "三国志·宣帝纪（晋书）、诸葛亮传、曹爽传",
+    "level": "史实",
+    "dbRow": 401,
+    "override": false
+   }
+  },
+  {
+   "id": 100074,
+   "name": "姜维",
+   "zi": "伯约",
+   "layer": "core",
+   "five": {
+    "tong": 90,
+    "wu": 82,
+    "zhi": 88,
+    "zheng": 60,
+    "mei": 88
+   },
+   "traits": [
+    "九伐中原",
+    "洮西大捷"
+   ],
+   "skills": [
+    910015
+   ],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1.1,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 71,
+   "xiangxing": 143,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "诸葛亮",
+     "groupId": "shichuan"
+    },
+    {
+     "type": "师徒",
+     "target": "诸葛亮"
+    }
+   ],
+   "fate": "shichuan",
+   "born": 202,
+   "died": 264,
+   "faction": "蜀汉",
+   "era": "三国中后期至归晋",
+   "hometown": "天水冀",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·姜维传、钟会传、华阳国志",
+    "level": "史实",
+    "dbRow": 498,
+    "override": false
+   }
+  },
+  {
+   "id": 100587,
+   "name": "黄盖",
+   "zi": "公覆",
+   "layer": "core",
+   "five": {
+    "tong": 78,
+    "wu": 79,
+    "zhi": 70,
+    "zheng": 55,
+    "mei": 68
+   },
+   "traits": [
+    "苦肉计",
+    "赤壁火船"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 60,
+   "xiangxing": 143,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "周瑜",
+     "groupId": "huogong"
+    },
+    {
+     "type": "fate",
+     "target": "程普",
+     "groupId": "huogong"
+    },
+    {
+     "type": "君臣",
+     "target": "周瑜"
+    }
+   ],
+   "fate": "huogong",
+   "born": null,
+   "died": 210,
+   "faction": "孙吴",
+   "era": "讨董群雄",
+   "hometown": "零陵泉陵",
+   "type": "名将",
+   "source": {
+    "ref": "sgz.wu.10 程黄韩蒋传",
+    "level": "史实",
+    "dbRow": null,
+    "override": true
+   }
+  },
+  {
+   "id": 240003,
+   "name": "程普",
+   "zi": "德谋",
+   "layer": "core",
+   "five": {
+    "tong": 80,
+    "wu": 80,
+    "zhi": 65,
+    "zheng": 70,
+    "mei": 85
+   },
+   "traits": [
+    "三世元老",
+    "赤壁左右督"
+   ],
+   "skills": [
+    910011
+   ],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 76,
+   "xiangxing": 10,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "fate",
+     "target": "周瑜",
+     "groupId": "huogong"
+    },
+    {
+     "type": "fate",
+     "target": "黄盖",
+     "groupId": "huogong"
+    }
+   ],
+   "fate": "huogong",
+   "born": null,
+   "died": null,
+   "faction": "孙吴",
+   "era": "黄巾之乱至三国鼎立",
+   "hometown": "右北平土垠",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·程普传裴注引江表传",
+    "level": "史实",
+    "dbRow": 613,
+    "override": false
+   }
+  },
+  {
+   "id": 100478,
+   "name": "陆逊",
+   "zi": "伯言",
+   "layer": "core",
+   "five": {
+    "tong": 98,
+    "wu": 55,
+    "zhi": 96,
+    "zheng": 95,
+    "mei": 88
+   },
+   "traits": [
+    "夷陵火攻",
+    "石亭破曹休"
+   ],
+   "skills": [
+    910010
+   ],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 92,
+   "xiangxing": 146,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "对手",
+     "target": "刘备"
+    }
+   ],
+   "fate": null,
+   "born": 183,
+   "died": 245,
+   "faction": "孙吴",
+   "era": "三国鼎立至三国中后期",
+   "hometown": "吴郡吴",
+   "type": "名将·丞相",
+   "source": {
+    "ref": "三国志·陆逊传",
+    "level": "史实",
+    "dbRow": 590,
+    "override": false
+   }
+  },
+  {
+   "id": 100035,
+   "name": "吕蒙",
+   "zi": "子明",
+   "layer": "core",
+   "five": {
+    "tong": 92,
+    "wu": 78,
+    "zhi": 90,
+    "zheng": 85,
+    "mei": 85
+   },
+   "traits": [
+    "士别三日刮目相待",
+    "计擒郝普"
+   ],
+   "skills": [
+    910015
+   ],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1.1,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 85,
+   "xiangxing": 12,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "对手",
+     "target": "关羽"
+    }
+   ],
+   "fate": null,
+   "born": 179,
+   "died": 220,
+   "faction": "孙吴",
+   "era": "官渡赤壁至三国鼎立",
+   "hometown": "汝南富陂",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·吕蒙传裴注引江表传、吴主传",
+    "level": "史实",
+    "dbRow": 589,
+    "override": false
+   }
+  },
+  {
+   "id": 100310,
+   "name": "邓艾",
+   "zi": "士载",
+   "layer": "core",
+   "five": {
+    "tong": 95,
+    "wu": 70,
+    "zhi": 90,
+    "zheng": 85,
+    "mei": 60
+   },
+   "traits": [
+    "阴平偷渡",
+    "裹毡攀崖"
+   ],
+   "skills": [
+    910026
+   ],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1.1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 75,
+   "xiangxing": 13,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 197,
+   "died": 264,
+   "faction": "曹魏·司马氏",
+   "era": "三国中后期至归晋",
+   "hometown": "义阳棘阳",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·邓艾传、晋书·文帝纪",
+    "level": "史实",
+    "dbRow": 422,
+    "override": false
+   }
+  },
+  {
+   "id": 100421,
+   "name": "徐晃",
+   "zi": "公明",
+   "layer": "core",
+   "five": {
+    "tong": 90,
+    "wu": 85,
+    "zhi": 72,
+    "zheng": 65,
+    "mei": 80
+   },
+   "traits": [
+    "蒲阪夜渡",
+    "樊城长驱"
+   ],
+   "skills": [
+    910003
+   ],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 71,
+   "xiangxing": 8,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 227,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至三国中后期",
+   "hometown": "河东杨",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·徐晃传、武帝纪",
+    "level": "史实",
+    "dbRow": 365,
+    "override": false
+   }
+  },
+  {
+   "id": 100585,
+   "name": "曹仁",
+   "zi": "子孝",
+   "layer": "core",
+   "five": {
+    "tong": 92,
+    "wu": 82,
+    "zhi": 70,
+    "zheng": 60,
+    "mei": 80
+   },
+   "traits": [
+    "江陵救牛金",
+    "樊城死守"
+   ],
+   "skills": [
+    910006
+   ],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 68,
+   "xiangxing": 144,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "亲族",
+     "target": "曹操"
+    }
+   ],
+   "fate": null,
+   "born": 168,
+   "died": 223,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至三国鼎立",
+   "hometown": "豫州沛国谯",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·曹仁传",
+    "level": "史实",
+    "dbRow": 356,
+    "override": false
+   }
+  },
+  {
+   "id": 100083,
+   "name": "张郃",
+   "zi": "儁乂",
+   "layer": "core",
+   "five": {
+    "tong": 90,
+    "wu": 85,
+    "zhi": 75,
+    "zheng": 60,
+    "mei": 70
+   },
+   "traits": [
+    "街亭",
+    "汉中代帅"
+   ],
+   "skills": [
+    910000
+   ],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 64,
+   "xiangxing": 2,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 231,
+   "faction": "曹魏·司马氏",
+   "era": "官渡赤壁至三国中后期",
+   "hometown": "河间鄚",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·张郃传",
+    "level": "史实",
+    "dbRow": 364,
+    "override": false
+   }
+  },
+  {
+   "id": 100475,
+   "name": "郝昭",
+   "zi": "伯道",
+   "layer": "core",
+   "five": {
+    "tong": 90,
+    "wu": 75,
+    "zhi": 70,
+    "zheng": 60,
+    "mei": 85
+   },
+   "traits": [
+    "陈仓之战",
+    "箭不识人"
+   ],
+   "skills": [
+    910009
+   ],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 70,
+   "xiangxing": 15,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "曹魏·司马氏",
+   "era": "三国中后期",
+   "hometown": "并州",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·曹真传裴注引魏略、诸葛亮传",
+    "level": "史实",
+    "dbRow": 380,
+    "override": false
+   }
+  },
+  {
+   "id": 100090,
+   "name": "太史慈",
+   "zi": "子义",
+   "layer": "core",
+   "five": {
+    "tong": 82,
+    "wu": 91,
+    "zhi": 66,
+    "zheng": 50,
+    "mei": 78
+   },
+   "traits": [
+    "北海解围",
+    "神亭酣斗"
+   ],
+   "skills": [
+    910030
+   ],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 1.1,
+    "navy": 1.15
+   },
+   "yili": 61,
+   "xiangxing": 4,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "亲爱",
+     "target": "孙策"
+    }
+   ],
+   "fate": null,
+   "born": 166,
+   "died": 206,
+   "faction": "孙吴",
+   "era": "讨董群雄",
+   "hometown": "东莱黄",
+   "type": "名将",
+   "source": {
+    "ref": "sgz.wu.4 太史慈传",
+    "level": "史实",
+    "dbRow": null,
+    "override": true
+   }
+  },
+  {
+   "id": 240004,
+   "name": "程昱",
+   "zi": "仲德",
+   "layer": "core",
+   "five": {
+    "tong": 70,
+    "wu": 55,
+    "zhi": 92,
+    "zheng": 82,
+    "mei": 65
+   },
+   "traits": [
+    "三城坚守",
+    "鄄城示寡"
+   ],
+   "skills": [
+    910010
+   ],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 75,
+   "xiangxing": 15,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 141,
+   "died": 220,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至三国鼎立",
+   "hometown": "东郡东阿",
+   "type": "谋士·将领",
+   "source": {
+    "ref": "三国志·程昱传",
+    "level": "史实",
+    "dbRow": 388,
+    "override": false
+   }
+  },
+  {
+   "id": 100591,
+   "name": "钟会",
+   "zi": "士季",
+   "layer": "core",
+   "five": {
+    "tong": 80,
+    "wu": 35,
+    "zhi": 98,
+    "zheng": 80,
+    "mei": 60
+   },
+   "traits": [
+    "三路灭蜀",
+    "阳安口"
+   ],
+   "skills": [
+    910004
+   ],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 72,
+   "xiangxing": 12,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 225,
+   "died": 264,
+   "faction": "曹魏·司马氏",
+   "era": "三国末期",
+   "hometown": "颍川长社",
+   "type": "谋士·将领",
+   "source": {
+    "ref": "三国志·钟会传、姜维传、晋书·文帝纪",
+    "level": "史实",
+    "dbRow": 423,
+    "override": false
+   }
+  },
+  {
+   "id": 100008,
+   "name": "张角",
+   "zi": "－",
+   "layer": "core",
+   "five": {
+    "tong": 70,
+    "wu": 35,
+    "zhi": 75,
+    "zheng": 80,
+    "mei": 90
+   },
+   "traits": [
+    "黄巾起义",
+    "广宗之战"
+   ],
+   "skills": [
+    910010
+   ],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 84,
+   "xiangxing": 1,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 184,
+   "faction": "黄巾·黑山",
+   "era": "黄巾之乱",
+   "hometown": "冀州钜鹿",
+   "type": "宗教首领",
+   "source": {
+    "ref": "后汉书·皇甫嵩传、三国志·武帝纪裴注",
+    "level": "史实",
+    "dbRow": 37,
+    "override": false
+   }
+  },
+  {
+   "id": 100435,
+   "name": "夏侯渊",
+   "zi": "妙才",
+   "layer": "core",
+   "five": {
+    "tong": 88,
+    "wu": 85,
+    "zhi": 60,
+    "zheng": 50,
+    "mei": 65
+   },
+   "traits": [
+    "关右虎步",
+    "长驱奔袭"
+   ],
+   "skills": [
+    910003
+   ],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 56,
+   "xiangxing": 11,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 219,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至三国鼎立",
+   "hometown": "豫州沛国谯",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·夏侯渊传",
+    "level": "史实",
+    "dbRow": 348,
+    "override": false
+   }
+  },
+  {
+   "id": 100034,
+   "name": "甘宁",
+   "zi": "兴霸",
+   "layer": "core",
+   "five": {
+    "tong": 80,
+    "wu": 90,
+    "zhi": 65,
+    "zheng": 45,
+    "mei": 65
+   },
+   "traits": [
+    "锦帆贼",
+    "破黄祖"
+   ],
+   "skills": [
+    910003
+   ],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 1.1,
+    "navy": 1.15
+   },
+   "yili": 53,
+   "xiangxing": 146,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 220,
+   "faction": "孙吴",
+   "era": "官渡赤壁至三国鼎立",
+   "hometown": "巴郡临江",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·甘宁传、吴主传裴注引江表传",
+    "level": "史实",
+    "dbRow": 269,
+    "override": false
+   }
+  },
+  {
+   "id": 100488,
+   "name": "孟获",
+   "zi": "－",
+   "layer": "core",
+   "five": {
+    "tong": 65,
+    "wu": 70,
+    "zhi": 60,
+    "zheng": 65,
+    "mei": 85
+   },
+   "traits": [
+    "七擒七纵",
+    "南人不复反"
+   ],
+   "skills": [
+    910011
+   ],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 1,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 73,
+   "xiangxing": 12,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "南中·外族",
+   "era": "三国中后期",
+   "hometown": "建宁",
+   "type": "部族首领",
+   "source": {
+    "ref": "三国志·诸葛亮传裴注引汉晋春秋、华阳国志、演义",
+    "level": "史实",
+    "dbRow": 535,
+    "override": false
+   }
+  },
+  {
+   "id": 100066,
+   "name": "魏延",
+   "zi": "文长",
+   "layer": "core",
+   "five": {
+    "tong": 88,
+    "wu": 92,
+    "zhi": 72,
+    "zheng": 40,
+    "mei": 50
+   },
+   "traits": [
+    "镇汉中十年",
+    "子午谷奇谋"
+   ],
+   "skills": [
+    910001
+   ],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 1.1,
+    "navy": 0.7
+   },
+   "yili": 44,
+   "xiangxing": 1,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 234,
+   "faction": "蜀汉",
+   "era": "三国鼎立至三国中后期",
+   "hometown": "义阳",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·魏延传、杨仪传、诸葛亮传裴注引魏略",
+    "level": "史实",
+    "dbRow": 497,
+    "override": false
+   }
+  },
+  {
+   "id": 100442,
+   "name": "黄忠",
+   "zi": "汉升",
+   "layer": "core",
+   "five": {
+    "tong": 82,
+    "wu": 93,
+    "zhi": 55,
+    "zheng": 40,
+    "mei": 70
+   },
+   "traits": [
+    "入蜀先登",
+    "定军山斩渊"
+   ],
+   "skills": [
+    910000
+   ],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 1.1,
+    "navy": 0.7
+   },
+   "yili": 52,
+   "xiangxing": 141,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "亲爱",
+     "target": "关羽"
+    }
+   ],
+   "fate": null,
+   "born": null,
+   "died": 220,
+   "faction": "蜀汉",
+   "era": "三国鼎立",
+   "hometown": "南阳",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·黄忠传、先主传",
+    "level": "史实",
+    "dbRow": 271,
+    "override": false
+   }
+  },
+  {
+   "id": 100086,
+   "name": "周泰",
+   "zi": "幼平",
+   "layer": "core",
+   "five": {
+    "tong": 65,
+    "wu": 92,
+    "zhi": 45,
+    "zheng": 45,
+    "mei": 90
+   },
+   "traits": [
+    "宣城十二创",
+    "濡须数痕"
+   ],
+   "skills": [
+    910009
+   ],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 1.1,
+    "navy": 1.15
+   },
+   "yili": 63,
+   "xiangxing": 149,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "孙吴",
+   "era": "三国鼎立",
+   "hometown": "九江下蔡",
+   "type": "猛将",
+   "source": {
+    "ref": "三国志·周泰传裴注引江表传",
+    "level": "史实",
+    "dbRow": 616,
+    "override": false
+   }
+  },
+  {
+   "id": 100011,
+   "name": "贾诩",
+   "zi": "文和",
+   "layer": "core",
+   "five": {
+    "tong": 60,
+    "wu": 15,
+    "zhi": 98,
+    "zheng": 90,
+    "mei": 70
+   },
+   "traits": [
+    "长安之策",
+    "官渡决战"
+   ],
+   "skills": [
+    910007
+   ],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 82,
+   "xiangxing": 149,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 147,
+   "died": 223,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至三国鼎立",
+   "hometown": "武威姑臧",
+   "type": "谋士",
+   "source": {
+    "ref": "三国志·贾诩传",
+    "level": "史实",
+    "dbRow": 106,
+    "override": false
+   }
+  },
+  {
+   "id": 100477,
+   "name": "庞统",
+   "zi": "士元",
+   "layer": "core",
+   "five": {
+    "tong": 35,
+    "wu": 15,
+    "zhi": 96,
+    "zheng": 85,
+    "mei": 85
+   },
+   "traits": [
+    "凤雏之誉",
+    "入蜀三策"
+   ],
+   "skills": [
+    910007
+   ],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 85,
+   "xiangxing": 10,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 179,
+   "died": 214,
+   "faction": "蜀汉",
+   "era": "三国鼎立",
+   "hometown": "襄阳",
+   "type": "谋士",
+   "source": {
+    "ref": "三国志·庞统传、襄阳记",
+    "level": "史实",
+    "dbRow": 473,
+    "override": false
+   }
+  },
+  {
+   "id": 100574,
+   "name": "陆抗",
+   "zi": "幼节",
+   "layer": "important",
+   "five": {
+    "tong": 95,
+    "wu": 62,
+    "zhi": 92,
+    "zheng": 90,
+    "mei": 90
+   },
+   "traits": [
+    "西陵之役",
+    "羊陆之交"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 90,
+   "xiangxing": 14,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 226,
+   "died": 274,
+   "faction": "孙吴",
+   "era": "三国末期",
+   "hometown": "吴郡吴",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·陆抗传、晋书·羊祜传",
+    "level": "史实",
+    "dbRow": 591,
+    "override": false
+   }
+  },
+  {
+   "id": 240005,
+   "name": "罗宪",
+   "zi": "令则",
+   "layer": "important",
+   "five": {
+    "tong": 88,
+    "wu": 70,
+    "zhi": 85,
+    "zheng": 88,
+    "mei": 95
+   },
+   "traits": [
+    "永安拒吴",
+    "临于都亭三日"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1.1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 91,
+   "xiangxing": 6,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 218,
+   "died": 270,
+   "faction": "西晋·归晋后",
+   "era": "三国末期至归晋",
+   "hometown": "襄阳",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·霍峻传裴注引襄阳记、晋书·罗宪传",
+    "level": "史实",
+    "dbRow": 548,
+    "override": false
+   }
+  },
+  {
+   "id": 240006,
+   "name": "陈泰",
+   "zi": "玄伯",
+   "layer": "important",
+   "five": {
+    "tong": 85,
+    "wu": 65,
+    "zhi": 88,
+    "zheng": 85,
+    "mei": 90
+   },
+   "traits": [
+    "狄道解围",
+    "请诛贾充"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 87,
+   "xiangxing": 141,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 260,
+   "faction": "曹魏·司马氏",
+   "era": "三国中后期",
+   "hometown": "颍川许昌",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·陈泰传裴注引汉晋春秋、晋书",
+    "level": "史实",
+    "dbRow": 379,
+    "override": false
+   }
+  },
+  {
+   "id": 240007,
+   "name": "张嶷",
+   "zi": "伯岐",
+   "layer": "important",
+   "five": {
+    "tong": 78,
+    "wu": 72,
+    "zhi": 80,
+    "zheng": 90,
+    "mei": 90
+   },
+   "traits": [
+    "越嶲十五年",
+    "开通旧道"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1.1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 90,
+   "xiangxing": 7,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 254,
+   "faction": "南中·外族",
+   "era": "三国中后期",
+   "hometown": "巴郡南充国",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·张嶷传",
+    "level": "史实",
+    "dbRow": 529,
+    "override": false
+   }
+  },
+  {
+   "id": 240008,
+   "name": "吕岱",
+   "zi": "定公",
+   "layer": "important",
+   "five": {
+    "tong": 78,
+    "wu": 60,
+    "zhi": 85,
+    "zheng": 92,
+    "mei": 90
+   },
+   "traits": [
+    "诱斩士徽",
+    "交广分州"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 91,
+   "xiangxing": 14,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 161,
+   "died": 256,
+   "faction": "孙吴",
+   "era": "三国鼎立至三国末期",
+   "hometown": "广陵海陵",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·吕岱传、士燮传",
+    "level": "史实",
+    "dbRow": 634,
+    "override": false
+   }
+  },
+  {
+   "id": 240009,
+   "name": "朱然",
+   "zi": "义封",
+   "layer": "important",
+   "five": {
+    "tong": 90,
+    "wu": 75,
+    "zhi": 78,
+    "zheng": 75,
+    "mei": 85
+   },
+   "traits": [
+    "江陵六月之围",
+    "破魏两屯"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 79,
+   "xiangxing": 2,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 182,
+   "died": 249,
+   "faction": "孙吴",
+   "era": "三国鼎立至三国中后期",
+   "hometown": "丹阳故鄣",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·朱然传、文帝纪裴注、朱然墓考古",
+    "level": "史实",
+    "dbRow": 604,
+    "override": false
+   }
+  },
+  {
+   "id": 100321,
+   "name": "贺齐",
+   "zi": "公苗",
+   "layer": "important",
+   "five": {
+    "tong": 85,
+    "wu": 72,
+    "zhi": 80,
+    "zheng": 88,
+    "mei": 78
+   },
+   "traits": [
+    "白棓破禁术",
+    "料山越万人"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1.1,
+    "cavalry": 0.85,
+    "navy": 1.1
+   },
+   "yili": 84,
+   "xiangxing": 1,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 227,
+   "faction": "山越·江东豪帅",
+   "era": "三国鼎立至三国中后期",
+   "hometown": "会稽山阴",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·贺齐传、吴主传裴注",
+    "level": "史实",
+    "dbRow": 633,
+    "override": false
+   }
+  },
+  {
+   "id": 100151,
+   "name": "曹真",
+   "zi": "子丹",
+   "layer": "important",
+   "five": {
+    "tong": 90,
+    "wu": 72,
+    "zhi": 80,
+    "zheng": 75,
+    "mei": 85
+   },
+   "traits": [
+    "街亭破马谡",
+    "陈仓预筑"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1.1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 79,
+   "xiangxing": 1,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 231,
+   "faction": "曹魏·司马氏",
+   "era": "三国鼎立至三国中后期",
+   "hometown": "豫州沛国谯",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·曹真传、诸葛亮传",
+    "level": "史实",
+    "dbRow": 359,
+    "override": false
+   }
+  },
+  {
+   "id": 240010,
+   "name": "郭淮",
+   "zi": "伯济",
+   "layer": "important",
+   "five": {
+    "tong": 88,
+    "wu": 68,
+    "zhi": 85,
+    "zheng": 80,
+    "mei": 78
+   },
+   "traits": [
+    "汉水收兵",
+    "上邽断麦"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 79,
+   "xiangxing": 9,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 255,
+   "faction": "曹魏·司马氏",
+   "era": "三国鼎立至三国中后期",
+   "hometown": "太原阳曲",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·郭淮传",
+    "level": "史实",
+    "dbRow": 378,
+    "override": false
+   }
+  },
+  {
+   "id": 240011,
+   "name": "张特",
+   "zi": "子产",
+   "layer": "important",
+   "five": {
+    "tong": 88,
+    "wu": 65,
+    "zhi": 88,
+    "zheng": 75,
+    "mei": 80
+   },
+   "traits": [
+    "合肥新城守城",
+    "九十日之诈"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 77,
+   "xiangxing": 7,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "曹魏·司马氏",
+   "era": "三国中后期",
+   "hometown": "涿郡",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·三少帝纪裴注引魏略、诸葛恪传",
+    "level": "史实",
+    "dbRow": 381,
+    "override": false
+   }
+  },
+  {
+   "id": 100554,
+   "name": "皇甫嵩",
+   "zi": "义真",
+   "layer": "important",
+   "five": {
+    "tong": 92,
+    "wu": 72,
+    "zhi": 80,
+    "zheng": 70,
+    "mei": 80
+   },
+   "traits": [
+    "长社之战",
+    "广宗之战"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1.1,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 74,
+   "xiangxing": 148,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 195,
+   "faction": "东汉·汉廷",
+   "era": "黄巾之乱至讨董群雄",
+   "hometown": "安定朝那",
+   "type": "名将",
+   "source": {
+    "ref": "后汉书·皇甫嵩传",
+    "level": "史实",
+    "dbRow": 60,
+    "override": false
+   }
+  },
+  {
+   "id": 100449,
+   "name": "夏侯惇",
+   "zi": "元让",
+   "layer": "important",
+   "five": {
+    "tong": 85,
+    "wu": 88,
+    "zhi": 60,
+    "zheng": 70,
+    "mei": 85
+   },
+   "traits": [
+    "拔矢啖睛",
+    "芍陂屯田"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 76,
+   "xiangxing": 147,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "亲族",
+     "target": "曹操"
+    }
+   ],
+   "fate": null,
+   "born": null,
+   "died": 220,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至三国鼎立",
+   "hometown": "豫州沛国谯",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·夏侯惇传",
+    "level": "史实",
+    "dbRow": 347,
+    "override": false
+   }
+  },
+  {
+   "id": 240012,
+   "name": "李典",
+   "zi": "曼成",
+   "layer": "important",
+   "five": {
+    "tong": 78,
+    "wu": 70,
+    "zhi": 80,
+    "zheng": 75,
+    "mei": 85
+   },
+   "traits": [
+    "博望识伏",
+    "合肥协战"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1.1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 79,
+   "xiangxing": 144,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至官渡赤壁",
+   "hometown": "山阳钜野",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·李典传",
+    "level": "史实",
+    "dbRow": 370,
+    "override": false
+   }
+  },
+  {
+   "id": 240013,
+   "name": "霍峻",
+   "zi": "仲邈",
+   "layer": "important",
+   "five": {
+    "tong": 85,
+    "wu": 70,
+    "zhi": 70,
+    "zheng": 70,
+    "mei": 90
+   },
+   "traits": [
+    "葭萌之守",
+    "头可得城不可得"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 78,
+   "xiangxing": 2,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 177,
+   "died": 217,
+   "faction": "蜀汉",
+   "era": "三国鼎立",
+   "hometown": "南郡枝江",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·霍峻传",
+    "level": "史实",
+    "dbRow": 546,
+    "override": false
+   }
+  },
+  {
+   "id": 240014,
+   "name": "皇甫规",
+   "zi": "威明",
+   "layer": "important",
+   "five": {
+    "tong": 85,
+    "wu": 60,
+    "zhi": 80,
+    "zheng": 75,
+    "mei": 80
+   },
+   "traits": [
+    "平羌之战"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 77,
+   "xiangxing": 9,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 104,
+   "died": 174,
+   "faction": "东汉·汉廷",
+   "era": "黄巾之乱前",
+   "hometown": "安定朝那",
+   "type": "名将",
+   "source": {
+    "ref": "后汉书·皇甫规传",
+    "level": "史实",
+    "dbRow": 63,
+    "override": false
+   }
+  },
+  {
+   "id": 240015,
+   "name": "文聘",
+   "zi": "仲业",
+   "layer": "important",
+   "five": {
+    "tong": 82,
+    "wu": 72,
+    "zhi": 70,
+    "zheng": 70,
+    "mei": 85
+   },
+   "traits": [
+    "迟降见忠",
+    "沔口空城计"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 76,
+   "xiangxing": 143,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "曹魏·司马氏",
+   "era": "官渡赤壁至三国中后期",
+   "hometown": "南阳宛",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·文聘传",
+    "level": "史实",
+    "dbRow": 268,
+    "override": false
+   }
+  },
+  {
+   "id": 100202,
+   "name": "王平",
+   "zi": "子均",
+   "layer": "important",
+   "five": {
+    "tong": 88,
+    "wu": 75,
+    "zhi": 70,
+    "zheng": 65,
+    "mei": 80
+   },
+   "traits": [
+    "街亭鸣鼓",
+    "南围拒郃"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 71,
+   "xiangxing": 6,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 248,
+   "faction": "蜀汉",
+   "era": "三国中后期",
+   "hometown": "巴西宕渠",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·王平传",
+    "level": "史实",
+    "dbRow": 525,
+    "override": false
+   }
+  },
+  {
+   "id": 100221,
+   "name": "朱桓",
+   "zi": "休穆",
+   "layer": "important",
+   "five": {
+    "tong": 88,
+    "wu": 88,
+    "zhi": 78,
+    "zheng": 55,
+    "mei": 65
+   },
+   "traits": [
+    "濡须破曹仁",
+    "生擒王双"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 59,
+   "xiangxing": 5,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 177,
+   "died": 238,
+   "faction": "孙吴",
+   "era": "三国鼎立至三国中后期",
+   "hometown": "吴郡吴",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·朱桓传、周鲂传",
+    "level": "史实",
+    "dbRow": 607,
+    "override": false
+   }
+  },
+  {
+   "id": 100553,
+   "name": "朱儁",
+   "zi": "公伟",
+   "layer": "important",
+   "five": {
+    "tong": 85,
+    "wu": 65,
+    "zhi": 78,
+    "zheng": 70,
+    "mei": 75
+   },
+   "traits": [
+    "宛城之战",
+    "围师必阙"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.1
+   },
+   "yili": 72,
+   "xiangxing": 145,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 195,
+   "faction": "东汉·汉廷",
+   "era": "黄巾之乱至讨董群雄",
+   "hometown": "会稽上虞",
+   "type": "名将",
+   "source": {
+    "ref": "后汉书·朱儁传",
+    "level": "史实",
+    "dbRow": 61,
+    "override": false
+   }
+  },
+  {
+   "id": 240016,
+   "name": "毌丘俭",
+   "zi": "仲恭",
+   "layer": "important",
+   "five": {
+    "tong": 82,
+    "wu": 70,
+    "zhi": 70,
+    "zheng": 70,
+    "mei": 80
+   },
+   "traits": [
+    "两征高句丽",
+    "丸都纪功碑"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 74,
+   "xiangxing": 4,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 255,
+   "faction": "袁术·淮南",
+   "era": "三国中后期",
+   "hometown": "河东闻喜",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·毌丘俭传、晋书·景帝纪",
+    "level": "史实",
+    "dbRow": 412,
+    "override": false
+   }
+  },
+  {
+   "id": 240017,
+   "name": "王濬",
+   "zi": "士治",
+   "layer": "important",
+   "five": {
+    "tong": 85,
+    "wu": 55,
+    "zhi": 80,
+    "zheng": 75,
+    "mei": 75
+   },
+   "traits": [
+    "楼船下益州",
+    "铁锁沉江"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 75,
+   "xiangxing": 12,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 206,
+   "died": 286,
+   "faction": "西晋·归晋后",
+   "era": "三国末期至归晋",
+   "hometown": "弘农湖",
+   "type": "名将",
+   "source": {
+    "ref": "晋书·王濬传、三国志·吴主传裴注",
+    "level": "史实",
+    "dbRow": 442,
+    "override": false
+   }
+  },
+  {
+   "id": 100159,
+   "name": "蒋钦",
+   "zi": "公奕",
+   "layer": "important",
+   "five": {
+    "tong": 75,
+    "wu": 78,
+    "zhi": 60,
+    "zheng": 70,
+    "mei": 85
+   },
+   "traits": [
+    "母妻布裙",
+    "与徐盛释怨"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 76,
+   "xiangxing": 142,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "孙吴",
+   "era": "三国鼎立",
+   "hometown": "九江寿春",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·蒋钦传裴注引江表传",
+    "level": "史实",
+    "dbRow": 615,
+    "override": false
+   }
+  },
+  {
+   "id": 100041,
+   "name": "张奂",
+   "zi": "然明",
+   "layer": "important",
+   "five": {
+    "tong": 82,
+    "wu": 65,
+    "zhi": 75,
+    "zheng": 70,
+    "mei": 75
+   },
+   "traits": [
+    "党锢之祸"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 72,
+   "xiangxing": 9,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 104,
+   "died": 181,
+   "faction": "东汉·汉廷",
+   "era": "黄巾之乱前",
+   "hometown": "敦煌渊泉",
+   "type": "名将",
+   "source": {
+    "ref": "后汉书·张奂传",
+    "level": "史实",
+    "dbRow": 64,
+    "override": false
+   }
+  },
+  {
+   "id": 100586,
+   "name": "庞德",
+   "zi": "令明",
+   "layer": "important",
+   "five": {
+    "tong": 82,
+    "wu": 92,
+    "zhi": 55,
+    "zheng": 45,
+    "mei": 90
+   },
+   "traits": [
+    "抬榇决死",
+    "射中关羽"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 1.1,
+    "navy": 0.7
+   },
+   "yili": 63,
+   "xiangxing": 147,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 219,
+   "faction": "曹魏·司马氏",
+   "era": "三国鼎立",
+   "hometown": "南安狟道",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·庞德传",
+    "level": "史实",
+    "dbRow": 369,
+    "override": false
+   }
+  },
+  {
+   "id": 240018,
+   "name": "臧霸",
+   "zi": "宣高",
+   "layer": "important",
+   "five": {
+    "tong": 80,
+    "wu": 75,
+    "zhi": 60,
+    "zheng": 70,
+    "mei": 75
+   },
+   "traits": [
+    "泰山群寇",
+    "青徐镇守"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 72,
+   "xiangxing": 2,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至三国鼎立",
+   "hometown": "泰山华",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·臧霸传",
+    "level": "史实",
+    "dbRow": 170,
+    "override": false
+   }
+  },
+  {
+   "id": 100498,
+   "name": "曹纯",
+   "zi": "子和",
+   "layer": "important",
+   "five": {
+    "tong": 85,
+    "wu": 85,
+    "zhi": 65,
+    "zheng": 55,
+    "mei": 70
+   },
+   "traits": [
+    "虎豹骑",
+    "白狼山"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 61,
+   "xiangxing": 7,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 210,
+   "faction": "曹魏·司马氏",
+   "era": "官渡赤壁",
+   "hometown": "豫州沛国谯",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·曹仁传裴注引魏书",
+    "level": "史实",
+    "dbRow": 357,
+    "override": false
+   }
+  },
+  {
+   "id": 100025,
+   "name": "曹丕",
+   "zi": "子桓",
+   "layer": "important",
+   "five": {
+    "tong": 55,
+    "wu": 45,
+    "zhi": 88,
+    "zheng": 90,
+    "mei": 78
+   },
+   "traits": [
+    "受禅",
+    "九品中正"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 85,
+   "xiangxing": 148,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 187,
+   "died": 226,
+   "faction": "曹魏·司马氏",
+   "era": "三国鼎立",
+   "hometown": "豫州沛国谯",
+   "type": "君主",
+   "source": {
+    "ref": "三国志·文帝纪",
+    "level": "史实",
+    "dbRow": 331,
+    "override": false
+   }
+  },
+  {
+   "id": 240019,
+   "name": "夏侯霸",
+   "zi": "仲权",
+   "layer": "important",
+   "five": {
+    "tong": 78,
+    "wu": 75,
+    "zhi": 70,
+    "zheng": 60,
+    "mei": 70
+   },
+   "traits": [
+    "高平陵逃蜀",
+    "姜维北伐"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 64,
+   "xiangxing": 143,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "蜀汉",
+   "era": "三国中后期",
+   "hometown": "豫州沛国谯",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·夏侯渊传裴注引魏略、姜维传",
+    "level": "史实",
+    "dbRow": 349,
+    "override": false
+   }
+  },
+  {
+   "id": 100156,
+   "name": "韩当",
+   "zi": "义公",
+   "layer": "important",
+   "five": {
+    "tong": 78,
+    "wu": 82,
+    "zhi": 55,
+    "zheng": 60,
+    "mei": 78
+   },
+   "traits": [
+    "三世随征",
+    "山越解烦兵"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 67,
+   "xiangxing": 7,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 226,
+   "faction": "孙吴",
+   "era": "黄巾之乱至三国中后期",
+   "hometown": "辽西令支",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·韩当传",
+    "level": "史实",
+    "dbRow": 614,
+    "override": false
+   }
+  },
+  {
+   "id": 240020,
+   "name": "曹叡",
+   "zi": "元仲",
+   "layer": "important",
+   "five": {
+    "tong": 70,
+    "wu": 40,
+    "zhi": 85,
+    "zheng": 85,
+    "mei": 70
+   },
+   "traits": [
+    "抵御北伐",
+    "平辽东"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 79,
+   "xiangxing": 146,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 204,
+   "died": 239,
+   "faction": "曹魏·司马氏",
+   "era": "三国中后期",
+   "hometown": "豫州沛国谯",
+   "type": "君主",
+   "source": {
+    "ref": "三国志·明帝纪",
+    "level": "史实",
+    "dbRow": 332,
+    "override": false
+   }
+  },
+  {
+   "id": 100143,
+   "name": "于禁",
+   "zi": "文则",
+   "layer": "important",
+   "five": {
+    "tong": 85,
+    "wu": 75,
+    "zhi": 65,
+    "zheng": 70,
+    "mei": 55
+   },
+   "traits": [
+    "宛城整军",
+    "围而后降"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 64,
+   "xiangxing": 8,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 221,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至三国鼎立",
+   "hometown": "泰山钜平",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·于禁传、关羽传",
+    "level": "史实",
+    "dbRow": 363,
+    "override": false
+   }
+  },
+  {
+   "id": 100144,
+   "name": "乐进",
+   "zi": "文谦",
+   "layer": "important",
+   "five": {
+    "tong": 80,
+    "wu": 88,
+    "zhi": 60,
+    "zheng": 50,
+    "mei": 70
+   },
+   "traits": [
+    "先登陷阵",
+    "乌巢"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 58,
+   "xiangxing": 14,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 218,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至三国鼎立",
+   "hometown": "兖州东郡卫国",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·乐进传、武帝纪",
+    "level": "史实",
+    "dbRow": 362,
+    "override": false
+   }
+  },
+  {
+   "id": 240021,
+   "name": "段颎",
+   "zi": "纪明",
+   "layer": "important",
+   "five": {
+    "tong": 88,
+    "wu": 75,
+    "zhi": 65,
+    "zheng": 55,
+    "mei": 60
+   },
+   "traits": [
+    "平羌之战"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 57,
+   "xiangxing": 8,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 179,
+   "faction": "东汉·汉廷",
+   "era": "黄巾之乱前",
+   "hometown": "武威姑臧",
+   "type": "名将",
+   "source": {
+    "ref": "后汉书·段颎传",
+    "level": "史实",
+    "dbRow": 65,
+    "override": false
+   }
+  },
+  {
+   "id": 240022,
+   "name": "夏侯尚",
+   "zi": "伯仁",
+   "layer": "important",
+   "five": {
+    "tong": 80,
+    "wu": 70,
+    "zhi": 68,
+    "zheng": 60,
+    "mei": 65
+   },
+   "traits": [
+    "江陵破诸葛瑾",
+    "上庸之役"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 62,
+   "xiangxing": 141,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 225,
+   "faction": "曹魏·司马氏",
+   "era": "三国鼎立",
+   "hometown": "豫州沛国谯",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·夏侯尚传、蒋济传裴注",
+    "level": "史实",
+    "dbRow": 350,
+    "override": false
+   }
+  },
+  {
+   "id": 240023,
+   "name": "司马炎",
+   "zi": "安世",
+   "layer": "important",
+   "five": {
+    "tong": 70,
+    "wu": 30,
+    "zhi": 85,
+    "zheng": 85,
+    "mei": 72
+   },
+   "traits": [
+    "泰始代魏",
+    "占田制"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 80,
+   "xiangxing": 143,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 236,
+   "died": 290,
+   "faction": "西晋·归晋后",
+   "era": "三国末期至归晋",
+   "hometown": "河内温",
+   "type": "君主",
+   "source": {
+    "ref": "晋书·武帝纪、三国志·吴主传",
+    "level": "史实",
+    "dbRow": 404,
+    "override": false
+   }
+  },
+  {
+   "id": 100053,
+   "name": "徐荣",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 85,
+    "wu": 78,
+    "zhi": 65,
+    "zheng": 50,
+    "mei": 50
+   },
+   "traits": [
+    "汴水之战",
+    "梁东之战"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 50,
+   "xiangxing": 148,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 192,
+   "faction": "董卓·凉州",
+   "era": "讨董群雄",
+   "hometown": "玄菟",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·武帝纪、孙破虏传、后汉书",
+    "level": "史实",
+    "dbRow": 92,
+    "override": false
+   }
+  },
+  {
+   "id": 100213,
+   "name": "曹休",
+   "zi": "文烈",
+   "layer": "important",
+   "five": {
+    "tong": 75,
+    "wu": 70,
+    "zhi": 60,
+    "zheng": 55,
+    "mei": 65
+   },
+   "traits": [
+    "洞口之战",
+    "石亭之败"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 59,
+   "xiangxing": 7,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 228,
+   "faction": "曹魏·司马氏",
+   "era": "三国鼎立至三国中后期",
+   "hometown": "豫州沛国谯",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·曹休传、周鲂传",
+    "level": "史实",
+    "dbRow": 358,
+    "override": false
+   }
+  },
+  {
+   "id": 100229,
+   "name": "朱灵",
+   "zi": "文博",
+   "layer": "important",
+   "five": {
+    "tong": 75,
+    "wu": 75,
+    "zhi": 55,
+    "zheng": 50,
+    "mei": 65
+   },
+   "traits": [
+    "择主归曹",
+    "夺营不疑"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 56,
+   "xiangxing": 4,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至三国鼎立",
+   "hometown": "清河鄃",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·徐晃传裴注引魏书、武帝纪",
+    "level": "史实",
+    "dbRow": 366,
+    "override": false
+   }
+  },
+  {
+   "id": 240024,
+   "name": "曹髦",
+   "zi": "彦士",
+   "layer": "important",
+   "five": {
+    "tong": 30,
+    "wu": 45,
+    "zhi": 80,
+    "zheng": 60,
+    "mei": 85
+   },
+   "traits": [
+    "甘露之变",
+    "司马昭之心"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 70,
+   "xiangxing": 144,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 241,
+   "died": 260,
+   "faction": "曹魏·司马氏",
+   "era": "三国中后期",
+   "hometown": "豫州沛国谯",
+   "type": "君主",
+   "source": {
+    "ref": "三国志·三少帝纪裴注引汉晋春秋、晋书·文帝纪",
+    "level": "史实",
+    "dbRow": 334,
+    "override": false
+   }
+  },
+  {
+   "id": 100147,
+   "name": "曹洪",
+   "zi": "子廉",
+   "layer": "important",
+   "five": {
+    "tong": 75,
+    "wu": 72,
+    "zhi": 55,
+    "zheng": 45,
+    "mei": 50
+   },
+   "traits": [
+    "汴水让马",
+    "下辩之战"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 47,
+   "xiangxing": 9,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 232,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至三国中后期",
+   "hometown": "豫州沛国谯",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·曹洪传",
+    "level": "史实",
+    "dbRow": 346,
+    "override": false
+   }
+  },
+  {
+   "id": 240025,
+   "name": "麹义",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 85,
+    "wu": 80,
+    "zhi": 55,
+    "zheng": 25,
+    "mei": 35
+   },
+   "traits": [
+    "界桥之战",
+    "先登死士"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 29,
+   "xiangxing": 144,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "袁绍·河北",
+   "era": "讨董群雄",
+   "hometown": "凉州金城",
+   "type": "名将",
+   "source": {
+    "ref": "三国志·袁绍传裴注引英雄记、后汉书",
+    "level": "史实",
+    "dbRow": 116,
+    "override": false
+   }
+  },
+  {
+   "id": 240026,
+   "name": "孙休",
+   "zi": "子烈",
+   "layer": "important",
+   "five": {
+    "tong": 30,
+    "wu": 25,
+    "zhi": 75,
+    "zheng": 75,
+    "mei": 65
+   },
+   "traits": [
+    "腊会诛孙綝",
+    "平反诸葛恪"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 71,
+   "xiangxing": 2,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 235,
+   "died": 264,
+   "faction": "孙吴",
+   "era": "三国末期",
+   "hometown": "吴郡富春",
+   "type": "君主",
+   "source": {
+    "ref": "三国志·三嗣主传",
+    "level": "史实",
+    "dbRow": 555,
+    "override": false
+   }
+  },
+  {
+   "id": 240027,
+   "name": "孙亮",
+   "zi": "子明",
+   "layer": "important",
+   "five": {
+    "tong": 20,
+    "wu": 20,
+    "zhi": 55,
+    "zheng": 45,
+    "mei": 60
+   },
+   "traits": [
+    "密谋诛孙綝",
+    "被废候官"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 51,
+   "xiangxing": 144,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 243,
+   "died": 260,
+   "faction": "孙吴",
+   "era": "三国末期",
+   "hometown": "吴郡富春",
+   "type": "君主",
+   "source": {
+    "ref": "三国志·三嗣主传、孙綝传",
+    "level": "史实",
+    "dbRow": 554,
+    "override": false
+   }
+  },
+  {
+   "id": 240028,
+   "name": "刘协",
+   "zi": "伯和",
+   "layer": "important",
+   "five": {
+    "tong": 20,
+    "wu": 10,
+    "zhi": 45,
+    "zheng": 35,
+    "mei": 60
+   },
+   "traits": [
+    "衣带诏",
+    "迁都许昌"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 45,
+   "xiangxing": 11,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 181,
+   "died": 234,
+   "faction": "东汉·汉廷",
+   "era": "黄巾之乱至三国鼎立",
+   "hometown": "洛阳",
+   "type": "君主",
+   "source": {
+    "ref": "后汉书·献帝纪、三国志·武帝纪",
+    "level": "史实",
+    "dbRow": 4,
+    "override": false
+   }
+  },
+  {
+   "id": 240029,
+   "name": "刘禅",
+   "zi": "公嗣",
+   "layer": "important",
+   "five": {
+    "tong": 20,
+    "wu": 15,
+    "zhi": 40,
+    "zheng": 40,
+    "mei": 55
+   },
+   "traits": [
+    "诸葛亮辅政",
+    "宠黄皓"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 46,
+   "xiangxing": 2,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 207,
+   "died": 271,
+   "faction": "西晋·归晋后",
+   "era": "三国鼎立至归晋",
+   "hometown": "幽州涿郡涿县",
+   "type": "君主",
+   "source": {
+    "ref": "三国志·后主传、汉晋春秋、晋书",
+    "level": "史实",
+    "dbRow": 452,
+    "override": false
+   }
+  },
+  {
+   "id": 240030,
+   "name": "曹奂",
+   "zi": "景明",
+   "layer": "important",
+   "five": {
+    "tong": 15,
+    "wu": 10,
+    "zhi": 40,
+    "zheng": 45,
+    "mei": 55
+   },
+   "traits": [
+    "魏灭蜀",
+    "禅晋"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 49,
+   "xiangxing": 9,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 246,
+   "died": 302,
+   "faction": "西晋·归晋后",
+   "era": "三国末期至归晋",
+   "hometown": "豫州沛国谯",
+   "type": "君主",
+   "source": {
+    "ref": "三国志·三少帝纪、晋书·武帝纪",
+    "level": "史实",
+    "dbRow": 335,
+    "override": false
+   }
+  },
+  {
+   "id": 240031,
+   "name": "孙皓",
+   "zi": "元宗",
+   "layer": "important",
+   "five": {
+    "tong": 25,
+    "wu": 25,
+    "zhi": 55,
+    "zheng": 35,
+    "mei": 25
+   },
+   "traits": [
+    "初期仁政",
+    "暴刑滥杀"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 31,
+   "xiangxing": 15,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 242,
+   "died": 284,
+   "faction": "孙吴",
+   "era": "三国末期至归晋",
+   "hometown": "吴郡富春",
+   "type": "君主",
+   "source": {
+    "ref": "三国志·三嗣主传、晋书·武帝纪",
+    "level": "史实",
+    "dbRow": 556,
+    "override": false
+   }
+  },
+  {
+   "id": 240032,
+   "name": "曹芳",
+   "zi": "兰卿",
+   "layer": "important",
+   "five": {
+    "tong": 15,
+    "wu": 15,
+    "zhi": 45,
+    "zheng": 40,
+    "mei": 45
+   },
+   "traits": [
+    "高平陵",
+    "李丰之谋"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 42,
+   "xiangxing": 9,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 232,
+   "died": 274,
+   "faction": "曹魏·司马氏",
+   "era": "三国中后期至归晋",
+   "hometown": "豫州沛国谯",
+   "type": "君主",
+   "source": {
+    "ref": "三国志·三少帝纪",
+    "level": "史实",
+    "dbRow": 333,
+    "override": false
+   }
+  },
+  {
+   "id": 240033,
+   "name": "刘宏",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 30,
+    "wu": 20,
+    "zhi": 35,
+    "zheng": 25,
+    "mei": 40
+   },
+   "traits": [
+    "黄巾起义",
+    "西园八校尉"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 31,
+   "xiangxing": 1,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 156,
+   "died": 189,
+   "faction": "东汉·汉廷",
+   "era": "黄巾之乱",
+   "hometown": "洛阳",
+   "type": "君主",
+   "source": {
+    "ref": "后汉书·灵帝纪、三国志·武帝纪裴注",
+    "level": "史实",
+    "dbRow": 2,
+    "override": false
+   }
+  },
+  {
+   "id": 240034,
+   "name": "刘辩",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 15,
+    "wu": 10,
+    "zhi": 20,
+    "zheng": 15,
+    "mei": 35
+   },
+   "traits": [
+    "董卓废立"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 23,
+   "xiangxing": 143,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 176,
+   "died": 190,
+   "faction": "东汉·汉廷",
+   "era": "黄巾之乱",
+   "hometown": "洛阳",
+   "type": "君主",
+   "source": {
+    "ref": "后汉书·少帝纪、三国志·董卓传",
+    "level": "史实",
+    "dbRow": 3,
+    "override": false
+   }
+  },
+  {
+   "id": 100045,
+   "name": "鲍信",
+   "zi": "允诚",
+   "layer": "important",
+   "five": {
+    "tong": 65,
+    "wu": 62,
+    "zhi": 70,
+    "zheng": 80,
+    "mei": 85
+   },
+   "traits": [
+    "迎曹入兖",
+    "东平战死"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 82,
+   "xiangxing": 14,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 152,
+   "died": 192,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄",
+   "hometown": "泰山平阳",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·武帝纪、鲍勋传裴注引魏书",
+    "level": "史实",
+    "dbRow": 238,
+    "override": false
+   }
+  },
+  {
+   "id": 240035,
+   "name": "公孙度",
+   "zi": "升济",
+   "layer": "important",
+   "five": {
+    "tong": 70,
+    "wu": 60,
+    "zhi": 75,
+    "zheng": 80,
+    "mei": 70
+   },
+   "traits": [
+    "辽东四郡",
+    "带方置郡"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 1.2,
+    "navy": 1.15
+   },
+   "yili": 76,
+   "xiangxing": 14,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 204,
+   "faction": "孙吴",
+   "era": "讨董群雄",
+   "hometown": "辽东襄平",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·公孙度传",
+    "level": "史实",
+    "dbRow": 193,
+    "override": false
+   }
+  },
+  {
+   "id": 240036,
+   "name": "公孙康",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 68,
+    "wu": 60,
+    "zhi": 75,
+    "zheng": 80,
+    "mei": 65
+   },
+   "traits": [
+    "斩二袁",
+    "破高句丽"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 1.2,
+    "navy": 1.15
+   },
+   "yili": 74,
+   "xiangxing": 4,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "孙吴",
+   "era": "官渡赤壁",
+   "hometown": "辽东襄平",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·公孙度传、武帝纪",
+    "level": "史实",
+    "dbRow": 194,
+    "override": false
+   }
+  },
+  {
+   "id": 240037,
+   "name": "士燮",
+   "zi": "威彦",
+   "layer": "important",
+   "five": {
+    "tong": 45,
+    "wu": 25,
+    "zhi": 85,
+    "zheng": 92,
+    "mei": 90
+   },
+   "traits": [
+    "交州保境",
+    "南迁士人"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 91,
+   "xiangxing": 11,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 137,
+   "died": 226,
+   "faction": "士燮·交州",
+   "era": "讨董群雄至三国中后期",
+   "hometown": "苍梧广信",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·士燮传",
+    "level": "史实",
+    "dbRow": 321,
+    "override": false
+   }
+  },
+  {
+   "id": 100339,
+   "name": "张燕",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 70,
+    "wu": 65,
+    "zhi": 55,
+    "zheng": 60,
+    "mei": 70
+   },
+   "traits": [
+    "黑山军",
+    "河北平定"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 64,
+   "xiangxing": 4,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "黄巾·黑山",
+   "era": "黄巾之乱至官渡赤壁",
+   "hometown": "常山真定",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·张燕传、后汉书",
+    "level": "史实",
+    "dbRow": 55,
+    "override": false
+   }
+  },
+  {
+   "id": 100062,
+   "name": "马腾",
+   "zi": "寿成",
+   "layer": "important",
+   "five": {
+    "tong": 72,
+    "wu": 75,
+    "zhi": 50,
+    "zheng": 55,
+    "mei": 65
+   },
+   "traits": [
+    "凉州之乱",
+    "潼关前因"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 59,
+   "xiangxing": 145,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 212,
+   "faction": "董卓·凉州",
+   "era": "讨董群雄至三国鼎立",
+   "hometown": "右扶风茂陵",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·马超传裴注引典略、武帝纪",
+    "level": "史实",
+    "dbRow": 219,
+    "override": false
+   }
+  },
+  {
+   "id": 240038,
+   "name": "张杨",
+   "zi": "稚叔",
+   "layer": "important",
+   "five": {
+    "tong": 60,
+    "wu": 55,
+    "zhi": 60,
+    "zheng": 65,
+    "mei": 70
+   },
+   "traits": [
+    "护驾安邑",
+    "欲救吕布"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 67,
+   "xiangxing": 11,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 198,
+   "faction": "东汉·汉廷",
+   "era": "讨董群雄",
+   "hometown": "并州云中",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·张杨传、武帝纪",
+    "level": "史实",
+    "dbRow": 183,
+    "override": false
+   }
+  },
+  {
+   "id": 100268,
+   "name": "张绣",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 80,
+    "wu": 85,
+    "zhi": 50,
+    "zheng": 40,
+    "mei": 50
+   },
+   "traits": [
+    "宛城之战",
+    "二次归曹"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 44,
+   "xiangxing": 144,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "憎恶",
+     "target": "曹操"
+    }
+   ],
+   "fate": null,
+   "born": null,
+   "died": 207,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至官渡赤壁",
+   "hometown": "武威祖厉",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·张绣传、武帝纪",
+    "level": "史实",
+    "dbRow": 103,
+    "override": false
+   }
+  },
+  {
+   "id": 240039,
+   "name": "张济",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 70,
+    "wu": 68,
+    "zhi": 55,
+    "zheng": 55,
+    "mei": 45
+   },
+   "traits": [
+    "东归之难",
+    "穰城之死"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 51,
+   "xiangxing": 147,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 196,
+   "faction": "董卓·凉州",
+   "era": "讨董群雄",
+   "hometown": "武威祖厉",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·张绣传、后汉书",
+    "level": "史实",
+    "dbRow": 85,
+    "override": false
+   }
+  },
+  {
+   "id": 240040,
+   "name": "高干",
+   "zi": "元才",
+   "layer": "important",
+   "five": {
+    "tong": 62,
+    "wu": 60,
+    "zhi": 55,
+    "zheng": 55,
+    "mei": 50
+   },
+   "traits": [
+    "壶关之战",
+    "太行苦寒"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 53,
+   "xiangxing": 1,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 206,
+   "faction": "曹魏·司马氏",
+   "era": "官渡赤壁",
+   "hometown": "陈留圉",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·武帝纪、高柔传",
+    "level": "史实",
+    "dbRow": 112,
+    "override": false
+   }
+  },
+  {
+   "id": 240041,
+   "name": "赵韪",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 55,
+    "wu": 45,
+    "zhi": 60,
+    "zheng": 60,
+    "mei": 55
+   },
+   "traits": [
+    "赵韪之乱"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 58,
+   "xiangxing": 141,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 201,
+   "faction": "刘璋·益州",
+   "era": "讨董群雄",
+   "hometown": "巴西阆中",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·刘二牧传裴注引英雄记",
+    "level": "史实",
+    "dbRow": 78,
+    "override": false
+   }
+  },
+  {
+   "id": 240042,
+   "name": "张邈",
+   "zi": "孟卓",
+   "layer": "important",
+   "five": {
+    "tong": 40,
+    "wu": 30,
+    "zhi": 60,
+    "zheng": 70,
+    "mei": 70
+   },
+   "traits": [
+    "兖州之叛",
+    "雍丘之围"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 70,
+   "xiangxing": 145,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 195,
+   "faction": "讨董·诸侯",
+   "era": "讨董群雄",
+   "hometown": "东平寿张",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·张邈传、武帝纪",
+    "level": "史实",
+    "dbRow": 244,
+    "override": false
+   }
+  },
+  {
+   "id": 240043,
+   "name": "张超",
+   "zi": "孟高",
+   "layer": "important",
+   "five": {
+    "tong": 45,
+    "wu": 40,
+    "zhi": 55,
+    "zheng": 60,
+    "mei": 70
+   },
+   "traits": [
+    "雍丘之围",
+    "臧洪复仇"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 64,
+   "xiangxing": 141,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 195,
+   "faction": "讨董·诸侯",
+   "era": "讨董群雄",
+   "hometown": "东平寿张",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·张邈传、臧洪传",
+    "level": "史实",
+    "dbRow": 245,
+    "override": false
+   }
+  },
+  {
+   "id": 240044,
+   "name": "袁遗",
+   "zi": "伯业",
+   "layer": "important",
+   "five": {
+    "tong": 35,
+    "wu": 30,
+    "zhi": 70,
+    "zheng": 70,
+    "mei": 65
+   },
+   "traits": [
+    "讨董联军",
+    "好学之名"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 68,
+   "xiangxing": 140,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "讨董·诸侯",
+   "era": "讨董群雄",
+   "hometown": "汝南汝阳",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·武帝纪裴注、典论自叙",
+    "level": "史实",
+    "dbRow": 248,
+    "override": false
+   }
+  },
+  {
+   "id": 240045,
+   "name": "刘繇",
+   "zi": "正礼",
+   "layer": "important",
+   "five": {
+    "tong": 45,
+    "wu": 35,
+    "zhi": 60,
+    "zheng": 65,
+    "mei": 65
+   },
+   "traits": [
+    "曲阿之战",
+    "太史慈不用"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 65,
+   "xiangxing": 146,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 156,
+   "died": 197,
+   "faction": "孙吴",
+   "era": "讨董群雄",
+   "hometown": "东莱牟平",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·刘繇传、孙策传",
+    "level": "史实",
+    "dbRow": 298,
+    "override": false
+   }
+  },
+  {
+   "id": 240046,
+   "name": "申耽",
+   "zi": "义举",
+   "layer": "important",
+   "five": {
+    "tong": 50,
+    "wu": 50,
+    "zhi": 55,
+    "zheng": 65,
+    "mei": 50
+   },
+   "traits": [
+    "上庸三易其主"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 59,
+   "xiangxing": 142,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "蜀汉",
+   "era": "三国鼎立",
+   "hometown": "上庸",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·刘封传裴注引魏略",
+    "level": "史实",
+    "dbRow": 506,
+    "override": false
+   }
+  },
+  {
+   "id": 240047,
+   "name": "公孙渊",
+   "zi": "文懿",
+   "layer": "important",
+   "five": {
+    "tong": 65,
+    "wu": 55,
+    "zhi": 60,
+    "zheng": 50,
+    "mei": 35
+   },
+   "traits": [
+    "吴使被斩",
+    "襄平之围"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 44,
+   "xiangxing": 10,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 238,
+   "faction": "公孙·辽东·幽州",
+   "era": "三国中后期",
+   "hometown": "辽东襄平",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·公孙度传、晋书·宣帝纪",
+    "level": "史实",
+    "dbRow": 196,
+    "override": false
+   }
+  },
+  {
+   "id": 240048,
+   "name": "宋建",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 55,
+    "wu": 50,
+    "zhi": 50,
+    "zheng": 60,
+    "mei": 45
+   },
+   "traits": [
+    "枹罕之灭",
+    "夏侯渊平凉"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 54,
+   "xiangxing": 147,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 214,
+   "faction": "凉州·羌胡",
+   "era": "讨董群雄至三国鼎立",
+   "hometown": "陇西枹罕",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·武帝纪、夏侯渊传",
+    "level": "史实",
+    "dbRow": 227,
+    "override": false
+   }
+  },
+  {
+   "id": 100184,
+   "name": "李傕",
+   "zi": "稚然",
+   "layer": "important",
+   "five": {
+    "tong": 75,
+    "wu": 70,
+    "zhi": 55,
+    "zheng": 35,
+    "mei": 20
+   },
+   "traits": [
+    "长安之乱",
+    "李郭交兵"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 29,
+   "xiangxing": 3,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 198,
+   "faction": "董卓·凉州",
+   "era": "讨董群雄",
+   "hometown": "北地",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·董卓传、后汉书·董卓传",
+    "level": "史实",
+    "dbRow": 82,
+    "override": false
+   }
+  },
+  {
+   "id": 240049,
+   "name": "樊稠",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 78,
+    "wu": 75,
+    "zhi": 40,
+    "zheng": 30,
+    "mei": 30
+   },
+   "traits": [
+    "长平观之战",
+    "四寇内讧"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 30,
+   "xiangxing": 2,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 195,
+   "faction": "董卓·凉州",
+   "era": "讨董群雄",
+   "hometown": "－",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·董卓传裴注、后汉书",
+    "level": "史实",
+    "dbRow": 84,
+    "override": false
+   }
+  },
+  {
+   "id": 240050,
+   "name": "申仪",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 45,
+    "wu": 45,
+    "zhi": 60,
+    "zheng": 65,
+    "mei": 35
+   },
+   "traits": [
+    "绝蜀降魏",
+    "私刻印绶"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 53,
+   "xiangxing": 143,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "曹魏·司马氏",
+   "era": "三国中后期",
+   "hometown": "上庸",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·刘封传裴注、晋书·宣帝纪",
+    "level": "史实",
+    "dbRow": 507,
+    "override": false
+   }
+  },
+  {
+   "id": 240051,
+   "name": "焦触",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 55,
+    "wu": 55,
+    "zhi": 45,
+    "zheng": 50,
+    "mei": 40
+   },
+   "traits": [
+    "幽州兵变",
+    "歃血降曹"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 46,
+   "xiangxing": 15,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 205,
+   "faction": "曹魏·司马氏",
+   "era": "官渡赤壁",
+   "hometown": "－",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·武帝纪、袁绍传裴注引英雄记",
+    "level": "史实",
+    "dbRow": 134,
+    "override": false
+   }
+  },
+  {
+   "id": 100099,
+   "name": "丁原",
+   "zi": "建阳",
+   "layer": "important",
+   "five": {
+    "tong": 60,
+    "wu": 55,
+    "zhi": 40,
+    "zheng": 45,
+    "mei": 45
+   },
+   "traits": [
+    "并州入洛",
+    "被弑"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 45,
+   "xiangxing": 143,
+   "enyi": 0,
+   "bonds": [
+    {
+     "type": "憎恶",
+     "target": "吕布"
+    }
+   ],
+   "fate": null,
+   "born": null,
+   "died": 189,
+   "faction": "东汉·汉廷",
+   "era": "讨董群雄",
+   "hometown": "－",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·吕布传、后汉书",
+    "level": "史实",
+    "dbRow": 182,
+    "override": false
+   }
+  },
+  {
+   "id": 240052,
+   "name": "桥瑁",
+   "zi": "元伟",
+   "layer": "important",
+   "five": {
+    "tong": 30,
+    "wu": 25,
+    "zhi": 65,
+    "zheng": 65,
+    "mei": 60
+   },
+   "traits": [
+    "讨董檄文",
+    "东郡之争"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 63,
+   "xiangxing": 12,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 191,
+   "faction": "讨董·诸侯",
+   "era": "讨董群雄",
+   "hometown": "梁国睢阳",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·武帝纪裴注引英雄记",
+    "level": "史实",
+    "dbRow": 242,
+    "override": false
+   }
+  },
+  {
+   "id": 240053,
+   "name": "王匡",
+   "zi": "公节",
+   "layer": "important",
+   "five": {
+    "tong": 45,
+    "wu": 45,
+    "zhi": 50,
+    "zheng": 55,
+    "mei": 50
+   },
+   "traits": [
+    "孟津之败",
+    "胡毋班之死"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 53,
+   "xiangxing": 148,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "讨董·诸侯",
+   "era": "讨董群雄",
+   "hometown": "泰山",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·武帝纪裴注引英雄记、谢承后汉书",
+    "level": "史实",
+    "dbRow": 243,
+    "override": false
+   }
+  },
+  {
+   "id": 240054,
+   "name": "杨奉",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 60,
+    "wu": 62,
+    "zhi": 45,
+    "zheng": 40,
+    "mei": 35
+   },
+   "traits": [
+    "东归之难",
+    "曹阳之战"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 38,
+   "xiangxing": 2,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 197,
+   "faction": "流动·山寇·地方",
+   "era": "讨董群雄",
+   "hometown": "－",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·董卓传、先主传、后汉书",
+    "level": "史实",
+    "dbRow": 99,
+    "override": false
+   }
+  },
+  {
+   "id": 100508,
+   "name": "严白虎",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 55,
+    "wu": 55,
+    "zhi": 40,
+    "zheng": 45,
+    "mei": 40
+   },
+   "traits": [
+    "吴郡之争",
+    "严舆之死"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.1
+   },
+   "yili": 43,
+   "xiangxing": 7,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "山越·江东豪帅",
+   "era": "讨董群雄",
+   "hometown": "吴郡乌程",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·孙策传裴注引吴录",
+    "level": "史实",
+    "dbRow": 302,
+    "override": false
+   }
+  },
+  {
+   "id": 240055,
+   "name": "笮融",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 55,
+    "wu": 55,
+    "zhi": 55,
+    "zheng": 45,
+    "mei": 20
+   },
+   "traits": [
+    "浮屠祠",
+    "浴佛斋"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.1
+   },
+   "yili": 35,
+   "xiangxing": 143,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 195,
+   "faction": "流动·山寇·地方",
+   "era": "讨董群雄",
+   "hometown": "丹阳",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·刘繇传、后汉书·陶谦传",
+    "level": "史实",
+    "dbRow": 300,
+    "override": false
+   }
+  },
+  {
+   "id": 240056,
+   "name": "郭汜",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 72,
+    "wu": 72,
+    "zhi": 35,
+    "zheng": 25,
+    "mei": 15
+   },
+   "traits": [
+    "李郭交兵",
+    "劫天子"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 21,
+   "xiangxing": 3,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 197,
+   "faction": "董卓·凉州",
+   "era": "讨董群雄",
+   "hometown": "张掖",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·董卓传、后汉书",
+    "level": "史实",
+    "dbRow": 83,
+    "override": false
+   }
+  },
+  {
+   "id": 240057,
+   "name": "眭固",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 55,
+    "wu": 55,
+    "zhi": 35,
+    "zheng": 30,
+    "mei": 40
+   },
+   "traits": [
+    "射犬之战"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 34,
+   "xiangxing": 140,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 199,
+   "faction": "黄巾·黑山",
+   "era": "讨董群雄",
+   "hometown": "－",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·武帝纪、张杨传",
+    "level": "史实",
+    "dbRow": 58,
+    "override": false
+   }
+  },
+  {
+   "id": 240058,
+   "name": "刘勋",
+   "zi": "子台",
+   "layer": "important",
+   "five": {
+    "tong": 50,
+    "wu": 45,
+    "zhi": 40,
+    "zheng": 45,
+    "mei": 35
+   },
+   "traits": [
+    "孙策袭皖",
+    "调虎离山"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 41,
+   "xiangxing": 14,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄",
+   "hometown": "琅邪",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·孙策传裴注引江表传",
+    "level": "史实",
+    "dbRow": 155,
+    "override": false
+   }
+  },
+  {
+   "id": 240059,
+   "name": "韩暹",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 55,
+    "wu": 58,
+    "zhi": 35,
+    "zheng": 30,
+    "mei": 30
+   },
+   "traits": [
+    "东归之难"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 30,
+   "xiangxing": 138,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 197,
+   "faction": "流动·山寇·地方",
+   "era": "讨董群雄",
+   "hometown": "－",
+   "type": "军阀",
+   "source": {
+    "ref": "后汉书·献帝纪、三国志裴注",
+    "level": "史实",
+    "dbRow": 100,
+    "override": false
+   }
+  },
+  {
+   "id": 240060,
+   "name": "陈兰",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 55,
+    "wu": 58,
+    "zhi": 35,
+    "zheng": 30,
+    "mei": 30
+   },
+   "traits": [
+    "灊山天柱山之战"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.1
+   },
+   "yili": 30,
+   "xiangxing": 144,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 209,
+   "faction": "袁术·淮南",
+   "era": "讨董群雄至官渡赤壁",
+   "hometown": "庐江",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·张辽传、武帝纪",
+    "level": "史实",
+    "dbRow": 151,
+    "override": false
+   }
+  },
+  {
+   "id": 100116,
+   "name": "袁术",
+   "zi": "公路",
+   "layer": "important",
+   "five": {
+    "tong": 55,
+    "wu": 40,
+    "zhi": 45,
+    "zheng": 35,
+    "mei": 30
+   },
+   "traits": [
+    "僭号寿春",
+    "匡亭之败"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 33,
+   "xiangxing": 12,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 199,
+   "faction": "袁术·淮南",
+   "era": "讨董群雄",
+   "hometown": "汝南汝阳",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·袁术传、后汉书",
+    "level": "史实",
+    "dbRow": 141,
+    "override": false
+   }
+  },
+  {
+   "id": 240061,
+   "name": "李乐",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 50,
+    "wu": 55,
+    "zhi": 30,
+    "zheng": 30,
+    "mei": 35
+   },
+   "traits": [
+    "曹阳渡河"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 32,
+   "xiangxing": 140,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 196,
+   "faction": "流动·山寇·地方",
+   "era": "讨董群雄",
+   "hometown": "－",
+   "type": "军阀",
+   "source": {
+    "ref": "后汉书·献帝纪",
+    "level": "史实",
+    "dbRow": 101,
+    "override": false
+   }
+  },
+  {
+   "id": 240062,
+   "name": "孔伷",
+   "zi": "公绪",
+   "layer": "important",
+   "five": {
+    "tong": 30,
+    "wu": 25,
+    "zhi": 45,
+    "zheng": 55,
+    "mei": 45
+   },
+   "traits": [
+    "讨董联军"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 51,
+   "xiangxing": 5,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 190,
+   "faction": "讨董·诸侯",
+   "era": "讨董群雄",
+   "hometown": "陈留",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·武帝纪裴注、后汉书",
+    "level": "史实",
+    "dbRow": 240,
+    "override": false
+   }
+  },
+  {
+   "id": 240063,
+   "name": "刘岱",
+   "zi": "公山",
+   "layer": "important",
+   "five": {
+    "tong": 35,
+    "wu": 35,
+    "zhi": 40,
+    "zheng": 45,
+    "mei": 45
+   },
+   "traits": [
+    "兖州之乱",
+    "黄巾入兖"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 45,
+   "xiangxing": 2,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 192,
+   "faction": "讨董·诸侯",
+   "era": "讨董群雄",
+   "hometown": "东莱牟平",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·武帝纪、刘繇传",
+    "level": "史实",
+    "dbRow": 241,
+    "override": false
+   }
+  },
+  {
+   "id": 240064,
+   "name": "公孙恭",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 25,
+    "wu": 20,
+    "zhi": 45,
+    "zheng": 60,
+    "mei": 45
+   },
+   "traits": [
+    "公孙渊夺位"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 1.2,
+    "navy": 1.15
+   },
+   "yili": 54,
+   "xiangxing": 17,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "孙吴",
+   "era": "三国鼎立",
+   "hometown": "辽东襄平",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·公孙度传",
+    "level": "史实",
+    "dbRow": 195,
+    "override": false
+   }
+  },
+  {
+   "id": 240065,
+   "name": "雷薄",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 50,
+    "wu": 55,
+    "zhi": 35,
+    "zheng": 30,
+    "mei": 20
+   },
+   "traits": [
+    "袁术末路"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 26,
+   "xiangxing": 138,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 199,
+   "faction": "袁术·淮南",
+   "era": "讨董群雄",
+   "hometown": "－",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·袁术传",
+    "level": "史实",
+    "dbRow": 150,
+    "override": false
+   }
+  },
+  {
+   "id": 240066,
+   "name": "士徽",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 45,
+    "wu": 45,
+    "zhi": 35,
+    "zheng": 35,
+    "mei": 30
+   },
+   "traits": [
+    "交趾之乱",
+    "吕岱诱斩"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 33,
+   "xiangxing": 149,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 226,
+   "faction": "士燮·交州",
+   "era": "三国中后期",
+   "hometown": "苍梧广信",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·士燮传、吕岱传",
+    "level": "史实",
+    "dbRow": 325,
+    "override": false
+   }
+  },
+  {
+   "id": 240067,
+   "name": "牛辅",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 55,
+    "wu": 55,
+    "zhi": 30,
+    "zheng": 25,
+    "mei": 20
+   },
+   "traits": [
+    "陕城之乱"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 23,
+   "xiangxing": 143,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 192,
+   "faction": "董卓·凉州",
+   "era": "讨董群雄",
+   "hometown": "－",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·董卓传、后汉书",
+    "level": "史实",
+    "dbRow": 86,
+    "override": false
+   }
+  },
+  {
+   "id": 240068,
+   "name": "胡才",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 50,
+    "wu": 55,
+    "zhi": 25,
+    "zheng": 25,
+    "mei": 30
+   },
+   "traits": [
+    "东归之难"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 27,
+   "xiangxing": 140,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 196,
+   "faction": "流动·山寇·地方",
+   "era": "讨董群雄",
+   "hometown": "－",
+   "type": "军阀",
+   "source": {
+    "ref": "后汉书·献帝纪",
+    "level": "史实",
+    "dbRow": 102,
+    "override": false
+   }
+  },
+  {
+   "id": 240069,
+   "name": "吴巨",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 45,
+    "wu": 45,
+    "zhi": 35,
+    "zheng": 35,
+    "mei": 20
+   },
+   "traits": [
+    "步骘斩吴巨",
+    "交州归吴"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 29,
+   "xiangxing": 8,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 211,
+   "faction": "士燮·交州",
+   "era": "三国鼎立",
+   "hometown": "长沙",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·士燮传、步骘传、先主传裴注",
+    "level": "史实",
+    "dbRow": 327,
+    "override": false
+   }
+  },
+  {
+   "id": 240070,
+   "name": "韩玄",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 30,
+    "wu": 30,
+    "zhi": 35,
+    "zheng": 45,
+    "mei": 30
+   },
+   "traits": [
+    "荆南四郡"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 39,
+   "xiangxing": 3,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 209,
+   "faction": "刘表·荆州",
+   "era": "官渡赤壁",
+   "hometown": "－",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·先主传、黄忠传裴注",
+    "level": "史实",
+    "dbRow": 272,
+    "override": false
+   }
+  },
+  {
+   "id": 240071,
+   "name": "金旋",
+   "zi": "元机",
+   "layer": "important",
+   "five": {
+    "tong": 30,
+    "wu": 30,
+    "zhi": 35,
+    "zheng": 45,
+    "mei": 30
+   },
+   "traits": [
+    "荆南四郡"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 39,
+   "xiangxing": 146,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 209,
+   "faction": "刘表·荆州",
+   "era": "官渡赤壁",
+   "hometown": "京兆",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·先主传裴注、三国演义",
+    "level": "史实",
+    "dbRow": 273,
+    "override": false
+   }
+  },
+  {
+   "id": 240072,
+   "name": "刘度",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 25,
+    "wu": 25,
+    "zhi": 35,
+    "zheng": 45,
+    "mei": 30
+   },
+   "traits": [
+    "荆南四郡"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 39,
+   "xiangxing": 138,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 209,
+   "faction": "刘表·荆州",
+   "era": "官渡赤壁",
+   "hometown": "－",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·先主传、三国演义",
+    "level": "史实",
+    "dbRow": 274,
+    "override": false
+   }
+  },
+  {
+   "id": 240073,
+   "name": "赵范",
+   "zi": "－",
+   "layer": "important",
+   "five": {
+    "tong": 25,
+    "wu": 20,
+    "zhi": 40,
+    "zheng": 50,
+    "mei": 25
+   },
+   "traits": [
+    "樊氏拒婚",
+    "赵云识人"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 40,
+   "xiangxing": 8,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 209,
+   "faction": "刘表·荆州",
+   "era": "官渡赤壁",
+   "hometown": "－",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·赵云传裴注引云别传",
+    "level": "史实",
+    "dbRow": 275,
+    "override": false
+   }
+  },
+  {
+   "id": 240074,
+   "name": "韩馥",
+   "zi": "文节",
+   "layer": "important",
+   "five": {
+    "tong": 25,
+    "wu": 20,
+    "zhi": 30,
+    "zheng": 40,
+    "mei": 25
+   },
+   "traits": [
+    "让冀州",
+    "厕中自尽"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 34,
+   "xiangxing": 11,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 191,
+   "faction": "讨董·诸侯",
+   "era": "讨董群雄",
+   "hometown": "颍川",
+   "type": "军阀",
+   "source": {
+    "ref": "三国志·袁绍传、武帝纪裴注",
+    "level": "史实",
+    "dbRow": 158,
+    "override": false
+   }
+  },
+  {
+   "id": 240075,
+   "name": "苏则",
+   "zi": "文师",
+   "layer": "important",
+   "five": {
+    "tong": 78,
+    "wu": 58,
+    "zhi": 84,
+    "zheng": 88,
+    "mei": 78
+   },
+   "traits": [
+    "平河西三郡",
+    "重开西域"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 84,
+   "xiangxing": 3,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 223,
+   "faction": "曹魏·司马氏",
+   "era": "汉末群雄至三国鼎立",
+   "hometown": "扶风武功",
+   "type": "名臣",
+   "source": {
+    "ref": "三国志·魏书·苏则传",
+    "level": "史实",
+    "dbRow": 657,
+    "override": false
+   }
+  },
+  {
+   "id": 240076,
+   "name": "杜袭",
+   "zi": "子绪",
+   "layer": "important",
+   "five": {
+    "tong": 78,
+    "wu": 55,
+    "zhi": 84,
+    "zheng": 88,
+    "mei": 74
+   },
+   "traits": [
+    "西鄂以少拒众",
+    "汉中败后收兵"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 82,
+   "xiangxing": 13,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "曹魏·司马氏",
+   "era": "汉末群雄至三国鼎立",
+   "hometown": "颍川定陵",
+   "type": "名臣",
+   "source": {
+    "ref": "三国志·魏书·杜袭传",
+    "level": "史实",
+    "dbRow": 651,
+    "override": false
+   }
+  },
+  {
+   "id": 240077,
+   "name": "刘渊",
+   "zi": "元海",
+   "layer": "minor",
+   "five": {
+    "tong": 88,
+    "wu": 78,
+    "zhi": 92,
+    "zheng": 90,
+    "mei": 94
+   },
+   "traits": [
+    "屠各种刘豹之子",
+    "通经史兵法"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1.1,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 92,
+   "xiangxing": 147,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 310,
+   "faction": "南中·外族",
+   "era": "三国末期至三国归晋后",
+   "hometown": "并州新兴",
+   "type": "史实·外族君主",
+   "source": {
+    "ref": "晋书·刘元海载记、资治通鉴·晋纪、三国志·魏书·乌丸鲜卑东夷传",
+    "level": "史实",
+    "dbRow": 928,
+    "override": false
+   }
+  },
+  {
+   "id": 240078,
+   "name": "马隆",
+   "zi": "孝兴",
+   "layer": "minor",
+   "five": {
+    "tong": 92,
+    "wu": 85,
+    "zhi": 92,
+    "zheng": 85,
+    "mei": 88
+   },
+   "traits": [
+    "立标简试三千五百人",
+    "自至武库选仗"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1.1,
+    "bow": 1.1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 86,
+   "xiangxing": 1,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "西晋·归晋后",
+   "era": "三国归晋后",
+   "hometown": "东平平陆",
+   "type": "史实·将领",
+   "source": {
+    "ref": "晋书·马隆传、武帝纪、资治通鉴·晋纪",
+    "level": "史实",
+    "dbRow": 931,
+    "override": false
+   }
+  },
+  {
+   "id": 240079,
+   "name": "拓跋力微",
+   "zi": "－",
+   "layer": "minor",
+   "five": {
+    "tong": 88,
+    "wu": 70,
+    "zhi": 85,
+    "zheng": 88,
+    "mei": 88
+   },
+   "traits": [
+    "迁盛乐",
+    "祭天诸部会盟"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1.1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 88,
+   "xiangxing": 142,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 174,
+   "died": 277,
+   "faction": "乌桓·鲜卑·北族",
+   "era": "三国末期至三国归晋",
+   "hometown": "代郡（盛乐）",
+   "type": "史实·外族君主（带北魏系年）",
+   "source": {
+    "ref": "魏书·序纪、资治通鉴·魏纪/晋纪（散见）",
+    "level": "史实",
+    "dbRow": 930,
+    "override": false
+   }
+  },
+  {
+   "id": 100287,
+   "name": "田豫",
+   "zi": "国让",
+   "layer": "minor",
+   "five": {
+    "tong": 85,
+    "wu": 70,
+    "zhi": 85,
+    "zheng": 90,
+    "mei": 85
+   },
+   "traits": [
+    "破轲比能",
+    "成山斩周贺"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1.1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 88,
+   "xiangxing": 14,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 171,
+   "died": 252,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至三国中后期",
+   "hometown": "渔阳雍奴",
+   "type": "名将·边吏",
+   "source": {
+    "ref": "三国志·田豫传",
+    "level": "史实",
+    "dbRow": 376,
+    "override": false
+   }
+  },
+  {
+   "id": 240080,
+   "name": "陶璜",
+   "zi": "世英",
+   "layer": "minor",
+   "five": {
+    "tong": 84,
+    "wu": 70,
+    "zhi": 84,
+    "zheng": 90,
+    "mei": 86
+   },
+   "traits": [
+    "复取交阯",
+    "夜袭董元"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1.1,
+    "cavalry": 0.85,
+    "navy": 1.1
+   },
+   "yili": 88,
+   "xiangxing": 15,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 290,
+   "faction": "西晋·归晋后",
+   "era": "三国末期至三国归晋",
+   "hometown": "丹阳秣陵",
+   "type": "将领/边吏",
+   "source": {
+    "ref": "晋书·陶璜传、三国志·吴书·孙皓传",
+    "level": "史实",
+    "dbRow": 772,
+    "override": false
+   }
+  },
+  {
+   "id": 240081,
+   "name": "司马乂",
+   "zi": "士度",
+   "layer": "minor",
+   "five": {
+    "tong": 85,
+    "wu": 78,
+    "zhi": 82,
+    "zheng": 75,
+    "mei": 90
+   },
+   "traits": [
+    "奉天子诛齐王冏",
+    "事无巨细咨成都王"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1.1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 81,
+   "xiangxing": 141,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 277,
+   "died": 304,
+   "faction": "西晋·归晋后",
+   "era": "三国归晋后",
+   "hometown": "河内温",
+   "type": "史实·宗室",
+   "source": {
+    "ref": "晋书·长沙王乂传、惠帝纪、资治通鉴·晋纪",
+    "level": "史实",
+    "dbRow": 919,
+    "override": false
+   }
+  },
+  {
+   "id": 240082,
+   "name": "杜预",
+   "zi": "元凯",
+   "layer": "minor",
+   "five": {
+    "tong": 85,
+    "wu": 45,
+    "zhi": 96,
+    "zheng": 95,
+    "mei": 88
+   },
+   "traits": [
+    "势如破竹",
+    "平吴之役"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 92,
+   "xiangxing": 9,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 222,
+   "died": 285,
+   "faction": "西晋·归晋后",
+   "era": "三国末期至归晋",
+   "hometown": "京兆杜陵",
+   "type": "名将·经学家",
+   "source": {
+    "ref": "晋书·杜预传、三国志·钟会传裴注",
+    "level": "史实",
+    "dbRow": 441,
+    "override": false
+   }
+  },
+  {
+   "id": 240083,
+   "name": "羊祜",
+   "zi": "叔子",
+   "layer": "minor",
+   "five": {
+    "tong": 80,
+    "wu": 40,
+    "zhi": 95,
+    "zheng": 95,
+    "mei": 95
+   },
+   "traits": [
+    "荆州十年",
+    "羊陆之交"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 95,
+   "xiangxing": 145,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 221,
+   "died": 278,
+   "faction": "西晋·归晋后",
+   "era": "三国末期至归晋",
+   "hometown": "泰山南城",
+   "type": "名将·战略家",
+   "source": {
+    "ref": "晋书·羊祜传、三国志·陆抗传裴注",
+    "level": "史实",
+    "dbRow": 440,
+    "override": false
+   }
+  },
+  {
+   "id": 240084,
+   "name": "司马攸",
+   "zi": "大猷",
+   "layer": "minor",
+   "five": {
+    "tong": 72,
+    "wu": 55,
+    "zhi": 92,
+    "zheng": 92,
+    "mei": 94
+   },
+   "traits": [
+    "出继司马师",
+    "桃符才望出武帝右"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 93,
+   "xiangxing": 10,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 248,
+   "died": 283,
+   "faction": "西晋·归晋后",
+   "era": "三国末期至三国归晋",
+   "hometown": "河内温",
+   "type": "史实·宗室",
+   "source": {
+    "ref": "晋书·齐献王攸传、武帝纪、资治通鉴·晋纪",
+    "level": "史实",
+    "dbRow": 915,
+    "override": false
+   }
+  },
+  {
+   "id": 240085,
+   "name": "马忠",
+   "zi": "德信",
+   "layer": "minor",
+   "five": {
+    "tong": 78,
+    "wu": 68,
+    "zhi": 78,
+    "zheng": 90,
+    "mei": 90
+   },
+   "traits": [
+    "平朱褒",
+    "斩刘胄"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 90,
+   "xiangxing": 149,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 249,
+   "faction": "南中·外族",
+   "era": "三国中后期",
+   "hometown": "巴西阆中",
+   "type": "将领",
+   "source": {
+    "ref": "三国志·马忠传、华阳国志",
+    "level": "史实",
+    "dbRow": 530,
+    "override": false
+   }
+  },
+  {
+   "id": 240086,
+   "name": "吾彦",
+   "zi": "士则",
+   "layer": "minor",
+   "five": {
+    "tong": 82,
+    "wu": 76,
+    "zhi": 80,
+    "zheng": 82,
+    "mei": 84
+   },
+   "traits": [
+    "木屑蔽江预警",
+    "铁锁横江"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1.1,
+    "cavalry": 0.85,
+    "navy": 1.1
+   },
+   "yili": 83,
+   "xiangxing": 9,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "西晋·归晋后",
+   "era": "三国末期至三国归晋",
+   "hometown": "吴郡吴",
+   "type": "将领",
+   "source": {
+    "ref": "晋书·吾彦传、资治通鉴·晋纪",
+    "level": "史实",
+    "dbRow": 771,
+    "override": false
+   }
+  },
+  {
+   "id": 100331,
+   "name": "霍弋",
+   "zi": "绍先",
+   "layer": "minor",
+   "five": {
+    "tong": 78,
+    "wu": 65,
+    "zhi": 82,
+    "zheng": 88,
+    "mei": 90
+   },
+   "traits": [
+    "素服大临三日",
+    "保境待问"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 89,
+   "xiangxing": 1,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 271,
+   "faction": "南中·外族",
+   "era": "三国末期至归晋",
+   "hometown": "南郡枝江",
+   "type": "将领",
+   "source": {
+    "ref": "三国志·霍峻传裴注引汉晋春秋、晋书·陶璜传",
+    "level": "史实",
+    "dbRow": 547,
+    "override": false
+   }
+  },
+  {
+   "id": 100240,
+   "name": "吕范",
+   "zi": "子衡",
+   "layer": "minor",
+   "five": {
+    "tong": 80,
+    "wu": 62,
+    "zhi": 80,
+    "zheng": 92,
+    "mei": 88
+   },
+   "traits": [
+    "自领都督",
+    "同舟俱败"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 90,
+   "xiangxing": 5,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 228,
+   "faction": "孙吴",
+   "era": "讨董群雄至三国中后期",
+   "hometown": "汝南细阳",
+   "type": "将领",
+   "source": {
+    "ref": "三国志·吕范传裴注引江表传",
+    "level": "史实",
+    "dbRow": 603,
+    "override": false
+   }
+  },
+  {
+   "id": 240087,
+   "name": "张既",
+   "zi": "德容",
+   "layer": "minor",
+   "five": {
+    "tong": 84,
+    "wu": 60,
+    "zhi": 88,
+    "zheng": 92,
+    "mei": 76
+   },
+   "traits": [
+    "关中屯粮",
+    "破窦茂"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 86,
+   "xiangxing": 148,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 223,
+   "faction": "曹魏·司马氏",
+   "era": "汉末群雄至三国鼎立",
+   "hometown": "冯翊高陵",
+   "type": "名臣/将领",
+   "source": {
+    "ref": "三国志·魏书·张既传",
+    "level": "史实",
+    "dbRow": 655,
+    "override": false
+   }
+  },
+  {
+   "id": 240088,
+   "name": "王基",
+   "zi": "伯舆",
+   "layer": "minor",
+   "five": {
+    "tong": 88,
+    "wu": 58,
+    "zhi": 92,
+    "zheng": 86,
+    "mei": 76
+   },
+   "traits": [
+    "南顿争粮",
+    "寿春长围"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 82,
+   "xiangxing": 146,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 190,
+   "died": 261,
+   "faction": "曹魏·司马氏",
+   "era": "三国鼎立至三国末期",
+   "hometown": "东莱曲城",
+   "type": "将领/名臣",
+   "source": {
+    "ref": "三国志·魏书·王基传",
+    "level": "史实",
+    "dbRow": 662,
+    "override": false
+   }
+  },
+  {
+   "id": 240089,
+   "name": "司马师",
+   "zi": "子元",
+   "layer": "minor",
+   "five": {
+    "tong": 85,
+    "wu": 60,
+    "zhi": 92,
+    "zheng": 92,
+    "mei": 70
+   },
+   "traits": [
+    "废曹芳",
+    "诛夏侯玄"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 83,
+   "xiangxing": 9,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 208,
+   "died": 255,
+   "faction": "曹魏·司马氏",
+   "era": "三国中后期",
+   "hometown": "河内温",
+   "type": "权臣",
+   "source": {
+    "ref": "晋书·景帝纪、三国志·毌丘俭传",
+    "level": "史实",
+    "dbRow": 402,
+    "override": false
+   }
+  },
+  {
+   "id": 240090,
+   "name": "丁奉",
+   "zi": "承渊",
+   "layer": "minor",
+   "five": {
+    "tong": 82,
+    "wu": 92,
+    "zhi": 75,
+    "zheng": 65,
+    "mei": 85
+   },
+   "traits": [
+    "东兴雪中短兵",
+    "腊会诛孙綝"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 1.1,
+    "navy": 1.15
+   },
+   "yili": 73,
+   "xiangxing": 4,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 271,
+   "faction": "孙吴",
+   "era": "三国鼎立至三国末期",
+   "hometown": "庐江安丰",
+   "type": "猛将",
+   "source": {
+    "ref": "三国志·丁奉传、诸葛恪传、孙綝传",
+    "level": "史实",
+    "dbRow": 624,
+    "override": false
+   }
+  },
+  {
+   "id": 240091,
+   "name": "杨阜",
+   "zi": "义山",
+   "layer": "minor",
+   "five": {
+    "tong": 80,
+    "wu": 68,
+    "zhi": 85,
+    "zheng": 90,
+    "mei": 76
+   },
+   "traits": [
+    "卤城起兵逐马超",
+    "身被五创"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 1.2,
+    "navy": 0.7
+   },
+   "yili": 84,
+   "xiangxing": 145,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "曹魏·司马氏",
+   "era": "汉末群雄至三国鼎立",
+   "hometown": "天水冀",
+   "type": "将领/名臣",
+   "source": {
+    "ref": "三国志·魏书·杨阜传",
+    "level": "史实",
+    "dbRow": 649,
+    "override": false
+   }
+  },
+  {
+   "id": 100334,
+   "name": "黄权",
+   "zi": "公衡",
+   "layer": "minor",
+   "five": {
+    "tong": 78,
+    "wu": 60,
+    "zhi": 85,
+    "zheng": 85,
+    "mei": 90
+   },
+   "traits": [
+    "谏拒刘备",
+    "汉中股臂之论"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 87,
+   "xiangxing": 15,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 240,
+   "faction": "蜀汉",
+   "era": "三国鼎立至三国中后期",
+   "hometown": "巴西阆中",
+   "type": "将领",
+   "source": {
+    "ref": "三国志·黄权传、先主传",
+    "level": "史实",
+    "dbRow": 502,
+    "override": false
+   }
+  },
+  {
+   "id": 240092,
+   "name": "牵招",
+   "zi": "子经",
+   "layer": "minor",
+   "five": {
+    "tong": 78,
+    "wu": 68,
+    "zhi": 80,
+    "zheng": 88,
+    "mei": 82
+   },
+   "traits": [
+    "雁门治边",
+    "抚鲜卑"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 86,
+   "xiangxing": 1,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至三国中后期",
+   "hometown": "安平观津",
+   "type": "名将·边吏",
+   "source": {
+    "ref": "三国志·牵招传",
+    "level": "史实",
+    "dbRow": 377,
+    "override": false
+   }
+  },
+  {
+   "id": 240093,
+   "name": "孙韶",
+   "zi": "公礼",
+   "layer": "minor",
+   "five": {
+    "tong": 80,
+    "wu": 65,
+    "zhi": 80,
+    "zheng": 85,
+    "mei": 85
+   },
+   "traits": [
+    "京城夜警",
+    "尽知魏情"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 85,
+   "xiangxing": 149,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 188,
+   "died": 241,
+   "faction": "孙吴",
+   "era": "三国鼎立至三国中后期",
+   "hometown": "吴郡富春",
+   "type": "宗室将领",
+   "source": {
+    "ref": "三国志·宗室传、吴主传",
+    "level": "史实",
+    "dbRow": 569,
+    "override": false
+   }
+  },
+  {
+   "id": 240094,
+   "name": "孙礼",
+   "zi": "德达",
+   "layer": "minor",
+   "five": {
+    "tong": 82,
+    "wu": 72,
+    "zhi": 78,
+    "zheng": 86,
+    "mei": 76
+   },
+   "traits": [
+    "合肥却全琮",
+    "谏止宫室"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 82,
+   "xiangxing": 10,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 250,
+   "faction": "曹魏·司马氏",
+   "era": "汉末群雄至三国末期",
+   "hometown": "涿郡容城",
+   "type": "将领/名臣",
+   "source": {
+    "ref": "三国志·魏书·孙礼传",
+    "level": "史实",
+    "dbRow": 646,
+    "override": false
+   }
+  },
+  {
+   "id": 240095,
+   "name": "滕修",
+   "zi": "显先",
+   "layer": "minor",
+   "five": {
+    "tong": 78,
+    "wu": 60,
+    "zhi": 82,
+    "zheng": 88,
+    "mei": 86
+   },
+   "traits": [
+    "缟素流涕还师赴难",
+    "至巴丘闻降"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 87,
+   "xiangxing": 140,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 288,
+   "faction": "西晋·归晋后",
+   "era": "三国末期至三国归晋",
+   "hometown": "南阳西鄂",
+   "type": "将领/边吏",
+   "source": {
+    "ref": "晋书·滕修传、三国志·吴书·孙皓传裴注",
+    "level": "史实",
+    "dbRow": 773,
+    "override": false
+   }
+  },
+  {
+   "id": 100335,
+   "name": "李恢",
+   "zi": "德昂",
+   "layer": "minor",
+   "five": {
+    "tong": 78,
+    "wu": 65,
+    "zhi": 82,
+    "zheng": 88,
+    "mei": 80
+   },
+   "traits": [
+    "绵竹归备",
+    "交好马超"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 85,
+   "xiangxing": 1,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 231,
+   "faction": "南中·外族",
+   "era": "三国鼎立至三国中后期",
+   "hometown": "建宁俞元",
+   "type": "将领",
+   "source": {
+    "ref": "三国志·李恢传",
+    "level": "史实",
+    "dbRow": 531,
+    "override": false
+   }
+  },
+  {
+   "id": 100426,
+   "name": "凌统",
+   "zi": "公绩",
+   "layer": "minor",
+   "five": {
+    "tong": 75,
+    "wu": 90,
+    "zhi": 65,
+    "zheng": 70,
+    "mei": 92
+   },
+   "traits": [
+    "逍遥津护主",
+    "泳渡断桥"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 1.1,
+    "navy": 1.15
+   },
+   "yili": 79,
+   "xiangxing": 144,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 189,
+   "died": 217,
+   "faction": "孙吴",
+   "era": "三国鼎立",
+   "hometown": "吴郡余杭",
+   "type": "猛将",
+   "source": {
+    "ref": "三国志·凌统传裴注引江表传",
+    "level": "史实",
+    "dbRow": 620,
+    "override": false
+   }
+  },
+  {
+   "id": 100087,
+   "name": "徐盛",
+   "zi": "文向",
+   "layer": "minor",
+   "five": {
+    "tong": 80,
+    "wu": 78,
+    "zhi": 78,
+    "zheng": 75,
+    "mei": 80
+   },
+   "traits": [
+    "柴桑五百破千",
+    "濡须斫岸"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 77,
+   "xiangxing": 142,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "孙吴",
+   "era": "三国鼎立",
+   "hometown": "琅邪莒",
+   "type": "将领",
+   "source": {
+    "ref": "三国志·徐盛传裴注引魏氏春秋、江表传",
+    "level": "史实",
+    "dbRow": 625,
+    "override": false
+   }
+  },
+  {
+   "id": 100152,
+   "name": "满宠",
+   "zi": "伯宁",
+   "layer": "minor",
+   "five": {
+    "tong": 82,
+    "wu": 60,
+    "zhi": 85,
+    "zheng": 88,
+    "mei": 75
+   },
+   "traits": [
+    "许令执法",
+    "合肥新城"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 83,
+   "xiangxing": 140,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 242,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至三国中后期",
+   "hometown": "山阳昌邑",
+   "type": "名将·能吏",
+   "source": {
+    "ref": "三国志·满宠传",
+    "level": "史实",
+    "dbRow": 375,
+    "override": false
+   }
+  },
+  {
+   "id": 240096,
+   "name": "张悌",
+   "zi": "巨先",
+   "layer": "minor",
+   "five": {
+    "tong": 76,
+    "wu": 58,
+    "zhi": 84,
+    "zheng": 82,
+    "mei": 90
+   },
+   "traits": [
+    "渡江决死",
+    "受张乔降"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 85,
+   "xiangxing": 14,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 280,
+   "faction": "孙吴",
+   "era": "三国末期",
+   "hometown": "襄阳",
+   "type": "名臣/将领",
+   "source": {
+    "ref": "晋书·武帝纪、王浑传、三国志·吴书·孙皓传裴注引襄阳记",
+    "level": "史实",
+    "dbRow": 768,
+    "override": false
+   }
+  },
+  {
+   "id": 240097,
+   "name": "钟离牧",
+   "zi": "子干",
+   "layer": "minor",
+   "five": {
+    "tong": 70,
+    "wu": 55,
+    "zhi": 80,
+    "zheng": 92,
+    "mei": 92
+   },
+   "traits": [
+    "让稻化民",
+    "揭阳自首"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 92,
+   "xiangxing": 146,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "孙吴",
+   "era": "三国中后期",
+   "hometown": "会稽山阴",
+   "type": "将领",
+   "source": {
+    "ref": "三国志·钟离牧传裴注引会稽典录",
+    "level": "史实",
+    "dbRow": 635,
+    "override": false
+   }
+  },
+  {
+   "id": 240098,
+   "name": "柳隐",
+   "zi": "休然",
+   "layer": "minor",
+   "five": {
+    "tong": 80,
+    "wu": 65,
+    "zhi": 78,
+    "zheng": 80,
+    "mei": 86
+   },
+   "traits": [
+    "独守黄金围",
+    "大哭三日释甲"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 82,
+   "xiangxing": 15,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 190,
+   "died": 269,
+   "faction": "蜀汉",
+   "era": "三国末期至三国归晋",
+   "hometown": "蜀郡成都",
+   "type": "将领",
+   "source": {
+    "ref": "华阳国志·后贤志、晋书（散见）",
+    "level": "史实",
+    "dbRow": 742,
+    "override": false
+   }
+  },
+  {
+   "id": 240099,
+   "name": "司马伷",
+   "zi": "子将",
+   "layer": "minor",
+   "five": {
+    "tong": 82,
+    "wu": 62,
+    "zhi": 78,
+    "zheng": 85,
+    "mei": 82
+   },
+   "traits": [
+    "镇下邳绥怀有方",
+    "六路平吴出涂中"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 84,
+   "xiangxing": 145,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 227,
+   "died": 283,
+   "faction": "西晋·归晋后",
+   "era": "三国末期至三国归晋",
+   "hometown": "河内温",
+   "type": "史实·宗室/将领",
+   "source": {
+    "ref": "晋书·琅邪武王伷传、武帝纪、三国志·吴书·孙皓传",
+    "level": "史实",
+    "dbRow": 923,
+    "override": false
+   }
+  },
+  {
+   "id": 240100,
+   "name": "轲比能",
+   "zi": "－",
+   "layer": "minor",
+   "five": {
+    "tong": 80,
+    "wu": 78,
+    "zhi": 75,
+    "zheng": 80,
+    "mei": 75
+   },
+   "traits": [
+    "鲜卑统一",
+    "田豫之争"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 78,
+   "xiangxing": 3,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 235,
+   "faction": "乌桓·鲜卑·北族",
+   "era": "三国鼎立至三国中后期",
+   "hometown": "－",
+   "type": "部族首领",
+   "source": {
+    "ref": "三国志·鲜卑传、田豫传",
+    "level": "史实",
+    "dbRow": 212,
+    "override": false
+   }
+  },
+  {
+   "id": 240101,
+   "name": "赵俨",
+   "zi": "伯然",
+   "layer": "minor",
+   "five": {
+    "tong": 82,
+    "wu": 50,
+    "zhi": 86,
+    "zheng": 90,
+    "mei": 80
+   },
+   "traits": [
+    "樊城之役收散卒",
+    "协统七军"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 86,
+   "xiangxing": 6,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 245,
+   "faction": "曹魏·司马氏",
+   "era": "汉末群雄至三国末期",
+   "hometown": "颍川阳翟",
+   "type": "将领/名臣",
+   "source": {
+    "ref": "三国志·魏书·赵俨传",
+    "level": "史实",
+    "dbRow": 652,
+    "override": false
+   }
+  },
+  {
+   "id": 100330,
+   "name": "邓芝",
+   "zi": "伯苗",
+   "layer": "minor",
+   "five": {
+    "tong": 72,
+    "wu": 50,
+    "zhi": 88,
+    "zheng": 92,
+    "mei": 86
+   },
+   "traits": [
+    "使吴复盟",
+    "唇齿之论"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 90,
+   "xiangxing": 6,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 251,
+   "faction": "蜀汉",
+   "era": "汉末群雄至三国末期",
+   "hometown": "义阳新野",
+   "type": "名臣/将领",
+   "source": {
+    "ref": "三国志·蜀书·邓芝传",
+    "level": "史实",
+    "dbRow": 708,
+    "override": false
+   }
+  },
+  {
+   "id": 240102,
+   "name": "秃发树机能",
+   "zi": "－",
+   "layer": "minor",
+   "five": {
+    "tong": 85,
+    "wu": 82,
+    "zhi": 75,
+    "zheng": 65,
+    "mei": 80
+   },
+   "traits": [
+    "万斛堆杀胡烈",
+    "青山败牵弘"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 71,
+   "xiangxing": 3,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 279,
+   "faction": "乌桓·鲜卑·北族",
+   "era": "三国归晋后",
+   "hometown": "河西",
+   "type": "史实·外族渠帅",
+   "source": {
+    "ref": "晋书·武帝纪、马隆传、秃发乌孤载记、资治通鉴·晋纪",
+    "level": "史实",
+    "dbRow": 929,
+    "override": false
+   }
+  },
+  {
+   "id": 240103,
+   "name": "司马昭",
+   "zi": "子上",
+   "layer": "minor",
+   "five": {
+    "tong": 80,
+    "wu": 50,
+    "zhi": 96,
+    "zheng": 95,
+    "mei": 65
+   },
+   "traits": [
+    "弑曹髦",
+    "寿春围城"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 83,
+   "xiangxing": 14,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 211,
+   "died": 265,
+   "faction": "曹魏·司马氏",
+   "era": "三国中后期至归晋",
+   "hometown": "河内温",
+   "type": "权臣",
+   "source": {
+    "ref": "晋书·文帝纪、三国志·三少帝纪、钟会传",
+    "level": "史实",
+    "dbRow": 403,
+    "override": false
+   }
+  },
+  {
+   "id": 100217,
+   "name": "朱治",
+   "zi": "君理",
+   "layer": "minor",
+   "five": {
+    "tong": 70,
+    "wu": 65,
+    "zhi": 75,
+    "zheng": 88,
+    "mei": 88
+   },
+   "traits": [
+    "三朝元老",
+    "领吴郡"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 88,
+   "xiangxing": 5,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 156,
+   "died": 224,
+   "faction": "孙吴",
+   "era": "黄巾之乱至三国鼎立",
+   "hometown": "丹阳故鄣",
+   "type": "将领",
+   "source": {
+    "ref": "三国志·朱治传",
+    "level": "史实",
+    "dbRow": 605,
+    "override": false
+   }
+  },
+  {
+   "id": 240104,
+   "name": "王昶",
+   "zi": "文舒",
+   "layer": "minor",
+   "five": {
+    "tong": 82,
+    "wu": 52,
+    "zhi": 86,
+    "zheng": 88,
+    "mei": 78
+   },
+   "traits": [
+    "《家戒》家训",
+    "伐吴破施绩"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 84,
+   "xiangxing": 144,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 259,
+   "faction": "曹魏·司马氏",
+   "era": "三国鼎立至三国末期",
+   "hometown": "太原晋阳",
+   "type": "将领/名臣",
+   "source": {
+    "ref": "三国志·魏书·王昶传",
+    "level": "史实",
+    "dbRow": 663,
+    "override": false
+   }
+  },
+  {
+   "id": 240105,
+   "name": "陈骞",
+   "zi": "休渊",
+   "layer": "minor",
+   "five": {
+    "tong": 75,
+    "wu": 60,
+    "zhi": 78,
+    "zheng": 88,
+    "mei": 82
+   },
+   "traits": [
+    "荆豫久镇",
+    "晋初八公"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 86,
+   "xiangxing": 6,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 201,
+   "died": 281,
+   "faction": "西晋·归晋后",
+   "era": "三国末期至归晋",
+   "hometown": "广陵东阳",
+   "type": "将领",
+   "source": {
+    "ref": "晋书·陈骞传、三国志·陈矫传裴注",
+    "level": "史实",
+    "dbRow": 448,
+    "override": false
+   }
+  },
+  {
+   "id": 240106,
+   "name": "胡质",
+   "zi": "文德",
+   "layer": "minor",
+   "five": {
+    "tong": 76,
+    "wu": 45,
+    "zhi": 84,
+    "zheng": 92,
+    "mei": 86
+   },
+   "traits": [
+    "父子清畏人知",
+    "公安拒朱然"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 90,
+   "xiangxing": 145,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 250,
+   "faction": "曹魏·司马氏",
+   "era": "汉末群雄至三国末期",
+   "hometown": "楚国寿春",
+   "type": "名臣/将领",
+   "source": {
+    "ref": "三国志·魏书·胡质传、晋书·良吏传",
+    "level": "史实",
+    "dbRow": 664,
+    "override": false
+   }
+  },
+  {
+   "id": 240107,
+   "name": "唐彬",
+   "zi": "儒宗",
+   "layer": "minor",
+   "five": {
+    "tong": 72,
+    "wu": 62,
+    "zhi": 78,
+    "zheng": 88,
+    "mei": 80
+   },
+   "traits": [
+    "巴东顺江",
+    "雍州兴学"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 85,
+   "xiangxing": 145,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 235,
+   "died": 294,
+   "faction": "西晋·归晋后",
+   "era": "三国末期至归晋",
+   "hometown": "鲁国邹",
+   "type": "将领",
+   "source": {
+    "ref": "晋书·唐彬传",
+    "level": "史实",
+    "dbRow": 444,
+    "override": false
+   }
+  },
+  {
+   "id": 240108,
+   "name": "张翼",
+   "zi": "伯恭",
+   "layer": "minor",
+   "five": {
+    "tong": 75,
+    "wu": 65,
+    "zhi": 75,
+    "zheng": 80,
+    "mei": 85
+   },
+   "traits": [
+    "不废公务",
+    "谏止黩武"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 82,
+   "xiangxing": 14,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 264,
+   "faction": "蜀汉",
+   "era": "三国中后期至归晋",
+   "hometown": "犍为武阳",
+   "type": "将领",
+   "source": {
+    "ref": "三国志·张翼传、姜维传",
+    "level": "史实",
+    "dbRow": 527,
+    "override": false
+   }
+  },
+  {
+   "id": 240109,
+   "name": "陈表",
+   "zi": "文奥",
+   "layer": "minor",
+   "five": {
+    "tong": 65,
+    "wu": 65,
+    "zhi": 75,
+    "zheng": 85,
+    "mei": 90
+   },
+   "traits": [
+    "太子四友",
+    "让兵于兄"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 87,
+   "xiangxing": 7,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 204,
+   "died": 237,
+   "faction": "孙吴",
+   "era": "三国中后期",
+   "hometown": "庐江松滋",
+   "type": "将领",
+   "source": {
+    "ref": "三国志·陈武传附、吴主五子传",
+    "level": "史实",
+    "dbRow": 618,
+    "override": false
+   }
+  },
+  {
+   "id": 240110,
+   "name": "吕虔",
+   "zi": "子恪",
+   "layer": "minor",
+   "five": {
+    "tong": 70,
+    "wu": 68,
+    "zhi": 75,
+    "zheng": 85,
+    "mei": 80
+   },
+   "traits": [
+    "泰山平寇",
+    "吕虔佩刀"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 83,
+   "xiangxing": 2,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至三国中后期",
+   "hometown": "任城",
+   "type": "将领",
+   "source": {
+    "ref": "三国志·吕虔传、晋书·王祥传",
+    "level": "史实",
+    "dbRow": 372,
+    "override": false
+   }
+  },
+  {
+   "id": 240111,
+   "name": "陆胤",
+   "zi": "敬宗",
+   "layer": "minor",
+   "five": {
+    "tong": 65,
+    "wu": 55,
+    "zhi": 80,
+    "zheng": 90,
+    "mei": 88
+   },
+   "traits": [
+    "交州绥靖",
+    "下狱不改辞"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 89,
+   "xiangxing": 143,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "孙吴",
+   "era": "三国中后期至三国末期",
+   "hometown": "吴郡吴",
+   "type": "将领",
+   "source": {
+    "ref": "三国志·陆胤传",
+    "level": "史实",
+    "dbRow": 594,
+    "override": false
+   }
+  },
+  {
+   "id": 240112,
+   "name": "沈莹",
+   "zi": "－",
+   "layer": "minor",
+   "five": {
+    "tong": 80,
+    "wu": 78,
+    "zhi": 70,
+    "zheng": 72,
+    "mei": 78
+   },
+   "traits": [
+    "丹阳青巾兵",
+    "板桥陷阵"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 74,
+   "xiangxing": 5,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 280,
+   "faction": "孙吴",
+   "era": "三国末期",
+   "hometown": "吴郡",
+   "type": "将领/学者",
+   "source": {
+    "ref": "晋书·王浑传、隋书经籍志、太平御览引",
+    "level": "史实",
+    "dbRow": 769,
+    "override": false
+   }
+  },
+  {
+   "id": 240113,
+   "name": "孙奂",
+   "zi": "季明",
+   "layer": "minor",
+   "five": {
+    "tong": 72,
+    "wu": 65,
+    "zhi": 75,
+    "zheng": 85,
+    "mei": 80
+   },
+   "traits": [
+    "江夏之役",
+    "三将之获"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 83,
+   "xiangxing": 12,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 195,
+   "died": 234,
+   "faction": "孙吴",
+   "era": "三国中后期",
+   "hometown": "吴郡富春",
+   "type": "宗室将领",
+   "source": {
+    "ref": "三国志·宗室传、吴主传",
+    "level": "史实",
+    "dbRow": 568,
+    "override": false
+   }
+  },
+  {
+   "id": 240114,
+   "name": "吕据",
+   "zi": "世议",
+   "layer": "minor",
+   "five": {
+    "tong": 75,
+    "wu": 72,
+    "zhi": 70,
+    "zheng": 70,
+    "mei": 90
+   },
+   "traits": [
+    "共谋废綝",
+    "耻为叛臣"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 78,
+   "xiangxing": 16,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 256,
+   "faction": "孙吴",
+   "era": "三国末期",
+   "hometown": "汝南细阳",
+   "type": "将领",
+   "source": {
+    "ref": "三国志·吕范传附、孙綝传",
+    "level": "史实",
+    "dbRow": 631,
+    "override": false
+   }
+  },
+  {
+   "id": 240115,
+   "name": "周浚",
+   "zi": "开林",
+   "layer": "minor",
+   "five": {
+    "tong": 82,
+    "wu": 65,
+    "zhi": 80,
+    "zheng": 78,
+    "mei": 72
+   },
+   "traits": [
+    "杨荷桥张乔诈降",
+    "板桥夹击"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 76,
+   "xiangxing": 149,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "西晋·归晋后",
+   "era": "三国末期至三国归晋",
+   "hometown": "汝南安城",
+   "type": "史实·将领",
+   "source": {
+    "ref": "晋书·周浚传、王浑传、武帝纪、资治通鉴·晋纪",
+    "level": "史实",
+    "dbRow": 924,
+    "override": false
+   }
+  },
+  {
+   "id": 240116,
+   "name": "朱据",
+   "zi": "子范",
+   "layer": "minor",
+   "five": {
+    "tong": 65,
+    "wu": 70,
+    "zhi": 75,
+    "zheng": 80,
+    "mei": 85
+   },
+   "traits": [
+    "护太子见杀",
+    "朱氏平反"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 1,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 82,
+   "xiangxing": 145,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 194,
+   "died": 250,
+   "faction": "孙吴",
+   "era": "三国中后期至三国末期",
+   "hometown": "吴郡吴",
+   "type": "将领",
+   "source": {
+    "ref": "三国志·朱据传、吴主五子传",
+    "level": "史实",
+    "dbRow": 609,
+    "override": false
+   }
+  },
+  {
+   "id": 240117,
+   "name": "虞汜",
+   "zi": "世洪",
+   "layer": "minor",
+   "five": {
+    "tong": 75,
+    "wu": 58,
+    "zhi": 80,
+    "zheng": 84,
+    "mei": 78
+   },
+   "traits": [
+    "虞翻第四子生于南海",
+    "抗言孙綝废立"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 82,
+   "xiangxing": 149,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "孙吴",
+   "era": "三国末期",
+   "hometown": "会稽余姚",
+   "type": "史实·将领/名臣",
+   "source": {
+    "ref": "三国志·吴书·虞翻传附、孙皓传、晋书·陶璜传",
+    "level": "史实",
+    "dbRow": 900,
+    "override": false
+   }
+  },
+  {
+   "id": 240118,
+   "name": "诸葛靓",
+   "zi": "仲思",
+   "layer": "minor",
+   "five": {
+    "tong": 72,
+    "wu": 58,
+    "zhi": 80,
+    "zheng": 72,
+    "mei": 92
+   },
+   "traits": [
+    "寿春入吴为质",
+    "晋武亲授大司马不受"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 80,
+   "xiangxing": 10,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "西晋·归晋后",
+   "era": "三国末期至三国归晋",
+   "hometown": "琅邪阳都",
+   "type": "将领/遗民",
+   "source": {
+    "ref": "晋书·诸葛恢传附、世说新语、三国志·诸葛诞传",
+    "level": "史实",
+    "dbRow": 767,
+    "override": false
+   }
+  },
+  {
+   "id": 100204,
+   "name": "陈登",
+   "zi": "元龙",
+   "layer": "minor",
+   "five": {
+    "tong": 70,
+    "wu": 50,
+    "zhi": 88,
+    "zheng": 85,
+    "mei": 80
+   },
+   "traits": [
+    "下邳内应",
+    "广陵破孙氏"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 83,
+   "xiangxing": 15,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至官渡赤壁",
+   "hometown": "下邳淮浦",
+   "type": "文臣",
+   "source": {
+    "ref": "三国志·吕布传裴注引先贤行状、陈矫传",
+    "level": "史实",
+    "dbRow": 162,
+    "override": false
+   }
+  },
+  {
+   "id": 100096,
+   "name": "步骘",
+   "zi": "子山",
+   "layer": "minor",
+   "five": {
+    "tong": 65,
+    "wu": 45,
+    "zhi": 85,
+    "zheng": 92,
+    "mei": 85
+   },
+   "traits": [
+    "种瓜读书",
+    "宴斩吴巨"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 89,
+   "xiangxing": 13,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 247,
+   "faction": "孙吴",
+   "era": "三国鼎立至三国中后期",
+   "hometown": "淮阴",
+   "type": "丞相",
+   "source": {
+    "ref": "三国志·步骘传、士燮传、陆抗传",
+    "level": "史实",
+    "dbRow": 601,
+    "override": false
+   }
+  },
+  {
+   "id": 240119,
+   "name": "留赞",
+   "zi": "正明",
+   "layer": "minor",
+   "five": {
+    "tong": 82,
+    "wu": 78,
+    "zhi": 65,
+    "zheng": 62,
+    "mei": 84
+   },
+   "traits": [
+    "自割脚筋",
+    "东兴先登"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 71,
+   "xiangxing": 148,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 183,
+   "died": 255,
+   "faction": "孙吴",
+   "era": "三国末期",
+   "hometown": "会稽长山",
+   "type": "将领",
+   "source": {
+    "ref": "三国志·吴书·孙峻传裴注引吴书、晋书·景帝纪",
+    "level": "史实",
+    "dbRow": 764,
+    "override": false
+   }
+  },
+  {
+   "id": 240120,
+   "name": "童渊",
+   "zi": "雄付",
+   "layer": "minor",
+   "five": {
+    "tong": 80,
+    "wu": 99,
+    "zhi": 65,
+    "zheng": 45,
+    "mei": 82
+   },
+   "traits": [
+    "五钩神飞亮银枪",
+    "百鸟朝凰枪"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 1.1,
+    "navy": 0.7
+   },
+   "yili": 60,
+   "xiangxing": 139,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "东汉·汉廷",
+   "era": "汉末群雄（民间系年）",
+   "hometown": "－",
+   "type": "民间/游戏虚拟·武师",
+   "source": {
+    "ref": "近现代评话、武术谱系、现代三国游戏设定",
+    "level": "虚构/传说",
+    "dbRow": 887,
+    "override": false
+   }
+  },
+  {
+   "id": 240121,
+   "name": "杜畿",
+   "zi": "伯侯",
+   "layer": "minor",
+   "five": {
+    "tong": 70,
+    "wu": 30,
+    "zhi": 90,
+    "zheng": 96,
+    "mei": 84
+   },
+   "traits": [
+    "单车定河东",
+    "卫固范先"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 91,
+   "xiangxing": 7,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 163,
+   "died": 224,
+   "faction": "曹魏·司马氏",
+   "era": "汉末群雄至三国鼎立",
+   "hometown": "京兆杜陵",
+   "type": "名臣",
+   "source": {
+    "ref": "三国志·魏书·杜畿传",
+    "level": "史实",
+    "dbRow": 660,
+    "override": false
+   }
+  },
+  {
+   "id": 100228,
+   "name": "李通",
+   "zi": "文达",
+   "layer": "minor",
+   "five": {
+    "tong": 72,
+    "wu": 72,
+    "zhi": 70,
+    "zheng": 75,
+    "mei": 80
+   },
+   "traits": [
+    "拒袁绍刘表",
+    "汝南全郡"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.1
+   },
+   "yili": 77,
+   "xiangxing": 4,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 168,
+   "died": 209,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至官渡赤壁",
+   "hometown": "江夏平春",
+   "type": "将领",
+   "source": {
+    "ref": "三国志·李通传裴注引魏书",
+    "level": "史实",
+    "dbRow": 371,
+    "override": false
+   }
+  },
+  {
+   "id": 240122,
+   "name": "关索",
+   "zi": "－",
+   "layer": "minor",
+   "five": {
+    "tong": 78,
+    "wu": 88,
+    "zhi": 60,
+    "zheng": 55,
+    "mei": 88
+   },
+   "traits": [
+    "花关索传",
+    "认父关羽"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 68,
+   "xiangxing": 11,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "南中·外族",
+   "era": "三国鼎立（南征时段，民间系年）",
+   "hometown": "－",
+   "type": "民间/游戏虚拟·将领",
+   "source": {
+    "ref": "明成化说唱词话·花关索传、云南关索戏、地方志",
+    "level": "虚构/传说",
+    "dbRow": 873,
+    "override": false
+   }
+  },
+  {
+   "id": 100233,
+   "name": "贾逵",
+   "zi": "梁道",
+   "layer": "minor",
+   "five": {
+    "tong": 60,
+    "wu": 45,
+    "zhi": 85,
+    "zheng": 95,
+    "mei": 82
+   },
+   "traits": [
+    "定继位",
+    "绛邑全城"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 90,
+   "xiangxing": 11,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 174,
+   "died": 228,
+   "faction": "曹魏·司马氏",
+   "era": "三国鼎立至三国中后期",
+   "hometown": "河东襄陵",
+   "type": "能臣",
+   "source": {
+    "ref": "三国志·贾逵传、晋书·贾充传",
+    "level": "史实",
+    "dbRow": 389,
+    "override": false
+   }
+  },
+  {
+   "id": 240123,
+   "name": "曲阿小将",
+   "zi": "－",
+   "layer": "minor",
+   "five": {
+    "tong": 85,
+    "wu": 96,
+    "zhi": 60,
+    "zheng": 40,
+    "mei": 86
+   },
+   "traits": [
+    "神亭岭",
+    "独挡十三骑"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1.15,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 1.1,
+    "navy": 0.7
+   },
+   "yili": 58,
+   "xiangxing": 144,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "流动·山寇·地方",
+   "era": "汉末群雄",
+   "hometown": "－",
+   "type": "虚构·无名人物（称号层）",
+   "source": {
+    "ref": "三国演义·第十五回、三国志·吴书·太史慈传（史实骨架）",
+    "level": "虚构/传说",
+    "dbRow": 886,
+    "override": false
+   }
+  },
+  {
+   "id": 240124,
+   "name": "陈武",
+   "zi": "子烈",
+   "layer": "minor",
+   "five": {
+    "tong": 75,
+    "wu": 88,
+    "zhi": 55,
+    "zheng": 60,
+    "mei": 88
+   },
+   "traits": [
+    "所向无前",
+    "合肥战死"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 71,
+   "xiangxing": 144,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 177,
+   "died": 215,
+   "faction": "孙吴",
+   "era": "三国鼎立",
+   "hometown": "庐江松滋",
+   "type": "猛将",
+   "source": {
+    "ref": "三国志·陈武传裴注引江表传",
+    "level": "史实",
+    "dbRow": 617,
+    "override": false
+   }
+  },
+  {
+   "id": 240125,
+   "name": "梁习",
+   "zi": "子虞",
+   "layer": "minor",
+   "five": {
+    "tong": 72,
+    "wu": 35,
+    "zhi": 86,
+    "zheng": 95,
+    "mei": 78
+   },
+   "traits": [
+    "绥辑并州",
+    "迁豪右为质"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 88,
+   "xiangxing": 149,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 230,
+   "faction": "乌桓·鲜卑·北族",
+   "era": "汉末群雄至三国鼎立",
+   "hometown": "陈郡柘",
+   "type": "名臣",
+   "source": {
+    "ref": "三国志·魏书·梁习传",
+    "level": "史实",
+    "dbRow": 654,
+    "override": false
+   }
+  },
+  {
+   "id": 240126,
+   "name": "温恢",
+   "zi": "曼基",
+   "layer": "minor",
+   "five": {
+    "tong": 76,
+    "wu": 40,
+    "zhi": 90,
+    "zheng": 86,
+    "mei": 74
+   },
+   "traits": [
+    "预判吕蒙袭荆",
+    "合肥守备"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 81,
+   "xiangxing": 140,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 223,
+   "faction": "曹魏·司马氏",
+   "era": "汉末群雄至三国鼎立",
+   "hometown": "太原祁",
+   "type": "名臣",
+   "source": {
+    "ref": "三国志·魏书·温恢传",
+    "level": "史实",
+    "dbRow": 656,
+    "override": false
+   }
+  },
+  {
+   "id": 240127,
+   "name": "马云騄",
+   "zi": "－",
+   "layer": "minor",
+   "five": {
+    "tong": 75,
+    "wu": 88,
+    "zhi": 58,
+    "zheng": 55,
+    "mei": 90
+   },
+   "traits": [
+    "反三国演义",
+    "马超之妹"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 69,
+   "xiangxing": 7,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "蜀汉",
+   "era": "汉末群雄至三国鼎立（小说系年）",
+   "hometown": "－",
+   "type": "近现代小说/游戏虚拟·女将",
+   "source": {
+    "ref": "周大荒·反三国演义、现代三国游戏设定",
+    "level": "虚构/传说",
+    "dbRow": 879,
+    "override": false
+   }
+  },
+  {
+   "id": 240128,
+   "name": "韩浩",
+   "zi": "元嗣",
+   "layer": "minor",
+   "five": {
+    "tong": 70,
+    "wu": 65,
+    "zhi": 70,
+    "zheng": 80,
+    "mei": 80
+   },
+   "traits": [
+    "劫质案",
+    "议屯田"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 80,
+   "xiangxing": 146,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "曹魏·司马氏",
+   "era": "讨董群雄至三国鼎立",
+   "hometown": "河内",
+   "type": "将领",
+   "source": {
+    "ref": "三国志·夏侯惇传裴注、武帝纪裴注引魏书",
+    "level": "史实",
+    "dbRow": 354,
+    "override": false
+   }
+  },
+  {
+   "id": 240129,
+   "name": "王观",
+   "zi": "伟台",
+   "layer": "minor",
+   "five": {
+    "tong": 70,
+    "wu": 45,
+    "zhi": 84,
+    "zheng": 92,
+    "mei": 74
+   },
+   "traits": [
+    "高平陵据曹爽营",
+    "涿郡备边"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 85,
+   "xiangxing": 6,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 260,
+   "faction": "曹魏·司马氏",
+   "era": "汉末群雄至三国末期",
+   "hometown": "东郡廪丘",
+   "type": "名臣",
+   "source": {
+    "ref": "三国志·魏书·王观传",
+    "level": "史实",
+    "dbRow": 647,
+    "override": false
+   }
+  },
+  {
+   "id": 240130,
+   "name": "裴潜",
+   "zi": "文行",
+   "layer": "minor",
+   "five": {
+    "tong": 70,
+    "wu": 30,
+    "zhi": 88,
+    "zheng": 94,
+    "mei": 82
+   },
+   "traits": [
+    "单车定代郡",
+    "怀服乌桓"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 89,
+   "xiangxing": 5,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 244,
+   "faction": "曹魏·司马氏",
+   "era": "汉末群雄至三国鼎立",
+   "hometown": "河东闻喜",
+   "type": "名臣",
+   "source": {
+    "ref": "三国志·魏书·裴潜传",
+    "level": "史实",
+    "dbRow": 653,
+    "override": false
+   }
+  },
+  {
+   "id": 100494,
+   "name": "祝融夫人",
+   "zi": "－",
+   "layer": "minor",
+   "five": {
+    "tong": 76,
+    "wu": 88,
+    "zhi": 60,
+    "zheng": 55,
+    "mei": 85
+   },
+   "traits": [
+    "背插五口飞刀",
+    "丈八长标"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1.1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 67,
+   "xiangxing": 138,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 225,
+   "faction": "南中·外族",
+   "era": "三国鼎立（南征时段）",
+   "hometown": "－",
+   "type": "虚构·外族女将",
+   "source": {
+    "ref": "三国演义·第九十回",
+    "level": "虚构/传说",
+    "dbRow": 854,
+    "override": false
+   }
+  },
+  {
+   "id": 100007,
+   "name": "卢植",
+   "zi": "子干",
+   "layer": "minor",
+   "five": {
+    "tong": 70,
+    "wu": 40,
+    "zhi": 88,
+    "zheng": 80,
+    "mei": 85
+   },
+   "traits": [
+    "广宗之围",
+    "谏董卓废立"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 82,
+   "xiangxing": 8,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 192,
+   "faction": "东汉·汉廷",
+   "era": "黄巾之乱至讨董群雄",
+   "hometown": "涿郡涿",
+   "type": "名臣",
+   "source": {
+    "ref": "后汉书·卢植传、三国志·卢毓传",
+    "level": "史实",
+    "dbRow": 62,
+    "override": false
+   }
+  },
+  {
+   "id": 240131,
+   "name": "辛毗",
+   "zi": "佐治",
+   "layer": "minor",
+   "five": {
+    "tong": 68,
+    "wu": 35,
+    "zhi": 88,
+    "zheng": 92,
+    "mei": 78
+   },
+   "traits": [
+    "引裾力谏",
+    "止徙民"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 86,
+   "xiangxing": 143,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 235,
+   "faction": "曹魏·司马氏",
+   "era": "汉末群雄至三国鼎立",
+   "hometown": "颍川阳翟",
+   "type": "名臣",
+   "source": {
+    "ref": "三国志·魏书·辛毗传",
+    "level": "史实",
+    "dbRow": 648,
+    "override": false
+   }
+  },
+  {
+   "id": 100072,
+   "name": "关银屏",
+   "zi": "－",
+   "layer": "minor",
+   "five": {
+    "tong": 70,
+    "wu": 82,
+    "zhi": 60,
+    "zheng": 65,
+    "mei": 84
+   },
+   "traits": [
+    "孙权为子索羽女被骂辱",
+    "关三小姐关凤"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 73,
+   "xiangxing": 5,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "南中·外族",
+   "era": "三国鼎立（南征时段，民间系年）",
+   "hometown": "－",
+   "type": "民间/游戏虚拟·女将",
+   "source": {
+    "ref": "三国志·蜀书·关羽传、云南澄江地方传说",
+    "level": "虚构/传说",
+    "dbRow": 881,
+    "override": false
+   }
+  },
+  {
+   "id": 240132,
+   "name": "臧洪",
+   "zi": "子源",
+   "layer": "minor",
+   "five": {
+    "tong": 70,
+    "wu": 45,
+    "zhi": 75,
+    "zheng": 75,
+    "mei": 95
+   },
+   "traits": [
+    "酸枣之盟",
+    "东郡死守"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 83,
+   "xiangxing": 10,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 195,
+   "faction": "袁绍·河北",
+   "era": "讨董群雄",
+   "hometown": "广陵射阳",
+   "type": "忠臣",
+   "source": {
+    "ref": "三国志·臧洪传、后汉书",
+    "level": "史实",
+    "dbRow": 246,
+    "override": false
+   }
+  },
+  {
+   "id": 240133,
+   "name": "石苞",
+   "zi": "仲容",
+   "layer": "minor",
+   "five": {
+    "tong": 75,
+    "wu": 65,
+    "zhi": 75,
+    "zheng": 80,
+    "mei": 65
+   },
+   "traits": [
+    "贩铁起家",
+    "淮南镇守"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 74,
+   "xiangxing": 145,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 273,
+   "faction": "西晋·归晋后",
+   "era": "三国末期至归晋",
+   "hometown": "渤海南皮",
+   "type": "将领",
+   "source": {
+    "ref": "晋书·石苞传",
+    "level": "史实",
+    "dbRow": 449,
+    "override": false
+   }
+  },
+  {
+   "id": 100164,
+   "name": "诸葛瑾",
+   "zi": "子瑜",
+   "layer": "minor",
+   "five": {
+    "tong": 60,
+    "wu": 35,
+    "zhi": 85,
+    "zheng": 90,
+    "mei": 90
+   },
+   "traits": [
+    "兄弟公会无私面",
+    "外交蜀汉"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 90,
+   "xiangxing": 2,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 174,
+   "died": 241,
+   "faction": "孙吴",
+   "era": "三国鼎立至三国中后期",
+   "hometown": "琅邪阳都",
+   "type": "文臣·将领",
+   "source": {
+    "ref": "三国志·诸葛瑾传、吴主传",
+    "level": "史实",
+    "dbRow": 597,
+    "override": false
+   }
+  },
+  {
+   "id": 240134,
+   "name": "王浑",
+   "zi": "玄冲",
+   "layer": "minor",
+   "five": {
+    "tong": 78,
+    "wu": 60,
+    "zhi": 75,
+    "zheng": 80,
+    "mei": 65
+   },
+   "traits": [
+    "版桥破张悌",
+    "王濬争功"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 74,
+   "xiangxing": 3,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": 223,
+   "died": 297,
+   "faction": "西晋·归晋后",
+   "era": "三国末期至归晋",
+   "hometown": "太原晋阳",
+   "type": "将领",
+   "source": {
+    "ref": "晋书·王浑传、三国志·孙皓传裴注",
+    "level": "史实",
+    "dbRow": 443,
+    "override": false
+   }
+  },
+  {
+   "id": 100257,
+   "name": "蒋琬",
+   "zi": "公琰",
+   "layer": "minor",
+   "five": {
+    "tong": 55,
+    "wu": 25,
+    "zhi": 88,
+    "zheng": 98,
+    "mei": 92
+   },
+   "traits": [
+    "广都沉醉",
+    "足食足兵"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 96,
+   "xiangxing": 141,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 246,
+   "faction": "蜀汉",
+   "era": "三国中后期",
+   "hometown": "零陵湘乡",
+   "type": "政治家",
+   "source": {
+    "ref": "三国志·蒋琬传",
+    "level": "史实",
+    "dbRow": 517,
+    "override": false
+   }
+  },
+  {
+   "id": 240135,
+   "name": "傅佥",
+   "zi": "－",
+   "layer": "minor",
+   "five": {
+    "tong": 70,
+    "wu": 78,
+    "zhi": 60,
+    "zheng": 55,
+    "mei": 95
+   },
+   "traits": [
+    "阳安关死节",
+    "蒋舒出降"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 71,
+   "xiangxing": 12,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 263,
+   "faction": "蜀汉",
+   "era": "三国末期",
+   "hometown": "－",
+   "type": "将领",
+   "source": {
+    "ref": "三国志·姜维传裴注引汉晋春秋、钟会传",
+    "level": "史实",
+    "dbRow": 543,
+    "override": false
+   }
+  },
+  {
+   "id": 100223,
+   "name": "孙静",
+   "zi": "幼台",
+   "layer": "minor",
+   "five": {
+    "tong": 60,
+    "wu": 55,
+    "zhi": 78,
+    "zheng": 80,
+    "mei": 85
+   },
+   "traits": [
+    "纠合乡曲",
+    "查渎奇计"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 0.9,
+    "spear": 0.9,
+    "bow": 0.9,
+    "cavalry": 0.85,
+    "navy": 1.15
+   },
+   "yili": 82,
+   "xiangxing": 8,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": null,
+   "faction": "孙吴",
+   "era": "讨董群雄",
+   "hometown": "吴郡富春",
+   "type": "宗室将领",
+   "source": {
+    "ref": "三国志·宗室传",
+    "level": "史实",
+    "dbRow": 565,
+    "override": false
+   }
+  },
+  {
+   "id": 240136,
+   "name": "蹋顿",
+   "zi": "－",
+   "layer": "minor",
+   "five": {
+    "tong": 80,
+    "wu": 82,
+    "zhi": 60,
+    "zheng": 65,
+    "mei": 70
+   },
+   "traits": [
+    "白狼山之战",
+    "卢龙塞奇袭"
+   ],
+   "skills": [],
+   "aptitude": {
+    "shield": 1,
+    "spear": 1,
+    "bow": 1,
+    "cavalry": 0.85,
+    "navy": 0.7
+   },
+   "yili": 67,
+   "xiangxing": 140,
+   "enyi": 0,
+   "bonds": [],
+   "fate": null,
+   "born": null,
+   "died": 207,
+   "faction": "乌桓·鲜卑·北族",
+   "era": "官渡赤壁",
+   "hometown": "－",
+   "type": "部族首领",
+   "source": {
+    "ref": "三国志·武帝纪、乌丸传",
+    "level": "史实",
+    "dbRow": 207,
+    "override": false
+   }
+  }
+ ]
+}

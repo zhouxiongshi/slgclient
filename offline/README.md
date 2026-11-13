@@ -68,17 +68,18 @@ offline/
 ├── conf/              配置数据
 │   ├── skills.json      31 条真实战法（battle-kit 原文片段可溯源）
 │   ├── json/            原版服务端配置副本（地图/建筑/设施/武将/兵种…）
-│   └── campaign/        章节、人物、命运、主角、战略层（strategy/map.json 72 城）
+│   └── campaign/        章节、人物、命运、主角、战略层（strategy/map.json 72 城）、heroes-240.json / fate-groups.json
 ├── web/               原版客户端构建产物（web-desktop，磁盘逐字节不动）
 ├── electron/          Electron 壳（main.cjs + smoke.cjs 冒烟）
-├── tests/             单测 324 条 / 48 个文件（node --test）
+├── tests/             单测 331 条 / 49 个文件（node --test）
 ├── tools/             工具链
 │   ├── pack.js            打包 exe → build/SLG-Offline-win32-x64/
 │   ├── check-release.js   发行核查（75 项硬性验收，含画面指纹、合规台账与真实点击 E2E）
 │   ├── compliance-report.js 合规台账三向扫描（覆盖性/禁入物/发行包）
 │   ├── smoke.js           运行时冒烟（28 项，源码态 / --packaged 打包态）
 │   ├── explore-bugs.mjs   协议穷举探测（73 handler × 5 payload）
-│   └── build-skills.js    战法表生成器（从 battle-kit 原文生成 skills.json）
+│   ├── build-skills.js    战法表生成器（从 battle-kit 原文生成 skills.json）
+│   └── build-heroes.mjs   M3 武将数据层生成器（资料库 CSV → heroes-240.json，六项校验失败即构建失败）
 └── package.json
 ```
 
@@ -102,8 +103,9 @@ node tools/smoke.js              # 源码态冒烟 28 项
 node tools/smoke.js --packaged   # 打包态冒烟 28 项
 node tools/check-release.js      # 发行核查 75 项
 node tools/compliance-report.js  # 合规扫描（资产台账 / 禁入物 / 发行包）
-node --test tests/*.test.js      # 单元测试 324 条
+node --test tests/*.test.js      # 单元测试 331 条
 node tools/explore-bugs.mjs      # 协议穷举探测
+node tools/build-heroes.mjs      # 重新生成 M3 武将数据层（需外部资料库 characters.csv）
 ```
 
 > 打包脚本会先清空 `build/SLG-Offline-win32-x64`。若在受限环境里删除被拦截，可先把旧目录改名挪开再打包。
@@ -111,7 +113,8 @@ node tools/explore-bugs.mjs      # 协议穷举探测
 ## 五、当前验证状态
 
 - ✅ 画面指纹 `ee987ec2…` 与原版逐字节一致（`pack.json`：`byteIdentical: true`，1582 个文件）
-- ✅ 单元测试 **324/324**（含 `tests/panels.test.js` 11 条：六面板回归 + 与战略层的数据／层级对齐断言、`tests/playtest-fixes.test.js` 实机试玩回归、`tests/save-slots.test.js` 存档档位）
+- ✅ 单元测试 **331/331**（含 `tests/panels.test.js` 11 条：六面板回归 + 与战略层的数据／层级对齐断言、`tests/playtest-fixes.test.js` 实机试玩回归、`tests/save-slots.test.js` 存档档位、`tests/m3-heroes-fates.test.js` 7 条：M3 武将数据层与宿命 24 组）
+- ✅ **M3-1 武将数据层**：`heroes-240.json` 240 位（60 核心 / 100 重要 / 80 在野，源 `three-kingdoms/characters.csv` 确定性选层 + 7 位补充条目）；`fate-groups.json` 宿命 24 组（8 组完整事件链、每组带史实依据与置信度）；`domain/fate-groups.js` 零依赖叶子（active/dormant/broken 三档判定、相性环形距离、登庸相性分项）
 - ✅ 运行时冒烟 **28/28**（源码态 `reports/smoke-original.json`、打包态 `reports/smoke-packaged.json`，含本城页存档卡 + 六面板逐一点开/零横向溢出/51 条战法获取途径 + 六府入口层级让位与不重叠 + 战略台情报卡可见）
 - ✅ 发行核查 **74/75**（含内核黄金向量、协议、画面指纹、合规台账、真实点击 E2E；唯一红项=本批改动未提交）
 - ✅ 协议穷举：73 handler × 5 = 365 用例，**0 抛异常**（35 条 "null 字段" 为设计空值：空战法槽、未解锁天赋、未选章节分支、无在店客人）

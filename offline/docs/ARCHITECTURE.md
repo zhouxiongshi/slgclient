@@ -289,6 +289,13 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 - 主 bundle 经 `patchClientBundle` 运行时改写后行号会偏移——定位崩溃栈时要用改写后的文本找行（踩过：直接读磁盘 bundle 对不上行号）。
 - 已修的上游崩溃：`onCityFacilities` 里 `getMyCityById` 回 null 时直接 `.cityId` 抛 TypeError（登录竞态/异城查询），补丁为空引用整段跳过。原版 `ArmySelectNodeLogic.setData` 也有同款未防护写法，尚未触发，暂不处理。
 
+### 9.5 M3-1 武将数据层与宿命 24 组（GDD §7.1 / §7.5）
+
+- `tools/build-heroes.mjs`：外部资料库 `three-kingdoms/characters.csv`（936 位，仓库外）确定性选层 → `conf/campaign/heroes-240.json` 入仓。分层 60 核心（宿命成员强制 + 高光战法武将 + 均值补足，候选限卒年 ≤281 且非部族首领）/ 100 重要 / 80 在野。资料库缺项走脚本内 `OVERRIDES`（7 位：太史慈/黄盖/孙尚香/甄洛/祝融/蔡文姬/黄月英），这是唯一允许手工加人的地方。
+- 字段映射：`yili = 政×0.6+魅×0.4`（复用 `conf/relations.json` 规则）；相性 = 势力锚点 + 名字 FNV-1a 散列 ±12 环形 1..149；兵种适性按五维/籍贯/势力派生（界面须标「本作设定」）。包内已有武将复用原 cfgId，新武将从 240001 起分配。
+- `server/domain/fate-groups.js`：零依赖叶子，读 `conf/campaign/fate-groups.json`（24 组，8 组 fullChain 事件链，每组带史实依据与置信度）。`evaluateFates(heroAlive, {heroInCourt})` 回 active/dormant/broken 三档；加成数值由调用方换算（描述=计算=战报同源）。**一人可属多组**（曹操 5 组、赵云 3 组）：`fate` 字段记首个组 id，bonds 全量铺边。
+- 测试 `tests/m3-heroes-fates.test.js` 7 条：含子进程重跑 `build-heroes.mjs --check`（V1..V6 校验失败即构建失败）。运行期接线（招募/关系网渲染/宿命加成落战斗）属 M3-4。
+
 ---
 
 ## 10. 文档地图（读哪本、信哪本）

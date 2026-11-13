@@ -1,0 +1,414 @@
+{
+ "version": 1,
+ "meta": {
+  "source": "GDD-顶配详细设计.md §7.5 宿命 24 组（规划基线）",
+  "note": "宿命必须可断：有人会死，断了要有代价，否则宿命只是数值加成。fullChain=true 的组为事件链候选（M3 后期接入），其余只做组合加成+断链代价。members 使用武将名（与 heroes-240.json / 资料库 characters.csv 同名对齐）。",
+  "fullChainCount": 8,
+  "fullChainTopics": [
+   "刘备",
+   "曹操",
+   "孙氏",
+   "吕布",
+   "袁绍",
+   "董卓",
+   "诸葛亮",
+   "周瑜"
+  ],
+  "fullChainNote": "GDD §7.5：8 组完整事件链，主题覆盖 刘备/曹操/孙氏/吕布/袁绍/董卓/诸葛亮/周瑜；其余 16 组只做组合加成+断链代价"
+ },
+ "groups": [
+  {
+   "id": "taoyuan",
+   "title": "桃园结义",
+   "members": [
+    "刘备",
+    "关羽",
+    "张飞"
+   ],
+   "trigger": "三人同队",
+   "effect": "连携「桃园」：全队士气 +15，首回合伤害 +20%",
+   "breakEffect": "一人死亡则永久失效，其余二人忠诚 -15",
+   "fullChain": true,
+   "source": {
+    "id": "sgz.shu.36.注/演义·第一回",
+    "confidence": "中"
+   }
+  },
+  {
+   "id": "caoxun",
+   "title": "奉天子以令不臣",
+   "members": [
+    "曹操",
+    "荀彧"
+   ],
+   "trigger": "荀彧任军师 3 旬",
+   "effect": "政策槽 +1",
+   "breakEffect": "荀彧死亡/离间成功 → 曹操威权 +20、信义 -30",
+   "fullChain": true,
+   "source": {
+    "id": "sgz.weishu.10 荀彧传",
+    "confidence": "高"
+   }
+  },
+  {
+   "id": "sunzhou",
+   "title": "总角之好",
+   "members": [
+    "孙策",
+    "周瑜"
+   ],
+   "trigger": "同队水战胜利",
+   "effect": "水战伤害 +15%",
+   "breakEffect": "孙策死 → 周瑜忠诚 -30",
+   "fullChain": false,
+   "source": {
+    "id": "sgz.wu.9 周瑜传",
+    "confidence": "高"
+   }
+  },
+  {
+   "id": "lvchan",
+   "title": "连环计",
+   "members": [
+    "吕布",
+    "貂蝉"
+   ],
+   "trigger": "事件链",
+   "effect": "吕布忠诚锁定 100 直至事件结束",
+   "breakEffect": "事件失败 → 吕布叛逃概率 ×2",
+   "fullChain": true,
+   "source": {
+    "id": "演义·第八回（貂蝉史无其人）",
+    "confidence": "低"
+   }
+  },
+  {
+   "id": "yanshao",
+   "title": "河北双璧",
+   "members": [
+    "袁绍",
+    "颜良",
+    "文丑"
+   ],
+   "trigger": "同队",
+   "effect": "骑兵冲锋 +20%",
+   "breakEffect": "颜良死 → 文丑狂暴（攻击 +20%，防御 -20%）",
+   "fullChain": false,
+   "source": {
+    "id": "sgz.weishu.6 袁绍传",
+    "confidence": "高"
+   }
+  },
+  {
+   "id": "wolong-zilong",
+   "title": "卧龙护军",
+   "members": [
+    "诸葛亮",
+    "赵云"
+   ],
+   "trigger": "同队",
+   "effect": "战法发动率 +10%",
+   "breakEffect": "无",
+   "fullChain": false,
+   "source": {
+    "id": "sgz.shu.35/36（同事刘备，演义共识）",
+    "confidence": "中"
+   }
+  },
+  {
+   "id": "caoxuchu",
+   "title": "虎痴护卫",
+   "members": [
+    "曹操",
+    "许褚"
+   ],
+   "trigger": "许褚护卫",
+   "effect": "主将受伤免除一次",
+   "breakEffect": "无",
+   "fullChain": false,
+   "source": {
+    "id": "sgz.weishu.18 许褚传",
+    "confidence": "高"
+   }
+  },
+  {
+   "id": "ziyu-lusu",
+   "title": "榻上策",
+   "members": [
+    "孙权",
+    "鲁肃"
+   ],
+   "trigger": "外交",
+   "effect": "结盟门槛 -15",
+   "breakEffect": "鲁肃死 → 江东士族支持 -20",
+   "fullChain": false,
+   "source": {
+    "id": "sgz.wu.9 鲁肃传",
+    "confidence": "高"
+   }
+  },
+  {
+   "id": "caoguo",
+   "title": "轻兵速进",
+   "members": [
+    "曹操",
+    "郭嘉"
+   ],
+   "trigger": "郭嘉任军师",
+   "effect": "出征粮耗 -10%",
+   "breakEffect": "郭嘉早逝（207）→ 该加成永久消失，赤壁相关事件难度上升",
+   "fullChain": false,
+   "source": {
+    "id": "sgz.weishu.14 郭嘉传",
+    "confidence": "高"
+   }
+  },
+  {
+   "id": "longzhongdui",
+   "title": "三顾茅庐",
+   "members": [
+    "刘备",
+    "诸葛亮"
+   ],
+   "trigger": "三顾完成",
+   "effect": "内政全项 +8%，可开「隆中对」战略目标",
+   "breakEffect": "诸葛亮死 → 蜀汉政策槽 -1，北伐事件链关闭",
+   "fullChain": true,
+   "source": {
+    "id": "sgz.shu.35 诸葛亮传",
+    "confidence": "高"
+   }
+  },
+  {
+   "id": "sanjiang",
+   "title": "三将分守",
+   "members": [
+    "关羽",
+    "张飞",
+    "赵云"
+   ],
+   "trigger": "三人分守三城",
+   "effect": "各城守军士气 +10",
+   "breakEffect": "任一人死 → 其余二人攻击 +10%、防御 -10%（哀兵）",
+   "fullChain": false,
+   "source": {
+    "id": "sgz.shu.36/演义",
+    "confidence": "中"
+   }
+  },
+  {
+   "id": "xianzhen",
+   "title": "陷阵之志",
+   "members": [
+    "吕布",
+    "高顺",
+    "张辽"
+   ],
+   "trigger": "同队",
+   "effect": "「陷阵」：首回合冲锋伤害 +30%",
+   "breakEffect": "高顺死 → 张辽忠诚 -20（可被招降）",
+   "fullChain": false,
+   "source": {
+    "id": "sgz.weishu.7 吕布传及裴注",
+    "confidence": "高"
+   }
+  },
+  {
+   "id": "hbei-mou",
+   "title": "河北谋主",
+   "members": [
+    "袁绍",
+    "田丰",
+    "沮授"
+   ],
+   "trigger": "二人在朝",
+   "effect": "政策成本 -20%",
+   "breakEffect": "杀田丰 → 沮授忠诚 -40，河北谋士集体寒心",
+   "fullChain": true,
+   "source": {
+    "id": "sgz.weishu.6 袁绍传及裴注",
+    "confidence": "高"
+   }
+  },
+  {
+   "id": "hefei",
+   "title": "威震合肥",
+   "members": [
+    "曹操",
+    "张辽"
+   ],
+   "trigger": "张辽归降后 5 旬",
+   "effect": "守城时城防 +15%",
+   "breakEffect": "张辽死 → 合肥线事件失败",
+   "fullChain": false,
+   "source": {
+    "id": "sgz.weishu.17 张辽传",
+    "confidence": "高"
+   }
+  },
+  {
+   "id": "sunjiye",
+   "title": "江东基业",
+   "members": [
+    "孙坚",
+    "孙策"
+   ],
+   "trigger": "孙坚战死",
+   "effect": "孙策继业：江东全城忠诚 +20，但 5 年内遇刺风险",
+   "breakEffect": "孙策早亡 → 孙权提前继位，威望 -30（需鲁肃补）",
+   "fullChain": true,
+   "source": {
+    "id": "sgz.wu.1 孙破虏讨逆传",
+    "confidence": "高"
+   }
+  },
+  {
+   "id": "jingzhou-shui",
+   "title": "荆州水军",
+   "members": [
+    "刘表",
+    "蔡瑁",
+    "黄祖"
+   ],
+   "trigger": "荆州完整",
+   "effect": "水军成本 -25%",
+   "breakEffect": "刘表死 → 二子相争，荆州分裂事件",
+   "fullChain": false,
+   "source": {
+    "id": "sgz.weishu.6 注/演义",
+    "confidence": "中"
+   }
+  },
+  {
+   "id": "yizhou-shou",
+   "title": "益州门阀",
+   "members": [
+    "刘璋",
+    "张任",
+    "严颜"
+   ],
+   "trigger": "守益州",
+   "effect": "关隘守军 +30%",
+   "breakEffect": "张任死 → 严颜有概率开城（劝降线）",
+   "fullChain": false,
+   "source": {
+    "id": "华阳国志/演义",
+    "confidence": "中"
+   }
+  },
+  {
+   "id": "xiliang-meng",
+   "title": "西凉联军",
+   "members": [
+    "马超",
+    "韩遂"
+   ],
+   "trigger": "西凉联军",
+   "effect": "骑兵战力 +15%",
+   "breakEffect": "离间成功 → 联军解散，马超独立且粮 -30%",
+   "fullChain": false,
+   "source": {
+    "id": "sgz.shu.36 马超传",
+    "confidence": "高"
+   }
+  },
+  {
+   "id": "hanzhong-wen",
+   "title": "汉中文治",
+   "members": [
+    "张鲁",
+    "阎圃"
+   ],
+   "trigger": "汉中稳固",
+   "effect": "民心 +10，疫病概率 -30%",
+   "breakEffect": "阎圃降 → 汉中城门事件可直接触发",
+   "fullChain": false,
+   "source": {
+    "id": "sgz.weishu.8 张鲁传及裴注",
+    "confidence": "高"
+   }
+  },
+  {
+   "id": "baima",
+   "title": "白马义从",
+   "members": [
+    "公孙瓒",
+    "赵云"
+   ],
+   "trigger": "赵云在队",
+   "effect": "白马义从可用",
+   "breakEffect": "赵云离（事件）→ 特殊兵失效，公孙瓒战力 -20%",
+   "fullChain": false,
+   "source": {
+    "id": "sgz.shu.36 赵云传注「本属公孙瓒」",
+    "confidence": "高"
+   }
+  },
+  {
+   "id": "weishe",
+   "title": "凉州威慑",
+   "members": [
+    "董卓",
+    "李儒",
+    "华雄"
+   ],
+   "trigger": "三人同在",
+   "effect": "威慑获取 +50%",
+   "breakEffect": "李儒死 → 董卓失去全部外交选项（只剩宣战）",
+   "fullChain": true,
+   "source": {
+    "id": "演义+后汉书（华雄实为孙坚所斩）",
+    "confidence": "中"
+   }
+  },
+  {
+   "id": "langgu",
+   "title": "鹰视狼顾",
+   "members": [
+    "曹操",
+    "司马懿"
+   ],
+   "trigger": "司马懿出仕",
+   "effect": "内政 +10%，但每 10 旬一次「狼顾」判定",
+   "breakEffect": "判定失败 → 司马懿忠诚 -30，后代事件链开启",
+   "fullChain": false,
+   "source": {
+    "id": "sgz.weishu.1/3 及裴注",
+    "confidence": "中"
+   }
+  },
+  {
+   "id": "shichuan",
+   "title": "传授衣钵",
+   "members": [
+    "诸葛亮",
+    "姜维"
+   ],
+   "trigger": "姜维归降",
+   "effect": "战法传授（姜维学得 1 条诸葛亮战法）",
+   "breakEffect": "诸葛亮死前未传 → 姜维只能学通用战法",
+   "fullChain": false,
+   "source": {
+    "id": "sgz.shu.44 姜维传",
+    "confidence": "高"
+   }
+  },
+  {
+   "id": "huogong",
+   "title": "江东火攻",
+   "members": [
+    "周瑜",
+    "黄盖",
+    "程普"
+   ],
+   "trigger": "水战编队",
+   "effect": "火攻成功率 +20%",
+   "breakEffect": "黄盖死 → 火攻线（苦肉计）关闭",
+   "fullChain": true,
+   "source": {
+    "id": "sgz.wu.10 程黄韩蒋周陈董甘凌徐潘丁传",
+    "confidence": "高"
+   }
+  }
+ ]
+}
