@@ -2,8 +2,9 @@
  * 招降规则：唯一权威公式（U08 / 设计规格 2.3「描述 = 计算 = 战报同源」）。
  *
  * 纪律：
- *  - 零内部依赖（只读 oath.js 的 protagonistStat），strategy.js 与 panels.js 都引它，
- *    避免 domain 层成环（panels.js 刻意不 import strategy.js，见该文件头注释）。
+ *  - 零环叶子：只读 oath.js 的 protagonistStat 这一个纯函数，不引 strategy.js /
+ *    panels.js / handlers.js。上层（strategy、panels）都引它，下层它只出边不进边，
+ *    因此 domain 层不会成环（panels.js 刻意不 import strategy.js，见该文件头注释）。
  *  - 面板展示的「降率」、确认框的成功率构成条、实际掷骰，全部走同一个函数。
  *  - 禁止在别处重写 0.45 / 0.05 / 0.002 这些系数。
  */

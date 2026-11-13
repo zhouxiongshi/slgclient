@@ -25,14 +25,14 @@ const shellSrc = stripComments(readFileSync(join(ROOT, 'server', 'ui-shell.js'),
 
 /* GDD §10.4 键位表：键 → 判定「这个键有没有被处理」的特征 */
 const SPEC = [
-  { key: 'Space', name: '下一旬', probe: /e\.key\s*===\s*' '\s*|e\.code\s*===\s*'Space'|key\('space'\)/ },
+  { key: 'Space', name: '下一旬', probe: /e\.key === ' '|e\.code === 'Space'/ },
   { key: 'Ctrl+Z', name: '撤销', probe: /ctrlKey[^\n]*key\('undo'\)|key\('undo'\)[^\n]*undoLast/ },
-  { key: 'Tab', name: '切换透镜', probe: /e\.key\s*===\s*'Tab'[^\n]*lens/ },
+  { key: 'Tab', name: '切换透镜', probe: /e\.key === 'Tab'[\s\S]{0,140}cycleLens/ },
   { key: 'K', name: '锁定提示框', probe: /key\('pin'\)/ },
-  { key: 'Esc', name: '逐级关闭', probe: /e\.key\s*===\s*'Escape'/ },
-  { key: 'F', name: '搜索城池/武将', probe: /key\('find'\)|key\('search'\)/ },
-  { key: '1–3', name: '切换我方槽位（推演台）', probe: /key\('slot'\)|data-slot.*keydown/ },
-  { key: '←/→', name: '推演台上一/下一回合', probe: /e\.key\s*===\s*'ArrowLeft'|e\.key\s*===\s*'ArrowRight'/ },
+  { key: 'Esc', name: '逐级关闭', probe: /e\.key === 'Escape'/ },
+  { key: 'F', name: '搜索城池/武将', probe: /key\('find'\)[\s\S]{0,90}focusFind/ },
+  { key: '1–3', name: '切换我方槽位（出征窗队伍）', probe: /pickArmy\(Number\(e\.key\)\)/ },
+  { key: '←/→', name: '推演台上一/下一回合', probe: /e\.key === 'ArrowLeft'[\s\S]{0,90}cycleArmy/ },
 ];
 
 const allSrc = uiSrc + '\n' + skillsSrc + '\n' + shellSrc;
@@ -49,21 +49,23 @@ test('UX-03b 出征快捷键 w 仍指向沙盘出征按钮（G4 无鼠标出征�
   assert.match(allSrc, pat, 'w 键必须仍触发 #slgBtnWar，否则 G4「无鼠标出征」断了第一步');
 });
 
-test('UX-03c GDD 键位表符合性清单（缺口只报告不失败）', () => {
+test('UX-03c GDD §10.4 全部 8 条键位必须实现', () => {
   const rows = SPEC.map((s) => ({ key: s.key, name: s.name, implemented: s.probe.test(allSrc) }));
   const gaps = rows.filter((r) => !r.implemented).map((r) => `${r.key}=${r.name}`);
-  /* 把清单挂在断言消息里：跑测试时可见，报告里可直接引用 */
-  assert.ok(
-    rows.length === 8,
-    `GDD §10.4 共 8 条（Space/Ctrl+Z/Tab/K/Esc/F/1-3/←→）；可移动槽位与回合键分开计。`
-    + ` 当前缺口：${gaps.length ? gaps.join('、') : '无'}`,
-  );
+  /* P2-03 修复后这里不再是「缺口清单」，而是硬断言：缺一个就红。
+     旧的「只报告不失败」写法会让缺口长期躺在报告里没人管。 */
+  assert.deepEqual(gaps, [], `GDD §10.4 键位缺失：${gaps.join('、')}`);
 });
 
-test('UX-03d 数字键语义与 GDD 的冲突已登记（实现 1–6=透镜，GDD 1–3=推演台槽位）', () => {
+test('UX-03d 数字键语义冲突已按上下文消解（出征窗 1–3 选队伍，否则 1–6 选透镜）', () => {
   /* GDD §10.4：Tab 循环六透镜、1–3 切我方槽位。
-     实现：1–6 直接选透镜，Tab 未绑定。
-     这不是笔误而是两种信息架构，改之前必须明确取舍 —— 用测试把现状钉住。 */
-  const lensByNumber = /\/\^\[1-6\]\$\/\.test\(e\.key\)[\s\S]{0,200}LENSES\[Number\(e\.key\) - 1\]/.test(allSrc);
-  assert.equal(lensByNumber, true, '当前口径：数字键 1–6 直选透镜（与 GDD 的 1–3 槽位冲突，已登记）');
+     实现：出征窗开着时 1–3 选队伍；没开时 1–6 直选透镜（更快的原路径保留）。
+     顺序必须是「先 pickArmy 后透镜」，否则出征窗里的 1–3 会被透镜吃掉。 */
+  const pickFirst = /pickArmy\(Number\(e\.key\)\)[\s\S]{0,200}"?\/\^\[1-6\]\$\/\.test\(e\.key\)/
+    .test(allSrc)
+    || /pickArmy\(Number\(e\.key\)\)[\s\S]{0,200}\/\^\[1-6\]\$\/\.test\(e\.key\)/.test(allSrc);
+  assert.equal(pickFirst, true, '1–3 必须先把按键交给出征窗，再落到透镜直选');
+  /* 槽位来自 skills.js 渲染的队伍行 */
+  assert.match(skillsSrc, /data-army-index/, '队伍行必须带 data-army-index，否则 1–3 无槽位可选');
+  assert.match(skillsSrc, /data-army-selected/, '选中行必须带 data-army-selected，否则 ←/→ 不知道该从哪挪');
 });

@@ -12,9 +12,9 @@
  *   - 单机世界状态：JSON 存档；定时任务持久化，重启续跑
  */
 import http from 'node:http';
-import { existsSync, statSync, readFileSync, renameSync } from 'node:fs';
+import { existsSync, statSync, readFileSync, readFile, renameSync } from 'node:fs';
 import { resolve, extname, join } from 'node:path';
-import { gzipSync } from 'node:zlib';
+import { gzipSync, gzip } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { loadConfig, defaultConfDir } from './config.js';
 import { createWorld, loadWorld, saveWorld, resolveWebDir, normalizeWorld, hasProtagonist } from './world.js';
@@ -263,33 +263,56 @@ export async function startOfflineServer(options = {}) {
   void lastWorldSaveDay;
 
   /* ---------------- HTTP 8088：原画面 + 账号接口 ---------------- */
+  /* 静态资源的三处优化（PF-01 首屏 5.79s 超预算）：
+   *  1. 读盘从 readFileSync 换成 readFile —— 同步读会把 Cocos 并发的上千个请求
+   *     在事件循环里串行化，实测 1582 个文件全量拉取要 1.79s，异步化后并发才真正生效。
+   *  2. ETag + Cache-Control:no-cache —— 每次校验、命中 304 就不传 body。
+   *     不用 immutable：打包后文件内容会变而 URL 不变，强缓存会让玩家停在旧资源上。
+   *  3. 文本类 >4KB 走 gzip，压好的结果按 ETag 缓存在内存（只压一次，多次复用）。
+   *     gzip 用异步版本，绝不阻塞主线程 —— 同步 gzipSync 会把这步的收益吃回去。
+   * 纪律：web/ 下的字节一个都不改，全部改动只发生在传输层。 */
+  const GZIP_EXT = new Set(['.js', '.json', '.css', '.plist', '.tmx', '.txt', '.md', '.html']);
+  const gzipCache = new Map();   // target -> { etag, gz, len }
+  const GZIP_CACHE_MAX = 500;
+
   /** 静态文件响应：读取成功才发响应；读流出错（如新打包文件被杀毒/索引短暂锁定）自动重试，绝不让请求悬死。 */
-  const serveStatic = (rawPath, res, attempt = 0) => {
+  const serveStatic = (req, rawPath, res, attempt = 0) => {
     let urlPath = rawPath;
     if (urlPath === '/') urlPath = '/index.html';
     const target = resolve(webDir, `.${urlPath}`);
     const root = resolve(webDir);
     if (!target.startsWith(root)) { res.writeHead(403); res.end('Forbidden'); return; }
-    if (!existsSync(target) || !statSync(target).isFile()) {
+    let st = null;
+    try { st = statSync(target); } catch { st = null; }
+    if (!st || !st.isFile()) {
       res.writeHead(404); res.end('Not found'); return;
     }
-    let body;
-    try {
-      body = readFileSync(target);
-    } catch (err) {
-      if (attempt < 5) {
-        log('warn', `read retry ${attempt + 1}/5 for ${urlPath}: ${err.message}`);
-        setTimeout(() => serveStatic(rawPath, res, attempt + 1), 250);
-        return;
-      }
-      log('error', `static read failed for ${urlPath}: ${err.stack || err.message}`);
-      res.writeHead(500); res.end('Internal error');
+    const ext = extname(target).toLowerCase();
+    const type = MIME[ext] || 'application/octet-stream';
+    /* ETag 用 size+mtime：打包产物不会原地改，这个组合足够可靠且零成本 */
+    const etag = `"${st.size.toString(16)}-${Math.floor(st.mtimeMs).toString(16)}"`;
+    /* index.html 每次都要注入脚本，不能走 304 */
+    if (urlPath !== '/index.html' && req.headers['if-none-match'] === etag) {
+      res.writeHead(304, { ETag: etag, 'Cache-Control': 'no-cache' });
+      res.end();
       return;
     }
-    // 六面板 UI：只在 HTTP 响应里追加一个 script 标签，磁盘 index.html 与打包产物一个字节都不改。
-    // ★ E2E 取证：错误钩子随注入脚本走——审计进程自己装的 window.onerror 会在页面
-    //   重载后失效，而这里每次加载都会重新生效，才能抓到「重载后才爆发」的未捕获异常（带栈）。
-    if (urlPath === '/index.html' && !body.includes(Buffer.from('/__slg/panels/ui.js'))) {
+    readFile(target, (err, raw) => {
+      if (err) {
+        if (attempt < 5) {
+          log('warn', `read retry ${attempt + 1}/5 for ${urlPath}: ${err.message}`);
+          setTimeout(() => serveStatic(req, rawPath, res, attempt + 1), 250);
+          return;
+        }
+        log('error', `static read failed for ${urlPath}: ${err.stack || err.message}`);
+        res.writeHead(500); res.end('Internal error');
+        return;
+      }
+      let body = raw;
+      // 六面板 UI：只在 HTTP 响应里追加一个 script 标签，磁盘 index.html 与打包产物一个字节都不改。
+      // ★ E2E 取证：错误钩子随注入脚本走——审计进程自己装的 window.onerror 会在页面
+      //   重载后失效，而这里每次加载都会重新生效，才能抓到「重载后才爆发」的未捕获异常（带栈）。
+      if (urlPath === '/index.html' && !body.includes(Buffer.from('/__slg/panels/ui.js'))) {
       const html = body.toString('utf8');
       const errHook = '<script>(function(){'
         + 'if (window.__slgErrHookInstalled) return;'
@@ -345,12 +368,36 @@ export async function startOfflineServer(options = {}) {
         + '<script src="/__slg/shell/ui.js" charset="utf-8"></script>';
       body = Buffer.from(/<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${tag}</body>`) : html + tag);
     }
-    res.writeHead(200, {
-      'Content-Type': MIME[extname(target).toLowerCase()] || 'application/octet-stream',
-      'Cache-Control': 'no-store',
-      'Content-Length': body.length,
+      const headers = { 'Content-Type': type, ETag: etag, 'Cache-Control': 'no-cache' };
+      const acceptsGzip = /\bgzip\b/i.test(String(req.headers['accept-encoding'] || ''));
+      /* 阈值 32KB：小 JSON 压缩的 CPU 成本在本地回环上换不回传输收益，
+         收益集中在大文件（cc.js 7MB → 约 1.5MB）。 */
+      if (acceptsGzip && body.length >= 32768 && GZIP_EXT.has(ext)) {
+        const hit = gzipCache.get(target);
+        if (hit && hit.etag === etag && hit.len === body.length) {
+          headers['Content-Encoding'] = 'gzip';
+          headers['Content-Length'] = hit.gz.length;
+          res.writeHead(200, headers); res.end(hit.gz);
+          return;
+        }
+        gzip(body, (e2, gz) => {
+          if (!e2 && gz.length < body.length) {
+            if (gzipCache.size >= GZIP_CACHE_MAX) gzipCache.clear();
+            gzipCache.set(target, { etag, gz, len: body.length });
+            headers['Content-Encoding'] = 'gzip';
+            headers['Content-Length'] = gz.length;
+            res.writeHead(200, headers); res.end(gz);
+          } else {
+            headers['Content-Length'] = body.length;
+            res.writeHead(200, headers); res.end(body);
+          }
+        });
+        return;
+      }
+      headers['Content-Length'] = body.length;
+      res.writeHead(200, headers);
+      res.end(body);
     });
-    res.end(body);
   };
 
   const httpServer = http.createServer((req, res) => {
@@ -755,7 +802,7 @@ export async function startOfflineServer(options = {}) {
 
     // 静态资源：直接指向原 web-desktop 构建产物
     try {
-      serveStatic(urlPath, res);
+      serveStatic(req, urlPath, res);
     } catch (err) {
       log('error', `static serve failed for ${urlPath}: ${err.stack || err.message}`);
       if (!res.headersSent) { res.writeHead(500); res.end('Internal error'); } else res.destroy();

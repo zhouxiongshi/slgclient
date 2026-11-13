@@ -61,6 +61,7 @@ const MEASURE = `(function(){
     viewport: { w: innerWidth, h: innerHeight, dpr: Math.round((window.devicePixelRatio || 1) * 100) / 100 },
     offscreen: [], clipped: [], smallTargets: [], mainWins: [], drawer: null,
     styles: { colors: {}, fonts: {}, radii: {}, durations: {} },
+    fontOffenders: [],
     textIssues: [],
   };
   var r0 = function(v){ return Math.round(v); };
@@ -160,6 +161,15 @@ const MEASURE = `(function(){
       if (fg) out.styles.colors['fg ' + fg] = (out.styles.colors['fg ' + fg] || 0) + 1;
       var ff = cs.fontFamily;
       if (ff) out.styles.fonts[ff] = (out.styles.fonts[ff] || 0) + 1;
+      /* 字体族越界取证：记下具体是谁，否则「4 套字族」无从修 */
+      if (ff && !/YaHei|KaiTi|STKaiti/s.test(ff) && out.fontOffenders.length < 8) {
+        out.fontOffenders.push({
+          ff: ff,
+          sel: el.tagName.toLowerCase() + (el.id ? ('#' + el.id) : '')
+            + (el.className && typeof el.className === 'string' ? ('.' + el.className.trim().split(/\s+/).slice(0, 2).join('.')) : ''),
+          txt: String(el.textContent || '').trim().slice(0, 20),
+        });
+      }
       var br = cs.borderRadius;
       if (br && br !== '0px') out.styles.radii[br] = (out.styles.radii[br] || 0) + 1;
       var td = cs.transitionDuration;

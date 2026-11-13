@@ -152,30 +152,53 @@ test('WB-08 事件 DSL 是白名单闸门（ARCH §9.6：未知字段与算子�
   const ctx = { turn: 1, year: 184, season: 'spring', resource: () => 100 };
   /* 未知字段：白名单外一律拒绝，不做「不认识就当假的」静默放过 */
   assert.throws(() => evaluateEvent({ 不存在的字段: 1 }, ctx), /未知|unknown|白名单/i);
-  /* 边界字段名写成 turn 也不行（真实口径是 turnMin/turnMax），防止手写近似名 */
-  assert.throws(() => evaluateEvent({ turn: { '>=': 1 } }, ctx), /未知|unknown|白名单/i);
-  /* 未知算子：resource 走 cmpValue，这里必须抛（数值边界字段是裸数字语义，
-     见 WB-08b，两者不是同一口径） */
+  /* 未知算子：resource 走 cmpValue */
   assert.throws(() => evaluateEvent({ resource: { grain: { '≈': 1 } } }, ctx), /算子|operator|未知|unknown/i);
   /* 多键算子对象也非法 */
   assert.throws(() => evaluateEvent({ resource: { grain: { '>=': 1, '<=': 9 } } }, ctx), /算子|operator/i);
+  /* 非数字非对象 */
+  assert.throws(() => evaluateEvent({ turnMin: 'abc' }, ctx), /单算子|算子|数字/i);
   /* 合法路径 */
   assert.equal(evaluateEvent({ turnMin: 1 }, ctx), true);
   assert.equal(evaluateEvent({ turnMin: 5 }, ctx), false);
   assert.equal(evaluateEvent({ resource: { grain: { '>=': 50 } } }, ctx), true);
 });
 
-test('WB-08b 数值边界字段是裸数字语义（yearMin:184 而不是 {">=":184}）', async () => {
-  const { evaluateEvent } = await import('../server/domain/event-dsl.js');
-  const ctx = { turn: 1, year: 190, season: 'spring' };
-  /* 这是 ARCH §9.6 与 GDD §8.2 的措辞差异点：
-     GDD 说「比较只走单算子对象」，实现里 turnMin/yearMin 这类边界字段收裸数字。
-     断言真实口径，避免后来者按文档改成对象后静默失效（对象比较结果是 false 而不报错）。 */
+test('WB-08b 时间/边界字段双写法等价（裸数字与单算子对象都生效，不再静默恒真）', async () => {
+  const { evaluateEvent, validateEventSchema } = await import('../server/domain/event-dsl.js');
+  const ctx = { turn: 1, year: 190, season: 'spring', resource: () => 100 };
+
+  /* 裸数字：turnMin/yearMin 是「宽松下界」 */
   assert.equal(evaluateEvent({ yearMin: 184 }, ctx), true);
   assert.equal(evaluateEvent({ yearMin: 200 }, ctx), false);
-  /* 传对象不会抛，也不按 {">="} 求值 —— `190 < {}` 为 false，条件被静默跳过，
-     结果是「永远命中」。也就是说照文档写成对象会让约束彻底失效且无任何报错，
-     这比抛错更难查，所以在测试里钉死真实口径。 */
-  assert.equal(evaluateEvent({ yearMin: { '>=': 999 } }, ctx), true,
-    '对象写法会被静默忽略（≈永远命中），这是当前真实口径');
+  assert.equal(evaluateEvent({ yearMax: 184 }, ctx), false);
+  assert.equal(evaluateEvent({ turnMax: 1 }, ctx), true);
+
+  /* 对象写法必须与裸数字等价 —— P3-03 修的就是这条：
+     修之前 { yearMin: {'>=': 999} } 会被静默忽略（恒为 true），约束彻底失效。 */
+  assert.equal(evaluateEvent({ yearMin: { '>=': 184 } }, ctx), true);
+  assert.equal(evaluateEvent({ yearMin: { '>=': 999 } }, ctx), false, '对象写法必须真的生效');
+  assert.equal(evaluateEvent({ yearMax: { '<': 200 } }, ctx), true);
+  assert.equal(evaluateEvent({ turnMin: { '>': 1 } }, ctx), false);
+
+  /* GDD §8.2 的字段名 turn / year 也受支持：裸数字=精确匹配，对象走算子 */
+  assert.equal(evaluateEvent({ year: 190 }, ctx), true);
+  assert.equal(evaluateEvent({ year: 184 }, ctx), false);
+  assert.equal(evaluateEvent({ turn: { '>=': 1 } }, ctx), true);
+  assert.equal(evaluateEvent({ turn: { '>=': 2 } }, ctx), false);
+
+  /* in / not_in 的比较目标是数组（曾被「必须是数字」那道闸误伤，恒抛） */
+  assert.equal(evaluateEvent({ resource: { grain: { in: [100, 200] } } }, ctx), true);
+  assert.equal(evaluateEvent({ resource: { grain: { in: [7, 8] } } }, ctx), false);
+  assert.equal(evaluateEvent({ resource: { grain: { not_in: [100] } } }, ctx), false);
+  assert.equal(evaluateEvent({ resource: { grain: { not_in: [7, 8] } } }, ctx), true);
+  assert.throws(() => evaluateEvent({ resource: { grain: { in: 100 } } }, ctx), /数组/);
+
+  /* 构建期就拦非法写法，别等运行期 */
+  const base = { id: 'evt.x', title: 't', layer: '条件', priority: 1, text: ['a'], source: { id: 's', confidence: 'FACT' } };
+  const mk = (when) => ({ ...base, when, choices: [{ id: 'c1', label: 'l', effects: ['gold:+1'] }] });
+  assert.deepEqual(validateEventSchema(mk({ turnMin: 5 })), []);
+  assert.deepEqual(validateEventSchema(mk({ year: { '>=': 184 } })), []);
+  assert.ok(validateEventSchema(mk({ turnMin: 'abc' })).length > 0, '字符串边界必须报错');
+  assert.ok(validateEventSchema(mk({ turnMin: { '>=': 1, '<': 9 } })).length > 0, '多算子必须报错');
 });

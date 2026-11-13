@@ -13,13 +13,13 @@
   var data = null;
   var ui = {
     tab: 'general', genId: 0, genTab: 'attr',
-    itemFilter: 'all', skillFilter: 'all', skillQuery: '', openSkill: 0,
+    itemFilter: 'all', skillFilter: 'all', skillQuery: '', openSkill: 0, skillLimit: 24,
     selectedCity: 0, dockOpen: false, // 默认折叠：战略层已有左上按钮坞，六府只留右上角一枚小按钮，不割裂分层地图
   };
   /* ★ 验收 #18：六府面板的选中对象与未完成输入（页签/选中武将/搜索词/筛选/选中城）
      跨切页、跨面板开关、跨刷新保持。白名单恢复——dockOpen 这类纯视觉开关不落盘。 */
   var UI_KEY = 'slg.panels.ui';
-  var UI_KEEP = ['tab', 'genId', 'genTab', 'itemFilter', 'skillFilter', 'skillQuery', 'openSkill', 'selectedCity'];
+  var UI_KEEP = ['tab', 'genId', 'genTab', 'itemFilter', 'skillFilter', 'skillQuery', 'openSkill', 'selectedCity', 'skillLimit'];
   (function restoreUI() {
     try {
       var v = JSON.parse(window.sessionStorage.getItem(UI_KEY) || 'null');
@@ -120,7 +120,7 @@
             + esc(g.name) + (busy && !inThis ? '（在编）' : '') + '</option>';
         }).join('') + '</select>';
     };
-    mask.innerHTML = '<div style="background:#1d1a12;border:1px solid #ba9a52;border-radius:8px;padding:18px 22px;min-width:420px;color:#e8dfc8;font:13px \'Microsoft YaHei\',sans-serif">'
+    mask.innerHTML = '<div style="background:#1d1a12;border:1px solid #ba9a52;border-radius:8px;padding:18px 22px;min-width:420px;color:#e8e0cc;font:13px \'Microsoft YaHei\',sans-serif">'
       + '<h3 style="margin:0 0 6px;color:#ffdf9a">整编队伍#' + army.order + '</h3>'
       + '<div class="muted" style="margin-bottom:10px">三槽各对应一个兵种：盾步克弓、弓克骑、骑克盾（克制战力 ±15%）；武将适性影响属性发挥。兵力只在该队现有 ' + fmt(army.soldiers.reduce(function (s, v) { return s + v; }, 0)) + ' 内重分。</div>'
       + [1, 2, 3].map(function (slot) {
@@ -163,7 +163,7 @@
     var selStyle = 'background:#2a2617;border:1px solid #ba9a52;color:#fff;padding:4px 6px;border-radius:4px;'
       + 'font:13px "Microsoft YaHei",sans-serif;';
     mask.innerHTML = '<div style="background:#1d1a12;border:1px solid #ba9a52;border-radius:8px;'
-      + 'padding:18px 22px;min-width:400px;color:#e8dfc8;font:13px \'Microsoft YaHei\',sans-serif">'
+      + 'padding:18px 22px;min-width:400px;color:#e8e0cc;font:13px \'Microsoft YaHei\',sans-serif">'
       + '<h3 style="margin:0 0 8px;color:#ffdf9a">运粮到 ' + esc(tCity.name) + '</h3>'
       + '<div class="muted" style="margin-bottom:12px">粮从起点城城库出，按里程算天数（辎重队速度固定 70）。'
       + '前线囤粮可省掉府库 25% 的途中损耗。</div>'
@@ -197,69 +197,69 @@
     '#slgPanelsBtns{display:flex;flex-direction:column;gap:5px;align-items:flex-end;}',
     '#slgPanelsDock .pb{background:rgba(20,22,16,.94);color:#e8c670;border:1px solid #ba9a52;border-radius:5px;',
     '  padding:5px 10px;min-width:88px;cursor:pointer;font:13px "Microsoft YaHei",sans-serif;text-align:left;letter-spacing:1px;}',
-    '#slgPanelsDock .pb:hover{background:#3a3423;color:#ffe6a6;}',
+    '#slgPanelsDock .pb:hover{background:#3a3325;color:#ffe6a6;}',
     '#slgPanelsDock .pb.on{background:#6b5527;color:#fff2cf;}',
     '#slgPanelsDock .pb{position:relative;}',
     '#slgPanelsDock .dot{position:absolute;right:4px;top:4px;width:8px;height:8px;border-radius:50%;'
       + 'background:#e04a3a;box-shadow:0 0 4px rgba(224,74,58,.8);display:none;}',
-    '#slgPanelsDock .fold{background:rgba(20,22,16,.9);color:#c9b98c;border:1px solid #6a624a;border-radius:5px;',
+    '#slgPanelsDock .fold{background:rgba(20,22,16,.9);color:#c8b88a;border:1px solid #6a624a;border-radius:5px;',
     '  padding:2px 9px;cursor:pointer;font:12px "Microsoft YaHei",sans-serif;}',
     '#slgPanelsMask{position:fixed;inset:0;z-index:100100;background:rgba(6,8,6,.9);display:none;}',
     '#slgPanelsWin{position:absolute;inset:18px;max-width:1280px;margin:0 auto;background:#151811;',
     '  border:1px solid #75643d;border-radius:10px;box-shadow:0 18px 70px rgba(0,0,0,.8);display:flex;overflow:hidden;}',
-    '#slgPanelsWin .side{width:178px;flex:0 0 178px;background:#101209;border-right:1px solid #3b3829;padding:14px 10px;overflow-y:auto;}',
+    '#slgPanelsWin .side{width:178px;flex:0 0 178px;background:#101209;border-right:1px solid #3a3325;padding:14px 10px;overflow-y:auto;}',
     '#slgPanelsWin .brand{color:#e8c670;font:700 16px "Microsoft YaHei",sans-serif;letter-spacing:2px;padding:4px 8px 14px;}',
     '#slgPanelsWin .side .nav{display:block;width:100%;text-align:left;background:transparent;color:#c9bfa3;',
     '  border:1px solid transparent;border-radius:5px;padding:9px 10px;margin-bottom:5px;cursor:pointer;',
     '  font:14px "Microsoft YaHei",sans-serif;}',
-    '#slgPanelsWin .side .nav:hover{background:#23261a;color:#f0dca8;}',
-    '#slgPanelsWin .side .nav.on{background:#3a3220;border-color:#ba9a52;color:#ffe6a6;}',
-    '#slgPanelsWin .side .tip{color:#8d8a74;font:12px/1.7 "Microsoft YaHei",sans-serif;padding:10px 8px;border-top:1px solid #2b2b20;margin-top:10px;}',
+    '#slgPanelsWin .side .nav:hover{background:#20221c;color:#f0dca8;}',
+    '#slgPanelsWin .side .nav.on{background:#3a3325;border-color:#ba9a52;color:#ffe6a6;}',
+    '#slgPanelsWin .side .tip{color:#8f8676;font:12px/1.7 "Microsoft YaHei",sans-serif;padding:10px 8px;border-top:1px solid #2b2b20;margin-top:10px;}',
     '#slgPanelsWin .main{flex:1;min-width:0;display:flex;flex-direction:column;}',
     '#slgPanelsWin .top{height:48px;flex:0 0 48px;display:flex;align-items:center;gap:12px;padding:0 16px;',
-    '  border-bottom:1px solid #3b3829;background:#1b1d14;color:#e8c670;font:14px "Microsoft YaHei",sans-serif;}',
+    '  border-bottom:1px solid #3a3325;background:#1b1d14;color:#e8c670;font:14px "Microsoft YaHei",sans-serif;}',
     '#slgPanelsWin .top .sp{flex:1;color:#b9b197;font-size:13px;}',
     '#slgPanelsWin .top button{background:#2a2c22;color:#e8c670;border:1px solid #6a624a;border-radius:4px;',
     '  padding:4px 12px;cursor:pointer;font:13px "Microsoft YaHei",sans-serif;}',
-    '#slgPanelsWin .body{flex:1;overflow-y:auto;padding:16px 18px 28px;color:#ddd2b6;',
+    '#slgPanelsWin .body{flex:1;overflow-y:auto;padding:16px 18px 28px;color:#e2d6ba;',
     '  font:13px/1.75 "Microsoft YaHei",sans-serif;}',
-    '#slgPanelsWin .body::-webkit-scrollbar{width:9px;}#slgPanelsWin .body::-webkit-scrollbar-thumb{background:#4b4632;border-radius:5px;}',
+    '#slgPanelsWin .body::-webkit-scrollbar{width:9px;}#slgPanelsWin .body::-webkit-scrollbar-thumb{background:#4a4436;border-radius:5px;}',
     '#slgPanelsWin h3{color:#e8c670;font:700 15px "Microsoft YaHei",sans-serif;margin:0 0 10px;letter-spacing:1px;}',
     '#slgPanelsWin h4{color:#cbb477;font:700 13px "Microsoft YaHei",sans-serif;margin:16px 0 8px;}',
-    '#slgPanelsWin .card{background:#1d2017;border:1px solid #3d3b2b;border-radius:7px;padding:12px 14px;margin-bottom:12px;}',
+    '#slgPanelsWin .card{background:#20221c;border:1px solid #3d3b2b;border-radius:7px;padding:12px 14px;margin-bottom:12px;}',
     '#slgPanelsWin .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(238px,1fr));gap:10px;}',
-    '#slgPanelsWin .k{color:#8f9c84;}#slgPanelsWin .v{color:#f0e2bd;}',
+    '#slgPanelsWin .k{color:#8f9c84;}#slgPanelsWin .v{color:#f0e2b8;}',
     '#slgPanelsWin .up{color:#e8a06a;}#slgPanelsWin .down{color:#9dca8b;}',    '#slgPanelsWin .btn{background:#2c2f22;color:#e8c670;border:1px solid #7a6a42;border-radius:4px;',
     '  padding:4px 11px;cursor:pointer;font:12px "Microsoft YaHei",sans-serif;margin:2px 4px 2px 0;}',
     '#slgPanelsWin .btn:hover{background:#474029;}#slgPanelsWin .btn:disabled{opacity:.4;cursor:not-allowed;}',
     '#slgPanelsWin .btn.warn{border-color:#a8664c;color:#e6a786;}',
     '#slgPanelsWin table{width:100%;border-collapse:collapse;font-size:13px;}',
-    '#slgPanelsWin th,#slgPanelsWin td{border-bottom:1px solid #333326;padding:7px 9px;text-align:left;}',
+    '#slgPanelsWin th,#slgPanelsWin td{border-bottom:1px solid #33302a;padding:7px 9px;text-align:left;}',
     '#slgPanelsWin th{color:#c2ac74;font-weight:600;background:#20221600;}',
     '#slgPanelsWin .tag{display:inline-block;padding:1px 7px;border-radius:3px;font-size:11px;margin-right:5px;border:1px solid #5c573c;color:#c9bd97;}',
     '#slgPanelsWin .tag.ok{background:#26361f;border-color:#4e7a3e;color:#bfe0a3;}',
-    '#slgPanelsWin .tag.mid{background:#37301b;border-color:#8a7037;color:#e8c670;}',
+    '#slgPanelsWin .tag.mid{background:#37301b;border-color:#8a7038;color:#e8c670;}',
     '#slgPanelsWin .tag.no{background:#2a211d;border-color:#6a4a3c;color:#bfa18e;}',
     '#slgPanelsWin .tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}',
-    '#slgPanelsWin .tabs button{background:#1d2017;color:#bcb292;border:1px solid #454231;border-radius:4px;',
+    '#slgPanelsWin .tabs button{background:#20221c;color:#bcb292;border:1px solid #4a4436;border-radius:4px;',
     '  padding:5px 13px;cursor:pointer;font:13px "Microsoft YaHei",sans-serif;}',
-    '#slgPanelsWin .tabs button.on{background:#3a3220;border-color:#ba9a52;color:#ffe6a6;}',
-    '#slgPanelsWin .genlist{width:206px;flex:0 0 206px;max-height:100%;overflow-y:auto;border-right:1px solid #333326;padding-right:8px;}',
+    '#slgPanelsWin .tabs button.on{background:#3a3325;border-color:#ba9a52;color:#ffe6a6;}',
+    '#slgPanelsWin .genlist{width:206px;flex:0 0 206px;max-height:100%;overflow-y:auto;border-right:1px solid #33302a;padding-right:8px;}',
     '#slgPanelsWin .genrow{display:block;width:100%;text-align:left;background:transparent;color:#c9bfa3;border:1px solid transparent;',
     '  border-radius:5px;padding:7px 9px;margin-bottom:3px;cursor:pointer;font:13px "Microsoft YaHei",sans-serif;}',
-    '#slgPanelsWin .genrow:hover{background:#23261a;}#slgPanelsWin .genrow.on{background:#3a3220;border-color:#ba9a52;color:#ffe6a6;}',
-    '#slgPanelsWin .genrow small{color:#8d8a74;display:block;font-size:11px;}',
+    '#slgPanelsWin .genrow:hover{background:#20221c;}#slgPanelsWin .genrow.on{background:#3a3325;border-color:#ba9a52;color:#ffe6a6;}',
+    '#slgPanelsWin .genrow small{color:#8f8676;display:block;font-size:11px;}',
     '#slgPanelsWin .cols{display:flex;gap:16px;align-items:flex-start;}#slgPanelsWin .cols>.right{flex:1;min-width:0;}',
     '#slgPanelsWin .src{border-left:2px solid #6a5a32;padding:4px 0 4px 11px;margin:8px 0;}',
-    '#slgPanelsWin .src b{color:#e8c670;}#slgPanelsWin .src .muted{color:#9d9882;font-size:12px;}',
+    '#slgPanelsWin .src b{color:#e8c670;}#slgPanelsWin .src .muted{color:#9c9382;font-size:12px;}',
     '#slgPanelsWin .skill{border:1px solid #3d3b2b;border-radius:6px;margin-bottom:7px;background:#1b1e15;}',
     '#slgPanelsWin .skill .hd{padding:9px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;}',
-    '#slgPanelsWin .skill .hd:hover{background:#22261900;}#slgPanelsWin .skill .dt{padding:0 14px 12px;border-top:1px solid #333326;}',
+    '#slgPanelsWin .skill .hd:hover{background:#22261900;}#slgPanelsWin .skill .dt{padding:0 14px 12px;border-top:1px solid #33302a;}',
     '#slgPanelsWin .bar{height:7px;background:#2b2d20;border-radius:4px;overflow:hidden;margin:5px 0;}',
     '#slgPanelsWin .bar i{display:block;height:100%;background:#a98a45;}',
-    '#slgPanelsWin select,#slgPanelsWin input[type=text]{background:#202317;color:#e6dbb9;border:1px solid #5a5539;',
+    '#slgPanelsWin select,#slgPanelsWin input[type=text]{background:#20221c;color:#e2d6ba;border:1px solid #5a5539;',
     '  border-radius:4px;padding:4px 7px;font:13px "Microsoft YaHei",sans-serif;}',
-    '#slgPanelsWin .muted{color:#97927c;}',
+    '#slgPanelsWin .muted{color:#9c9382;}',
     '#slgPanelsToast{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:100130;display:none;',
     '  padding:9px 20px;border:1px solid #ba9a52;border-radius:5px;color:#f4e7bf;font:14px "Microsoft YaHei",sans-serif;}',
   ].join('');
@@ -758,6 +758,9 @@
 
   function viewLibrary() {
     var L = data.library, sm = data.librarySummary;
+    /* sessionStorage 恢复的是字符串/旧值，先归一，否则 slice(0,'24') 会得到空列表 */
+    if (!(Number(ui.skillLimit) > 0)) ui.skillLimit = 24;
+    ui.skillLimit = Number(ui.skillLimit);
     var out = '<h3>战法库（势力级资产）</h3><div class="grid">'
       + [['全库', sm.total + ' 条'], ['已解锁', sm.unlocked + ' 条'], ['研习中', sm.researching + ' 条'],
          ['≥2 条获取途径', sm.sourcesCovered + ' / ' + sm.total]].map(function (p) {
@@ -783,9 +786,16 @@
       if (ui.skillQuery && String(s.name).indexOf(ui.skillQuery) < 0) return false;
       return true;
     });
-    out += '<div class="muted" style="margin-bottom:8px">筛出 ' + list.length + ' 条。</div>';
+    out += '<div class="muted" style="margin-bottom:8px">筛出 ' + list.length + ' 条'
+      + (list.length > ui.skillLimit ? '，先显示前 ' + ui.skillLimit + ' 条（列表底部可继续加载）' : '')
+      + '。</div>';
 
-    out += list.map(function (s) {
+    /* ★ PF-05 修：51 条战法全量渲染会让单视角 DOM 增量到 604 节点（预算 400）。
+       GDD §11.5 的降级顺序第 1/2 条是「先降表现、离屏不算不画」，所以这里分批渲染：
+       首屏 24 条，底部「显示更多」按需追加。筛选与检索会重置回 24 条，
+       因此「找某条战法」的路径没有变慢（筛完通常只剩几条）。 */
+    var shown = list.slice(0, ui.skillLimit);
+    out += shown.map(function (s) {
       var tag = s.status === 'unlocked' ? '<span class="tag ok">已解锁 Lv' + esc(s.level) + '</span>'
         : s.status === 'researching' ? '<span class="tag mid">研习中</span>' : '<span class="tag no">未解锁</span>';
       // ★ P3：语义摘要——不展开就能看到「怎么触发、Lv10 发动率、效果值」
@@ -800,7 +810,7 @@
       var h = '<div class="skill"><div class="hd" data-act="skilldetail" data-cfg="' + s.cfgId + '">'
         + tag + '<b class="v">' + esc(s.name) + '</b><span class="muted">' + esc(s.trigger) + ' · '
         + esc(s.sourceGroup) + ' · ' + esc(s.tags.join('/')) + '</span>'
-        + (digest ? '<span class="muted" style="color:#c9b98c">' + digest + '</span>' : '')
+        + (digest ? '<span class="muted" style="color:#c8b88a">' + digest + '</span>' : '')
         + '<span class="tag mid" style="margin-left:6px" data-term="有效距离">' + rangeTxt + '</span>'
         + '<span style="flex:1"></span><span class="muted">' + (ui.openSkill === s.cfgId ? '收起 ▲' : '展开获取途径 ▼') + '</span></div>';
       if (ui.openSkill === s.cfgId) {
@@ -835,6 +845,10 @@
       }
       return h + '</div>';
     }).join('');
+    if (list.length > shown.length) {
+      out += '<div style="margin:12px 0"><button class="btn" data-act="skillmore">显示更多（还有 '
+        + (list.length - shown.length) + ' 条）</button></div>';
+    }
     return out;
   }
 
@@ -858,7 +872,7 @@
     var nav = document.getElementById('slgPanelsNav');
     nav.innerHTML = NAV.map(function (x) {
       return '<button class="nav' + (ui.tab === x[0] ? ' on' : '') + '" data-act="tab" data-id="' + x[0] + '">'
-        + x[1] + '<div style="font-size:11px;color:#8d8a74">' + x[2] + '</div></button>';
+        + x[1] + '<div style="font-size:11px;color:#8f8676">' + x[2] + '</div></button>';
     }).join('');
     var cur = NAV.find(function (x) { return x[0] === ui.tab; }) || NAV[0];
     document.getElementById('slgPanelsTitle').textContent = cur[1] + ' · ' + cur[2];
@@ -910,7 +924,8 @@
     if (act === 'prospect') { ui.genId = -Number(t.getAttribute('data-i')) - 1; return render(); }
     if (act === 'gtab') { ui.genTab = id; return render(); }
     if (act === 'itemfilter') { ui.itemFilter = id; return render(); }
-    if (act === 'skillfilter') { ui.skillFilter = id; return render(); }
+    if (act === 'skillfilter') { ui.skillFilter = id; ui.skillLimit = 24; return render(); }
+    if (act === 'skillmore') { ui.skillLimit += 24; return render(); }
     if (act === 'skilldetail') {
       var cfg = Number(t.getAttribute('data-cfg'));
       ui.openSkill = ui.openSkill === cfg ? 0 : cfg; return render();
@@ -977,6 +992,7 @@
     var t = e.target.closest('[data-act]');
     if (!t || t.getAttribute('data-act') !== 'skillquery') return;
     ui.skillQuery = t.value;
+    ui.skillLimit = 24;   /* 检索结果从第一批开始，避免「搜到了却停在列表末尾」 */
     var pos = t.selectionStart;
     render();
     var again = document.querySelector('[data-act="skillquery"]');
@@ -1004,7 +1020,7 @@
       + 'background:rgba(20,18,10,.92);box-shadow:0 18px 60px rgba(0,0,0,.7);color:#e6dac0;font:13px/1.7 "Microsoft YaHei",sans-serif;">'
       + '<div style="text-align:center;font:bold 30px/1.4 KaiTi,STKaiti,serif;color:#f0d998;letter-spacing:8px;">举 义</div>'
       + '<div style="text-align:center;color:#9c9382;margin:6px 0 18px;font-size:12.5px;">汉室倾颓，群雄并起 —— 择一主而事之，定一都而图天下</div>'
-      + '<div id="slgOathBody"><div style="text-align:center;color:#8a8070;padding:30px 0;">正召集诸侯……</div></div>'
+      + '<div id="slgOathBody"><div style="text-align:center;color:#8f8676;padding:30px 0;">正召集诸侯……</div></div>'
       + '</div>';
     document.body.appendChild(oathEl);
     // 服务端若已被举义（比如另一窗口完成选择），覆盖层自动收起，不把新档玩家锁死。

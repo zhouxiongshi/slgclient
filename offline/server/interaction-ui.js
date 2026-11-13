@@ -134,7 +134,7 @@
     var css = ''
       + '.slgIx{font-size:12px;line-height:1.5;color:#e8e0cc;font-family:"Microsoft YaHei","PingFang SC",sans-serif}'
       + '.slgIx button{font:inherit;cursor:pointer;background:#243026;color:#e8e0cc;border:1px solid #5c6b4e;border-radius:3px;padding:4px 9px;min-height:26px}'
-      + '.slgIx button:hover{background:#35452f;border-color:#ba9a52}'
+      + '.slgIx button:hover{background:#33402f;border-color:#ba9a52}'
       + '.slgIx button:focus-visible{outline:2px solid #e3c46a;outline-offset:1px}'
       + '.slgIx .muted{color:#a9a48f}.slgIx b{color:#f0e2b8}'
       + '.slgIx .tag{display:inline-block;padding:1px 6px;border:1px solid #6b6142;border-radius:2px;font-size:11px;margin-right:4px}'
@@ -159,7 +159,7 @@
       + '.slgIx-tip .src{margin-top:8px;font-size:11px;color:#9cae8c;border-top:1px solid #3d4636;padding-top:6px}'
       + '.slgIx-tip .links{margin-top:7px;display:flex;flex-wrap:wrap;gap:5px}'
       + '.slgIx-tip .links button{padding:2px 7px;min-height:22px;font-size:11px}'
-      + '.slgIx-tip .crumb{font-size:11px;color:#c9b98c;margin-bottom:6px;word-break:break-all}'
+      + '.slgIx-tip .crumb{font-size:11px;color:#c8b88a;margin-bottom:6px;word-break:break-all}'
       + '.slgIx-term{color:#e3c46a;border-bottom:1px dotted #ba9a52;cursor:help}'
       + '#slgIxAgenda{position:fixed;right:12px;top:96px;z-index:100100;width:268px;'
       + 'background:rgba(16,22,16,.95);border:1px solid #5c6b4e;border-radius:4px;padding:9px 11px}'
@@ -210,7 +210,7 @@
       + '#slgIxGuide .ga{margin-top:9px;display:flex;gap:7px;justify-content:flex-end}'
       /* ★ P11 决策预览重做：卡片式两栏，风险区独立着色，底部操作条固定 */
       + '.slgIx-modal .box.slgIxPV{width:min(760px,92vw);padding:0;border:1px solid #8a7038;'
-      + 'border-radius:10px;overflow:hidden;background:linear-gradient(165deg,#1d241a,#141a13);'
+      + 'border-radius:10px;overflow:hidden;background:linear-gradient(165deg,#20221c,#141a13);'
       + 'box-shadow:0 22px 70px rgba(0,0,0,.7)}'
       + '.slgIxPV .pv-head{position:relative;padding:18px 22px 14px;border-bottom:1px solid rgba(186,154,82,.24);'
       + 'background:radial-gradient(600px 160px at 15% -40%,rgba(186,154,82,.22),transparent 70%)}'
@@ -245,7 +245,7 @@
       + 'color:#ffe9b0;font-weight:600;letter-spacing:1px}'
       + '@media (max-width:760px){.slgIxPV .pv-cols{grid-template-columns:1fr}'
       + '.slgIxPV .pv-col+.pv-col{border-left:none;border-top:1px solid rgba(186,154,82,.16)}}'
-      + '.slgIx input[type=text]{background:#1a2419;border:1px solid #5c6b4e;color:#e8e0cc;padding:4px 7px;font:inherit;min-height:26px}'
+      + '.slgIx input[type=text]{background:#20221c;border:1px solid #5c6b4e;color:#e8e0cc;padding:4px 7px;font:inherit;min-height:26px}'
       + '#slgIxRoot.reduce *{transition:none!important;animation:none!important}'
       + '@media (max-width:1100px){#slgIxAgenda,#slgIxLens{display:none}}'
       /* M4-3（GDD §10.1 五档断点）：抽屉宽 360/380/420/460/480 随分辨率分档（fallback 380）。 */
@@ -1021,7 +1021,7 @@
   /* ---------------- 11. 快捷键 / 设置 / 无障碍 ---------------- */
   var DEFAULT_KEYS = {
     pin: 'k', lens: '1', agenda: 'g', ency: 'e', help: '?', undo: 'z',
-    guide: 'h', drawer: 'd', war: 'w',
+    guide: 'h', drawer: 'd', war: 'w', find: 'f',
   };
   function key(action) { return S.keys[action] || DEFAULT_KEYS[action]; }
   function openKeys() {
@@ -1032,9 +1032,14 @@
       + '<div class="muted" style="font-size:11px;margin-bottom:9px">键位可重映射：点右侧输入框后按新键；'
       + '字号可缩放、减少动效、色盲双编码（颜色 + 形状/文字标签）。</div>'
       + '<table>' + Object.keys(DEFAULT_KEYS).map(function (a) {
-        return '<tr><th>' + esc({ pin: '锁定术语框', lens: '透镜 1–6', agenda: '当前事务', ency: '内置百科', help: '本页', undo: '撤销 Ctrl+', guide: '重看教学', drawer: '就地抽屉', war: '打开出征面板' }[a])
+        return '<tr><th>' + esc({ pin: '锁定术语框', lens: '透镜 1–6', agenda: '当前事务', ency: '内置百科', help: '本页', undo: '撤销 Ctrl+', guide: '重看教学', drawer: '就地抽屉', war: '打开出征面板', find: '搜索城池/武将' }[a])
           + '</th><td><input type="text" data-key="' + esc(a) + '" value="' + esc(key(a)) + '" style="width:70px"></td></tr>';
       }).join('') + '</table>'
+      /* GDD §10.4 的固定键（不可重映射：它们是操作系统级习惯键） */
+      + '<div class="muted" style="font-size:11px;margin-top:9px;line-height:1.8">'
+      + '固定键：<b>Space</b> 下一旬（焦点不在按钮上时）　<b>Tab</b> 下一透镜（Shift+Tab 走焦点）　'
+      + '<b>Esc</b> 逐级关闭　<b>←/→</b> 出征窗内切我方队伍　<b>1–3</b> 出征窗内选第 1/2/3 支队伍'
+      + '（出征窗没开时 1–6 仍直选透镜）</div>'
       + '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
       + '<button data-act="font">字号：' + esc(fontLabel()) + '</button>'
       + '<button data-act="motion">' + (S.reduceMotion ? '动效：已减少' : '动效：正常') + '</button>'
@@ -1068,6 +1073,77 @@
     on(mask, 'click', function (e) { if (e.target === mask) mask.remove(); });
   }
   function openKeysAgain(mask) { mask.remove(); openKeys(); }
+
+  /* ---------------- 11.5 GDD §10.4 键位补齐（P2-03） ----------------
+   * 补的是 GDD 表里原先缺的五项：Space / Tab / F / ←→ / 1–3。
+   * 两处冲突的处理方式：
+   *   1. 数字键原来 1–6 直选透镜，GDD 的 1–3 是「推演台我方槽位」。
+   *      现在做成上下文敏感：出征窗开着 → 1–3 选我方第 N 支队伍（槽位）；
+   *      否则维持 1–6 直选透镜（更快的原路径不删）。
+   *   2. Tab 被 GDD 占用为「透镜循环」，会与浏览器默认的焦点遍历冲突。
+   *      折中：Tab 切透镜，Shift+Tab 保留原生焦点遍历 —— 键盘用户仍有退路。
+   * Space 只在焦点不在可交互控件上时劫持，否则保留「空格按下按钮」的原生行为。 */
+  function focusIsInteractive() {
+    var a = document.activeElement;
+    if (!a || a === document.body || a === document.documentElement) return false;
+    var t = (a.tagName || '').toLowerCase();
+    return t === 'button' || t === 'input' || t === 'select' || t === 'textarea'
+      || t === 'a' || a.hasAttribute('tabindex');
+  }
+  function lensIndex() {
+    for (var i = 0; i < LENSES.length; i++) if (LENSES[i].id === S.lens) return i;
+    return 0;
+  }
+  function cycleLens(step) {
+    var n = (lensIndex() + step + LENSES.length) % LENSES.length;
+    S.lens = LENSES[n].id;
+    persist(); buildLens();
+    toast('透镜 ' + (n + 1) + '/6：' + LENSES[n].name + '　（' + LENSES[n].desc + '）');
+  }
+  /* 出征窗的「我方槽位」＝可派队伍列表（skills.js 渲染时挂 data-army-index） */
+  function armyRows() {
+    return Array.prototype.slice.call(document.querySelectorAll('#slgWarWin [data-army-index]'));
+  }
+  function pickArmy(n) {
+    var row = armyRows()[n - 1];
+    if (!row) return false;
+    row.click();
+    return true;
+  }
+  function cycleArmy(step) {
+    var rows = armyRows();
+    if (!rows.length) return false;
+    var cur = -1;
+    for (var i = 0; i < rows.length; i++) if (rows[i].hasAttribute('data-army-selected')) cur = i;
+    rows[(cur + step + rows.length) % rows.length].click();
+    return true;
+  }
+  /* 下一旬：与城内页/沙盘共用同一个 __slgTick，绝不另写一份推进逻辑 */
+  function nextTurn() {
+    if (typeof window.__slgTick === 'function') { window.__slgTick(); return; }
+    var b = document.getElementById('slgStratTick');
+    if (b) { b.click(); return; }
+    toast('天下沙盘尚未就绪，无法推进回合');
+  }
+  /* F：搜索 —— 六府开着就聚焦当前页检索框，否则聚焦沙盘城/关检索 */
+  function focusFind() {
+    var cands = [];
+    var w = document.getElementById('slgPanelsWin');
+    if (w) cands = cands.concat(Array.prototype.slice.call(
+      w.querySelectorAll('input[type="search"],input[data-act$="query"]')));
+    cands.push(document.getElementById('slgStratFind'));
+    for (var i = 0; i < cands.length; i++) {
+      var f = cands[i];
+      if (f && f.offsetParent !== null) {
+        f.focus();
+        if (f.select) f.select();
+        toast(f.id === 'slgStratFind' ? '搜索城池 / 关隘：输入城名' : '搜索：输入关键词');
+        return;
+      }
+    }
+    toast('没有可用的检索框（先打开天下沙盘或六府）');
+  }
+
   function bindKeys() {
     on(document, 'keydown', function (e) {
       var tag = (e.target && e.target.nodeName) || '';
@@ -1082,8 +1158,24 @@
       if (typing) return;
       if (e.ctrlKey && e.key.toLowerCase() === key('undo')) { e.preventDefault(); undoLast(); return; }
       if (e.ctrlKey) return;
+      /* Tab：六透镜循环（Shift+Tab 保留原生焦点遍历，见 11.5 注释） */
+      if (e.key === 'Tab') {
+        if (e.shiftKey) return;
+        e.preventDefault(); cycleLens(1); return;
+      }
+      /* Space：下一旬。焦点在按钮/输入框上时不劫持，留给原生行为 */
+      if ((e.key === ' ' || e.code === 'Space') && !focusIsInteractive()) {
+        e.preventDefault(); nextTurn(); return;
+      }
+      /* ←/→：出征窗内切我方槽位；不在出征窗时不劫持方向键 */
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        if (cycleArmy(e.key === 'ArrowRight' ? 1 : -1)) { e.preventDefault(); return; }
+      }
+      /* 1–3：出征窗开着时选我方第 N 支队伍（GDD 的「我方槽位」） */
+      if (/^[1-3]$/.test(e.key) && pickArmy(Number(e.key))) { e.preventDefault(); return; }
       if (/^[1-6]$/.test(e.key)) { S.lens = LENSES[Number(e.key) - 1].id; persist(); buildLens(); return; }
       var k = e.key.toLowerCase();
+      if (k === key('find')) { e.preventDefault(); focusFind(); return; }
       if (k === key('pin')) {
         var ht = S.hoverTip;
         if (ht) { var r = ht.getBoundingClientRect(); showTip(ht._termId, r.left, r.top, { pinned: true, crumbs: ht._crumbs }); hideTip(ht); }

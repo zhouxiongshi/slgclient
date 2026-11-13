@@ -1032,7 +1032,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
         var color = '#9c9382';
         if (mv.kind === '出征' && mv.result === '克') { label = '克' + (mv.toName || ''); color = '#e07060'; }
         else if (mv.kind === '出征' && mv.result === '挫') { label = '挫' + (mv.toName || ''); color = '#c9a066'; }
-        else if (mv.kind === '出征') { label = '未发'; color = '#8a8070'; }
+        else if (mv.kind === '出征') { label = '未发'; color = '#8f8676'; }
         else if (mv.kind === '结盟') { label = '盟' + (mv.otherName || ''); color = '#7dcea0'; }
         cell[mv.who + '@' + m.month] = { label: label, color: color };
       });
@@ -2287,7 +2287,7 @@ const BATTLE_ANIM_SOURCE = `;(function () {
     }
     // 名字与兵力条
     if (!u.dead || fall < 1) {
-      g.fillStyle = '#e8dcc0'; g.font = '12px "Microsoft YaHei",sans-serif'; g.textAlign = 'center';
+      g.fillStyle = '#e6dac0'; g.font = '12px "Microsoft YaHei",sans-serif'; g.textAlign = 'center';
       g.fillText(u.name, x, y - 34);
       var w = 74;
       g.fillStyle = '#22252b'; g.fillRect(x - w / 2, y + 34, w, 5);
@@ -2393,26 +2393,26 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
   STYLE.textContent = [
     '#slgUIv2 *{box-sizing:border-box;margin:0;padding:0;}',
     '#slgUIv2 .win{position:fixed;top:12px;right:244px;bottom:12px;width:520px;z-index:100560;'
-    + 'background:linear-gradient(180deg,#1b1d16,#141610);border:1px solid #8a7038;border-radius:10px;'
+    + 'background:linear-gradient(180deg,#20221c,#141610);border:1px solid #8a7038;border-radius:10px;'
     + 'color:#e2d6b8;font:13px/1.8 "Microsoft YaHei",sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.7);display:none;}',
-    '#slgUIv2 .win-head{position:relative;padding:12px 16px 8px;border-bottom:1px solid #4a4030;background:rgba(60,48,24,.35);}',
+    '#slgUIv2 .win-head{position:relative;padding:12px 16px 8px;border-bottom:1px solid #4a4436;background:rgba(60,48,24,.35);}',
     '#slgUIv2 .win-head b{font-size:17px;color:#f0d998;letter-spacing:2px;}',
     '#slgUIv2 .win-head .sub{opacity:.85;font-size:12px;margin-top:2px;}',
     '#slgUIv2 .badge{display:inline-block;padding:0 6px;border-radius:3px;font-size:11px;margin-left:6px;vertical-align:2px;}',
     '#slgUIv2 .badge.cap{background:#7a2a20;color:#ffd9c0;}',
     '#slgUIv2 .badge.home{background:#7a5822;color:#ffe9b0;}',
     '#slgUIv2 .x{position:absolute;top:10px;right:12px;cursor:pointer;color:#a89f86;font-size:16px;padding:2px 8px;}',
-    '#slgUIv2 .tabs{display:flex;border-bottom:1px solid #4a4030;}',
+    '#slgUIv2 .tabs{display:flex;border-bottom:1px solid #4a4436;}',
     '#slgUIv2 .tabs button{flex:1;background:#20221c;border:none;border-right:1px solid #33302a;color:#a89f86;',
     'padding:7px 0;cursor:pointer;font:13px "Microsoft YaHei",sans-serif;}',
     '#slgUIv2 .tabs button.on{background:#5c4318;color:#ffe9b0;font-weight:bold;}',
     '#slgUIv2 .body{position:absolute;top:98px;left:0;right:0;bottom:0;overflow-y:auto;padding:12px 16px;}',
-    '#slgUIv2 .card{background:rgba(255,255,255,.04);border:1px solid #3a3428;border-radius:6px;padding:10px 12px;margin-bottom:10px;}',
+    '#slgUIv2 .card{background:rgba(255,255,255,.04);border:1px solid #3a3325;border-radius:6px;padding:10px 12px;margin-bottom:10px;}',
     '#slgUIv2 .grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;}',
     '#slgUIv2 .kv{display:flex;justify-content:space-between;border-bottom:1px dashed #33302a;padding:4px 0;}',
     '#slgUIv2 .kv span:last-child{color:#f0d998;}',
     '#slgUIv2 .res{display:flex;gap:10px;flex-wrap:wrap;}',
-    '#slgUIv2 .res .r{background:rgba(255,255,255,.05);border:1px solid #3a3428;border-radius:6px;',
+    '#slgUIv2 .res .r{background:rgba(255,255,255,.05);border:1px solid #3a3325;border-radius:6px;',
     'padding:6px 12px;min-width:96px;}',
     '#slgUIv2 .res .r b{color:#f0d998;font-size:15px;}',
     '#slgUIv2 .res .r small{display:block;opacity:.7;font-size:11px;}',
@@ -2440,7 +2440,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
        确认框 100820 < 术语提示 100780 < toast 100880~900。旧值 100002 会被城内页盖住。 */
     '#slgUIv2 .modal{position:fixed;inset:0;z-index:100820;background:rgba(0,0,0,.55);display:flex;',
     'align-items:center;justify-content:center;}',
-    '#slgUIv2 .modal .box{width:430px;background:#1b1d16;border:1px solid #8a7038;border-radius:8px;padding:18px 20px;}',
+    '#slgUIv2 .modal .box{width:430px;background:#20221c;border:1px solid #8a7038;border-radius:8px;padding:18px 20px;}',
     '#slgUIv2 .modal .box p{margin:0 0 14px;line-height:1.9;}',
     '#slgUIv2 .modal .bar{display:flex;justify-content:flex-end;gap:8px;}',
     '#slgUIv2 .seg{display:inline-flex;border:1px solid #4a4436;border-radius:4px;overflow:hidden;}',
@@ -2454,7 +2454,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     /* ★ P11 城市内部页：点地图城池即「进城」，整屏一页，不再叠浮窗 */
     '#slgUIv2 .citypage{position:fixed;inset:0;z-index:100420;display:flex;flex-direction:column;'
       + 'background:radial-gradient(1200px 700px at 78% -20%,rgba(150,116,54,.16),transparent 70%),'
-      + 'linear-gradient(160deg,#14160f 0%,#1b1c14 48%,#12140e 100%);color:#e6dcc0;'
+      + 'linear-gradient(160deg,#14160f 0%,#1b1c14 48%,#12140e 100%);color:#e6dac0;'
       + 'font-family:"Microsoft YaHei","PingFang SC",sans-serif;animation:slgCityIn .22s ease-out;}',
     '@keyframes slgCityIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}',
     '#slgUIv2 .citypage-head{display:flex;align-items:center;gap:18px;padding:18px 26px 14px;'
@@ -2524,7 +2524,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     '#slgUIv2 .kv{border-bottom:1px dashed rgba(186,154,82,.16);padding:5px 0;}',
     '#slgUIv2 .btn{border-radius:5px;letter-spacing:1px;transition:filter .15s,transform .1s;}',
     '#slgUIv2 .btn:active{transform:translateY(1px);}',
-    '#slgUIv2 .modal .box{border-radius:9px;background:linear-gradient(165deg,#1d241a,#141a13);'
+    '#slgUIv2 .modal .box{border-radius:9px;background:linear-gradient(165deg,#20221c,#141a13);'
       + 'box-shadow:0 20px 60px rgba(0,0,0,.65);}',
     '@media (max-width:1100px){#slgUIv2 .win{top:16px;bottom:16px;width:calc(100vw - 40px)}}',
   ].join('');
@@ -2998,12 +2998,18 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         }));
       }
     }
-    idle.forEach(function (a) {
+    idle.forEach(function (a, ai) {
       var on = a.id === war.armyId;
       var row = el('div', 'row');
+      /* GDD §10.4「1–3 切换我方槽位」：槽位就是这条可派队伍列表，
+         data-army-index 从 1 起，交互层按键时按它取行。 */
+      row.setAttribute('data-army-index', String(ai + 1));
+      row.setAttribute('data-army-id', String(a.id));
+      if (on) row.setAttribute('data-army-selected', '1');
       row.style.cssText = 'cursor:pointer;padding:8px;border-radius:5px;'
         + (on ? 'background:rgba(240,217,152,.10);border:1px solid #8a7038;' : 'border:1px solid #33302a;');
-      row.innerHTML = '<span><b style="color:' + (on ? '#ffe9b0' : '#e2d6b8') + '">队伍#' + a.order + '</b>'
+      row.innerHTML = '<span><b style="color:' + (on ? '#ffe9b0' : '#e2d6b8') + '">'
+        + (ai < 3 ? '［' + (ai + 1) + '］' : '') + '队伍#' + a.order + '</b>'
         + '<span class="cost">　盾 ' + fmt(a.soldiers[0]) + ' / 弓 ' + fmt(a.soldiers[1])
         + ' / 骑 ' + fmt(a.soldiers[2]) + '　合计 <b style="color:#f0d998">' + fmt(warTroops(a))
         + '</b> 兵 · 队速 ' + Math.round(a.speed || 100) + '</span>'

@@ -678,6 +678,65 @@ async function runAudit(win, server, app) {
     report.paths = res.paths || [];
     report.pageErrors = res.pageErrors || [];
 
+    /* ---------- 快捷键真按（GDD §10.4 / P2-03） ----------
+       静态扫描只能证明「代码里有这个分支」，按下去有没有反应必须真发键事件。
+       这一段跑在 WALK 之后（此时已收掉所有覆盖层、回到沙盘），不会干扰上面的路径。 */
+    const sleepMs = (ms) => new Promise((r) => setTimeout(r, ms));
+    const press = async (keyCode) => {
+      wc.sendInputEvent({ type: 'keyDown', keyCode });
+      wc.sendInputEvent({ type: 'keyUp', keyCode });
+      await sleepMs(280);
+    };
+    const js = (code) => wc.executeJavaScript(code, true);
+    const lensOn = () => js(`(function(){var b=document.querySelector('#slgIxLens button.on');return b?b.getAttribute('data-lens'):null;})()`);
+    const turnOf = () => js(`fetch('/__slg/strategy/state',{cache:'no-store'}).then(function(r){return r.json()}).then(function(s){return s.turn;})`);
+    const armySel = () => js(`(function(){var r=document.querySelector('#slgWarWin [data-army-selected]');return r?r.getAttribute('data-army-index'):null;})()`);
+    const keyPaths = [];
+    const kv = (id, expect, ok, note) => keyPaths.push({ id, expect, ok: !!ok, textLen: 0, note: note || '' });
+
+    try {
+      /* Tab：六透镜循环 */
+      const lb = await lensOn();
+      await press('Tab');
+      const la = await lensOn();
+      kv('key.tab-lens', ['地图透镜'], la && la !== lb, '透镜 ' + lb + ' → ' + la);
+
+      /* F：聚焦沙盘检索框 */
+      await press('F');
+      const focused = await js(`(function(){var a=document.activeElement;return a?(a.id||a.tagName):'';})()`);
+      kv('key.f-find', ['输入城名'], focused === 'slgStratFind', 'activeElement=' + focused);
+      await js(`(function(){var a=document.activeElement;if(a&&a.blur)a.blur();return true;})()`);
+
+      /* Space：下一旬（turn 必须真的 +1，不能只是弹个 toast） */
+      const tb = await turnOf();
+      await press('Space');
+      const ta = await turnOf();
+      kv('key.space-tick', ['推演'], typeof tb === 'number' && typeof ta === 'number' && ta > tb,
+        'turn ' + tb + ' → ' + ta);
+      await js(`(function(){try{if(window.__slgIX)window.__slgIX.closeAll();}catch(e){}return true;})()`);
+
+      /* 1–3 / ←→：出征窗里的我方槽位 */
+      await js(`(function(){var b=document.getElementById('slgBtnWar');if(b)b.click();return true;})()`);
+      await sleepMs(900);
+      const rowCount = await js(`document.querySelectorAll('#slgWarWin [data-army-index]').length`);
+      if (rowCount >= 2) {
+        const s0 = await armySel();
+        await press('ArrowRight');
+        const s1 = await armySel();
+        kv('key.arrow-army', ['可派队伍'], s1 && s1 !== s0, '选中槽位 ' + s0 + ' → ' + s1);
+        await press('2');
+        const s2 = await armySel();
+        kv('key.digit-army', ['可派队伍'], s2 === '2', '按 2 后选中槽位=' + s2);
+      } else {
+        kv('key.army-slot', ['可派队伍'], true, '跳过：可派队伍仅 ' + rowCount + ' 支（需要 ≥2 支才能验证切换）');
+      }
+      await js(`(function(){var w=document.getElementById('slgWarWin');if(w)w.remove();return true;})()`);
+      await js(`(function(){try{if(window.__slgIX)window.__slgIX.closeAll();}catch(e){}return true;})()`);
+    } catch (e) {
+      kv('key.fatal', [], false, String((e && e.message) || e));
+    }
+    report.paths = report.paths.concat(keyPaths);
+
     try {
       const img = await wc.capturePage();
       fs.writeFileSync(path.join(outDir, `ui-audit-${tag}.png`), img.toPNG());

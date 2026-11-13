@@ -23,6 +23,26 @@
        ——真鼠标试玩里推演一旬后弹事件卡，玩家就再也点不到「推演一月」了。 */
     var MAIN = ':is(html[data-slg-window="city"],html[data-slg-window="panels"],html[data-slg-window="win"])';
     var css = ''
+      /* ---- 注入层基础 token（P3-01 / P3-02）----
+         注入层元素如果自己不写 font-family / color，就会从原版 web/style.css 继承
+         Arial，未设颜色的元素则拿到浏览器默认黑。实测结果是 4 套字体族并存、
+         深色面板上出现看不见的黑字。这里把注入层所有根节点钉死到同一套字体与
+         正文色，子元素再各自覆盖。书法标题（KaiTi）是刻意保留的第二档。 */
+      + '#slgUIv2,#slgIxRoot,#slgPanelsWin,#slgCityWin,#slgCityPage,#slgWarWin,'
+      + '#slgDock,#slgPanelsDock,#slgStratSide,#slgStratFoot,#slgLegend,#slgShellToggle{'
+      + 'font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;'
+      + 'color:#e6dac0}'
+      /* 表单控件不吃继承：浏览器对 input/select/textarea/button 用 UA 默认字体
+         （Arial）与黑字，实测有 15 个 input 落在 Arial 上、深色面板里是黑字。 */
+      + '#slgUIv2 input,#slgUIv2 select,#slgUIv2 textarea,#slgUIv2 button,'
+      + '#slgIxRoot input,#slgIxRoot select,#slgIxRoot textarea,#slgIxRoot button,'
+      + '#slgPanelsWin input,#slgPanelsWin select,#slgPanelsWin textarea,#slgPanelsWin button,'
+      + '#slgCityWin input,#slgCityWin select,#slgCityWin textarea,#slgCityWin button,'
+      + '#slgCityPage input,#slgCityPage select,#slgCityPage textarea,#slgCityPage button,'
+      + '#slgWarWin input,#slgWarWin select,#slgWarWin textarea,#slgWarWin button,'
+      + '#slgDock input,#slgDock select,#slgDock button,'
+      + '#slgStratSide input,#slgStratSide select,#slgStratSide button'
+      + '{font-family:inherit;color:inherit}'
       /* ---- 静止态：四张浮窗各占一角，互不遮挡 ---- */
       + 'html[data-slg-phase="game"] #slgIxAgenda{right:12px;top:96px;width:250px;max-height:184px;overflow:auto}'
       + 'html[data-slg-phase="game"] #slgIxLens{left:12px;top:auto;bottom:118px;width:212px;max-height:132px;overflow:auto}'

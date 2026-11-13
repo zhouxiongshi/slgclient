@@ -5,13 +5,16 @@
  *  - 字段白名单：turn / year / season / faction / cityOwned / cityLost /
  *    resource / flag / relation / generalAlive / generalDead / generalInTeam /
  *    battleLost / battleWon（未知字段一律 throw，构建期与运行期同拒）
- *  - 算子白名单：= != > >= < <= in not_in（值比较只走单算子对象 {">=": 500}）
+ *  - 时间字段有两种写法，**都生效**（见 §「边界字段」）：
+ *      turnMin/turnMax/yearMin/yearMax  → 裸数字是上下界，单算子对象走算子
+ *      turn/year                        → 裸数字是精确相等，单算子对象走算子
+ *  - 算子白名单：= != > >= < <= in not_in（值比较走单算子对象 {">=": 500}）
  *  - 禁止：任意 JS 表达式、网络请求、随机数（随机必须走 rngFor 并声明）
  *
  * 零依赖叶子：不知道 state 长什么样，只消费 ctx 查询回调。
  */
 export const WHEN_FIELDS = [
-  'turnMin', 'turnMax', 'yearMin', 'yearMax', 'season', 'faction',
+  'turnMin', 'turnMax', 'yearMin', 'yearMax', 'turn', 'year', 'season', 'faction',
   'cityOwned', 'cityLost', 'resource', 'flag', 'relation',
   'generalAlive', 'generalDead', 'generalInTeam', 'battleLost', 'battleWon',
 ];
@@ -32,6 +35,11 @@ function cmpValue(opObj, actual) {
   }
   const op = keys[0];
   const want = opObj[keys[0]];
+  /* in / not_in 的比较目标是数组，不能走「必须是数字」那道闸；先分出去 */
+  if (op === 'in' || op === 'not_in') {
+    if (!Array.isArray(want)) throw new Error(`${op} 的比较目标必须是数组: ${JSON.stringify(want)}`);
+    return op === 'in' ? want.includes(actual) : !want.includes(actual);
+  }
   if (typeof want !== 'number') throw new Error(`比较目标必须是数字: ${JSON.stringify(want)}`);
   if (typeof actual !== 'number' || !Number.isFinite(actual)) return false;
   switch (op) {
@@ -41,10 +49,31 @@ function cmpValue(opObj, actual) {
     case '>=': return actual >= want;
     case '<': return actual < want;
     case '<=': return actual <= want;
-    case 'in': return Array.isArray(want) ? want.includes(actual) : false;
-    case 'not_in': return Array.isArray(want) ? !want.includes(actual) : true;
     default: throw new Error(`未实现的算子: ${op}`);
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* 时间/边界字段：裸数字与单算子对象**都生效**                          */
+/* ------------------------------------------------------------------ */
+/* 历史缺陷（P3-03）：turnMin/yearMin 等只认裸数字，照 GDD §8.2 写成        */
+/*   { "turnMin": { ">=": 5 } } 会被静默忽略 —— 条件恒成立、不报错。      */
+/* 静默放宽比抛错危险得多（事件会在不该触发的时候全触发），所以这里两种写法  */
+/* 都支持，且对象写法里的非法算子照旧 throw。                              */
+function boundOk(spec, actual, kind) {
+  if (typeof spec === 'number') {
+    if (!Number.isFinite(spec)) throw new Error(`边界值必须是有限数字: ${JSON.stringify(spec)}`);
+    return kind === 'min' ? actual >= spec : actual <= spec;
+  }
+  return cmpValue(spec, actual); // 非数字非对象、或多算子对象，在这里 throw
+}
+
+function exactOk(spec, actual) {
+  if (typeof spec === 'number') {
+    if (!Number.isFinite(spec)) throw new Error(`时间值必须是有限数字: ${JSON.stringify(spec)}`);
+    return actual === spec;
+  }
+  return cmpValue(spec, actual);
 }
 
 /* ------------------------------------------------------------------ */
@@ -62,10 +91,13 @@ export function evaluateEvent(when, ctx) {
   const unknown = Object.keys(when).filter((k) => !WHEN_FIELDS.includes(k));
   if (unknown.length) throw new Error(`事件条件字段不在白名单: ${unknown.join(',')}（允许 ${WHEN_FIELDS.join(',')}）`);
 
-  if (when.turnMin != null && ctx.turn < when.turnMin) return false;
-  if (when.turnMax != null && ctx.turn > when.turnMax) return false;
-  if (when.yearMin != null && ctx.year < when.yearMin) return false;
-  if (when.yearMax != null && ctx.year > when.yearMax) return false;
+  if (when.turnMin != null && !boundOk(when.turnMin, ctx.turn, 'min')) return false;
+  if (when.turnMax != null && !boundOk(when.turnMax, ctx.turn, 'max')) return false;
+  if (when.yearMin != null && !boundOk(when.yearMin, ctx.year, 'min')) return false;
+  if (when.yearMax != null && !boundOk(when.yearMax, ctx.year, 'max')) return false;
+  /* GDD §8.2 的字段名是 turn / year（精确匹配或单算子） */
+  if (when.turn != null && !exactOk(when.turn, ctx.turn)) return false;
+  if (when.year != null && !exactOk(when.year, ctx.year)) return false;
   if (when.season != null) {
     const want = Array.isArray(when.season) ? when.season : [when.season];
     if (!want.includes(ctx.season)) return false;
@@ -147,6 +179,21 @@ export function validateEventSchema(e, heroNames) {
   else {
     const unknown = Object.keys(e.when).filter((k) => !WHEN_FIELDS.includes(k));
     if (unknown.length) bad(`when 字段不在白名单: ${unknown.join(',')}`);
+    /* 时间/边界字段：构建期就把「非法写法」拦掉，别等到运行期静默失效 */
+    for (const k of ['turnMin', 'turnMax', 'yearMin', 'yearMax', 'turn', 'year']) {
+      const v = e.when[k];
+      if (v == null) continue;
+      if (typeof v === 'number') {
+        if (!Number.isFinite(v)) bad(`${k} 必须是有限数字`);
+        continue;
+      }
+      if (typeof v !== 'object' || Array.isArray(v)) {
+        bad(`${k} 必须是数字或单算子对象，得到 ${JSON.stringify(v)}`);
+        continue;
+      }
+      const ks = Object.keys(v);
+      if (ks.length !== 1 || !OPS.includes(ks[0])) bad(`${k} 的算子非法（须为 ${OPS.join('/')} 之一且仅一个）: ${ks.join(',')}`);
+    }
   }
   if (!Array.isArray(e.text) || e.text.length === 0) bad('缺 text（至少一段）');
   if (!Array.isArray(e.choices) || e.choices.length === 0) bad('缺 choices');
