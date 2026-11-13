@@ -446,6 +446,73 @@
     on(mask, 'click', function (e) { if (e.target === mask) { mask.remove(); S.layers.splice(S.layers.indexOf(mask), 1); } });
   }
 
+  /* ---------------- 4.5 M3-6 事件弹窗卡（GDD §8.3） ----------------
+   *  数据来自 /__slg/interaction/state 的 pendingEvents（只读投影）；
+   *  点选 POST /__slg/strategy/action eventChoice（落账在 strategy 层）。
+   *  选择是必答的（队列未决不堆叠，选完 loadState 拉下一条）；按钮带
+   *  data-ix-allow，避免被 interceptCosts 成本词预览二次拦截（两层弹窗协议）。 */
+  var ACT = '/__slg/strategy/action';
+  var LAYER_NAMES = { node: '史实节点', cond: '时局', rel: '关系' };
+  function buildEventCards(d) {
+    var list = d && Array.isArray(d.pendingEvents) ? d.pendingEvents : [];
+    var cur = document.querySelector('.slgIx-modal.slgIxEvent');
+    var want = list.length ? list[0] : null;
+    if (cur && want && cur.dataset.evtId === want.id) return;
+    if (cur) { cur.remove(); var li = S.layers.indexOf(cur); if (li >= 0) S.layers.splice(li, 1); }
+    if (!want) return;
+    var mask = el('div', '', ''); mask.className = 'slgIx-modal slgIxEvent'; mask.dataset.evtId = want.id;
+    var box = el('div', '', ''); box.className = 'box';
+    var html = '<h3>【' + esc(LAYER_NAMES[want.layer] || '事件') + '】' + esc(want.title) + '</h3>';
+    if (want.speaker) html += '<div class="muted" style="font-size:12px;margin-bottom:6px">' + esc(want.speaker) + '</div>';
+    html += want.text.map(function (t) {
+      return '<p style="margin:6px 0;line-height:1.6">' + esc(t) + '</p>';
+    }).join('');
+    html += '<div style="display:flex;flex-direction:column;gap:7px;margin-top:14px">'
+      + want.choices.map(function (c) {
+        return '<button data-evt-choice="' + esc(c.id) + '" data-ix-allow="1" '
+          + 'style="text-align:left;padding:8px 12px;min-height:34px">'
+          + esc(c.label)
+          + (c.preview ? '<div class="muted" style="font-size:11px;font-weight:normal;margin-top:3px">' + esc(c.preview) + '</div>' : '')
+          + '</button>';
+      }).join('') + '</div>'
+      + '<div class="muted" style="font-size:11px;margin-top:10px">抉择写入史册（结局回放可查）；本旬事件至多两件，逐件处理。</div>';
+    box.innerHTML = html;
+    mask.appendChild(box);
+    (document.getElementById('slgIxRoot') || document.body).appendChild(mask);
+    S.layers.push(mask);
+    on(box, 'click', function (e) {
+      var b = e.target.closest('[data-evt-choice]');
+      if (!b || b.disabled) return;
+      var btns = box.querySelectorAll('[data-evt-choice]');
+      btns.forEach(function (x) { x.disabled = true; });
+      fetch(ACT, {
+        method: 'POST', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ act: 'eventChoice', id: want.id, choice: b.dataset.evtChoice }),
+      }).then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      }).then(function (res) {
+        if (res && res.ok === false) {
+          toast('事件点选未生效：' + (res.reason || res.detail || '未知'), 'fail');
+          btns.forEach(function (x) { x.disabled = false; });
+          return;
+        }
+        var eff = (res && Array.isArray(res.applied) ? res.applied : [])
+          .filter(function (a) { return a.kind !== 'nothing'; })
+          .map(function (a) { return (a.kind === 'flag' ? '立flag「' + a.name + '」' : a.target ? a.target + (a.delta > 0 ? '+' : '') + a.delta : a.kind + ' ' + (a.delta > 0 ? '+' : '') + a.delta); })
+          .join('、');
+        toast('抉择已记录' + (eff ? '：' + eff : ''));
+        mask.remove(); var i = S.layers.indexOf(mask); if (i >= 0) S.layers.splice(i, 1);
+        loadState();
+      }).catch(function (err) {
+        toast('事件点选失败：' + err.message, 'fail');
+        btns.forEach(function (x) { x.disabled = false; });
+      });
+    });
+    on(mask, 'click', function (e) { if (e.target === mask) e.stopPropagation(); }); // 必答卡：点遮罩不关闭
+  }
+
   /* ---------------- 5. 6.2 决策预览 + 6.3 撤销 + 四态反馈 ---------------- */
   var COST_WORDS = [
     { re: /招降/, title: '招降俘虏', cost: '300 金', term: 'zhaoxiang', reversible: false },
@@ -953,6 +1020,7 @@
         S.undoSignal = { battle: battleNow, turn: turnNow };
       }
       S.data = d;
+      buildEventCards(d);
       buildAgendaHtml(); buildLens(); buildQueue();
       scanTerms(document.getElementById('slgPanelsMask') || document.body);
     }).catch(function (e) {

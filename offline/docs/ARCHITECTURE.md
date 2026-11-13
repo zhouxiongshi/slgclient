@@ -317,7 +317,7 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 - **事件系统接线**（`strategy.js` M3-4 段）：`strategyEventTick` 每旬一次——冷却递减（引擎落在 `st.eventSys`，与 chronicle 数组 `st.events` 物理分开，避免引擎把数组当事件域改写）→ `selectEvents`（ctx 由 `strategyEventCtx` 适配：turn/year=184+⌊(day−1)/360⌋/season/城归属/资源/flag/关系=同宿命组即 80/胜负窗=`st.battleHistory`）→ `st.pendingEvents` 队列（未决不堆叠）。点选走 `/strategy/action eventChoice`（`strategyEventChoice`），效果词落账：gold→府库、morale→逐城民心、loyalty→全军/最低者/点名、attitude→`diplomacy.adjustAttitudeByEvent`（pairData.eventAdj，attitudeOf 新增「事件」因子）、fame→`st.fame`。
 - **宿命组合落战斗**（GDD §7.5）：`fateComboDefMul(state, cfg, army)`——队内 ≥2 名同组武将 → 守军折算 ×0.95/组（上限 2 组）。`settleArmyBattle` 与 `previewAssault` **同调此函数**（与 M2-5 defMul 同一处相乘，dLoss 基线保持 raw），推演 `fateNotes` 与战报 `analysis.fateNotes` 同源。口径：只看队内成员，不查全局生死（战略层尚无武将死亡结算，注释防后来者加戏）。
 - **cityLost 口径**：`st.everOwned` 在三处入账（bindPlayerHome / chooseOath 划拨 / 克城），ctx.cityLost() = everOwned − 当前玩家城。胜负窗 `st.battleHistory`（cap 60）由 settleArmyBattle 写。
-- 测试 `tests/m3-runtime-wiring.test.js` 7 条。事件弹窗 UI 呈现（interaction 层卡片）属后续打磨。
+- 测试 `tests/m3-runtime-wiring.test.js` 7 条。事件弹窗 UI 呈现（interaction 层卡片）见 §9.10。
 
 ### 9.9 M3-5 六剧本运行期接入（GDD §12.1）
 
@@ -326,6 +326,13 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 - **势力集**：`factionConfFor(state)` 剧本优先——剧本 factions **整体替换** 8 诸侯（NPC 决策/田赋/快照/显示名全走它）；局部 id 缺 trait/startGenerals 时按 name 从基础诸侯继承（`scenarioFactionsEnriched`）。`oath.js` 是防循环叶子，自带剧本目录读取做同款降级（`oathFactionOf` 回退链）。
 - **年份**：`strategyEventCtx` 年份基准改 `(st.scenarioYear || 184) + ⌊(day−1)/360⌋`。注意：events.json 史实节点用绝对年份条件，非 184 起点的剧本下错位——补量批次再按剧本改写条件。
 - 测试 `tests/m3-scenario-runtime.test.js` 6 条（切换/势力集/举义/开局事件/ctx 年份+NPC tick/视图）。
+
+### 9.10 M3-6 事件弹窗卡（GDD §8.3，interaction 层）
+
+- **数据链**：`strategyEventTick` 排队 → `domain/interaction.js` 在聚合返回里加 `pendingEvents` 只读投影（text 归一数组、choices 归一并带 preview；本模块零 IO，点选不在这层落账）→ `interaction-ui.js buildEventCards` 在 `loadState` 后消费。
+- **交互协议**：每次只弹第一条（`slgIx-modal slgIxEvent`，`dataset.evtId` 去重；服务端消费后换下一条）；**抉择必答**——点遮罩不关闭、无关闭按钮，Esc 关掉也会在下轮 20s 轮询重弹；点选 POST `/__slg/strategy/action {act:'eventChoice'}`，成功 toast 效果摘要（服务端 `res.applied` 过滤 nothing）并 `loadState()` 拉下一条。
+- **两层弹窗协议**：选项按钮带 `data-ix-allow="1"`——事件选项文案（如「征兵讨贼」）会命中 `interceptCosts` 的成本词表，不加会被决策预览二次拦截。
+- 测试 `tests/m3-event-ui.test.js` 3 条：聚合投影 shape、UI 静态纪律（含禁 Math.random 查代码行非注释）、opening 伪事件点选入档（`st.eventSys.choices`）。
 
 ---
 

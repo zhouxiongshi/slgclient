@@ -260,6 +260,16 @@ export function interactionState(state, cfg) {
       supplyCut: cutCities.map((c) => ({ id: c.id, name: c.name, days: (c.supply && c.supply.days) || 10 })),
     },
     agenda, turnPreview, fieldGaps,
+    /* ★ M3-6 事件弹窗（GDD §8.3）：只读投影——strategyEventTick 已把待决事件排进
+       st.pendingEvents（未决不堆叠），这里原样下发，点选走 /__slg/strategy/action
+       eventChoice（落账在 strategy 层，本模块零 IO）。 */
+    pendingEvents: (Array.isArray(st.pendingEvents) ? st.pendingEvents : []).map((e) => ({
+      id: e.id, title: e.title, layer: e.layer || 'node', speaker: e.speaker || '',
+      text: Array.isArray(e.text) ? e.text : [String(e.text || '')],
+      choices: (Array.isArray(e.choices) ? e.choices : []).map((c) => ({
+        id: c.id, label: c.label, preview: c.preview || '',
+      })),
+    })),
   };
 }
 
