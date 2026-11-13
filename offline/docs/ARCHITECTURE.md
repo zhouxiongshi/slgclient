@@ -366,6 +366,15 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 - **check-release 7.9b**：两项新检查（溯源无缺口且 ≥500 条、地图声明登记且 UI 渲染），未通过不得发布。
 - 测试 `tests/m4-compliance.test.js` 4 条：全量 exit 0 / 武将口径分布（高 233 + 低 7）/ 声明双向存在 / 负例精确抓出 exit 1。
 
+### 9.14 M4-2 无障碍与表现档位（GDD §10.7 / 验收 G1-G4）
+
+- **字号三档制**：`interaction-ui.js` 的 fontScale 从 ±10 连续缩放（80~150，无法验收）改为 **3 档**（小 85 / 中 100 / 大 120），设置面板单按钮循环切换；旧存档的连续值在初始化时归档到最近档。**陷阱记录**：FONT_TIERS 必须定义在 IIFE 顶部（var 不提升赋值，初始化 try 块在 section 11 之前就要归档）。
+- **G4 无鼠标出征**：`war: 'w'` 快捷键触发战略层 dock 出征按钮（`slgBtnWar.click()`）；出征窗内是原生 select/button，Tab+方向键+Enter 即可走完一次出征；`button:focus-visible` 金色轮廓已在（焦点可见）。
+- **G1 跳过动画不影响结算**：本作战斗「先算后演」——战报渲染（renderReportsInto）只读协议 `war.report` 的服务端结算结果，UI 层不掷骰不复算（断言渲染函数体无 runBattle/Math.random）。
+- **G2 关闭音效不丢失信息**：本作预算内音效未实装，三个注入 UI（interaction-ui / skills / panels-ui）断言零 `<audio`/`new Audio`/`.play(`——信息全部文字/图形传递，静音零损失。
+- **G3 灰度仍可区分**：粮道断绝带文字标签「断绝 N 日」+ 后果说明（非仅颜色）；军标行军线已走实线/未走 `setLineDash` 虚线（形状双编码）；减少动效开关（`.reduce` 强制 `transition:none!important;animation:none!important`）延续 P9。
+- 测试 `tests/m4-a11y.test.js` 5 条：三档定义位置+归档+循环、G4 快捷键链+原生控件+焦点可见、G1 战报数据源纯只读、G2 三文件零 Audio、G3 文字标签+虚线+减少动效。静态断言一律剥注释行后匹配（防字样撞注释）。
+
 ---
 
 ## 10. 文档地图（读哪本、信哪本）

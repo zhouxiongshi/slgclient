@@ -50,13 +50,29 @@
     ignored: {}, keys: {}, fontScale: 100, reduceMotion: false,
     drawer: null, lastFocus: null, fetchTimer: 0,
   };
+  /* M4-2（GDD §10.7）：字号三档 小/中/大——连续缩放不可验收（5 分辨率 × 3 档全测），
+     档位封顶 120%，超过的旧值归档到最大档。定义在顶部：初始化（下方 try 块）就要用。 */
+  var FONT_TIERS = [85, 100, 120];
+  function fontTierOf(v) {
+    var n = Number(v) || 100, best = 0, dist = 1e9;
+    for (var i = 0; i < FONT_TIERS.length; i++) {
+      var d = Math.abs(FONT_TIERS[i] - n);
+      if (d < dist) { dist = d; best = i; }
+    }
+    return best;
+  }
+  function fontLabel() {
+    var i = fontTierOf(S.fontScale);
+    return ['小', '中', '大'][i] + '（' + FONT_TIERS[i] + '%）';
+  }
   try {
     var saved = JSON.parse(localStorage.getItem('slgIX') || '{}');
     S.guideStep = saved.guideStep || 0;
     S.guideDismissed = !!saved.guideDismissed;
     S.ignored = saved.ignored || {};
     S.keys = saved.keys || {};
-    S.fontScale = saved.fontScale || 100;
+    /* 旧存档可能存过 80~150 的连续值：归档到最近的合法档位（M4-2 三档制）。 */
+    S.fontScale = FONT_TIERS[fontTierOf(saved.fontScale || 100)];
     S.reduceMotion = !!saved.reduceMotion;
     S.lens = saved.lens || 'faction';
   } catch (e) { /* 存档损坏用默认值，不阻塞 */ }
@@ -925,7 +941,7 @@
   /* ---------------- 11. 快捷键 / 设置 / 无障碍 ---------------- */
   var DEFAULT_KEYS = {
     pin: 'k', lens: '1', agenda: 'g', ency: 'e', help: '?', undo: 'z',
-    guide: 'h', drawer: 'd',
+    guide: 'h', drawer: 'd', war: 'w',
   };
   function key(action) { return S.keys[action] || DEFAULT_KEYS[action]; }
   function openKeys() {
@@ -936,12 +952,11 @@
       + '<div class="muted" style="font-size:11px;margin-bottom:9px">键位可重映射：点右侧输入框后按新键；'
       + '字号可缩放、减少动效、色盲双编码（颜色 + 形状/文字标签）。</div>'
       + '<table>' + Object.keys(DEFAULT_KEYS).map(function (a) {
-        return '<tr><th>' + esc({ pin: '锁定术语框', lens: '透镜 1–6', agenda: '当前事务', ency: '内置百科', help: '本页', undo: '撤销 Ctrl+', guide: '重看教学', drawer: '就地抽屉' }[a])
+        return '<tr><th>' + esc({ pin: '锁定术语框', lens: '透镜 1–6', agenda: '当前事务', ency: '内置百科', help: '本页', undo: '撤销 Ctrl+', guide: '重看教学', drawer: '就地抽屉', war: '打开出征面板' }[a])
           + '</th><td><input type="text" data-key="' + esc(a) + '" value="' + esc(key(a)) + '" style="width:70px"></td></tr>';
       }).join('') + '</table>'
       + '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
-      + '<button data-act="font-">字号 −</button><button data-act="font+">字号 +</button>'
-      + '<span>当前 ' + S.fontScale + '%</span>'
+      + '<button data-act="font">字号：' + esc(fontLabel()) + '</button>'
       + '<button data-act="motion">' + (S.reduceMotion ? '动效：已减少' : '动效：正常') + '</button>'
       + '<button data-act="reset">恢复默认键位</button></div>'
       + '<h4 style="margin-top:15px;color:#f0e2b8">字段缺口与降级方案（设计规格 2.2 / 章节 K）</h4>'
@@ -955,8 +970,11 @@
     on(box, 'click', function (e) {
       var b = e.target.closest('button'); if (!b) return;
       if (b.dataset.act === 'close') { mask.remove(); return; }
-      if (b.dataset.act === 'font+') { S.fontScale = Math.min(150, S.fontScale + 10); applyFontScale(); persist(); openKeysAgain(mask); }
-      if (b.dataset.act === 'font-') { S.fontScale = Math.max(80, S.fontScale - 10); applyFontScale(); persist(); openKeysAgain(mask); }
+      if (b.dataset.act === 'font') {
+        var ti = fontTierOf(S.fontScale);
+        S.fontScale = FONT_TIERS[(ti + 1) % FONT_TIERS.length];
+        applyFontScale(); persist(); openKeysAgain(mask);
+      }
       if (b.dataset.act === 'motion') { S.reduceMotion = !S.reduceMotion; var r = document.getElementById('slgIxRoot'); if (r) r.className = 'slgIx' + (S.reduceMotion ? ' reduce' : ''); persist(); openKeysAgain(mask); }
       if (b.dataset.act === 'reset') { S.keys = {}; persist(); openKeysAgain(mask); }
     });
@@ -996,6 +1014,11 @@
       else if (k === key('agenda')) { S.agendaOpen = !S.agendaOpen; buildAgendaHtml(); toast(S.agendaOpen ? '当前事务已展开' : '当前事务已折叠'); }
       else if (k === key('guide')) { S.guideDismissed = false; S.guideStep = 0; persist(); buildGuide(); }
       else if (k === key('drawer')) { if (S.drawer) { S.drawer.remove(); S.drawer = null; } else openDrawer('city', (S.data && S.data.cities && S.data.cities[0] && S.data.cities[0].id) || 0); }
+      /* M4-2 G4 无鼠标出征：w 键触发战略层 dock 的出征按钮（窗内 select/button 原生键盘可达）。 */
+      else if (k === key('war')) {
+        var wb = document.getElementById('slgBtnWar');
+        if (wb) wb.click(); else toast('天下沙盘尚未就绪，无法出征');
+      }
     });
   }
 
