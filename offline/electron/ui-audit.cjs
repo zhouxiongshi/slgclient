@@ -331,6 +331,149 @@ const WALK = `(async function(){
     rec('war.go.content', [], { visible: false, note: '__slgWarWindow missing' });
   }
 
+  /* ---------- 5b. 推演→确认→战报（GDD §14：必须进真实点击 E2E，零未捕获异常） ---------- */
+  /* 本项目曾有 4 个 P0 因为「冒烟全部绕开真实点击」而留到很晚——这条链就是防复发的。 */
+  if (typeof window.__slgWarWindow === 'function') {
+    window.__slgWarWindow({ tab: 'go' });
+    await wait(function(){ return document.getElementById('slgWarWin'); }, 9000);
+    await sleep(800);
+
+    /* ⓪ 默认出发城可能没兵：点「以此为出发城」切到有可用队伍的城（真实玩家路径） */
+    var switchBtn = Array.from(document.querySelectorAll('#slgWarWin button'))
+      .find(function(b){ return txt(b).indexOf('以此为出发城') >= 0; });
+    if (switchBtn) { switchBtn.click(); await sleep(750); }
+
+    /* ① 点一条可攻目标行（含「守军约」的行才是目标行，避开「出兵比例」的分段行） */
+    var tgtRows = Array.from(document.querySelectorAll('#slgWarWin .row'))
+      .filter(function(r){ return txt(r).indexOf('守军约') >= 0; });
+    if (tgtRows.length) { tgtRows[0].click(); await sleep(650); }
+
+    /* ② 推演：等「战斗种子」或明确的失败原因出现（异步 fetch） */
+    var pvBtn = Array.from(document.querySelectorAll('#slgWarWin button'))
+      .find(function(b){ return txt(b).indexOf('推演一次') >= 0; });
+    if (pvBtn) {
+      pvBtn.click();
+      await wait(function(){
+        var t = txt(document.getElementById('slgWarWin'));
+        return t.indexOf('战斗种子') >= 0 || t.indexOf('推演失败') >= 0;
+      }, 15000);
+    }
+    var pvText = txt(document.getElementById('slgWarWin'));
+    rec('war.preview.click', ['战前推演'], {
+      visible: vis(document.getElementById('slgWarWin')), text: pvText,
+      note: pvBtn ? (pvText.indexOf('战斗种子') >= 0 ? ''
+        : (pvText.indexOf('推演失败') >= 0 ? 'preview-refused' : 'preview-no-result')) : 'no-preview-btn',
+    });
+
+    /* ③ 确认出征：真实玩家路径是两层弹窗——
+       第一层 interaction-ui 决策预览（.slgIx-modal，COST_WORDS 捕获阶段拦截；
+       点「确认」data-act=ok，0.9s 撤销窗口后自动放行原点击）；
+       第二层 skills.js confirmBox（.modal「出兵确认」，点「出征」才真正发兵）。 */
+    var atkBtn = Array.from(document.querySelectorAll('#slgWarWin button'))
+      .find(function(b){ return txt(b).indexOf('出征 ') === 0; });
+    if (atkBtn) {
+      /* 清光此前页签（武将·研习、内政开发等）遗留的决策预览——它们会堆叠，
+         querySelector 第一个不一定是本次的。逐个取消（取消不触发成本词）。 */
+      var guardN = 0;
+      while (document.querySelector('.slgIx-modal') && guardN++ < 8) {
+        var mm0 = document.querySelector('.slgIx-modal');
+        var mc0 = mm0.querySelector('[data-act="cancel"]');
+        if (mc0) { try { mc0.click(); } catch (e) {} await sleep(320); }
+        else { try { mm0.remove(); } catch (e) {} }
+      }
+      var atkLabel = txt(atkBtn);
+      atkBtn.click();
+      /* 第一层：决策预览（若该按钮被 COST_WORDS 拦截）。认准正文含「出征」的那个。 */
+      var ixModal = await wait(function(){
+        return Array.from(document.querySelectorAll('.slgIx-modal'))
+          .find(function(x){ return txt(x).indexOf('出征') >= 0; }) || null;
+      }, 2500);
+      var ixOk = ixModal ? ixModal.querySelector('[data-act="ok"]') : null;
+      rec('war.preview.confirm', ['出征'], {
+        visible: !!ixModal, text: ixModal ? txt(ixModal) : '',
+        note: ixModal ? (ixOk ? '' : 'no-ix-ok-btn') : 'not-intercepted',
+      });
+      if (ixOk) { ixOk.click(); }
+      /* 第二层：出兵确认（放行后 confirmBox 弹出） */
+      var modal = await wait(function(){ return document.querySelector('.modal'); }, 4500);
+      var okBtn = null;
+      if (modal) {
+        okBtn = Array.from(modal.querySelectorAll('.bar button'))
+          .find(function(b){ return txt(b).indexOf('取消') < 0; });
+      }
+      rec('war.confirm.modal', ['出兵确认'], {
+        visible: !!modal, text: modal ? txt(modal) : '',
+        note: modal ? '' : 'no-confirm-modal;atk=' + atkLabel + ';ix=' + (ixModal ? 'yes' : 'no')
+          + ';phase=' + txt(document.getElementById('slgIxPhase'))
+          + ';ixLeft=' + document.querySelectorAll('.slgIx-modal').length,
+      });
+      if (okBtn) {
+        okBtn.click();
+        /* ★ 确认弹窗的「出征」二字也是成本词——会被决策预览再拦一层。
+           同样点掉它（0.9s 撤销窗口后放行），attack POST 才会真正发出。 */
+        var ix2 = await wait(function(){
+          return Array.from(document.querySelectorAll('.slgIx-modal'))
+            .find(function(x){ return txt(x).indexOf('出征') >= 0; }) || null;
+        }, 2500);
+        var ix2ok = ix2 ? ix2.querySelector('[data-act="ok"]') : null;
+        if (ix2ok) { ix2ok.click(); }
+      }
+      await sleep(1800);
+      /* ④ 行军队列页：应有在途记录（开拔/到达/补给任一）。出兵被拒时抓 toast 留证。 */
+      var toastEl = document.querySelector('#slgUIv2 .toast');
+      var phaseEl = document.getElementById('slgIxPhase');
+      var qTab = Array.from(document.querySelectorAll('#slgWarWin .tabs button'))
+        .find(function(b){ return txt(b).indexOf('行军队列') >= 0; });
+      if (qTab) { qTab.click(); await sleep(750); }
+      var qText = txt(document.getElementById('slgWarWin'));
+      rec('war.queue.marching', ['在途', '到达', '补给', '队列'], {
+        visible: vis(document.getElementById('slgWarWin')), text: qText,
+        note: qTab ? (qText.indexOf('在途 0 支') >= 0
+          ? 'no-march-in-flight;toast=' + txt(toastEl).slice(0, 90) + ';phase=' + txt(phaseEl).slice(0, 40)
+          : '') : 'no-queue-tab',
+      });
+    } else {
+      rec('war.confirm.modal', [], { visible: false, note: 'no-attack-btn（无队伍或无可攻目标，属前置缺失而非链路坏）' });
+    }
+    try { if (window.__slgWarClose) window.__slgWarClose(); } catch (e) {}
+    await sleep(400);
+
+    /* ⑤ 推进旬直到到达日（每 tick 10 日，至多 8 旬），到点自动开战 */
+    var st2 = await (await fetch('/__slg/strategy/state', { cache: 'no-store' })).json();
+    var mm = (st2.marches || []).find(function(m){ return m.side === 'player'; });
+    var ticked = 0;
+    if (mm) {
+      while (ticked < 8 && (Number(st2.day) || 0) < Number(mm.arriveDay)) {
+        await fetch('/__slg/strategy/tick', { method: 'POST' });
+        ticked += 1;
+        st2 = await (await fetch('/__slg/strategy/state', { cache: 'no-store' })).json();
+        var still = (st2.marches || []).some(function(m){ return m.side === 'player'; });
+        if (!still) break;
+        mm = (st2.marches || []).find(function(m){ return m.side === 'player'; }) || mm;
+      }
+      var left = (st2.marches || []).filter(function(m){ return m.side === 'player'; }).length;
+      rec('war.march.resolved', [], {
+        visible: true,
+        text: 'day=' + st2.day + ' ticks=' + ticked + ' marches-left=' + left,
+        note: left > 0 ? 'not-resolved-in-' + ticked + '-ticks' : '',
+      });
+    } else {
+      rec('war.march.resolved', [], { visible: true, text: 'no-march', note: 'attack-refused-or-not-run' });
+    }
+
+    /* ⑥ 战报页：真实点击读战报（折损/歼敌/占领任一即算成） */
+    window.__slgWarWindow({ tab: 'log' });
+    await wait(function(){ return document.getElementById('slgWarWin'); }, 9000);
+    await sleep(900);
+    var repText = txt(document.getElementById('slgWarWin'));
+    rec('war.report.after', ['折损', '歼敌', '占领', '战报'], {
+      visible: vis(document.getElementById('slgWarWin')), text: repText,
+      note: repText.indexOf('折损') >= 0 || repText.indexOf('歼敌') >= 0 || repText.indexOf('占领') >= 0 ? '' : 'no-report-row',
+    });
+    var closeW2 = document.querySelector('#slgWarWin [data-act="close"], #slgWarWin button');
+    if (closeW2) { try { closeW2.click(); } catch (e) {} }
+  }
+
   /* ---------- 6. 沙盘交互：图层 / 缩放 / 检索 ---------- */
   if (typeof window.__slgStrategyShow === 'function') { try { window.__slgStrategyShow(); } catch (e) {} }
   await sleep(700);
@@ -421,21 +564,30 @@ async function runAudit(win, server, app) {
     const d = consolePayload(args);
     const text = String(d.message == null ? '' : d.message);
     if (/Electron Security Warning/i.test(text)) return;
-    if (consoleSeverity(d.level) >= 2) consoleErrors.push('[' + d.level + '] ' + text);
+    if (consoleSeverity(d.level) >= 2) {
+      /* ★ E2E 抓到未捕获异常时只记文案定位不了——补 source:line:stack 取证 */
+      consoleErrors.push('[' + d.level + '] ' + text
+        + (d.sourceId ? ' @ ' + d.sourceId + ':' + d.lineNumber : '')
+        + (d.stack ? '\n  stack: ' + String(d.stack).slice(0, 600) : ''));
+    }
   });
 
   const report = { startedAt: new Date().toISOString(), mode: 'ui-audit', tag, paths: [], pageErrors: [], consoleErrors: [] };
 
   try {
     // 采集页面异常（与 smoke 同一套钩子）
+    /* ★ 修复：钩子改由服务端注入脚本随页安装（index.js 注入段），页面重载后依然活着。
+       这里只在注入钩子缺失时兜底安装，且不清空已有采集（避免把重载前抓到的异常冲掉）。 */
     await wc.executeJavaScript(`(function(){
-      window.__slgErrors = [];
-      window.addEventListener('error', function(e){
-        window.__slgErrors.push({ msg:String(e.message), stack:String(e.error && e.error.stack || ''), src:String(e.filename)+':'+e.lineno });
-      });
-      window.addEventListener('unhandledrejection', function(e){
-        window.__slgErrors.push({ msg:'unhandledrejection: '+String(e.reason), stack:String(e.reason && e.reason.stack || '') });
-      });
+      if (!window.__slgErrHookInstalled) {
+        window.__slgErrors = window.__slgErrors || [];
+        window.addEventListener('error', function(e){
+          window.__slgErrors.push({ msg:String(e.message), stack:String(e.error && e.error.stack || ''), src:String(e.filename)+':'+e.lineno });
+        });
+        window.addEventListener('unhandledrejection', function(e){
+          window.__slgErrors.push({ msg:'unhandledrejection: '+String(e.reason), stack:String(e.reason && e.reason.stack || '') });
+        });
+      }
       return true;
     })()`, true);
 

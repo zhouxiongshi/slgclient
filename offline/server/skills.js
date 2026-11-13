@@ -772,6 +772,29 @@ export function patchClientBundle(source) {
 
             _this2.addLoadingNode();`,
     ],
+    [
+      `            var cityData = MapCommand.getInstance().cityProxy.getMyCityById(data.msg.cityId);
+
+            var addition = this._proxy.updateMyCityAdditions(cityData.cityId);
+
+            cityData.maxDurable = this._proxy.getMyCityMaxDurable(data.msg.cityId);
+            EventMgr.emit(LogicEvent.updateCityAddition, data.msg.cityId, addition);
+          }`,
+      `            var cityData = MapCommand.getInstance().cityProxy.getMyCityById(data.msg.cityId);
+
+            /* __slg 离线修复：城列表未就绪（登录竞态/异地城查询）时 getMyCityById
+               会回 null，原版直接读 .cityId 抛 TypeError——真实点击 E2E 抓到的
+               上游崩溃。空引用时整段跳过，只刷设施列表不刷加成。 */
+            if (cityData == null) {
+              console.log("onCityFacilities: city not ready, skip", data.msg.cityId);
+            } else {
+            var addition = this._proxy.updateMyCityAdditions(cityData.cityId);
+
+            cityData.maxDurable = this._proxy.getMyCityMaxDurable(data.msg.cityId);
+            EventMgr.emit(LogicEvent.updateCityAddition, data.msg.cityId, addition);
+            }
+          }`,
+    ],
   ];
   let out = source;
   for (const [from, to] of pieces) {

@@ -306,6 +306,32 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
       problems: termsReport?.problems?.length }));
 }
 
+/* ---------------- 7.11 推演→确认→战报 真实点击 E2E（GDD §14.2-7，M2） ---------------- */
+{
+  /* 项目教训：曾有 4 个 P0 因为「冒烟全部绕开真实点击」留到很晚。
+     本项锁死 ui-audit 里那条「切城→推演→确认→队列→推进→战报」链必须跑过且零异常。
+     审计耗时 3~10 分钟，不在 check-release 里现跑——只验 reports/ui-audit-original.json。 */
+  const a = readJson(join(REPORTS, 'ui-audit-original.json'), null);
+  const byId = new Map((a?.paths || []).map((p) => [p.id, p]));
+  const chainOk = (id) => byId.has(id) && byId.get(id).ok !== false
+    && !/attack-refused|no-preview-btn|no-confirm-modal|no-report-row|not-resolved/.test(byId.get(id).note || '');
+  const chain = [
+    'war.preview.click',     // 点了「推演一次」且拿到结果（战斗种子或明确拒绝）
+    'war.preview.confirm',   // 出征被交互层决策预览拦截（两层弹窗的第一层）
+    'war.confirm.modal',     // 过预览后「出兵确认」confirmBox 真的弹了（第二层）
+    'war.queue.marching',    // 行军队列页有在途记录
+    'war.march.resolved',    // 推进旬到到达日、队列结算（非 attack-refused）
+    'war.report.after',      // 战报页真的读出战报行
+  ];
+  check('真实点击 E2E「推演→确认→战报」链路完整（tools/ui-audit.js，先跑 node tools/ui-audit.js）',
+    !!a?.passed && chain.every(chainOk),
+    a ? `failed=${JSON.stringify((a.failed || []).slice(0, 6))} chain=${chain.map((c) => `${c}:${chainOk(c) ? 'ok' : 'no'}`).join(',')}` : '报告不存在');
+  check('真实点击 E2E 页面零未捕获异常 / 零 error 输出',
+    Array.isArray(a?.pageErrors) && a.pageErrors.length === 0 &&
+    Array.isArray(a?.consoleErrors) && a.consoleErrors.length === 0,
+    `page=${a?.pageErrors?.length} console=${(a?.consoleErrors || []).length}`);
+}
+
 /* ---------------- 8. 需用户处理（本机无法验证） ---------------- */
 requiresUser.push(
   { name: 'Steamworks 账号与 Steam Direct 上架费', detail: '每款应用 US$100，需本人注册与付款；我无法代办。' },

@@ -257,14 +257,18 @@ async function runSmoke(win, server, app) {
 
   try {
     // 捕获页面内未处理异常的堆栈（只在冒烟进程里挂，不写入任何客户端文件）
+    /* ★ 与 ui-audit 同步：钩子优先由服务端注入脚本安装（页面重载后依然活着）；
+       注入钩子在时这里不重复挂、也不清空已有采集。 */
     await wc.executeJavaScript(`(function(){
-      window.__slgErrors = [];
-      window.addEventListener('error', function(e){
-        window.__slgErrors.push({ msg:String(e.message), stack:String(e.error && e.error.stack || ''), src:String(e.filename)+':'+e.lineno });
-      });
-      window.addEventListener('unhandledrejection', function(e){
-        window.__slgErrors.push({ msg:'unhandledrejection: '+String(e.reason), stack:String(e.reason && e.reason.stack || '') });
-      });
+      if (!window.__slgErrHookInstalled) {
+        window.__slgErrors = window.__slgErrors || [];
+        window.addEventListener('error', function(e){
+          window.__slgErrors.push({ msg:String(e.message), stack:String(e.error && e.error.stack || ''), src:String(e.filename)+':'+e.lineno });
+        });
+        window.addEventListener('unhandledrejection', function(e){
+          window.__slgErrors.push({ msg:'unhandledrejection: '+String(e.reason), stack:String(e.reason && e.reason.stack || '') });
+        });
+      }
       return true;
     })()`, true);
     const probe = await wc.executeJavaScript(PROBE, true);

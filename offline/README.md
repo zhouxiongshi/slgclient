@@ -74,7 +74,7 @@ offline/
 ├── tests/             单测 324 条 / 48 个文件（node --test）
 ├── tools/             工具链
 │   ├── pack.js            打包 exe → build/SLG-Offline-win32-x64/
-│   ├── check-release.js   发行核查（72 项硬性验收，含画面指纹与合规台账）
+│   ├── check-release.js   发行核查（75 项硬性验收，含画面指纹、合规台账与真实点击 E2E）
 │   ├── compliance-report.js 合规台账三向扫描（覆盖性/禁入物/发行包）
 │   ├── smoke.js           运行时冒烟（28 项，源码态 / --packaged 打包态）
 │   ├── explore-bugs.mjs   协议穷举探测（73 handler × 5 payload）
@@ -100,7 +100,7 @@ node electron/main.cjs        # 或直接跑 Electron 壳
 node tools/pack.js               # 打包 exe（自动拷贝 server/conf/web 进包，并校验画面指纹）
 node tools/smoke.js              # 源码态冒烟 28 项
 node tools/smoke.js --packaged   # 打包态冒烟 28 项
-node tools/check-release.js      # 发行核查 72 项
+node tools/check-release.js      # 发行核查 75 项
 node tools/compliance-report.js  # 合规扫描（资产台账 / 禁入物 / 发行包）
 node --test tests/*.test.js      # 单元测试 324 条
 node tools/explore-bugs.mjs      # 协议穷举探测
@@ -113,7 +113,7 @@ node tools/explore-bugs.mjs      # 协议穷举探测
 - ✅ 画面指纹 `ee987ec2…` 与原版逐字节一致（`pack.json`：`byteIdentical: true`，1582 个文件）
 - ✅ 单元测试 **324/324**（含 `tests/panels.test.js` 11 条：六面板回归 + 与战略层的数据／层级对齐断言、`tests/playtest-fixes.test.js` 实机试玩回归、`tests/save-slots.test.js` 存档档位）
 - ✅ 运行时冒烟 **28/28**（源码态 `reports/smoke-original.json`、打包态 `reports/smoke-packaged.json`，含本城页存档卡 + 六面板逐一点开/零横向溢出/51 条战法获取途径 + 六府入口层级让位与不重叠 + 战略台情报卡可见）
-- ✅ 发行核查 **72/72**（含内核黄金向量、协议、画面指纹、合规台账、工作区干净）
+- ✅ 发行核查 **74/75**（含内核黄金向量、协议、画面指纹、合规台账、真实点击 E2E；唯一红项=本批改动未提交）
 - ✅ 协议穷举：73 handler × 5 = 365 用例，**0 抛异常**（35 条 "null 字段" 为设计空值：空战法槽、未解锁天赋、未选章节分支、无在店客人）
 - ✅ 战争闭环：战前推演 → 出征 → 结算 → 战报入档 → 折叠/回跳复盘。
   **兵力口径（实测 40 个到达日）**：守军 1.46× 兵力 40 胜 0 负、1.17× 为 19 胜 21 负。

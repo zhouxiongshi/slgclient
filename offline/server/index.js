@@ -268,9 +268,22 @@ export async function startOfflineServer(options = {}) {
       return;
     }
     // 六面板 UI：只在 HTTP 响应里追加一个 script 标签，磁盘 index.html 与打包产物一个字节都不改。
+    // ★ E2E 取证：错误钩子随注入脚本走——审计进程自己装的 window.onerror 会在页面
+    //   重载后失效，而这里每次加载都会重新生效，才能抓到「重载后才爆发」的未捕获异常（带栈）。
     if (urlPath === '/index.html' && !body.includes(Buffer.from('/__slg/panels/ui.js'))) {
       const html = body.toString('utf8');
-      const tag = '<script src="/__slg/panels/ui.js" charset="utf-8"></script>'
+      const errHook = '<script>(function(){'
+        + 'if (window.__slgErrHookInstalled) return;'
+        + 'window.__slgErrHookInstalled = true;'
+        + 'window.__slgErrors = window.__slgErrors || [];'
+        + 'function rec(e){'
+        + '  window.__slgErrors.push({ msg:String(e && e.message || e), stack:String(e && e.error && e.error.stack || e && e.reason && e.reason.stack || \'\').slice(0,800), src:String(e && e.filename||\'\')+":"+String(e&&e.lineno||0) });'
+        + '  if (window.__slgErrors.length > 60) window.__slgErrors.length = 60;'
+        + '}'
+        + 'window.addEventListener("error", rec, true);'
+        + 'window.addEventListener("unhandledrejection", function(e){ rec({ message:"unhandledrejection: "+String(e&&e.reason), error:e&&e.reason, reason:e&&e.reason }); });'
+        + '})();</script>';
+      const tag = errHook + '<script src="/__slg/panels/ui.js" charset="utf-8"></script>'
         + '<script src="/__slg/interaction/ui.js" charset="utf-8"></script>';
       body = Buffer.from(/<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${tag}</body>`) : html + tag);
     }
