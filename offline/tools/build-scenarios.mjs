@@ -411,7 +411,18 @@ for (const sc of SCENARIOS) {
     mkdirSync(OUT_DIR, { recursive: true });
     const out = { ...doc };
     delete out._warns;
-    writeFileSync(resolve(OUT_DIR, `${sc.id}.json`), `${JSON.stringify(out, null, 1)}\n`, 'utf8');
+    const file = resolve(OUT_DIR, `${sc.id}.json`);
+    const next = `${JSON.stringify(out, null, 1)}\n`;
+    /* 只有 validatedAt 变了就不算「内容有过改动」——不写盘。
+       （否则每跑一次校验，6 个剧本文件全部变成「已修改」，check-release 的
+         「工作区干净」永远红；打一局游戏、跑一次验收都会把工作树弄脏，
+         玩家/开发者只能靠 git checkout 反复擦屁股。） */
+    let prev = '';
+    try { prev = readFileSync(file, 'utf8'); } catch { /* 首次生成，照写 */ }
+    const noStamp = (t) => t
+      .replace(/\r\n/g, '\n')                       /* 工作区是 CRLF、生成是 LF，不归一化会永远判「不同」 */
+      .replace(/"validatedAt": "[^"]*",?/, '');
+    if (!prev || noStamp(prev) !== noStamp(next)) writeFileSync(file, next, 'utf8');
   }
 }
 console.log(`\n${checkOnly ? 'check' : 'build'} 完成：${results.length}/6 剧本`);
