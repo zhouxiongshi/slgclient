@@ -61,7 +61,8 @@ export function attributeFor(effectType, hero) {
 /** E2 占位实现：base = 属性 × 等级缩放后的伤害率 × 兵力系数。
  *  所有因子都可经配置替换；减伤用减法而非除法。 */
 export function baseDamage(cfg, effect, attacker, defender) {
-    const rate = levelValue(effect.rate_pct, attacker.hero.level) / 100.0;
+    // M4-7 回击：rate_pct 已是最终伤害率（按战法等级注入），不随武将等级二次成长。
+    const rate = (effect.flat_rate ? effect.rate_pct : levelValue(effect.rate_pct, attacker.hero.level)) / 100.0;
     const { value: attr, note: attrNote } = attributeFor(effect.effect_type, attacker.hero);
     const defense = heroAttr(defender.hero, 'defence');
     // legacy 为参考实现原样（E2 占位，方向反了）；corrected 为后续微调推荐值。

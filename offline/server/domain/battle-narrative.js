@@ -25,6 +25,7 @@ const TARGET_TEXT = {
   ally_single: '我军单体',
   ally_two: '我军群体（2 人）',
   ally_all: '我军全体',
+  self_and_ally_single: '自身与一名友军',
 };
 
 const CLASS_TEXT = { 主动: '主动', 指挥: '指挥', 被动: '被动', 追击: '追击' };
@@ -232,6 +233,8 @@ export function actSentence(a) {
       return `${f} 蓄势，${a.skill} 将在下一回合发动`;
     case 'skill': {
       const hit = a.loss > 0 ? `，折其 ${fmt(a.loss)} 卒` : '';
+      /* M4-7 回击：同一条战法在「开战生效」与「受击还击」时必须说清是哪一种 */
+      if (a.counter) return `${f} 受击回击，以「${a.skill}」还击${hit}${flavor ? '——' + flavor : ''}`;
       return `${f} 发动「${a.skill}」（${eff}）${hit}${flavor ? '——' + flavor : ''}`;
     }
     case 'hit':
@@ -240,6 +243,8 @@ export function actSentence(a) {
         : `${f} 挥军直进 → ${to}，折其 ${fmt(a.loss)} 卒`;
     case 'control':
       return `${f} 施压 ${to}，使其陷入「${a.state || '受制'}」`;
+    case 'immune':
+      return `${a.toName || to} 洞察生效，免疫「${a.state || '控制'}」`;
     case 'heal':
       return `${f} 为 ${to} 补员 ${fmt(a.amount)} 卒${flavor ? '——' + flavor : ''}`;
     case 'down':

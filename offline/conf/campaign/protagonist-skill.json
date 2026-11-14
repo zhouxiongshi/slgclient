@@ -6,47 +6,93 @@
   "ui": {
     "cfgId": 19001,
     "name": "后世之识",
-    "des": "自身攻击提高（%n%%）。此为穿越者自带战法，不在原战法名录中。",
+    "des": "战斗开始时，自身与一名友军获得 %n% 回合洞察（免疫控制）；自身受到攻击时，有 %n%% 概率回击一次，造成 87% 策略伤害；自身受到伤害降低 %n%%。",
     "trigger": 4,
-    "target": 1,
-    "limit": 1,
+    "target": 5,
+    "limit": 2,
     "arms": [1, 2, 3, 4, 5, 6, 7, 8, 9],
-    "include_effect": [2],
+    "include_effect": [2, 1, 2],
     "levels": [
-      { "probability": 100, "effect_value": [6], "effect_round": [0] },
-      { "probability": 100, "effect_value": [6.67], "effect_round": [0] },
-      { "probability": 100, "effect_value": [7.33], "effect_round": [0] },
-      { "probability": 100, "effect_value": [8], "effect_round": [0] },
-      { "probability": 100, "effect_value": [8.67], "effect_round": [0] },
-      { "probability": 100, "effect_value": [9.33], "effect_round": [0] },
-      { "probability": 100, "effect_value": [10], "effect_round": [0] },
-      { "probability": 100, "effect_value": [10.67], "effect_round": [0] },
-      { "probability": 100, "effect_value": [11.33], "effect_round": [0] },
-      { "probability": 100, "effect_value": [12], "effect_round": [0] }
+      { "probability": 100, "effect_value": [3, 30, 30], "effect_round": [3, 0, 0] },
+      { "probability": 100, "effect_value": [3, 35, 30], "effect_round": [3, 0, 0] },
+      { "probability": 100, "effect_value": [3, 40, 30], "effect_round": [3, 0, 0] },
+      { "probability": 100, "effect_value": [3, 45, 30], "effect_round": [3, 0, 0] },
+      { "probability": 100, "effect_value": [3, 50, 30], "effect_round": [3, 0, 0] },
+      { "probability": 100, "effect_value": [3, 55, 30], "effect_round": [3, 0, 0] },
+      { "probability": 100, "effect_value": [3, 60, 30], "effect_round": [3, 0, 0] },
+      { "probability": 100, "effect_value": [3, 65, 30], "effect_round": [3, 0, 0] },
+      { "probability": 100, "effect_value": [3, 70, 30], "effect_round": [3, 0, 0] },
+      { "probability": 100, "effect_value": [3, 75, 30], "effect_round": [3, 0, 0] }
     ]
   },
   "kernel": {
     "cfgId": 19001,
     "name": "后世之识",
     "skill_class": "指挥",
-    "effect_type": "BUFF",
-    "rate_pct_lv1": 6,
-    "rate_pct_lv10": 12,
+    "prepare": 0,
     "probability_init": 1,
     "probability_max": 1,
-    "prepare": 0,
-    "target_type": "self",
+    "target_type": "self_and_ally_single",
     "attack_type": "normal",
     "control_state": null,
     "control_probability": 0,
-    "bonus_terms": [{ "name": "攻击提高", "value": 0.06, "op": 1 }],
-    "detail_id": 900190
+    "bonus_terms": [],
+    "detail_id": 900190,
+    "effects": [
+      {
+        "detail_id": 9001901,
+        "effect_type": "BUFF",
+        "rate_pct": 0,
+        "target_type": "self_and_ally_single",
+        "attack_type": "normal",
+        "available_round": 0,
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "mechanics": { "insight_rounds": 3 }
+      },
+      {
+        "detail_id": 9001902,
+        "effect_type": "BUFF",
+        "rate_pct": 0,
+        "target_type": "self",
+        "attack_type": "normal",
+        "available_round": 0,
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "mechanics": {
+          "counter": {
+            "chance": 0.3,
+            "rate_pct": 87,
+            "damage_type": "STRATEGY_DAMAGE"
+          }
+        }
+      },
+      {
+        "detail_id": 9001903,
+        "effect_type": "BUFF",
+        "rate_pct": 0,
+        "target_type": "self",
+        "attack_type": "normal",
+        "available_round": 0,
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "mechanics": { "damage_taken_reduce": 0.3 }
+      }
+    ]
   },
   "provenance": {
     "pairing": "authored",
-    "descSource": "本局为穿越者写的自带战法，不是 battle-kit 原文",
+    "descSource": "本局为穿越者写的自带战法，不是 battle-kit 原文；M4-7 按玩家指定效果改写",
     "nameSource": "原创",
-    "rateSource": "原创，不取伤害率样本",
-    "probability": "指挥，开战即生效"
+    "rateSource": "回击伤害率 87% 固定，不取伤害率样本；洞察 3 回合、受伤降低 30% 均为固定值",
+    "probability": "指挥开战即生效（发动率 100%）；回击概率 30%，每升一级 +5%，Lv10 = 75%",
+    "kernelNotes": [
+      "三个 BUFF 槽分别授予 insight / counter / damage_reduce 三种 reaction，全部由 battle-core/src/engine.ts 真实结算",
+      "mechanics 不进 bonus_terms：内核对攻击方 buffs 无差别求和，减伤与回击词混进去会变成攻击加成",
+      "ui.levels[lv-1].effect_value 是三个槽的唯一数值源，kernelSkillAt 逐槽注入，界面数值即结算数值"
+    ]
   }
 }

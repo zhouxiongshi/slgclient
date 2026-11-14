@@ -101,7 +101,8 @@ export function baseDamage(
   attacker: UnitState,
   defender: UnitState,
 ): BaseDamageResult {
-  const rate = levelValue(effect.rate_pct, attacker.hero.level) / 100.0;
+  // M4-7 回击：rate_pct 已是最终伤害率（按战法等级注入），不随武将等级二次成长。
+  const rate = (effect.flat_rate ? effect.rate_pct : levelValue(effect.rate_pct, attacker.hero.level)) / 100.0;
   const { value: attr, note: attrNote } = attributeFor(effect.effect_type, attacker.hero);
   const defense = heroAttr(defender.hero, 'defence');
   // legacy 为参考实现原样（E2 占位，方向反了）；corrected 为后续微调推荐值。

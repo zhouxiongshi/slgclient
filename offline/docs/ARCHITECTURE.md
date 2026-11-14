@@ -475,6 +475,22 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 - **基线**：单测 **422/422**、双态冒烟 **33/33**、UI 审计 72/72、真鼠标 54/54、perf/layout/ui-probe 全绿、`byteIdentical=true`、check-release **89/89**。
 - **仍需人工拍板（不是 bug）**：金通胀（玩家 ≈14,600 金/旬 vs NPC 600~800 金/旬）、是否按强度档重排 `layer`（牵动宿命/剧本/资料库）、貂蝉等虚构人物五维签核。三者都涉及内容/数值口径，改前需产品确认。
 
+### 9.22 M4-7 主角战法改写与内核三机制（2026-11-14，玩家指定效果）
+
+- **需求**：把主角自带战法 19001「后世之识」改成指挥战法 —— ① 自身与一名友军获得 3 回合洞察（免疫控制）；② 自身受击时 30% 概率回击一次、造成 87% 策略伤害，每升一级 +5% 回击概率；③ 自身受到伤害降低 30%。
+- **为什么必须动内核**：旧 `battle-core` 只有 `PHYSICAL_DAMAGE / STRATEGY_DAMAGE / HEAL / CONTROL / BUFF / DEBUFF` 六类结算，免疫控制、受击回击、承伤减伤都没有落账点；只改 `ui.des` 会直接违反「描述=计算=战报同源」。
+- **内核扩展（`battle-core/src/types.ts` / `rules.ts` / `engine.ts`，编译后同步 `offline/kernel/`）**：
+  1. 新增可选 `Effect.mechanics`（`insight_rounds` / `counter{chance,rate_pct,damage_type}` / `damage_taken_reduce`）与 `UnitState.reactions`；BUFF 槽在 `battle_start` 把三类机制授予目标，同源重复授予只刷新不堆叠。
+  2. **硬纪律：mechanics 绝不进 `bonus_terms`**。内核对攻击方 `buffs` 无差别求和进伤害链，减伤/回击词混进去会变成攻击加成，描述与计算立刻分家。
+  3. 洞察在 `CONTROL` 分支拦截状态施加（仍消耗一次随机数，保证确定性），`round_end` 递减 `reaction.rounds`，R3 末过期 → R4 起可被控；`control_immune` 事件进战报。
+  4. 回击在伤害结算后按 `reaction.value` 掷骰，复用 `skill_trigger(counter:true)` + `damage(counter:true)` 通道，战报才能查到 `c_id/lv/e_v` 并记 `kill`；回击伤害带 `noReaction` 防双方无限互击，`flat_rate:true` 让 87% 不再被 `levelValue(rate, hero.level)` 二次放大（武将 Lv10 也仍为 87%）。
+  5. 减伤只作用于承受者，`reduce` 求和后 clamp 90%，`applied = trunc(final × (1-reduce))`。
+  6. 新增 `TargetType.self_and_ally_single`（阵列顺序取第一个非自身存活友军）。**旧战法不携带任何新字段/新事件**：`damage` / `buff` 的新 payload 只在真发生时写入，内核 37/37 与 175 条跨语言黄金向量逐位不变。
+- **配置与同源**：`conf/campaign/protagonist-skill.json` 改 3 个 BUFF 槽（洞察 / 回击 / 减伤），`ui.levels[lv-1].effect_value = [3, 30+5×(lv-1), 30]`，`ui.des` 三个 `%n%`；`server/skills.js kernelSkillAt` 逐槽把 UI 数值注入 `mechanics` —— 界面写「有 35% 概率回击」，内核就按 `0.35` 判定。87% 伤害率为固定值（每级 +5% 只作用于回击概率）。`battle-narrative.js` 补「受击回击 / 洞察生效，免疫」话术，`battle.js` 补 `control_immune` 动作。
+- **发布闸两处补强**：① 7.7.5 出厂源码清单补 `kernel/` 与静态 `conf/campaign/protagonist-skill.json`（旧清单漏内核，`conf/campaign` 又因存档回写被整体跳过，改内核会拿旧报告背书）；② 7.9d 加「主角战法三效果与 UI 槽位同源」硬断言。`electron/smoke.cjs` 的「10 级数值成长」改为**任一槽成长**（主角首槽 3 回合是固定值，成长在第 2 槽），不是放宽口径，是修正只看首槽的旧假设。
+- **测试**：`tests/m4-protagonist-skill.test.js` 9 条 —— 配置/映射/叙述同源、洞察共享与 3 回合边界（R1~R3 免疫、R4 可受控、R3 末双人过期）、回击概率成长（20 seed：Lv1 35 次 vs Lv10 92 次）、87% 固定、减伤逐笔 30% 对账、回击进战报 `skillHit(c_id=19001)`、旧战法事件零污染、确定性双跑。
+- **基线**：battle-core 37/37、offline 单测 **431/431**、双态冒烟 33/33、UI 审计 72/72、真鼠标 54/54、perf/layout/ui-probe 全绿、60 旬系统验收（72 旬 / 0 异常 / 灭国 T62 / 确定性通过）、`byteIdentical=true`、check-release **90/90**。
+
 ---
 
 ## 10. 文档地图（读哪本、信哪本）

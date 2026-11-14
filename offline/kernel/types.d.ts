@@ -12,7 +12,9 @@ export type EffectType = 'PHYSICAL_DAMAGE' | 'STRATEGY_DAMAGE' | 'HEAL' | 'CONTR
 /** 兵种 / 攻击类型，对应 GetCounterFactor 的三档 */
 export type AttackType = 'normal' | 'armor' | 'chain';
 export type ControlState = '犹豫' | '混乱' | '暴走' | '怯战';
-export type TargetType = 'self' | 'ally_single' | 'ally_all' | 'enemy_single' | 'enemy_all';
+export type TargetType = 'self' | 'ally_single' | 'ally_all' | 'enemy_single' | 'enemy_all'
+/** M4-7 主角战法：自身 + 一名友军（按阵列顺序取第一个非自身存活友军） */
+ | 'self_and_ally_single';
 export type Phase = 'battle_start' | 'round_start' | 'prepare_ready' | 'action' | 'after_attack' | 'round_end';
 /** 加减伤修正项。op=0 => 按百分数登记需 /100；op!=0 => 原值 */
 export interface BonusTerm {
@@ -22,11 +24,34 @@ export interface BonusTerm {
     evidence?: Evidence;
     source?: string;
 }
+/**
+ * M4-7 指挥/被动类扩展机制（可选）。
+ * 旧战法不携带该字段，事件流与黄金向量逐字节不变；数值一律由游戏层
+ * kernelSkillAt 从 ui.levels[lv-1].effect_value 注入，保证描述=计算同源。
+ */
+export interface EffectMechanics {
+    /** 洞察：免疫控制状态的施加，N 个回合后失效（回合末递减） */
+    insight_rounds?: number;
+    /** 回击：自身受到伤害时按 chance 概率对攻击者造成一次伤害 */
+    counter?: {
+        /** 0~1，当前战法等级对应的回击概率 */
+        chance: number;
+        /** 伤害率（百分数），固定值，不随武将等级二次成长 */
+        rate_pct: number;
+        damage_type: 'PHYSICAL_DAMAGE' | 'STRATEGY_DAMAGE';
+    };
+    /** 自身受到伤害降低比例（0~1） */
+    damage_taken_reduce?: number;
+}
 export interface Effect {
     detail_id: number;
     effect_type: EffectType;
     /** 伤害率 / 恢复率（百分数） */
     rate_pct: number;
+    /** true = rate_pct 为最终伤害率，不再按武将等级做 levelValue 缩放（回击用） */
+    flat_rate?: boolean;
+    /** 指挥/被动扩展机制；由 BUFF 槽在 battle_start 授予 */
+    mechanics?: EffectMechanics;
     target_type: TargetType;
     attack_type: AttackType;
     /** 0 = 不限 */
@@ -97,6 +122,19 @@ export interface UnitInput {
      */
     attack_range?: number;
 }
+/** 由 BUFF 槽授予的常驻反应：洞察 / 回击 / 减伤。rounds=0 表示整场有效。 */
+export interface Reaction {
+    kind: 'insight' | 'counter' | 'damage_reduce';
+    skill_id: number;
+    skill_name: string;
+    /** 剩余回合；0 = 整场战斗有效 */
+    rounds: number;
+    /** counter = 回击概率；damage_reduce = 减伤比例 */
+    value: number;
+    /** counter 专用 */
+    rate_pct?: number;
+    damage_type?: 'PHYSICAL_DAMAGE' | 'STRATEGY_DAMAGE';
+}
 /** 引擎内部状态（深拷贝自 UnitInput，调用方对象不会被修改） */
 export interface UnitState {
     unit_id: string;
@@ -111,6 +149,8 @@ export interface UnitState {
     attack_range: number;
     states: ControlState[];
     buffs: BonusTerm[];
+    /** M4-7：洞察 / 回击 / 减伤，旧战法恒为空数组 */
+    reactions: Reaction[];
     alive: boolean;
 }
 export interface BattleEvent {

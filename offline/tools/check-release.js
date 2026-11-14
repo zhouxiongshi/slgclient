@@ -298,7 +298,9 @@ check('构建脚本可复现（npm run pack）', existsSync(join(ROOT, 'tools', 
  * conf/campaign/ 是**运行时回写**的覆盖层与存档（每次开打都会写），不算源码，
  * 否则每玩一次游戏，全部报告就集体过期。 */
 {
-  const SHIPPED_DIRS = ['electron', 'server', 'conf'];
+  /* ★ M4-7：kernel/ 是真正打进包里的确定性内核，改了它必须重跑所有报告；
+     旧清单漏掉这一层，会出现「内核换了、报告还是旧的」的假绿。 */
+  const SHIPPED_DIRS = ['electron', 'server', 'conf', 'kernel'];
   const SKIP = new Set(['node_modules', 'reports', 'build', '.git']);
   const SKIP_REL = ['conf/campaign'];
   let newestAt = 0;
@@ -318,6 +320,15 @@ check('构建脚本可复现（npm run pack）', existsSync(join(ROOT, 'tools', 
     }
   };
   for (const d of SHIPPED_DIRS) walk(join(ROOT, d));
+  /* conf/campaign/ 整目录被跳过是因为存档/覆盖层每次开打都会回写；但里面的
+     静态源配置（主角自带战法等）是出厂内容，改动同样必须让报告作废。 */
+  const STATIC_SHIPPED = ['conf/campaign/protagonist-skill.json'];
+  for (const rel of STATIC_SHIPPED) {
+    const f = join(ROOT, rel);
+    if (!existsSync(f)) continue;
+    const m = statSync(f).mtimeMs;
+    if (m > newestAt) { newestAt = m; newestFile = f; }
+  }
 
   /* 本地时间（这台机器 UTC+8），别用 UTC —— 差 8 小时会让「刚跑过」看着像隔了一天 */
   const fmt = (ms) => {
@@ -500,6 +511,24 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
   }
   check('模拟脚本只调 settleWorld，未退化成手写结算链（M4-5 口径）',
     chainBad.length === 0, chainBad.join(' | '));
+  /* M4-7：主角自带战法的玩家指定口径，防止有人把三效果改回单条「攻击提高」
+     或让每级 +5% 的回击概率悄悄退化成固定值。 */
+  {
+    const p = readJson(join(ROOT, 'conf', 'campaign', 'protagonist-skill.json'), null);
+    const k = p?.kernel || {};
+    const fx = Array.isArray(k.effects) ? k.effects : [];
+    const lv = p?.ui?.levels || [];
+    const stepOk = lv.length === 10 && lv.every((r, i) =>
+      r.effect_value[0] === 3 && r.effect_value[1] === 30 + i * 5 && r.effect_value[2] === 30);
+    check('主角战法：指挥三效果（洞察3回合 / 回击30%+5%每级 / 减伤30%）与 UI 槽位同源',
+      p?.cfgId === 19001 && k.skill_class === '指挥' && fx.length === 3
+      && fx[0]?.mechanics?.insight_rounds === 3
+      && fx[1]?.mechanics?.counter?.rate_pct === 87
+      && fx[1]?.mechanics?.counter?.damage_type === 'STRATEGY_DAMAGE'
+      && fx[2]?.mechanics?.damage_taken_reduce === 0.3
+      && (p?.ui?.des?.match(/%n%/g) || []).length === 3 && stepOk,
+      JSON.stringify({ class: k.skill_class, effects: fx.length, stepOk }));
+  }
   /* tools/ 不进出厂源码扫描，工具改了报告不重跑也不会被 7.x 新鲜度发现，这里单独兜。 */
   const stale = [];
   const toolMtime = (f) => statSync(join(ROOT, 'tools', f)).mtimeMs;

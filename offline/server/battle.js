@@ -318,6 +318,9 @@ export function buildBattleAnim({ kernel, attackers, defense, army, beginSoldier
         act = {
           t: 'skill', f: unitOf(ev.actor), skill: String(p.skill ?? ''),
           loss: skillLoss.get(`${ev.actor}|${String(p.skill ?? '')}`) || 0,
+          /* M4-7：回击复用了 skill_trigger 通道（战报 c_id/lv/e_v 才能查到），
+             但要单独标出来，否则玩家会把「受击还击」误读成又一次开战生效。 */
+          counter: !!p.counter,
         };
       } else if (ev.kind === 'damage') {
         act = {
@@ -327,6 +330,12 @@ export function buildBattleAnim({ kernel, attackers, defense, army, beginSoldier
         };
       } else if (ev.kind === 'control') {
         act = { t: 'control', f: unitOf(ev.actor), to: unitOf(p.target ?? 'a0'), state: String(p.state ?? '') };
+      } else if (ev.kind === 'control_immune') {
+        /* M4-7 洞察：内核拒绝施加控制时要进战报，玩家才知道这 3 回合买了什么 */
+        act = {
+          t: 'immune', f: unitOf(ev.actor), to: unitOf(p.target ?? 'a0'),
+          state: String(p.state ?? ''),
+        };
       } else if (ev.kind === 'heal') {
         const amount = Math.round((Number(p.applied ?? p.amount ?? 0)) * TROOP_SCALE);
         /* 0 治疗没有任何信息量，只会在战报里刷「回复 0」两行（实测确有） */

@@ -56,7 +56,7 @@ function mkUnit(id: string, speed: number, states: UnitState['states'] = []): Un
     unit_id: id, side: 1, hero: mkHero() as UnitState['hero'],
     troops: 1000, max_troops: 1000, speed,
     pos: 0, attack_range: 9,
-    states, buffs: [], alive: true,
+    states, buffs: [], reactions: [], alive: true,
   };
 }
 

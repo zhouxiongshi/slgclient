@@ -170,6 +170,22 @@ export function kernelSkillAt(cfgId, lv) {
         const now = uiLevel.effect_value[i] ?? 0;
         const growth = base[i] ? now / base[i] : 1;
         const rated = e.effect_type === 'PHYSICAL_DAMAGE' || e.effect_type === 'STRATEGY_DAMAGE' || e.effect_type === 'HEAL';
+        /* ★ M4-7 主角指挥战法：洞察回合 / 回击概率 / 减伤比例一律取本等级的 UI 槽值。
+           界面写「有 35% 概率回击」，内核就按 0.35 判定，杜绝两套数字。
+           伤害率 87% 是固定值（每级 +5% 只作用于回击概率），放在 counter.rate_pct。 */
+        let mechanics;
+        if (e.mechanics) {
+          mechanics = { ...e.mechanics };
+          if (mechanics.insight_rounds != null) {
+            mechanics.insight_rounds = Math.max(0, Math.trunc(Number(now) || 0));
+          }
+          if (mechanics.counter) {
+            mechanics.counter = { ...mechanics.counter, chance: (Number(now) || 0) / 100 };
+          }
+          if (mechanics.damage_taken_reduce != null) {
+            mechanics.damage_taken_reduce = (Number(now) || 0) / 100;
+          }
+        }
         return {
           detail_id: e.detail_id,
           effect_type: e.effect_type,
@@ -186,6 +202,7 @@ export function kernelSkillAt(cfgId, lv) {
             op: b.op ?? 0,
             evidence: 'E2',
           })),
+          ...(mechanics ? { mechanics } : {}),
           evidence: 'E2',
         };
       }),

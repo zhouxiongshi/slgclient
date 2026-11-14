@@ -138,7 +138,13 @@ const SKILL_PROBE = `(async function(){
         p1:c.levels[0].probability, p10:c.levels[9].probability
       }; }),
       legacy: confs.filter(function(c){ return legacy.indexOf(c.name) >= 0; }).map(function(c){ return c.name; }),
-      grown: confs.filter(function(c){ return c.levels && c.levels.length === 10 && c.levels[9].effect_value[0] > c.levels[0].effect_value[0]; }).length,
+      /* M4-7：成长看「任一效果槽」，不能只盯首槽。主角指挥战法首槽是固定的
+         3 回合洞察，成长在第 2 槽（回击概率 30% 起每级 +5%，Lv10=75%）。 */
+      grown: confs.filter(function(c){
+        if(!c.levels || c.levels.length !== 10) return false;
+        var a = c.levels[0].effect_value || [], b = c.levels[9].effect_value || [];
+        return b.some(function(v, i){ return Number(v) > Number(a[i]); });
+      }).length,
       minCfgId: Math.min.apply(null, confs.map(function(c){ return c.cfgId; })),
       maxCfgId: Math.max.apply(null, confs.map(function(c){ return c.cfgId; })),
     };

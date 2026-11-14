@@ -20,6 +20,7 @@ import type {
   Effect,
   EffectType,
   Phase,
+  Reaction,
   Skill,
   UnitInput,
   UnitState,
@@ -83,6 +84,7 @@ function cloneUnits(inputs: readonly UnitInput[]): UnitState[] {
       attack_range,
       states: [],
       buffs: [],
+      reactions: [],
       alive: true,
     } as UnitState;
   });
@@ -161,6 +163,12 @@ export class BattleEngine {
     const inRange = (u: UnitState): boolean => this.slotDist(unit, u) <= range;
     const pickN = (list: UnitState[], n: number): UnitState[] => (n ? list.slice(0, n) : list);
     if (tt === 'self') return unit.alive ? [unit] : [];
+    // M4-7 主角战法：自身 + 一名友军。友军按阵列顺序取第一个非自身存活者，确定性。
+    if (tt === 'self_and_ally_single') {
+      if (!unit.alive) return [];
+      const other = allies.find((u) => u !== unit && u.alive && inRange(u));
+      return other ? [unit, other] : [unit];
+    }
     if (tt.startsWith('ally')) {
       const pool = allies.filter(inRange);
       if (tt.endsWith('single') || tt.endsWith('_one')) return pool.slice(0, 1);
@@ -178,7 +186,14 @@ export class BattleEngine {
     return enemies.slice(0, 1);
   }
 
-  private applyEffect(effect: Effect, attacker: UnitState, target: UnitState, skillName: string, phase: Phase): void {
+  /**
+   * @param skill 发动该效果的战法（用于把 mechanics 记到 reaction 上）；普攻不传。
+   * @param opts.noReaction 回击造成的伤害不再触发回击，避免双方互击无限递归。
+   */
+  private applyEffect(
+    effect: Effect, attacker: UnitState, target: UnitState, skillName: string, phase: Phase,
+    skill?: Skill, opts?: { noReaction?: boolean },
+  ): void {
     if (!effectAvailable(effect, this.round)) return;
 
     const t = effect.effect_type;
@@ -191,8 +206,17 @@ export class BattleEngine {
       const bonusTotal = sumTermsBonus(bonuses);
       const calc = calcDamage(bd.value, cf.factor, bonusTotal, this.cfg.min_damage);
 
+      /* M4-7：「自身受到伤害降低」只作用在承受者身上，不进攻击方加成链。
+         减伤求和后 clamp 到 90%，避免叠加出无敌导致战斗永无终结。 */
+      const reduce = Math.min(0.9, Math.max(0, target.reactions
+        .filter((r) => r.kind === 'damage_reduce')
+        .reduce((s, r) => s + r.value, 0)));
+      const mitigated = reduce > 0
+        ? Math.max(0, Math.trunc(calc.final * (1 - reduce)))
+        : calc.final;
+
       const troopsBefore = target.troops;
-      target.troops = Math.max(0, target.troops - calc.final);
+      target.troops = Math.max(0, target.troops - mitigated);
       const troopsAfter = target.troops;
 
       this.emit(phase, attacker.unit_id, 'damage', {
@@ -207,11 +231,52 @@ export class BattleEngine {
         troops_before: troopsBefore,
         troops_after: troopsAfter,
         applied: troopsBefore - troopsAfter,
+        /* M4-7 审计字段只在真的发生时写入：旧战法的事件必须逐字节不变，
+           否则黄金向量 / event_fingerprint 会整体漂移。 */
+        ...(reduce > 0 ? { damage_reduce: reduce, before_mitigation: calc.final } : {}),
+        ...(effect.note === 'counter' ? { counter: true } : {}),
       }, 'E0');
 
       if (target.troops <= 0 && target.alive) {
         target.alive = false;
         this.emit(phase, 'system', 'unit_down', { unit: target.unit_id }, 'E0');
+      }
+
+      /* M4-7 回击：受到攻击（普攻/战法伤害）时按当前战法等级概率反击一次。
+         与 CONTROL 一致，无论概率多少都消耗一次随机数，保证同种子可回放。
+         回击伤害携带 noReaction，不会再触发对方的回击。 */
+      if (!opts?.noReaction && target.alive && attacker.alive && attacker !== target) {
+        for (const reaction of target.reactions.filter((r) => r.kind === 'counter')) {
+          const chance = Math.min(1, Math.max(0, reaction.value));
+          const fired = this.rng.random() < chance;
+          if (!fired) {
+            this.emit(phase, target.unit_id, 'counter_miss', {
+              skill: reaction.skill_name, target: attacker.unit_id, probability: chance,
+            }, 'E2');
+            continue;
+          }
+          this.emit(phase, target.unit_id, 'skill_trigger', {
+            skill: reaction.skill_name,
+            class: '指挥',
+            probability: chance,
+            counter: true,
+          }, 'E2');
+          const counterEffect: Effect = {
+            detail_id: -2,
+            effect_type: reaction.damage_type ?? 'STRATEGY_DAMAGE',
+            rate_pct: reaction.rate_pct ?? 0,
+            flat_rate: true,           // 87% 是最终伤害率，不随武将等级二次成长
+            target_type: 'enemy_single',
+            attack_type: 'normal',
+            available_round: 0,
+            control_probability: 0,
+            bonus_terms: [],
+            evidence: 'E2',
+            note: 'counter',
+          };
+          this.applyEffect(counterEffect, target, attacker, reaction.skill_name,
+            phase, undefined, { noReaction: true });
+        }
       }
       return;
     }
@@ -235,6 +300,13 @@ export class BattleEngine {
       const p = effect.control_probability;
       // 与 Python 一致：无论 p 是否为 1 都消耗一次随机数
       const ok = this.rng.random() < p;
+      // M4-7 洞察：免疫控制状态的施加（回合末自动过期，见 run 的 round_end）
+      if (ok && target.reactions.some((r) => r.kind === 'insight')) {
+        this.emit(phase, attacker.unit_id, 'control_immune', {
+          target: target.unit_id, state: effect.control_state, by: '洞察', probability: p,
+        }, 'E2');
+        return;
+      }
       if (ok && effect.control_state && !hasControl(target, effect.control_state)) {
         target.states.push(effect.control_state);
         this.emit(phase, attacker.unit_id, 'control', {
@@ -257,9 +329,48 @@ export class BattleEngine {
           source: 'effect',
         });
       }
+      /* M4-7：mechanics 不进 buffs（内核对攻击方 buffs 无差别求和，减伤/回击词
+         混进去会变成攻击加成，描述与计算就分家了），单独记在 reactions 上。 */
+      const m = t === 'BUFF' ? effect.mechanics : undefined;
+      const mechanics: string[] = [];
+      if (m) {
+        const sid = skill?.skill_id ?? effect.detail_id;
+        const grant = (r: Reaction): void => {
+          // 同源战法重复授予（如被动每回合触发）只刷新，不堆叠
+          target.reactions = target.reactions.filter((x) => !(x.skill_id === sid && x.kind === r.kind));
+          target.reactions.push(r);
+        };
+        const insightRounds = Math.max(0, Math.trunc(Number(m.insight_rounds) || 0));
+        const counter = m.counter;
+        const reduce = Math.min(0.9, Math.max(0, Number(m.damage_taken_reduce) || 0));
+        if (insightRounds > 0) {
+          grant({ kind: 'insight', skill_id: sid, skill_name: skillName, rounds: insightRounds, value: 0 });
+          mechanics.push('洞察');
+        }
+        if (counter) {
+          grant({
+            kind: 'counter', skill_id: sid, skill_name: skillName, rounds: 0,
+            value: Math.min(1, Math.max(0, Number(counter.chance) || 0)),
+            rate_pct: Number(counter.rate_pct) || 0,
+            damage_type: counter.damage_type,
+          });
+          mechanics.push('回击');
+        }
+        if (reduce > 0) {
+          grant({ kind: 'damage_reduce', skill_id: sid, skill_name: skillName, rounds: 0, value: reduce });
+          mechanics.push('受到伤害降低');
+        }
+        this.emit(phase, attacker.unit_id, 'reaction', {
+          target: target.unit_id, skill: skillName, mechanics,
+          insight_rounds: insightRounds,
+          counter_chance: counter ? Math.min(1, Math.max(0, Number(counter.chance) || 0)) : 0,
+          damage_reduce: reduce,
+        }, 'E2');
+      }
       this.emit(phase, attacker.unit_id, 'buff', {
         target: target.unit_id,
         terms: effect.bonus_terms.map((x) => x.name),
+        ...(mechanics.length ? { mechanics } : {}),
       }, 'E2');
     }
   }
@@ -305,7 +416,7 @@ export class BattleEngine {
           ? [this.nearestFoe(unit, undefined, 'order')].filter((x): x is UnitState => Boolean(x))
           : this.effectTargets(effect, unit);
       for (const target of targets) {
-        if (target.alive) this.applyEffect(effect, unit, target, skill.name, phase);
+        if (target.alive) this.applyEffect(effect, unit, target, skill.name, phase, skill);
       }
     }
   }
@@ -382,12 +493,22 @@ export class BattleEngine {
         }
       }
 
-      // 回合结束：清除单回合控制状态
+      // 回合结束：清除单回合控制状态 + 递减有期限的反应（洞察 3 回合口径）
       for (const u of this.units) {
         for (const st of [...u.states]) {
           if (st === '犹豫' || st === '怯战') {
             u.states.splice(u.states.indexOf(st), 1);
             this.emit('round_end', u.unit_id, 'state_clear', { state: st }, 'E2');
+          }
+        }
+        for (const r of [...u.reactions]) {
+          if (r.rounds <= 0) continue;       // 0 = 整场有效
+          r.rounds -= 1;
+          if (r.rounds <= 0) {
+            u.reactions.splice(u.reactions.indexOf(r), 1);
+            this.emit('round_end', u.unit_id, 'reaction_expire', {
+              kind: r.kind, skill: r.skill_name,
+            }, 'E2');
           }
         }
       }

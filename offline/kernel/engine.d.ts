@@ -37,6 +37,10 @@ export declare class BattleEngine {
      */
     private nearestFoe;
     private effectTargets;
+    /**
+     * @param skill 发动该效果的战法（用于把 mechanics 记到 reaction 上）；普攻不传。
+     * @param opts.noReaction 回击造成的伤害不再触发回击，避免双方互击无限递归。
+     */
     private applyEffect;
     private cast;
     private normalAttackEffect;
