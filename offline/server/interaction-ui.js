@@ -286,7 +286,9 @@
       + '@media (min-width:1920px){#slgIxDrawer{width:420px}}'
       + '@media (min-width:2560px){#slgIxDrawer{width:460px}}'
       + '@media (min-width:3440px){#slgIxDrawer{width:480px}}'
-      + '@media (min-width:2560px){#slgIxAgenda{width:300px}}';
+      + '@media (min-width:2560px){#slgIxAgenda{width:300px}}'
+      /* ★ M4-11：左下角常驻快捷入口——设置面板此前只有 ? 键可开，界面上没有任何可见按钮 */
+      + '#slgIxQuick{position:fixed;left:12px;bottom:44px;z-index:100120;display:flex;gap:6px}';
     var s = el('style', '', css); s.id = 'slgIxCss'; document.head.appendChild(s);
     var root = el('div', '', ''); root.id = 'slgIxRoot'; root.className = 'slgIx' + (S.reduceMotion ? ' reduce' : '');
     document.body.appendChild(root);
@@ -295,6 +297,23 @@
     root.appendChild(el('div', '', '')).id = 'slgIxAgenda';
     root.appendChild(el('div', '', '')).id = 'slgIxLens';
     root.appendChild(el('div', '', '')).id = 'slgIxQueue';
+    /* ★ M4-11：常驻快捷入口（设置 + 武将编辑器）。点击打开对应面板；编辑器脚本
+       由 /__slg/editor/ui.js 下发，未就绪时给四态提示而不是静默失败。 */
+    var quick = el('div', '', ''); quick.id = 'slgIxQuick';
+    var btnSettings = el('button', '', '⚙ 设置 / 快捷键');
+    btnSettings.type = 'button';
+    btnSettings.title = '打开设置面板（快捷键 ?）';
+    on(btnSettings, 'click', function () { openKeys(); });
+    var btnEditor = el('button', '', '武将编辑器');
+    btnEditor.type = 'button';
+    btnEditor.title = '编辑全部武将属性与自带战法';
+    on(btnEditor, 'click', function () {
+      if (typeof window.__slgEditorOpen === 'function') window.__slgEditorOpen();
+      else phase('武将编辑器脚本未就绪，请刷新页面后重试', 'fail');
+    });
+    quick.appendChild(btnSettings);
+    quick.appendChild(btnEditor);
+    root.appendChild(quick);
     applyFontScale();
   }
   function applyFontScale() {

@@ -206,3 +206,13 @@ test('interaction-ui.js：设置面板有武将编辑器入口', () => {
   assert.match(src, /武将编辑器/);
   assert.match(src, /__slgEditorOpen/);
 });
+
+test('interaction-ui.js：屏幕上有常驻可见入口（不能只有快捷键）', () => {
+  /* 教训：设置面板最初只有 ? 键可开，界面上没有任何可见按钮，用户「找不到设置界面」。
+     快捷入口条必须常驻渲染，且同时提供设置与编辑器两个直达按钮。 */
+  const src = codeOnly('server/interaction-ui.js');
+  assert.match(src, /slgIxQuick/, '常驻快捷入口条');
+  assert.match(src, /root\.appendChild\(quick\)/, '入口条必须实际挂载到根节点');
+  assert.match(src, /⚙ 设置 \/ 快捷键/, '设置直达按钮');
+  assert.match(src, /btnEditor\)/, '编辑器直达按钮挂载');
+});
