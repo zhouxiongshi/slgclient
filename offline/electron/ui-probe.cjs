@@ -301,6 +301,158 @@ const SCENARIO_BATTLE = `(async function(){
   } catch (e) { return { ok:false, error:String(e && e.stack || e) }; }
 })()`;
 
+/** 场景 F：内政/府库设施升级后的滚动位置（玩家 2026-11-14 反馈）。
+ *  症状：升一个设施滚动条就跳回最上面，下次升级还得重新往下拖。
+ *  取证方式：把滚动条拉到一个非零位置 → 真点「升级」→ 量升级后的 scrollTop。
+ *  判定：位置不变（±2px）才算修好；只看代码「应该有还原」不作数。 */
+const SCENARIO_SCROLL = `(async function(){
+  var out = { cases: [] };
+  var sleep = function(ms){ return new Promise(function(r){ setTimeout(r, ms); }); };
+  var txt2 = function(n){
+    return n ? (n.innerText || '').replace(/\\s+/g, ' ').trim().slice(0, 140) : '';
+  };
+  var grabToast = function(){
+    var list = document.querySelectorAll('.toast, #slgIxToast, #slgPanelsToast');
+    var txt = [];
+    Array.prototype.forEach.call(list, function(t){
+      if (getComputedStyle(t).display !== 'none' && (t.textContent||'').trim()) txt.push(t.textContent.trim());
+    });
+    return txt.join(' / ');
+  };
+  var facCard = function(body){    var cards = body ? body.querySelectorAll('.card') : [];
+    for (var i = 0; i < cards.length; i++) {
+      var h = cards[i].querySelector('h4');
+      if (h && /设施/.test(h.textContent || '')) return cards[i];
+    }
+    return null;
+  };
+  var upBtn = function(card, skip){
+    if (!card) return null;
+    var bs = card.querySelectorAll('button');
+    var found = [];
+    Array.prototype.forEach.call(bs, function(b){
+      if ((b.textContent || '').trim() === '升级' && !b.disabled) found.push(b);
+    });
+    return found[skip || 0] || null;
+  };
+  try {
+    var s = await (await fetch('/__slg/strategy/state', { cache:'no-store' })).json();
+    var cid = s.playerCity || 1;
+    out.playerCity = cid;
+    /* 页签切换是异步的（先取 state 再重绘）：必须等目标页签真的 on 了再抓卡片，
+       否则第二次会抓到上一个页签遗留的卡片，测出来的是假的「位置没变」。 */
+    var waitTab = async function(tabId){
+      for (var i = 0; i < 40; i++) {
+        var on = document.querySelector('#slgCityNav button[data-citytab="' + tabId + '"].on');
+        if (on) return true;
+        await sleep(150);
+      }
+      return false;
+    };
+
+    /* ---- 案例 1：内政 tab（玩家报的那条路） ---- */
+    window.__slgCityInterior(cid, 'home');
+    await waitTab('home');
+    var page = null, body = null, card = null;
+    for (var i = 0; i < 40; i++) {
+      await sleep(200);
+      page = document.getElementById('slgCityPage');
+      body = document.getElementById('slgCityBody');
+      if (page && body) { card = facCard(body); if (card && upBtn(card)) break; }
+    }
+    if (!body) { out.ok = false; out.reason = 'city page not open'; return out; }
+    if (!card) { out.ok = false; out.reason = 'no facility card'; return out; }
+    var maxTop = Math.max(0, body.scrollHeight - body.clientHeight);
+    body.scrollTop = Math.min(320, maxTop);
+    await sleep(120);
+    var before = body.scrollTop;
+    var b1 = upBtn(card);
+    if (!b1) { out.cases.push({ where:'内政', skipped:'无可升级设施（可能都在升级中或已满级）' }); }
+    else {
+      var nameRow = b1.closest('.row');
+      var label = txt2(nameRow);
+      b1.click();
+      var toast1 = '';
+      for (var k = 0; k < 10; k++) { await sleep(150); var t1 = grabToast(); if (t1) { toast1 = t1; break; } }
+      await sleep(700);
+      var after = body.scrollTop;
+      var stillPage = !!document.getElementById('slgCityPage');
+      var cardNow = facCard(body);
+      out.cases.push({
+        where: '内政', row: label, before: before, after: after,
+        delta: Math.round((after - before) * 10) / 10, kept: Math.abs(after - before) <= 2,
+        toast: toast1, pageAlive: stillPage,
+        /* 卡片是否被换成新节点：false = 只重画卡片内容（本轮修法），
+           true 且位置仍不变 = 确实整页重绘了但滚动被还原 */
+        cardNodeReplaced: cardNow !== card,
+        bodyScrollable: (body.scrollHeight - body.clientHeight),
+        cardText: cardNow ? (cardNow.innerText || '').replace(/\\s+/g, ' ').trim().slice(0, 200) : '',
+      });
+    }
+
+    /* ---- 案例 2：府库 tab（升级会重绘该页，靠 tabHome 的滚动还原兜住） ----
+       直接点页签按钮（玩家的真实动作），不用接口切页 —— 接口切页要等 fetchState，
+       抢跑会抓到上一个页签的残留卡片，测出假的「位置没变」。 */
+    var navBase = document.querySelector('#slgCityNav button[data-citytab="base"]');
+    var card2 = null, body2 = null;
+    if (!navBase) {
+      out.cases.push({
+        where: '府库', skipped: '页面上没有府库页签（非本城？）',
+        tabs: Array.prototype.map.call(document.querySelectorAll('#slgCityNav button'), function(b){
+          return (b.textContent || '').trim();
+        }).join('/'),
+      });
+    } else {
+      navBase.click();
+      await waitTab('base');
+    }
+    for (var j = 0; navBase && j < 30; j++) {
+      await sleep(200);
+      body2 = document.getElementById('slgCityBody');
+      card2 = body2 ? facCard(body2) : null;
+      if (card2 && upBtn(card2)) break;
+    }
+    if (!navBase) { /* 上面已记录跳过 */ }
+    else if (!body2 || !card2) { out.cases.push({ where:'府库', skipped:'府库页或设施卡未就绪' }); }
+    else {
+      var maxTop2 = Math.max(0, body2.scrollHeight - body2.clientHeight);
+      body2.scrollTop = Math.min(320, maxTop2);
+      await sleep(120);
+      var before2 = body2.scrollTop;
+      var b2 = upBtn(card2, 1) || upBtn(card2, 0);
+      if (!b2) { out.cases.push({ where:'府库', skipped:'无可升级设施' }); }
+      else {
+        b2.click();
+        var toast2 = '';
+        for (var k2 = 0; k2 < 10; k2++) { await sleep(150); var t2 = grabToast(); if (t2) { toast2 = t2; break; } }
+        await sleep(900);
+        var after2 = body2.scrollTop;
+        out.cases.push({
+          where: '府库', before: before2, after: after2,
+          delta: Math.round((after2 - before2) * 10) / 10, kept: Math.abs(after2 - before2) <= 2,
+          toast: toast2, pageAlive: !!document.getElementById('slgCityPage'),
+          /* 府库升级走的是整页重绘：这里必须 cardNodeReplaced=true（证明确实重绘了），
+             若为 false 说明「位置没变」只是因为压根没重建，测不出问题 */
+          cardNodeReplaced: facCard(body2) !== card2,
+          oldCardConnected: !!card2.isConnected,
+          activeTab: (function(){
+            var on = document.querySelector('#slgCityNav button.on');
+            return on ? (on.textContent || '').trim() : '';
+          })(),
+          navHtml: (function(){
+            var n = document.getElementById('slgCityNav');
+            return n ? n.innerHTML.replace(/\\s+/g, ' ').slice(0, 300) : '(无 #slgCityNav)';
+          })(),
+          bodyScrollable: (body2.scrollHeight - body2.clientHeight),
+        });
+      }
+    }
+    out.ok = out.cases.length > 0 && out.cases.every(function(c){ return c.skipped || c.kept; });
+    return out;
+  } catch (e) { return { ok:false, error:String(e && e.stack || e) }; }
+})()`;
+
+
 /** 场景 E：界面收敛（用户 ⑦⑧⑨⑩⑪ 的 DOM 取证）。
  *  不看代码猜，直接量：按钮坞里还剩哪些按钮、图层列表还剩几项、六府有没有折叠、
  *  浮窗开关是否真能隐藏、势力面板能否选势力看版图、推演预览能否收起。 */
@@ -501,6 +653,10 @@ async function runProbe(win, server, app) {
     report.scenarios.reportShot = await shot(wc, outDir, `probe-report-${tag}.png`);
     report.scenarios.ui = await wc.executeJavaScript(SCENARIO_UI, true);
     report.scenarios.uiShot = await shot(wc, outDir, `probe-ui-${tag}.png`);
+
+    /* 场景 F 放在最后：它会真的升一次设施（扣资源、起工期），不能影响前面的测量 */
+    report.scenarios.scroll = await wc.executeJavaScript(SCENARIO_SCROLL, true);
+    report.scenarios.scrollShot = await shot(wc, outDir, `probe-scroll-${tag}.png`);
 
     report.pageErrors = pageErrors.concat(await wc.executeJavaScript('window.__slgErrors || []', true));
     report.consoleErrors = consoleErrors;

@@ -7,6 +7,7 @@
  * 与 smoke/perf 同一套启动纪律：清 ELECTRON_RUN_AS_NODE、隔离 userData。
  */
 import { spawn } from 'node:child_process';
+import { assertPortsFree } from './lib/port-guard.js';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -36,6 +37,9 @@ env.SLG_SMOKE_EXIT = '1';
 env.SLG_SMOKE_TAG = tag;
 env.SLG_SMOKE_REPORT_DIR = reportsDir;
 
+/* 上一轮残留进程会让本次探测静默失败（报告是上一次的旧文件），先清端口 */
+assertPortsFree([8088, 8004], 'slg-offline:ui-probe');
+
 const child = spawn(exe, [ROOT], { env, cwd: ROOT, stdio: 'inherit' });
 child.on('error', (err) => {
   console.error(`[slg-offline:probe] 启动失败：${err.message}`);
@@ -52,11 +56,23 @@ child.on('exit', (code) => {
   const s = r.scenarios || {};
   console.log('');
   console.log('[slg-offline:probe] ── 取证结果 ──');
-  for (const key of ['levy', 'preview', 'battle', 'reports', 'ui']) {
+  for (const key of ['levy', 'preview', 'battle', 'reports', 'ui', 'scroll']) {
     const v = s[key];
     if (!v) { console.log(`  ? ${key}：无结果`); continue; }
     console.log(`  ${v.ok ? '✓' : '✗'} ${key}${v.reason ? '（' + v.reason + '）' : ''}`
       + (v.error ? ' 错误：' + String(v.error).slice(0, 200) : ''));
+    /* 滚动类结果逐条打印「升级前后位置」，否则「✓」看不出量到了什么 */
+    (v.cases || []).forEach((c) => {
+      if (c.skipped) { console.log(`      · ${c.where}：跳过（${c.skipped}）`); return; }
+      console.log(`      · ${c.where}：升级前 ${c.before}px → 升级后 ${c.after}px`
+        + `（Δ ${c.delta}px${c.kept ? '，位置保持' : '，跳了'}）`
+        + `　卡片节点${c.cardNodeReplaced ? '已重建（走整页重绘，靠还原兜住）' : '复用（只重画内容，未重绘页面）'}`
+        + (c.bodyScrollable != null ? `　可滚动高度 ${c.bodyScrollable}px` : '')
+        + (c.activeTab ? `　当前页签「${c.activeTab}」` : '')
+        + (c.oldCardConnected === false ? '　旧卡片已摘除' : '')
+        + (c.toast ? `　toast「${c.toast}」` : '')
+        + (c.pageAlive === false ? '　页面已关闭' : ''));
+    });
   }
   if (r.consoleErrors?.length) {
     console.log('[slg-offline:probe] 控制台错误：');

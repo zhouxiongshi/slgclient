@@ -8,6 +8,7 @@
  * 否则 Electron 会退化成纯 Node 进程。
  */
 import { spawn } from 'node:child_process';
+import { assertPortsFree } from './lib/port-guard.js';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -44,6 +45,9 @@ env.SLG_SMOKE_TAG = tag;
 env.SLG_SMOKE_REPORT_DIR = reportsDir;
 
 const args = packaged ? [] : [ROOT];
+/* 上一轮残留进程会让本次探测静默失败（报告是上一次的旧文件），先清端口 */
+assertPortsFree([8088, 8004], 'slg-offline:ui-audit');
+
 const child = spawn(exe, args, { env, cwd: ROOT, stdio: 'inherit' });
 
 child.on('error', (err) => {

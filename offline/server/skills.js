@@ -4026,9 +4026,44 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       })
       .catch(function () { /* 服务重启瞬间：保留当前画面 */ });
   }
+  /* ── 重绘不抢滚动条 ────────────────────────────────────────────────────
+   * 玩家反馈：内政面板升一个设施，滚动条就跳回最上面，下次升级还得重新往下拖。
+   * 根因不是某个按钮写错了，而是「操作 → 重新取 state → 重绘」这条路径本身：
+   *   整屏城内页会重建 #slgCityBody、浮窗会让 makeWindow 重建 .win .body，
+   * 容器一换，scrollTop 必然归零；tabHome 那类在原地 innerHTML='' 再填充的，
+   * 清空瞬间滚动位置也被夹到 0，之后内容长回来也不会自己复原。
+   * 所以修在重绘边界上：按「容器 + 页签 + 城池」记住滚动位置，重绘后还原。
+   * 换页签时用该页签自己的记忆（第一次进就是 0，本来也该在顶部）。
+   * ------------------------------------------------------------------ */
+  var SCROLL_MEM = {};
+  var SCROLL_TIMERS = {};
+  function scrollSlot(kind) {
+    return kind + '|' + tab + '|' + (currentCity == null ? '-' : currentCity);
+  }
+  function scrollRemember(kind, node) {
+    if (node) SCROLL_MEM[scrollSlot(kind)] = Math.max(0, node.scrollTop || 0);
+  }
+  /* 设施/府库这类卡片要等协议回包才长出高度，第一次设值会被「当前太短」夹住，
+     所以下一帧与 160ms 后各补一次；容器已销毁则静默跳过。 */
+  function scrollApply(kind, node) {
+    if (!node) return;
+    var want = SCROLL_MEM[scrollSlot(kind)] || 0;
+    if (want <= 0) return;
+    var fix = function () {
+      if (!node.isConnected) return;
+      if (node.scrollHeight - node.clientHeight >= want - 1) node.scrollTop = want;
+    };
+    node.scrollTop = want;
+    clearTimeout(SCROLL_TIMERS[kind]);
+    requestAnimationFrame(fix);
+    SCROLL_TIMERS[kind] = setTimeout(fix, 160);
+  }
+
   function renderCity(s) {
     var c = cityOf(s, currentCity);
     if (!c) { window.__slgCityClose(); return; }
+    /* 浮窗形态：makeWindow 会把旧窗整块删掉重建，先记下当前滚动位置 */
+    scrollRemember('win', document.querySelector('#slgUIv2 .win .body'));
     var isHome = s.playerCity === c.id;
     /* ★ P7：内政页对所有己方城统一（治理卡 + 五项内政任务）；
        府库/设施/存档属于本地主城，单列「府库」页，只在主城出现。 */
@@ -4054,6 +4089,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     else if (tab === 'gens') { if (isHome) renderGensInto(body); else tabGeneralView(c, body); }
     else if (tab === 'tavern') { if (isHome) renderTavernInto(body); else tabTavernView(c, body); }
     else if (tab === 'reports') renderReportsInto(body, c);
+    scrollApply('win', body);
   }
 
   /* ==========================================================================
@@ -4096,6 +4132,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       page.id = 'slgCityPage';
       host.appendChild(page);
     }
+    /* 下面 page.innerHTML 会把 #slgCityBody 一起重建，先记住玩家当前看到哪一段 */
+    scrollRemember('page', page.querySelector('#slgCityBody'));
     var lv = c.levy || null;
     var pill = function (k, v) { return '<div class="pill"><small>' + k + '</small><b>' + v + '</b></div>'; };
     page.innerHTML = '<div class="citypage-head">'
@@ -4143,6 +4181,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         ? '己方城：内政与征兵均在此办理。征兵按「一户一丁」，本旬只能征一次。'
         : '敌方城：先看概览与守军，进攻请从「自本城出征」发起。')));
     cityPageContent(s, c, page.querySelector('#slgCityBody'), isHome);
+    scrollApply('page', page.querySelector('#slgCityBody'));
     document.documentElement.setAttribute('data-slg-window', 'city');
   }
 
@@ -4169,6 +4208,50 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     if (w) w.remove();
     document.documentElement.removeAttribute('data-slg-window');
   };
+
+  /* 设施卡：初次挂载与「升级后刷新」共用同一个函数。
+     ★ 升级后只重画这一张卡，不再整页重绘 —— 整页重绘会把滚动条一起重置，
+     玩家升一个设施就被踹回顶部（玩家 2026-11-14 反馈的原问题）。 */
+  function mountFacilitiesCard(card, c) {
+    var head = '<h4 style="margin-top:0">' + esc(c.name) + ' · 设施</h4>';
+    card.innerHTML = head + '<div class="empty">读取中…</div>';
+    send('city.facilities', { cityId: clientCityId(), realCityId: c.id }, true).then(function (rsp) {
+      var list2 = (rsp.msg && rsp.msg.facilities) || [];
+      card.innerHTML = head;
+      if (!list2.length) { card.appendChild(el('div', 'empty', '本城暂无设施数据。')); return; }
+      var COST = [['wood', '木'], ['iron', '铁'], ['stone', '石'], ['grain', '粮'], ['gold', '金'], ['decree', '令']];
+      list2.forEach(function (f) {
+        var row = el('div', 'row');
+        var chips = f.level >= f.maxLevel ? '已满级' : COST.filter(function (k) {
+          return f.nextNeed && f.nextNeed[k[0]];
+        }).map(function (k) {
+          return k[1] + ' ' + fmt(f.nextNeed[k[0]]);
+        }).join(' · ') + (f.nextTime ? '　工期 ' + f.nextTime + 's' : '');
+        row.innerHTML = '<span><b style="color:#f0d998">' + esc(f.name) + '</b> '
+          + '<span class="winTag">Lv' + f.level + '/' + f.maxLevel + '</span>'
+          + '<div class="cost">' + chips + '</div></span>';
+        if (f.up_time > 0) {
+          row.appendChild(el('span', 'cost', '升级中…'));
+        } else if (f.level >= f.maxLevel) {
+          row.appendChild(el('span', 'cost', '—'));
+        } else {
+          row.appendChild(mkBtn('升级', '', function () {
+            send('city.upFacility', { cityId: clientCityId(), realCityId: c.id, fType: f.type }).then(function (r2) {
+              if (r2.code === 0) toast(f.name + ' 开始升级', true);
+              else toast('升级失败：' + errText(r2), false);
+              /* 只刷这张卡：等级/「升级中…」立刻更新，滚动位置与其它卡片原样不动 */
+              mountFacilitiesCard(card, c);
+              /* 战略层缓存也要新（别处再进内政拿到的是旧值），但不重绘页面 */
+              fetchState().then(function (s2) { cache = s2; lastState = s2; }).catch(function () {});
+            });
+          }));
+        }
+        card.appendChild(row);
+      });
+    }).catch(function () {
+      card.innerHTML = head + '<div class="cost">设施读取失败，稍后再试。</div>';
+    });
+  }
 
   function tabInteriorView(c, body) {
     /* ★ P6 己方非主城：城池内政任务（开垦/招商/募兵/修城/赈灾），每城每旬一次
@@ -4392,44 +4475,11 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         '民心的作用：影响人口增长（+2%~6%/月）与粮金产量（×0.85~1.10）。'
         + '治安越高灾害越少。开发度到 100 以上收益递减，别把一座城堆到顶。'));
 
-      /* ★ 修 bug-6：分城也有自己的一套设施（举义时逐城建立），在此可查看与升级 */
-      var facCard = el('div', 'card', '<h4 style="margin-top:0">' + c.name + ' · 设施</h4>'
-        + '<div class="empty">读取中…</div>');
+      /* ★ 修 bug-6：分城也有自己的一套设施（举义时逐城建立），在此可查看与升级。
+         ★ 2026-11-14：卡片内容抽到 mountFacilitiesCard()，升级后只重画卡片不重画整页 */
+      var facCard = el('div', 'card', '');
       body.appendChild(facCard);
-      send('city.facilities', { cityId: clientCityId(), realCityId: c.id }, true).then(function (rsp) {
-        var list2 = (rsp.msg && rsp.msg.facilities) || [];
-        facCard.innerHTML = '<h4 style="margin-top:0">' + c.name + ' · 设施</h4>';
-        if (!list2.length) { facCard.appendChild(el('div', 'empty', '本城暂无设施数据。')); return; }
-        var COST = [['wood', '木'], ['iron', '铁'], ['stone', '石'], ['grain', '粮'], ['gold', '金'], ['decree', '令']];
-        list2.forEach(function (f) {
-          var row = el('div', 'row');
-          var chips = f.level >= f.maxLevel ? '已满级' : COST.filter(function (k) {
-            return f.nextNeed && f.nextNeed[k[0]];
-          }).map(function (k) {
-            return k[1] + ' ' + fmt(f.nextNeed[k[0]]);
-          }).join(' · ') + (f.nextTime ? '　工期 ' + f.nextTime + 's' : '');
-          row.innerHTML = '<span><b style="color:#f0d998">' + esc(f.name) + '</b> '
-            + '<span class="winTag">Lv' + f.level + '/' + f.maxLevel + '</span>'
-            + '<div class="cost">' + chips + '</div></span>';
-          if (f.up_time > 0) {
-            row.appendChild(el('span', 'cost', '升级中…'));
-          } else if (f.level >= f.maxLevel) {
-            row.appendChild(el('span', 'cost', '—'));
-          } else {
-            row.appendChild(mkBtn('升级', '', function () {
-              send('city.upFacility', { cityId: clientCityId(), realCityId: c.id, fType: f.type }).then(function (r2) {
-                if (r2.code === 0) toast(f.name + ' 开始升级', true);
-                else toast('升级失败：' + errText(r2), false);
-                fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
-              });
-            }));
-          }
-          facCard.appendChild(row);
-        });
-      }).catch(function () {
-        facCard.innerHTML = '<h4 style="margin-top:0">' + c.name + ' · 设施</h4>'
-          + '<div class="cost">设施读取失败，稍后再试。</div>';
-      });
+      mountFacilitiesCard(facCard, c);
       return;
     }
     body.appendChild(el('div', 'card', '<h4 style="margin-top:0">' + c.name + ' · 内政</h4><div class="grid">'
@@ -4646,10 +4696,63 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     }
   }
 
+  /* 府库页的设施列表（与内政 tab 的设施卡同一份数据，展示口径不同：这里按资源缺口标红）。
+     升级后走 onAfterUpgrade()（= 重绘府库页），因为升级会扣资源、上方资源行必须跟着变。
+     ★ 玩家反馈的「升级就跳回顶部」由 tabHome 自身的滚动还原兜住（见 restoreHomeScroll）。 */
+  function renderHomeFacilityList(card, c, cid, list, res, onAfterUpgrade) {
+    card.innerHTML = '<h4 style="margin-top:0">设施</h4>';
+    if (!list.length) { card.appendChild(el('div', 'empty', '本城暂无设施数据。')); return; }
+    list.forEach(function (f) {
+      var row = el('div', 'row');
+      var left = el('div', '');
+      left.innerHTML = '<b style="color:#f0d998">' + f.name + '</b> <span class="winTag">Lv'
+        + f.level + '/' + f.maxLevel + '</span>';
+      var cost = f.nextNeed || {};
+      var chips = '';
+      [['wood', '木'], ['iron', '铁'], ['stone', '石'], ['grain', '粮'], ['gold', '金'], ['decree', '令']]
+        .forEach(function (k) {
+          if (cost[k[0]]) {
+            var lack = Number(res[k[0]] || 0) < cost[k[0]];
+            chips += '<span class="chip" style="' + (lack ? 'color:#ff6b5e;border-color:#7a4038' : '') + '">'
+              + k[1] + ' ' + fmt(cost[k[0]]) + '</span>';
+          }
+        });
+      if (f.nextTime) chips += '<span class="chip">工期 ' + f.nextTime + 's</span>';
+      left.innerHTML += '<div class="cost">' + (f.level >= f.maxLevel ? '已满级' : chips) + '</div>';
+      row.appendChild(left);
+      if (f.up_time && f.up_time > 0) {
+        row.appendChild(el('span', 'cost', '升级中…'));
+      } else if (f.level >= f.maxLevel) {
+        row.appendChild(el('span', 'cost', '—'));
+      } else {
+        row.appendChild(mkBtn('升级', '', function () {
+          send('city.upFacility', { cityId: clientCityId(), realCityId: cid, fType: f.type }).then(function (rsp) {
+            if (rsp.code === 0) toast(f.name + ' 开始升级', true);
+            else toast('升级失败：' + errText(rsp), false);
+            if (onAfterUpgrade) onAfterUpgrade();
+          });
+        }));
+      }
+      card.appendChild(row);
+    });
+  }
+
   function tabHome(body, c) {
     /* ★ P7：兵营/设施属于「本地主城」（原客户端 cityId），不是战略城的 id；
        两者是两套编号。队伍归属才用战略城 id（tabArmy 的 cid）。 */
     var cid = (c && c.id) || (cache && cache.playerCity) || 1;
+    /* 这里会在原地把 body 清空再填充（先放「读取中…」），滚动位置被夹到 0 且不会自己复原。
+       玩家点一次升级/征收就被踹回面板顶部，所以进函数先记、填完再还原。 */
+    var keepTop = body.scrollTop || 0;
+    function restoreHomeScroll() {
+      if (!(keepTop > 0) || !body.isConnected) return;
+      var put = function () {
+        if (body.isConnected && (body.scrollHeight - body.clientHeight) >= keepTop - 1) body.scrollTop = keepTop;
+      };
+      body.scrollTop = keepTop;
+      requestAnimationFrame(put);
+      setTimeout(put, 200);
+    }
     body.innerHTML = '<div class="empty">读取中…</div>';
     Promise.all([send('city.facilities', { cityId: clientCityId(), realCityId: cid }), send('role.myRoleRes', {}), loadMeta()])
       .then(function (rs) {
@@ -4678,41 +4781,12 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         card.appendChild(collect);
         body.appendChild(card);
 
-        var facCard = el('div', 'card', '<h4 style="margin-top:0">设施</h4>');
-        (rs[0].msg && rs[0].msg.facilities || []).forEach(function (f) {
-          var row = el('div', 'row');
-          var left = el('div', '');
-          left.innerHTML = '<b style="color:#f0d998">' + f.name + '</b> <span class="winTag">Lv'
-            + f.level + '/' + f.maxLevel + '</span>';
-          var cost = f.nextNeed || {};
-          var chips = '';
-          [['wood', '木'], ['iron', '铁'], ['stone', '石'], ['grain', '粮'], ['gold', '金'], ['decree', '令']]
-            .forEach(function (k) {
-              if (cost[k[0]]) {
-                var lack = Number(res[k[0]] || 0) < cost[k[0]];
-                chips += '<span class="chip" style="' + (lack ? 'color:#ff6b5e;border-color:#7a4038' : '') + '">'
-                  + k[1] + ' ' + fmt(cost[k[0]]) + '</span>';
-              }
-            });
-          if (f.nextTime) chips += '<span class="chip">工期 ' + f.nextTime + 's</span>';
-          left.innerHTML += '<div class="cost">' + (f.level >= f.maxLevel ? '已满级' : chips) + '</div>';
-          row.appendChild(left);
-          if (f.up_time && f.up_time > 0) {
-            row.appendChild(el('span', 'cost', '升级中…'));
-          } else if (f.level >= f.maxLevel) {
-            row.appendChild(el('span', 'cost', '—'));
-          } else {
-            row.appendChild(mkBtn('升级', '', function () {
-              send('city.upFacility', { cityId: clientCityId(), realCityId: cid, fType: f.type }).then(function (rsp) {
-                if (rsp.code === 0) toast(f.name + ' 开始升级', true);
-                else toast('升级失败：' + errText(rsp), false);
-                tabHome(body, c);
-              });
-            }));
-          }
-          facCard.appendChild(row);
-        });
+        /* 设施列表抽到 renderHomeFacilityList()：升级后只重画这张卡。
+           原来升级走 tabHome(body,c) 整页重来，滚动条同样被踹回顶部。 */
+        var facCard = el('div', 'card', '');
         body.appendChild(facCard);
+        renderHomeFacilityList(facCard, c, cid, (rs[0].msg && rs[0].msg.facilities) || [], res,
+          function () { tabHome(body, c); });
 
         // ★ P1-6 / P0-4：来犯军与章节结局都放在本城页，玩家不用切回被遮住的本地地图
         var extra = el('div', '');
@@ -4838,6 +4912,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
             extra.appendChild(endCard);
           }
         }).catch(function () {});
+        restoreHomeScroll();
       })
       .catch(function () { body.innerHTML = '<div class="empty">读取失败，稍后再试。</div>'; });
   }
