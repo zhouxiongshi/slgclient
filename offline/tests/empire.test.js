@@ -98,6 +98,30 @@ test('编队：换将+重分兵力生效，重复武将与超量兵力被拒', (
   assert.equal(over.reason, 'too_many_troops', '超过现有兵力应拒绝');
 });
 
+test('编队：全空编队被拒（兵不许凭空蒸发），减编差额退回驻城', () => {
+  const state = freshCao();
+  const army = state.armys[0];
+  const totalBefore = army.soldiers.reduce((s, v) => s + v, 0);
+  const empty = strategyFormup(state, cfg, makeCtx(state), {
+    armyId: army.id, generals: [0, 0, 0], soldiers: [0, 0, 0],
+  });
+  assert.equal(empty.reason, 'empty_formup', 'UI 可提交三槽全 0，服务端必须拒绝');
+  assert.equal(army.soldiers.reduce((s, v) => s + v, 0), totalBefore, '拒绝后兵力不变');
+
+  const home = state.strategy.cities?.[army.cityId];
+  const garrisonBefore = home ? Math.round(Number(home.troops) || 0) : 0;
+  const r = strategyFormup(state, cfg, makeCtx(state), {
+    armyId: army.id, generals: [state.generals[0].id, 0, 0], soldiers: [100, 0, 0],
+  });
+  assert.ok(r.ok, `减编应成功: ${JSON.stringify(r)}`);
+  assert.equal(army.soldiers.reduce((s, v) => s + v, 0), 100);
+  if (home) {
+    assert.equal(Math.round(Number(home.troops) || 0), garrisonBefore + (totalBefore - 100),
+      '余兵必须退回驻城守军，不允许蒸发');
+    assert.equal(r.returnedToCity, totalBefore - 100);
+  }
+});
+
 test('行军粮：优先扣出发城城库，池扣部分加 25% 损耗', () => {
   const state = freshCao();
   const econ = ensureCityEcon(state);

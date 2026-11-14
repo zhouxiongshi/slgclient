@@ -274,28 +274,34 @@ function assemble(layer, heroes, fateGroups, skillHeroes, cfgIdOf, extraTable) {
       if (b.b === p.name && byName.has(b.a)) bonds.push({ type: b.type, target: b.a });
     }
     const skill = skillHeroes[p.name];
-    /* ★ M3-8（GDD §9 战法 80 条 + §7 武将装配）：core 层武将从单条专属扩到 2~3 条——
-       第 1 条仍是 hero-skills.json 专属映射；第 2/3 条从 library-skills-extra 新池
-       按五维倾向确定性选取（谋士配谋略/治疗、武将配兵刃；高维配指挥/被动光环）。
-       禁随机：只走 fnv1a(名字) 稳定散列，重跑产物逐位一致。 */
+    /* ★ M3-8 + M4-4 平衡修复：战法数量按「五维强度」而非只按 layer。
+       系统性验收发现 minor 层五维均值 383.5 反超 core 346.4（层是剧情权重不是强度档），
+       旧规则给 core 每人 2~3 条、其余 117 位高维武将 0 条，强度与战法完全脱节。
+       新规则（确定性 fnv1a，禁随机）：
+         ① 专属映射保底 1 条；② 五维和 ≥340 或 core → 配 1 条倾向战法；
+         ③ 高武 ≥90 强制兵刃、高智 ≥90 强制谋略（矫正错配）；
+         ④ 五维和 ≥390（或 core ≥340）→ 再配指挥/被动光环，core 无论如何凑满 2 条。 */
     let skills = skill ? [skill] : [];
-    if (layer === 'core' && extraTable) {
+    if (extraTable) {
       const fiveSum = p.five.reduce((a, b) => a + b, 0);
       const wu = p.five[1], zhi = p.five[2];
-      // 第 2 条：按智力/武力倾向从伤害+治疗池选
-      const prefer = zhi >= wu
-        ? ['STRATEGY_DAMAGE', 'HEAL']
-        : ['PHYSICAL_DAMAGE', 'HEAL'];
+      // 高维强制矫正优先于一般倾向；避免「武力 95 却只带辅助/谋略」
+      let prefer;
+      if (wu >= 90) prefer = ['PHYSICAL_DAMAGE'];
+      else if (zhi >= 90) prefer = ['STRATEGY_DAMAGE'];
+      else prefer = zhi >= wu ? ['STRATEGY_DAMAGE', 'HEAL'] : ['PHYSICAL_DAMAGE', 'HEAL'];
       const pool2 = extraTable.skills.filter((s) =>
         s.kernel.effects.some((e) => prefer.includes(e.effect_type)) && !skills.includes(s.cfgId));
-      if (pool2.length) {
+      if ((layer === 'core' || fiveSum >= 340) && pool2.length) {
         const pick2 = pool2[fnv1a(p.name) % pool2.length];
         skills.push(pick2.cfgId);
       }
-      // 第 3 条：五维总和高（≥340）的 core 配指挥/被动光环；无专属映射的 core 无论如何凑满 2 条
       const pool3 = extraTable.skills.filter((s) =>
         ['指挥', '被动'].includes(s.kernel.skill_class) && !skills.includes(s.cfgId));
-      if ((fiveSum >= 340 || skills.length < 2) && pool3.length) {
+      const needAura = layer === 'core'
+        ? (fiveSum >= 340 || skills.length < 2)
+        : fiveSum >= 390;
+      if (needAura && pool3.length) {
         const pick3 = pool3[fnv1a(`${p.name}|cmd`) % pool3.length];
         skills.push(pick3.cfgId);
       }
@@ -364,8 +370,8 @@ function build(srcPath) {
 
   const heroes = [
     ...assemble('core', core, fateGroups, skillHeroes, cfgIdOf, extraTable),
-    ...assemble('important', important, fateGroups, skillHeroes, cfgIdOf, null),
-    ...assemble('minor', minor, fateGroups, skillHeroes, cfgIdOf, null),
+    ...assemble('important', important, fateGroups, skillHeroes, cfgIdOf, extraTable),
+    ...assemble('minor', minor, fateGroups, skillHeroes, cfgIdOf, extraTable),
   ];
 
   const meta = {
@@ -378,7 +384,7 @@ function build(srcPath) {
       yili: '政×0.6+魅×0.4（relations.json 规则）',
       xiangxing: '势力锚点+名字FNV散列±12，环形1..149',
       aptitude: '兵种适性按五维/籍贯/势力派生，界面须标「本作设定」',
-      skills: 'core=专属(hero-skills.json)+新池倾向2条(五维≥340再配指挥/被动)；important/minor=专属1条',
+      skills: 'M4-4 按五维强度装配：专属1条 + 五维和≥340(或core)配倾向战法(高武≥90强制兵刃/高智≥90强制谋略) + 五维和≥390配光环；core 保底2条',
     },
   };
   return { version: 1, meta, heroes };

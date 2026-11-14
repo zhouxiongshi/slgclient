@@ -1701,10 +1701,26 @@ export function strategyFormup(state, cfg, ctx, { armyId, generals, soldiers }) 
   }
   const troops = [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(soldiers?.[i]) || 0)));
   const cur = (army.soldiers || []).map((v) => Math.max(0, Math.floor(Number(v) || 0)));
-  if (troops.reduce((s, v) => s + v, 0) > cur.reduce((s, v) => s + v, 0)) {
-    return { ok: false, reason: 'too_many_troops', have: cur.reduce((s, v) => s + v, 0) };
+  const totalCur = cur.reduce((s, v) => s + v, 0);
+  const totalNew = troops.reduce((s, v) => s + v, 0);
+  if (totalNew > totalCur) {
+    return { ok: false, reason: 'too_many_troops', have: totalCur };
   }
-  // 兵力从该队现有兵重分：差额部分视为留在营（cur - troops）
+  /* 系统性验收（M4-4）发现的真缺陷：UI（panels-ui formupBox）允许三槽全填 0，
+     旧实现直接把 army.soldiers 清零、差额无任何入账——兵凭空蒸发。
+     修正：① 全空编队拒绝；② 差额按注释「留在营」退回驻城守军，找不到驻城就留回首槽。 */
+  if (totalNew === 0) return { ok: false, reason: 'empty_formup' };
+  const diff = totalCur - totalNew;
+  const home = st.cities?.[army.cityId];
+  let returnedToCity = 0;
+  if (diff > 0) {
+    if (home) {
+      home.troops = Math.max(0, Math.round(Number(home.troops) || 0) + diff);
+      returnedToCity = diff;
+    } else {
+      troops[0] += diff; // 无驻城记录时兵留队里，绝不蒸发
+    }
+  }
   army.generals = slots;
   army.soldiers = troops;
   army.con_times = [0, 0, 0];
@@ -1713,10 +1729,11 @@ export function strategyFormup(state, cfg, ctx, { armyId, generals, soldiers }) 
     const g = (state.generals || []).find((x) => x.id === gid);
     return g ? (cfg?.generalByCfg?.get(g.cfgId)?.name || `武将${g.id}`) : '';
   });
-  recordEvent(state, `整编队伍#${army.order}：${names.map((n, i) => n ? `${ARMS_NAMES[i + 1]}·${n}(${troops[i]})` : '').filter(Boolean).join('、') || '空编'}。`);
+  recordEvent(state, `整编队伍#${army.order}：${names.map((n, i) => n ? `${ARMS_NAMES[i + 1]}·${n}(${troops[i]})` : '').filter(Boolean).join('、') || '空编'}。${returnedToCity ? `余兵 ${returnedToCity} 退回驻城。` : ''}`);
   ctx.push?.('army.push', army);
   return {
     ok: true, army: { id: army.id, order: army.order, generals: names, soldiers: troops },
+    returnedToCity,
     apt: slots.map((gid, i) => {
       const g = (state.generals || []).find((x) => x.id === gid);
       return g ? Math.round(armsApt(g, i + 1) * 100) : 0;
