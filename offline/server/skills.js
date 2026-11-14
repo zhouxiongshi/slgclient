@@ -47,6 +47,18 @@ if (existsSync(LIBRARY_EXTRA)) {
     if (!TABLE.skills.some((x) => x.cfgId === s.cfgId || x.name === s.name)) TABLE.skills.push(s);
   }
 }
+/* ★ 全武将初始战法：tools/build-innate-skills.mjs 由率土之滨官网 W0 战法表
+   生成，按效果范式去重后覆盖 conf/campaign/hero-skills.json 的 424 位武将。
+   文件独立落盘，运行时不依赖 battle-kit；缺文件时退化为原有 81 条战法。 */
+const INNATE_PATH = join(ROOT, 'conf', 'innate-skills.json');
+let INNATE_SKILLS = [];
+if (existsSync(INNATE_PATH)) {
+  const innate = JSON.parse(readFileSync(INNATE_PATH, 'utf8'));
+  for (const s of innate.skills || []) {
+    if (!TABLE.skills.some((x) => x.cfgId === s.cfgId || x.name === s.name)) TABLE.skills.push(s);
+  }
+  INNATE_SKILLS = innate.skills || [];
+}
 export const SKILLS = TABLE.skills;
 export const SKILL_BY_ID = new Map(SKILLS.map((s) => [s.cfgId, s]));
 export const LEVEL_COUNT = TABLE.levelCount;
@@ -69,6 +81,11 @@ const RANGE_CONF = (() => {
 const RANGE_OVERRIDE = new Map(
   Object.entries(RANGE_CONF.ranges || {}).map(([k, v]) => [Number(k), Number(v) || 9]),
 );
+/* 全武将初始战法的有效距离取官网 distance（构建器写进 ui.range），不走
+   「效果类型 × 单/群体」的通用推导，保证描述里的「有效距离 N」= 内核射程。 */
+for (const s of INNATE_SKILLS) {
+  if (Number(s.ui?.range) > 0) RANGE_OVERRIDE.set(Number(s.cfgId), Number(s.ui.range));
+}
 
 /** 群体目标类型（t7/t8/t9）；单体（t6）。我方目标一律视作无距离。 */
 function isGroupTarget(tt) { return ['7', '8', '9'].includes(tt); }

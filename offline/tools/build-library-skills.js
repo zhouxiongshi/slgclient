@@ -178,5 +178,18 @@ for (const id of Object.values(heroSkill)) used[id] = (used[id] || 0) + 1;
 for (const s of kept) s.ui.limit = Math.max(1, used[s.cfgId] || 1);
 
 writeFileSync(resolve(ROOT, 'conf', 'library-skills.json'), JSON.stringify({ count: kept.length, dropped: skills.length - kept.length, skills: kept }));
-writeFileSync(resolve(ROOT, 'conf', 'campaign', 'hero-skills.json'), JSON.stringify(heroSkill, null, 2));
+
+/* ★ 领地边界：conf/campaign/hero-skills.json 现在由 tools/build-innate-skills.mjs
+   统一生成（424 位武将全量，按官网战法效果范式 + 证据表落盘）。本脚本手里只有
+   adapted/hero_skill_map.csv 的 A2「推荐适配」51 人，若照旧无条件回写，会把
+   全量表静默覆盖成 51 人的旧口径——玩家侧表现就是「大半武将初始战法又变空」。
+   因此默认不写，要写必须显式加 --force-hero-map。 */
+const FORCE_HERO_MAP = process.argv.includes('--force-hero-map');
+if (FORCE_HERO_MAP) {
+  writeFileSync(resolve(ROOT, 'conf', 'campaign', 'hero-skills.json'), JSON.stringify(heroSkill, null, 2));
+  console.log(`⚠ --force-hero-map：已用 A2 推荐适配表覆盖 hero-skills.json（${Object.keys(heroSkill).length} 位，非全量）`);
+} else {
+  console.log('※ 跳过 conf/campaign/hero-skills.json：该表归 tools/build-innate-skills.mjs 全量生成'
+    + `（本脚本只读到 ${Object.keys(heroSkill).length} 位 A2 推荐适配）。要强行覆盖请加 --force-hero-map。`);
+}
 console.log(`skills ${kept.length} dropped ${skills.length - kept.length} heroes ${Object.keys(heroSkill).length}`);

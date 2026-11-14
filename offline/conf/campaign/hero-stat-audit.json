@@ -1,0 +1,195 @@
+{
+ "version": 1,
+ "generatedBy": "tools/normalize-hero-stats.mjs",
+ "baselineQuantiles": {
+  "3": {
+   "n": 61,
+   "baseP50": 21200,
+   "baseP75": 24600,
+   "baseP90": 25300,
+   "growP50": 182,
+   "growP90": 249
+  },
+  "4": {
+   "n": 156,
+   "baseP50": 30800,
+   "baseP75": 34600,
+   "baseP90": 36300,
+   "growP50": 288,
+   "growP90": 336
+  },
+  "5": {
+   "n": 92,
+   "baseP50": 34900,
+   "baseP75": 36400,
+   "baseP90": 37300,
+   "growP50": 339,
+   "growP90": 390
+  }
+ },
+ "rule": "同星级五维和中位 × 0.92 为上限，等比缩放；成长率只降不升；同名多版本按星级单调（低星 ≤ 前一档 × 0.94）",
+ "note": "主角只改 conf/campaign/protagonist.json；M4-8 之后战斗/内政/外交/行军统一由 gameStatOf 读它，无需改领域模块。",
+ "changes": [
+  {
+   "label": "夏侯惇 100449",
+   "star": 5,
+   "before": {
+    "base": 32100,
+    "grow": 312
+   },
+   "after": {
+    "base": 32100,
+    "grow": 312
+   },
+   "ceiling": {
+    "base": 32100,
+    "grow": 312
+   },
+   "dimsBefore": null
+  },
+  {
+   "label": "黄盖 100587",
+   "star": 5,
+   "before": {
+    "base": 32100,
+    "grow": 239
+   },
+   "after": {
+    "base": 32100,
+    "grow": 239
+   },
+   "ceiling": {
+    "base": 32100,
+    "grow": 312
+   },
+   "dimsBefore": null
+  },
+  {
+   "label": "夏侯惇 100079",
+   "star": 4,
+   "before": {
+    "base": 28300,
+    "grow": 265
+   },
+   "after": {
+    "base": 28300,
+    "grow": 265
+   },
+   "ceiling": {
+    "base": 28300,
+    "grow": 265
+   },
+   "dimsBefore": null
+  },
+  {
+   "label": "黄盖 100162",
+   "star": 4,
+   "before": {
+    "base": 28300,
+    "grow": 265
+   },
+   "after": {
+    "base": 28300,
+    "grow": 265
+   },
+   "ceiling": {
+    "base": 28300,
+    "grow": 265
+   },
+   "dimsBefore": null
+  },
+  {
+   "label": "黄盖 100439",
+   "star": 4,
+   "before": {
+    "base": 26600,
+    "grow": 265
+   },
+   "after": {
+    "base": 26600,
+    "grow": 265
+   },
+   "ceiling": {
+    "base": 28300,
+    "grow": 265
+   },
+   "dimsBefore": null
+  },
+  {
+   "label": "主公 880001",
+   "star": 4,
+   "before": {
+    "base": 28300,
+    "grow": 180
+   },
+   "after": {
+    "base": 28300,
+    "grow": 180
+   },
+   "ceiling": {
+    "base": 28300,
+    "grow": 265
+   },
+   "dimsBefore": null
+  }
+ ],
+ "monotonic": [
+  {
+   "name": "夏侯惇",
+   "cfgId": 100449,
+   "star": 5,
+   "base": 32100,
+   "grow": 312,
+   "ceiling": null
+  },
+  {
+   "name": "夏侯惇",
+   "cfgId": 100079,
+   "star": 4,
+   "base": 28300,
+   "grow": 265,
+   "ceiling": 30200
+  },
+  {
+   "name": "黄盖",
+   "cfgId": 100587,
+   "star": 5,
+   "base": 32100,
+   "grow": 239,
+   "ceiling": null
+  },
+  {
+   "name": "黄盖",
+   "cfgId": 100162,
+   "star": 4,
+   "base": 28300,
+   "grow": 265,
+   "ceiling": 30200
+  },
+  {
+   "name": "黄盖",
+   "cfgId": 100439,
+   "star": 4,
+   "base": 26600,
+   "grow": 265,
+   "ceiling": 26600
+  }
+ ],
+ "quantilesAfter": {
+  "3": {
+   "n": 61,
+   "baseP50": 21200,
+   "baseP90": 25300
+  },
+  "4": {
+   "n": 156,
+   "baseP50": 30800,
+   "baseP90": 36300
+  },
+  "5": {
+   "n": 92,
+   "baseP50": 34800,
+   "baseP90": 37300
+  }
+ }
+}

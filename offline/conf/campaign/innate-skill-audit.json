@@ -1,0 +1,7536 @@
+{
+ "version": 1,
+ "generatedBy": "tools/build-innate-skills.mjs",
+ "sourceSha256": "31bb6be423262cfa:77d3d1491985dcd0",
+ "license": "参考用：战法名来自率土之滨官网公开名录，描述与数值为本游戏重写/内核档位近似；仅本地学习与内部对照，对外发布须换皮",
+ "totals": {
+  "officialSkills": 642,
+  "translatable": 610,
+  "signatures": 227,
+  "representatives": 96,
+  "heroes": 424,
+  "w0Linked": 139,
+  "derived": 237,
+  "authored": 1
+ },
+ "caveat": "官网战法表只给出「拆解/传承出处」，没有「武将自带战法」逐人对照表；本表匹配的是效果范式，不对史实归属作断言。",
+ "heroes": [
+  {
+   "name": "丁原",
+   "cfgIds": [
+    100099
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920061,
+   "innateName": "反计",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200075,
+    200213
+   ],
+   "sourceName": "反计",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "丁夫人",
+   "cfgIds": [
+    100077
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920063,
+   "innateName": "佯攻",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200227
+   ],
+   "sourceName": "诱敌",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "丁奉",
+   "cfgIds": [
+    240090
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920079,
+   "innateName": "扬威",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200976
+   ],
+   "sourceName": "乘间击隙",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "丁封",
+   "cfgIds": [
+    100165,
+    100481
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920062,
+   "innateName": "疾风迅雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200646
+   ],
+   "sourceName": "疾风迅雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "严氏",
+   "cfgIds": [
+    100046
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920058,
+   "innateName": "叫阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200913,
+    200906,
+    200679
+   ],
+   "sourceName": "叫阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "严白虎",
+   "cfgIds": [
+    100508
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920060,
+   "innateName": "战必断金",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200228,
+    200230
+   ],
+   "sourceName": "近攻",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "严颜",
+   "cfgIds": [
+    100134
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920064,
+   "innateName": "始计",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200687,
+    200862,
+    300002
+   ],
+   "sourceName": "垒实迎击",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "乐进",
+   "cfgIds": [
+    100144,
+    100145
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920077,
+   "innateName": "破魂",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200107
+   ],
+   "sourceName": "三军齐出",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "于吉",
+   "cfgIds": [
+    100340
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920056,
+   "innateName": "势无虚动",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200949
+   ],
+   "sourceName": "翕处还张",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "于禁",
+   "cfgIds": [
+    100143
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920059,
+   "innateName": "反计之策",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200220,
+    200737,
+    200852
+   ],
+   "sourceName": "以诱待来",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "伊籍",
+   "cfgIds": [
+    100199
+   ],
+   "role": "BUFF",
+   "star": 2,
+   "innateCfgId": 920066,
+   "innateName": "美人计",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200853,
+    200954
+   ],
+   "sourceName": "美人计",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "伏寿",
+   "cfgIds": [
+    100552
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "破魂",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "伏皇后",
+   "cfgIds": [
+    100378
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920086,
+   "innateName": "勠力同心",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200967
+   ],
+   "sourceName": "勠力同心",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "何太后",
+   "cfgIds": [
+    100037
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920020,
+   "innateName": "母仪浮梦",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200037
+   ],
+   "sourceName": "母仪浮梦",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com 2015-10-21 更新公告：5星 何太后 母仪浮梦（重新设计：规避+减伤）"
+  },
+  {
+   "name": "何进",
+   "cfgIds": [
+    100098
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920059,
+   "innateName": "反计之策",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200220,
+    200737,
+    200852
+   ],
+   "sourceName": "索敌",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "侯成",
+   "cfgIds": [
+    100265
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920061,
+   "innateName": "反计",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200075,
+    200213
+   ],
+   "sourceName": "反计",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "侯选",
+   "cfgIds": [
+    100346
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920050,
+   "innateName": "甚陷不惧",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200941,
+    200939,
+    300050
+   ],
+   "sourceName": "迫近",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "傅佥",
+   "cfgIds": [
+    240135
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920073,
+   "innateName": "疏数",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200782,
+    200795,
+    200053
+   ],
+   "sourceName": "疏数",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "兀突骨",
+   "cfgIds": [
+    100519
+   ],
+   "role": "CONTROL",
+   "star": 5,
+   "innateCfgId": 920062,
+   "innateName": "疾风迅雷",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200646
+   ],
+   "sourceName": "一夫当关",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "全琮",
+   "cfgIds": [
+    100249
+   ],
+   "role": "CONTROL",
+   "star": 2,
+   "innateCfgId": 920058,
+   "innateName": "叫阵",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200913,
+    200906,
+    200679
+   ],
+   "sourceName": "索敌",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "全踪",
+   "cfgIds": [
+    100523
+   ],
+   "role": "CONTROL",
+   "star": 5,
+   "innateCfgId": 920063,
+   "innateName": "佯攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200227
+   ],
+   "sourceName": "佯攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "公孙度",
+   "cfgIds": [
+    240035
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "落雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "公孙康",
+   "cfgIds": [
+    240036
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "不攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "公孙恭",
+   "cfgIds": [
+    240064
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920060,
+   "innateName": "战必断金",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200228,
+    200230
+   ],
+   "sourceName": "战必断金",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "公孙渊",
+   "cfgIds": [
+    240047
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920071,
+   "innateName": "以诱待来",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200274
+   ],
+   "sourceName": "以诱待来",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "公孙瓒",
+   "cfgIds": [
+    100521,
+    100114,
+    100484
+   ],
+   "role": "CONTROL",
+   "star": 5,
+   "innateCfgId": 920037,
+   "innateName": "北疆白马",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200703
+   ],
+   "sourceName": "北疆白马",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：典故唯一指向（公孙瓒「白马义从」）；W0 表内为自带战法，type=指挥、effect=攻击/速度属性提高"
+  },
+  {
+   "name": "关兴&张苞",
+   "cfgIds": [
+    100398
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920080,
+   "innateName": "蓄盈待竭",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200995
+   ],
+   "sourceName": "蓄盈待竭",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "关平",
+   "cfgIds": [
+    100129
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920075,
+   "innateName": "怯心夺志",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200659
+   ],
+   "sourceName": "怯心夺志",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "关索",
+   "cfgIds": [
+    240122
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920074,
+   "innateName": "钝兵挫锐",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200658
+   ],
+   "sourceName": "雀伏",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "关羽",
+   "cfgIds": [
+    100026,
+    100451,
+    100065
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920026,
+   "innateName": "樊渊泅囚",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200769
+   ],
+   "sourceName": "樊渊泅囚",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：网易大神《五虎将·关羽篇》：中军蜀关羽 自带战法【樊渊泅囚】，群伤+全体犹豫"
+  },
+  {
+   "name": "关银屏",
+   "cfgIds": [
+    100072
+   ],
+   "role": "CONTROL",
+   "star": 5,
+   "innateCfgId": 920059,
+   "innateName": "反计之策",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200220,
+    200737,
+    200852
+   ],
+   "sourceName": "远攻秘策",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "典韦",
+   "cfgIds": [
+    100575,
+    100081
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920023,
+   "innateName": "奋不顾身",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200079
+   ],
+   "sourceName": "奋不顾身",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com 2015-10-21 更新公告：4星 典韦 奋不顾身（恢复效果上升）"
+  },
+  {
+   "name": "军士",
+   "cfgIds": [
+    100239,
+    100128,
+    100142,
+    100155,
+    100167,
+    100178,
+    100179,
+    100180,
+    100189,
+    100190,
+    100191,
+    100205,
+    100206,
+    100207,
+    100214,
+    100215,
+    100216,
+    100224,
+    100225,
+    100226,
+    100253,
+    100264,
+    100276
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 2,
+   "innateCfgId": 920076,
+   "innateName": "奇术折冲",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200977
+   ],
+   "sourceName": "奇术折冲",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "凌操",
+   "cfgIds": [
+    100218
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920053,
+   "innateName": "远攻强化",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200190,
+    200636
+   ],
+   "sourceName": "远攻强化",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "凌统",
+   "cfgIds": [
+    100426
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920094,
+   "innateName": "犒劳",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200197
+   ],
+   "sourceName": "击势",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "刘勋",
+   "cfgIds": [
+    240058
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920088,
+   "innateName": "胜兵求战",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200754
+   ],
+   "sourceName": "胜兵求战",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "刘协",
+   "cfgIds": [
+    240028
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "十面埋伏",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "刘备",
+   "cfgIds": [
+    100016,
+    100044
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920040,
+   "innateName": "桃园结义",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200784
+   ],
+   "sourceName": "桃园结义",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：典故唯一指向（刘关张桃园结义，主位为刘备）；W0 表内为自带战法，type=指挥"
+  },
+  {
+   "name": "刘宏",
+   "cfgIds": [
+    240033
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "十面埋伏",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "刘封",
+   "cfgIds": [
+    100255
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920089,
+   "innateName": "鱼鳞",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200783
+   ],
+   "sourceName": "鱼鳞",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "刘岱",
+   "cfgIds": [
+    240063
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "扬威",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "刘度",
+   "cfgIds": [
+    240072
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920058,
+   "innateName": "叫阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200913,
+    200906,
+    200679
+   ],
+   "sourceName": "叫阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "刘晔",
+   "cfgIds": [
+    100211
+   ],
+   "role": "CONTROL",
+   "star": 2,
+   "innateCfgId": 920061,
+   "innateName": "反计",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200075,
+    200213
+   ],
+   "sourceName": "反计",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "刘渊",
+   "cfgIds": [
+    240077
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "迷阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "刘焉",
+   "cfgIds": [
+    100285
+   ],
+   "role": "CONTROL",
+   "star": 2,
+   "innateCfgId": 920062,
+   "innateName": "疾风迅雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200646
+   ],
+   "sourceName": "疾风迅雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "刘琦",
+   "cfgIds": [
+    100282
+   ],
+   "role": "CONTROL",
+   "star": 2,
+   "innateCfgId": 920063,
+   "innateName": "佯攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200227
+   ],
+   "sourceName": "佯攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "刘璋",
+   "cfgIds": [
+    240001
+   ],
+   "role": "CONTROL",
+   "star": 5,
+   "innateCfgId": 920060,
+   "innateName": "战必断金",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200228,
+    200230
+   ],
+   "sourceName": "战必断金",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "刘禅",
+   "cfgIds": [
+    240029
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "合纵连横",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "刘繇",
+   "cfgIds": [
+    240045
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "十面埋伏",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "刘虞",
+   "cfgIds": [
+    100104
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920051,
+   "innateName": "恃强淬锋",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200299,
+    200654
+   ],
+   "sourceName": "恃强淬锋",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "刘表",
+   "cfgIds": [
+    100107
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "筹策绝道",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "刘豹",
+   "cfgIds": [
+    100506
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920058,
+   "innateName": "叫阵",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200913,
+    200906,
+    200679
+   ],
+   "sourceName": "远射",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "刘辩",
+   "cfgIds": [
+    240034
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "不攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "十常士",
+   "cfgIds": [
+    100002
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920069,
+   "innateName": "垒实迎击",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200900,
+    200734,
+    200261
+   ],
+   "sourceName": "浑水摸鱼",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "华佗",
+   "cfgIds": [
+    100369
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "擅兵不寡",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "华雄",
+   "cfgIds": [
+    100049
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920015,
+   "innateName": "重斩",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200048
+   ],
+   "sourceName": "重斩",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com 2015-10-21 更新公告：4星 华雄 重斩（发动率上升）"
+  },
+  {
+   "name": "南华老仙",
+   "cfgIds": [
+    100124
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "落雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "卞夫人",
+   "cfgIds": [
+    100076
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920063,
+   "innateName": "佯攻",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200227
+   ],
+   "sourceName": "迷阵",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "卢植",
+   "cfgIds": [
+    100007
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920067,
+   "innateName": "白刃",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200691
+   ],
+   "sourceName": "步步为营",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "司马乂",
+   "cfgIds": [
+    240081
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920092,
+   "innateName": "速战兵法",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200621
+   ],
+   "sourceName": "速战兵法",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "司马伷",
+   "cfgIds": [
+    240099
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920057,
+   "innateName": "合纵连横",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200964
+   ],
+   "sourceName": "合纵连横",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "司马师",
+   "cfgIds": [
+    240089
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "及锋而试",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "司马懿",
+   "cfgIds": [
+    100472,
+    100590
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "避锐治气",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "司马攸",
+   "cfgIds": [
+    240084
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "亡命一搏",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "司马昭",
+   "cfgIds": [
+    240103
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "及锋而试",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "司马炎",
+   "cfgIds": [
+    240023
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "及锋而试",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "吕姬",
+   "cfgIds": [
+    100055,
+    100060
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920059,
+   "innateName": "反计之策",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200220,
+    200737,
+    200852
+   ],
+   "sourceName": "锋矢",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "吕岱",
+   "cfgIds": [
+    240008
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "迷阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "吕布",
+   "cfgIds": [
+    100003,
+    100010,
+    100479
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920000,
+   "innateName": "辕门射戟",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200012
+   ],
+   "sourceName": "辕门射戟",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com 2018-10-18《S2SP武将攻略》：五星·吕布·群·弓 自带战法辕门射戟"
+  },
+  {
+   "name": "吕据",
+   "cfgIds": [
+    240114
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920055,
+   "innateName": "令无空悬",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200280
+   ],
+   "sourceName": "令无空悬",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "吕范",
+   "cfgIds": [
+    100240
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920072,
+   "innateName": "胜负先征",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200981
+   ],
+   "sourceName": "胜负先征",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "吕蒙",
+   "cfgIds": [
+    100035,
+    100166
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920008,
+   "innateName": "白衣渡江",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200648
+   ],
+   "sourceName": "白衣渡江",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com / 网易大神攻略：五星·吕蒙 自带战法白衣渡江（怯战+犹豫）"
+  },
+  {
+   "name": "吕虔",
+   "cfgIds": [
+    240110
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "落雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "吴兰",
+   "cfgIds": [
+    100136
+   ],
+   "role": "CONTROL",
+   "star": 3,
+   "innateCfgId": 920061,
+   "innateName": "反计",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200075,
+    200213
+   ],
+   "sourceName": "反计",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "吴夫人",
+   "cfgIds": [
+    100091
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "落雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "吴巨",
+   "cfgIds": [
+    240069
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920081,
+   "innateName": "临危",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200728
+   ],
+   "sourceName": "临危",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "吴懿",
+   "cfgIds": [
+    100203
+   ],
+   "role": "BUFF",
+   "star": 2,
+   "innateCfgId": 920087,
+   "innateName": "远攻秘策",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200210
+   ],
+   "sourceName": "远攻秘策",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "吾彦",
+   "cfgIds": [
+    240086
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920065,
+   "innateName": "锋矢",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200718,
+    200716
+   ],
+   "sourceName": "锋矢",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "吾粲",
+   "cfgIds": [
+    100528
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920093,
+   "innateName": "固阵",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200193
+   ],
+   "sourceName": "衡轭",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "周姬",
+   "cfgIds": [
+    100032
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920049,
+   "innateName": "一夫当关",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200674,
+    200265,
+    200816
+   ],
+   "sourceName": "始计",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "周泰",
+   "cfgIds": [
+    100086
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920078,
+   "innateName": "飒沓如星",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200929
+   ],
+   "sourceName": "白刃",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "周浚",
+   "cfgIds": [
+    240115
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920070,
+   "innateName": "百战无怯",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200252
+   ],
+   "sourceName": "百战无怯",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "周瑜",
+   "cfgIds": [
+    100031
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920012,
+   "innateName": "玄武洰流",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200031
+   ],
+   "sourceName": "玄武洰流",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com 2015-10-21 更新公告：5星 周瑜 玄武洰流（怯战回合数上升）"
+  },
+  {
+   "name": "唐彬",
+   "cfgIds": [
+    240107
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "十面埋伏",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "士徽",
+   "cfgIds": [
+    240066
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920077,
+   "innateName": "破魂",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200107
+   ],
+   "sourceName": "破魂",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "士燮",
+   "cfgIds": [
+    240037
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "不攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "夏侯尚",
+   "cfgIds": [
+    240022
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920090,
+   "innateName": "远攻之策",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200209
+   ],
+   "sourceName": "远攻之策",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "夏侯惇",
+   "cfgIds": [
+    100449,
+    100079
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920022,
+   "innateName": "拔箭啖睛",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200077
+   ],
+   "sourceName": "拔箭啖睛",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com 2015-10-21 更新公告：4星 夏侯惇 拔箭啖睛（分兵效果上升）"
+  },
+  {
+   "name": "夏侯月姬",
+   "cfgIds": [
+    100326
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920062,
+   "innateName": "疾风迅雷",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200646
+   ],
+   "sourceName": "索敌",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "夏侯渊",
+   "cfgIds": [
+    100435,
+    100420
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920034,
+   "innateName": "虎步关右",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200655
+   ],
+   "sourceName": "虎步关右",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：典故唯一指向（夏侯渊「虎步关右」为史书原话）；W0 表内为自带战法，type=主动、effect=攻击伤害提高"
+  },
+  {
+   "name": "夏侯霸",
+   "cfgIds": [
+    240019
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920091,
+   "innateName": "移花接木",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200239
+   ],
+   "sourceName": "筹策绝道",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "夏恽",
+   "cfgIds": [
+    100170
+   ],
+   "role": "CONTROL",
+   "star": 3,
+   "innateCfgId": 920060,
+   "innateName": "战必断金",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200228,
+    200230
+   ],
+   "sourceName": "战必断金",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "大乔",
+   "cfgIds": [
+    100095
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "三军之众",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "大乔&小乔",
+   "cfgIds": [
+    100424
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920048,
+   "innateName": "愈战愈勇",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200863,
+    200643,
+    200034
+   ],
+   "sourceName": "愈战愈勇",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "太史慈",
+   "cfgIds": [
+    100090
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920081,
+   "innateName": "临危",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200728
+   ],
+   "sourceName": "钝兵挫锐",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "姜维",
+   "cfgIds": [
+    100074
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920068,
+   "innateName": "敛众定气",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200267,
+    200135,
+    200139
+   ],
+   "sourceName": "大赏三军",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "孔伷",
+   "cfgIds": [
+    240062
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "十面埋伏",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "孔融",
+   "cfgIds": [
+    100103
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "破胆",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "孙乾",
+   "cfgIds": [
+    100200
+   ],
+   "role": "BUFF",
+   "star": 2,
+   "innateCfgId": 920095,
+   "innateName": "谨言",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200670
+   ],
+   "sourceName": "谨言",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "孙亮",
+   "cfgIds": [
+    240027
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "落雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "孙休",
+   "cfgIds": [
+    240026
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "迷阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "孙坚",
+   "cfgIds": [
+    100033,
+    100043,
+    100088
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920041,
+   "innateName": "江东虎将XP",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    300017
+   ],
+   "sourceName": "江东虎将XP",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：典故指向（孙坚为江东基业开创者）；W0 表内为自带战法，type=指挥"
+  },
+  {
+   "name": "孙奂",
+   "cfgIds": [
+    240113
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "落雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "孙尚香",
+   "cfgIds": [
+    100036
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "反计之策",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "孙权",
+   "cfgIds": [
+    100030
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920054,
+   "innateName": "运筹帷幄",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200181,
+    200183
+   ],
+   "sourceName": "避锐治气",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "孙桓",
+   "cfgIds": [
+    100243
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920063,
+   "innateName": "佯攻",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200227
+   ],
+   "sourceName": "设伏",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "孙瑜",
+   "cfgIds": [
+    100247
+   ],
+   "role": "CONTROL",
+   "star": 2,
+   "innateCfgId": 920062,
+   "innateName": "疾风迅雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200646
+   ],
+   "sourceName": "疾风迅雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "孙皓",
+   "cfgIds": [
+    240031
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "迷阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "孙礼",
+   "cfgIds": [
+    240094
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920052,
+   "innateName": "衡轭",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200781,
+    200089
+   ],
+   "sourceName": "衡轭",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "孙策",
+   "cfgIds": [
+    100450,
+    100089
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920014,
+   "innateName": "小霸王",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200087
+   ],
+   "sourceName": "小霸王",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com 2015-10-21 更新公告：4星 孙策 小霸王（伤害值略为下降）"
+  },
+  {
+   "name": "孙静",
+   "cfgIds": [
+    100223
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "十面埋伏",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "孙韶",
+   "cfgIds": [
+    240093
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920051,
+   "innateName": "恃强淬锋",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200299,
+    200654
+   ],
+   "sourceName": "恃强淬锋",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "孟优",
+   "cfgIds": [
+    100489
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920091,
+   "innateName": "移花接木",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200239
+   ],
+   "sourceName": "临危",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "孟获",
+   "cfgIds": [
+    100488
+   ],
+   "role": "CONTROL",
+   "star": 5,
+   "innateCfgId": 920043,
+   "innateName": "南中平蛮",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200653
+   ],
+   "sourceName": "南中平蛮",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：典故指向（孟获为南中蛮王）；W0 表内为自带战法，type=主动"
+  },
+  {
+   "name": "孟达",
+   "cfgIds": [
+    100254
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920067,
+   "innateName": "白刃",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200691
+   ],
+   "sourceName": "白刃",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "宋典",
+   "cfgIds": [
+    100177
+   ],
+   "role": "CONTROL",
+   "star": 3,
+   "innateCfgId": 920060,
+   "innateName": "战必断金",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200228,
+    200230
+   ],
+   "sourceName": "战必断金",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "宋宪",
+   "cfgIds": [
+    100338
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920053,
+   "innateName": "远攻强化",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200190,
+    200636
+   ],
+   "sourceName": "远攻强化",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "宋建",
+   "cfgIds": [
+    240048
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920056,
+   "innateName": "势无虚动",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200949
+   ],
+   "sourceName": "势无虚动",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "宋谦",
+   "cfgIds": [
+    100241
+   ],
+   "role": "CONTROL",
+   "star": 2,
+   "innateCfgId": 920061,
+   "innateName": "反计",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200075,
+    200213
+   ],
+   "sourceName": "反计",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "审配",
+   "cfgIds": [
+    100186,
+    100272
+   ],
+   "role": "CONTROL",
+   "star": 3,
+   "innateCfgId": 920059,
+   "innateName": "反计之策",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200220,
+    200737,
+    200852
+   ],
+   "sourceName": "觑隙",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "小乔",
+   "cfgIds": [
+    100094
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920047,
+   "innateName": "双艳",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200652
+   ],
+   "sourceName": "双艳",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：典故指向（二乔并称「双艳」）；W0 表内为自带战法，type=主动"
+  },
+  {
+   "name": "山贼",
+   "cfgIds": [
+    100277
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 1,
+   "innateCfgId": 920078,
+   "innateName": "飒沓如星",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200929
+   ],
+   "sourceName": "飒沓如星",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "左慈",
+   "cfgIds": [
+    100056
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "令无空悬",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "带来洞主",
+   "cfgIds": [
+    100490
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920093,
+   "innateName": "固阵",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200193
+   ],
+   "sourceName": "强攻兵法",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "庞德",
+   "cfgIds": [
+    100586,
+    100084
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920069,
+   "innateName": "垒实迎击",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200900,
+    200734,
+    200261
+   ],
+   "sourceName": "疾击其后",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "庞统",
+   "cfgIds": [
+    100477,
+    100069
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920002,
+   "innateName": "密谋定蜀",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200693
+   ],
+   "sourceName": "密谋定蜀",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com 2018-10-18《S2SP武将攻略》：五星·庞统·蜀·步 自带战法密谋定蜀"
+  },
+  {
+   "name": "廖化",
+   "cfgIds": [
+    100256
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920064,
+   "innateName": "始计",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200687,
+    200862,
+    300002
+   ],
+   "sourceName": "始计",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "张任",
+   "cfgIds": [
+    100351
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920075,
+   "innateName": "怯心夺志",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200659
+   ],
+   "sourceName": "箭岚",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "张勋",
+   "cfgIds": [
+    100117
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920058,
+   "innateName": "叫阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200913,
+    200906,
+    200679
+   ],
+   "sourceName": "叫阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "张奂",
+   "cfgIds": [
+    100041
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920011,
+   "innateName": "威震北疆",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200041
+   ],
+   "sourceName": "威震北疆",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com 2015-10-21 更新公告：4星 张奂 威震北疆（重新设计为主动）"
+  },
+  {
+   "name": "张姬",
+   "cfgIds": [
+    100358
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920079,
+   "innateName": "扬威",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200976
+   ],
+   "sourceName": "钝兵挫锐",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "张宁",
+   "cfgIds": [
+    100474
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920076,
+   "innateName": "奇术折冲",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200977
+   ],
+   "sourceName": "始计",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "张宝",
+   "cfgIds": [
+    100430,
+    100562
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920070,
+   "innateName": "百战无怯",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200252
+   ],
+   "sourceName": "众谋不懈",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "张嶷",
+   "cfgIds": [
+    240007
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "不攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "张恭",
+   "cfgIds": [
+    100175
+   ],
+   "role": "CONTROL",
+   "star": 3,
+   "innateCfgId": 920062,
+   "innateName": "疾风迅雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200646
+   ],
+   "sourceName": "疾风迅雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "张悌",
+   "cfgIds": [
+    240096
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "落雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "张既",
+   "cfgIds": [
+    240087
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "十面埋伏",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "张春华",
+   "cfgIds": [
+    100029
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920045,
+   "innateName": "六宫无怨XP",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    302073
+   ],
+   "sourceName": "六宫无怨XP",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：典故指向（张春华为司马懿正妻）；W0 表内为自带战法，type=指挥"
+  },
+  {
+   "name": "张昭",
+   "cfgIds": [
+    100161
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "连环",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "张曼成",
+   "cfgIds": [
+    100054
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920080,
+   "innateName": "蓄盈待竭",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200995
+   ],
+   "sourceName": "蓄盈待竭",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "张机",
+   "cfgIds": [
+    100526
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "兵无常势",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "张杨",
+   "cfgIds": [
+    240038
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920072,
+   "innateName": "胜负先征",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200981
+   ],
+   "sourceName": "胜负先征",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "张梁",
+   "cfgIds": [
+    100051
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920073,
+   "innateName": "疏数",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200782,
+    200795,
+    200053
+   ],
+   "sourceName": "众谋不懈",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "张横",
+   "cfgIds": [
+    100342
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920089,
+   "innateName": "鱼鳞",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200783
+   ],
+   "sourceName": "拒盾",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "张济",
+   "cfgIds": [
+    240039
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920055,
+   "innateName": "令无空悬",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200280
+   ],
+   "sourceName": "令无空悬",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "张燕",
+   "cfgIds": [
+    100339
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920065,
+   "innateName": "锋矢",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200718,
+    200716
+   ],
+   "sourceName": "锋矢",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "张特",
+   "cfgIds": [
+    240011
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920050,
+   "innateName": "甚陷不惧",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200941,
+    200939,
+    300050
+   ],
+   "sourceName": "甚陷不惧",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "张纮",
+   "cfgIds": [
+    100160
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "不攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "张绣",
+   "cfgIds": [
+    100268,
+    100593
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920042,
+   "innateName": "北地枪王",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200096
+   ],
+   "sourceName": "北地枪王",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：典故唯一指向（张绣「北地枪王」）；W0 表内为自带战法，type=追击"
+  },
+  {
+   "name": "张翼",
+   "cfgIds": [
+    240108
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920088,
+   "innateName": "胜兵求战",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200754
+   ],
+   "sourceName": "胜兵求战",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "张角",
+   "cfgIds": [
+    100008
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920030,
+   "innateName": "黄天当立",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200008
+   ],
+   "sourceName": "黄天当立",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：看个号《五星武将梯度解析》：张角 战法黄天当立（伤害+属性削弱）"
+  },
+  {
+   "name": "张超",
+   "cfgIds": [
+    240043
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "十面埋伏",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "张辽",
+   "cfgIds": [
+    100027,
+    100050
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920028,
+   "innateName": "其疾如风",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200027
+   ],
+   "sourceName": "其疾如风",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：网易号《张辽全面解析》：张辽 自带战法其疾如风（提速+连击）"
+  },
+  {
+   "name": "张邈",
+   "cfgIds": [
+    240042
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "扬威",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "张郃",
+   "cfgIds": [
+    100083,
+    100123
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920095,
+   "innateName": "谨言",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200670
+   ],
+   "sourceName": "战必断金",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "张飞",
+   "cfgIds": [
+    100022,
+    100068
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920013,
+   "innateName": "长坂之吼",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200022
+   ],
+   "sourceName": "长坂之吼",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com 2015-10-21 更新公告：5星 张飞 长坂之吼（发动率上升）"
+  },
+  {
+   "name": "张鲁",
+   "cfgIds": [
+    100487
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "火积",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "徐夫人",
+   "cfgIds": [
+    100093
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920063,
+   "innateName": "佯攻",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200227
+   ],
+   "sourceName": "诱敌",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "徐庶",
+   "cfgIds": [
+    100534,
+    100582,
+    100067
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "道行险阻",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "徐晃",
+   "cfgIds": [
+    100421
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920068,
+   "innateName": "敛众定气",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200267,
+    200135,
+    200139
+   ],
+   "sourceName": "翕处还张",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "徐盛",
+   "cfgIds": [
+    100087
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920074,
+   "innateName": "钝兵挫锐",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200658
+   ],
+   "sourceName": "破甲",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "徐荣",
+   "cfgIds": [
+    100053
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920078,
+   "innateName": "飒沓如星",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200929
+   ],
+   "sourceName": "移花接木",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "戏志才",
+   "cfgIds": [
+    100502
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920087,
+   "innateName": "远攻秘策",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200210
+   ],
+   "sourceName": "连环",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "成公英",
+   "cfgIds": [
+    100125
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920073,
+   "innateName": "疏数",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200782,
+    200795,
+    200053
+   ],
+   "sourceName": "疏数",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "成宜",
+   "cfgIds": [
+    100348
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920057,
+   "innateName": "合纵连横",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200964
+   ],
+   "sourceName": "退避",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "拓跋力微",
+   "cfgIds": [
+    240079
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920086,
+   "innateName": "勠力同心",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200967
+   ],
+   "sourceName": "勠力同心",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "敬哀皇后",
+   "cfgIds": [
+    100329
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920058,
+   "innateName": "叫阵",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200913,
+    200906,
+    200679
+   ],
+   "sourceName": "安抚军心",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "文丑",
+   "cfgIds": [
+    100059
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920081,
+   "innateName": "临危",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200728
+   ],
+   "sourceName": "激昂",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "文聘",
+   "cfgIds": [
+    240015
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920066,
+   "innateName": "美人计",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200853,
+    200954
+   ],
+   "sourceName": "火积",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "曲阿小将",
+   "cfgIds": [
+    240123
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920077,
+   "innateName": "破魂",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200107
+   ],
+   "sourceName": "破魂",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "曹丕",
+   "cfgIds": [
+    100025,
+    100210
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920054,
+   "innateName": "运筹帷幄",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200181,
+    200183
+   ],
+   "sourceName": "浑水摸鱼",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "曹仁",
+   "cfgIds": [
+    100585,
+    100085
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920071,
+   "innateName": "以诱待来",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200274
+   ],
+   "sourceName": "疾击其后",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "曹休",
+   "cfgIds": [
+    100213
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920049,
+   "innateName": "一夫当关",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200674,
+    200265,
+    200816
+   ],
+   "sourceName": "一夫当关",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "曹叡",
+   "cfgIds": [
+    240020
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "十面埋伏",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "曹奂",
+   "cfgIds": [
+    240030
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "落雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "曹彰",
+   "cfgIds": [
+    100148,
+    100209
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920060,
+   "innateName": "战必断金",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200228,
+    200230
+   ],
+   "sourceName": "久战熟谋",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "曹操",
+   "cfgIds": [
+    100023,
+    100042
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920007,
+   "innateName": "魏武之世",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200023
+   ],
+   "sourceName": "魏武之世",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com / 网易大神攻略：五星·曹操 自带战法魏武之世（降四维、提攻击距离）"
+  },
+  {
+   "name": "曹昂",
+   "cfgIds": [
+    100208
+   ],
+   "role": "CONTROL",
+   "star": 2,
+   "innateCfgId": 920059,
+   "innateName": "反计之策",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200220,
+    200737,
+    200852
+   ],
+   "sourceName": "反计之策",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "曹洪",
+   "cfgIds": [
+    100147
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920092,
+   "innateName": "速战兵法",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200621
+   ],
+   "sourceName": "速战兵法",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "曹真",
+   "cfgIds": [
+    100151
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920052,
+   "innateName": "衡轭",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200781,
+    200089
+   ],
+   "sourceName": "衡轭",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "曹睿",
+   "cfgIds": [
+    100153
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "十面埋伏",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "曹纯",
+   "cfgIds": [
+    100498
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920005,
+   "innateName": "虎豹督军",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200739
+   ],
+   "sourceName": "虎豹督军",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com《S3卡包·绝版武将解读》：五星·曹纯·魏·骑 自带战法虎豹督军"
+  },
+  {
+   "name": "曹节",
+   "cfgIds": [
+    100471
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "养精蓄锐",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "曹芳",
+   "cfgIds": [
+    240032
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "迷阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "曹豹",
+   "cfgIds": [
+    100283
+   ],
+   "role": "CONTROL",
+   "star": 2,
+   "innateCfgId": 920061,
+   "innateName": "反计",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200075,
+    200213
+   ],
+   "sourceName": "反计",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "曹髦",
+   "cfgIds": [
+    240024
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "落雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "木鹿大王",
+   "cfgIds": [
+    100452
+   ],
+   "role": "CONTROL",
+   "star": 5,
+   "innateCfgId": 920062,
+   "innateName": "疾风迅雷",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200646
+   ],
+   "sourceName": "兵无常势",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "朱儁",
+   "cfgIds": [
+    100553,
+    100040
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920010,
+   "innateName": "节镇关东",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200040
+   ],
+   "sourceName": "节镇关东",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com 2015-10-21 更新公告：4星 朱儁 节镇关东（重新设计）"
+  },
+  {
+   "name": "朱据",
+   "cfgIds": [
+    240116
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "十面埋伏",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "朱桓",
+   "cfgIds": [
+    100221
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920076,
+   "innateName": "奇术折冲",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200977
+   ],
+   "sourceName": "速战兵法",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "朱治",
+   "cfgIds": [
+    100217
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "扬威",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "朱灵",
+   "cfgIds": [
+    100229
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920080,
+   "innateName": "蓄盈待竭",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200995
+   ],
+   "sourceName": "蓄盈待竭",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "朱然",
+   "cfgIds": [
+    240009
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920048,
+   "innateName": "愈战愈勇",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200863,
+    200643,
+    200034
+   ],
+   "sourceName": "伐谋",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "李严",
+   "cfgIds": [
+    100138
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "不攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "李乐",
+   "cfgIds": [
+    240061
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920074,
+   "innateName": "钝兵挫锐",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200658
+   ],
+   "sourceName": "钝兵挫锐",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "李傕",
+   "cfgIds": [
+    100184
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920090,
+   "innateName": "远攻之策",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200209
+   ],
+   "sourceName": "远攻之策",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "李儒",
+   "cfgIds": [
+    100111
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920016,
+   "innateName": "逆反毒杀",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200610
+   ],
+   "sourceName": "逆反毒杀",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com 2015-10-21 更新公告：4星 李儒 逆反毒杀（发动率与伤害上升）"
+  },
+  {
+   "name": "李典",
+   "cfgIds": [
+    240012
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "迷阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "李堪",
+   "cfgIds": [
+    100343
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920094,
+   "innateName": "犒劳",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200197
+   ],
+   "sourceName": "拒盾",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "李恢",
+   "cfgIds": [
+    100335
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920060,
+   "innateName": "战必断金",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200228,
+    200230
+   ],
+   "sourceName": "战必断金",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "李肃",
+   "cfgIds": [
+    100113
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "落雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "李通",
+   "cfgIds": [
+    100228
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920079,
+   "innateName": "扬威",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200976
+   ],
+   "sourceName": "扬威",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "杜氏",
+   "cfgIds": [
+    100379
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920070,
+   "innateName": "百战无怯",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200252
+   ],
+   "sourceName": "百战无怯",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "杜畿",
+   "cfgIds": [
+    240121
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "十面埋伏",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "杜袭",
+   "cfgIds": [
+    240076
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "不攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "杜预",
+   "cfgIds": [
+    240082
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "乘胜追击",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "杨修",
+   "cfgIds": [
+    100212
+   ],
+   "role": "CONTROL",
+   "star": 2,
+   "innateCfgId": 920063,
+   "innateName": "佯攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200227
+   ],
+   "sourceName": "佯攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "杨奉",
+   "cfgIds": [
+    240054
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920075,
+   "innateName": "怯心夺志",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200659
+   ],
+   "sourceName": "怯心夺志",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "杨彪",
+   "cfgIds": [
+    100288
+   ],
+   "role": "CONTROL",
+   "star": 2,
+   "innateCfgId": 920058,
+   "innateName": "叫阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200913,
+    200906,
+    200679
+   ],
+   "sourceName": "叫阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "杨秋",
+   "cfgIds": [
+    100345
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920088,
+   "innateName": "胜兵求战",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200754
+   ],
+   "sourceName": "胜兵求战",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "杨阜",
+   "cfgIds": [
+    240091
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "迷阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "柯比能",
+   "cfgIds": [
+    100550
+   ],
+   "role": "CONTROL",
+   "star": 5,
+   "innateCfgId": 920061,
+   "innateName": "反计",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200075,
+    200213
+   ],
+   "sourceName": "反计",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "柳隐",
+   "cfgIds": [
+    240098
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920087,
+   "innateName": "远攻秘策",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200210
+   ],
+   "sourceName": "远攻秘策",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "桥瑁",
+   "cfgIds": [
+    240052
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "落雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "梁习",
+   "cfgIds": [
+    240125
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "十面埋伏",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "梁兴",
+   "cfgIds": [
+    100352
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920071,
+   "innateName": "以诱待来",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200274
+   ],
+   "sourceName": "迫近",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "楼班",
+   "cfgIds": [
+    100507
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920059,
+   "innateName": "反计之策",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200220,
+    200737,
+    200852
+   ],
+   "sourceName": "远射",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "樊稠",
+   "cfgIds": [
+    240049
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920095,
+   "innateName": "谨言",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200670
+   ],
+   "sourceName": "谨言",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "步度根",
+   "cfgIds": [
+    100529
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920049,
+   "innateName": "一夫当关",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200674,
+    200265,
+    200816
+   ],
+   "sourceName": "疏数",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "步皇后",
+   "cfgIds": [
+    100497
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 10022,
+   "innateName": "中宫追玺",
+   "match": "stzb-innate-reuse",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200738
+   ],
+   "sourceName": "中宫追玺",
+   "note": "率土之滨自带战法；包内已有同名战法 cfgId 10022，直接复用不新建。来源：stzb.163.com《S3卡包·绝版武将解读》：五星·步皇后·吴·步 自带战法中宫追玺"
+  },
+  {
+   "name": "步骘",
+   "cfgIds": [
+    100096
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "十面埋伏",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "段珪",
+   "cfgIds": [
+    100173
+   ],
+   "role": "CONTROL",
+   "star": 3,
+   "innateCfgId": 920062,
+   "innateName": "疾风迅雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200646
+   ],
+   "sourceName": "疾风迅雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "段颎",
+   "cfgIds": [
+    240021
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920089,
+   "innateName": "鱼鳞",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200783
+   ],
+   "sourceName": "鱼鳞",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "毌丘俭",
+   "cfgIds": [
+    240016
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920048,
+   "innateName": "愈战愈勇",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200863,
+    200643,
+    200034
+   ],
+   "sourceName": "愈战愈勇",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "毕岚",
+   "cfgIds": [
+    100172
+   ],
+   "role": "CONTROL",
+   "star": 3,
+   "innateCfgId": 920060,
+   "innateName": "战必断金",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200228,
+    200230
+   ],
+   "sourceName": "战必断金",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "水镜先生",
+   "cfgIds": [
+    100354
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920065,
+   "innateName": "锋矢",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200718,
+    200716
+   ],
+   "sourceName": "锋矢",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "汉少帝",
+   "cfgIds": [
+    100414
+   ],
+   "role": "CONTROL",
+   "star": 3,
+   "innateCfgId": 920061,
+   "innateName": "反计",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200075,
+    200213
+   ],
+   "sourceName": "反计",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "汉献帝",
+   "cfgIds": [
+    100001
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "不攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "沈莹",
+   "cfgIds": [
+    240112
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920091,
+   "innateName": "移花接木",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200239
+   ],
+   "sourceName": "移花接木",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "沙摩柯",
+   "cfgIds": [
+    100524,
+    100141
+   ],
+   "role": "CONTROL",
+   "star": 5,
+   "innateCfgId": 920058,
+   "innateName": "叫阵",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200913,
+    200906,
+    200679
+   ],
+   "sourceName": "健卒不殆",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "沮授",
+   "cfgIds": [
+    100120
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "诱敌深入",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "法正",
+   "cfgIds": [
+    100396
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920079,
+   "innateName": "扬威",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200976
+   ],
+   "sourceName": "兼弱攻昧",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "波才",
+   "cfgIds": [
+    100266
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920059,
+   "innateName": "反计之策",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200220,
+    200737,
+    200852
+   ],
+   "sourceName": "反计之策",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "淳于琼",
+   "cfgIds": [
+    100118
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920069,
+   "innateName": "垒实迎击",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200900,
+    200734,
+    200261
+   ],
+   "sourceName": "垒实迎击",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "温恢",
+   "cfgIds": [
+    240126
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "落雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "滕修",
+   "cfgIds": [
+    240095
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "落雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "满宠",
+   "cfgIds": [
+    100152
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "迷阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "潘凤",
+   "cfgIds": [
+    100486
+   ],
+   "role": "CONTROL",
+   "star": 5,
+   "innateCfgId": 920036,
+   "innateName": "上将潘凤",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200719
+   ],
+   "sourceName": "上将潘凤",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：同名直接对应（战法名即武将名）；W0 表内为自带战法，type=主动"
+  },
+  {
+   "name": "潘璋",
+   "cfgIds": [
+    100246
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920063,
+   "innateName": "佯攻",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200227
+   ],
+   "sourceName": "觑隙",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "灵帝",
+   "cfgIds": [
+    100101
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920021,
+   "innateName": "帝临回光",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200607
+   ],
+   "sourceName": "帝临回光",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com 2015-10-21 更新公告：5星 灵帝 帝临回光（修正有效距离）"
+  },
+  {
+   "name": "焦触",
+   "cfgIds": [
+    240051
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920078,
+   "innateName": "飒沓如星",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200929
+   ],
+   "sourceName": "飒沓如星",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "牛辅",
+   "cfgIds": [
+    240067
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920074,
+   "innateName": "钝兵挫锐",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200658
+   ],
+   "sourceName": "钝兵挫锐",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "牛金",
+   "cfgIds": [
+    100230
+   ],
+   "role": "CONTROL",
+   "star": 3,
+   "innateCfgId": 920059,
+   "innateName": "反计之策",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200220,
+    200737,
+    200852
+   ],
+   "sourceName": "反计之策",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "牵招",
+   "cfgIds": [
+    240092
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "不攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "献帝",
+   "cfgIds": [
+    100551
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "袭屯夺气",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "王允",
+   "cfgIds": [
+    100105
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920038,
+   "innateName": "连环计",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200968
+   ],
+   "sourceName": "连环计",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：典故唯一指向（王允连环计）；W0 表内为自带战法，type=主动、effect=策略伤害/暴走/混乱"
+  },
+  {
+   "name": "王凌",
+   "cfgIds": [
+    100234
+   ],
+   "role": "CONTROL",
+   "star": 3,
+   "innateCfgId": 920063,
+   "innateName": "佯攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200227
+   ],
+   "sourceName": "佯攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "王匡",
+   "cfgIds": [
+    240053
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "不攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "王基",
+   "cfgIds": [
+    240088
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "落雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "王子服",
+   "cfgIds": [
+    100280
+   ],
+   "role": "CONTROL",
+   "star": 2,
+   "innateCfgId": 920060,
+   "innateName": "战必断金",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200228,
+    200230
+   ],
+   "sourceName": "战必断金",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "王平",
+   "cfgIds": [
+    100202
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920068,
+   "innateName": "敛众定气",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200267,
+    200135,
+    200139
+   ],
+   "sourceName": "敛众定气",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "王异",
+   "cfgIds": [
+    100028
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "妖术",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "王昶",
+   "cfgIds": [
+    240104
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "迷阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "王朗",
+   "cfgIds": [
+    100286
+   ],
+   "role": "CONTROL",
+   "star": 2,
+   "innateCfgId": 920061,
+   "innateName": "反计",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200075,
+    200213
+   ],
+   "sourceName": "以直报怨",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "王浑",
+   "cfgIds": [
+    240134
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920053,
+   "innateName": "远攻强化",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200190,
+    200636
+   ],
+   "sourceName": "远攻强化",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "王濬",
+   "cfgIds": [
+    240017
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920052,
+   "innateName": "衡轭",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200781,
+    200089
+   ],
+   "sourceName": "衡轭",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "王烈",
+   "cfgIds": [
+    100102
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920058,
+   "innateName": "叫阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200913,
+    200906,
+    200679
+   ],
+   "sourceName": "叫阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "王美人",
+   "cfgIds": [
+    100038
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920024,
+   "innateName": "饮鸩之怨",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200038
+   ],
+   "sourceName": "饮鸩之怨",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com 2015-10-21 更新公告：4星 王美人 饮鸩之怨（发动率上升）"
+  },
+  {
+   "name": "王观",
+   "cfgIds": [
+    240129
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "十面埋伏",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "甄洛",
+   "cfgIds": [
+    100015
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920009,
+   "innateName": "洛水佳人",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200015
+   ],
+   "sourceName": "洛水佳人",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com 2015-10-21 更新公告：5星 甄洛 洛水佳人（目标数与生效机率上升）"
+  },
+  {
+   "name": "甘宁",
+   "cfgIds": [
+    100034,
+    100589,
+    100157
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 10005,
+   "innateName": "侵掠如火",
+   "match": "stzb-innate-reuse",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200034
+   ],
+   "sourceName": "侵掠如火",
+   "note": "率土之滨自带战法；包内已有同名战法 cfgId 10005，直接复用不新建。来源：stzb.163.com 2015-10-21 更新公告写作「5星 甘宁 侵略如火」；W0 官方战法表内为「侵掠如火」（自带战法、无拆解出处），判为同一战法的字形差异，取表内正名"
+  },
+  {
+   "name": "甘皇后",
+   "cfgIds": [
+    100063
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920086,
+   "innateName": "勠力同心",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200967
+   ],
+   "sourceName": "远攻奇略",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "田丰",
+   "cfgIds": [
+    100057
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "勠力同心",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "田豫",
+   "cfgIds": [
+    100287
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920050,
+   "innateName": "甚陷不惧",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200941,
+    200939,
+    300050
+   ],
+   "sourceName": "甚陷不惧",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "申仪",
+   "cfgIds": [
+    240050
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "不攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "申耽",
+   "cfgIds": [
+    240046
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "迷阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "留赞",
+   "cfgIds": [
+    240119
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920093,
+   "innateName": "固阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200193
+   ],
+   "sourceName": "固阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "皇甫嵩",
+   "cfgIds": [
+    100554,
+    100039
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920066,
+   "innateName": "美人计",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200853,
+    200954
+   ],
+   "sourceName": "垒实迎击",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "皇甫规",
+   "cfgIds": [
+    240014
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920067,
+   "innateName": "白刃",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200691
+   ],
+   "sourceName": "白刃",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "眭固",
+   "cfgIds": [
+    240057
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920073,
+   "innateName": "疏数",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200782,
+    200795,
+    200053
+   ],
+   "sourceName": "疏数",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "石苞",
+   "cfgIds": [
+    240133
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920051,
+   "innateName": "恃强淬锋",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200299,
+    200654
+   ],
+   "sourceName": "恃强淬锋",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "祖茂",
+   "cfgIds": [
+    100242
+   ],
+   "role": "CONTROL",
+   "star": 2,
+   "innateCfgId": 920062,
+   "innateName": "疾风迅雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200646
+   ],
+   "sourceName": "疾风迅雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "祝融夫人",
+   "cfgIds": [
+    100494
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920062,
+   "innateName": "疾风迅雷",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200646
+   ],
+   "sourceName": "全军突击",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "祢衡",
+   "cfgIds": [
+    100126
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "十面埋伏",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "秃发树机能",
+   "cfgIds": [
+    240102
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920056,
+   "innateName": "势无虚动",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200949
+   ],
+   "sourceName": "势无虚动",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "程昱",
+   "cfgIds": [
+    240004
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "乘间击隙",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "程普",
+   "cfgIds": [
+    240003
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920077,
+   "innateName": "破魂",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200107
+   ],
+   "sourceName": "久战熟谋",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "程银",
+   "cfgIds": [
+    100347
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920092,
+   "innateName": "速战兵法",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200621
+   ],
+   "sourceName": "抢攻",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "穆皇后",
+   "cfgIds": [
+    100070
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "增援",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "童渊",
+   "cfgIds": [
+    240120
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920080,
+   "innateName": "蓄盈待竭",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200995
+   ],
+   "sourceName": "蓄盈待竭",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "笮融",
+   "cfgIds": [
+    240055
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920075,
+   "innateName": "怯心夺志",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200659
+   ],
+   "sourceName": "怯心夺志",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "管亥",
+   "cfgIds": [
+    100052
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920058,
+   "innateName": "叫阵",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200913,
+    200906,
+    200679
+   ],
+   "sourceName": "远攻强化",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "糜夫人",
+   "cfgIds": [
+    100064
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920057,
+   "innateName": "合纵连横",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200964
+   ],
+   "sourceName": "合纵连横",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "糜竺",
+   "cfgIds": [
+    100198
+   ],
+   "role": "BUFF",
+   "star": 2,
+   "innateCfgId": 920094,
+   "innateName": "犒劳",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200197
+   ],
+   "sourceName": "犒劳",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "纪灵",
+   "cfgIds": [
+    100353
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920055,
+   "innateName": "令无空悬",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200280
+   ],
+   "sourceName": "令无空悬",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "罗宪",
+   "cfgIds": [
+    240005
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920054,
+   "innateName": "运筹帷幄",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200181,
+    200183
+   ],
+   "sourceName": "运筹帷幄",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "羊祜",
+   "cfgIds": [
+    240083
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "望风而降",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "胡才",
+   "cfgIds": [
+    240068
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920081,
+   "innateName": "临危",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200728
+   ],
+   "sourceName": "临危",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "胡质",
+   "cfgIds": [
+    240106
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "十面埋伏",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "胡车儿",
+   "cfgIds": [
+    100267
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920063,
+   "innateName": "佯攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200227
+   ],
+   "sourceName": "佯攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "臧洪",
+   "cfgIds": [
+    240132
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "落雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "臧霸",
+   "cfgIds": [
+    240018
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920072,
+   "innateName": "胜负先征",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200981
+   ],
+   "sourceName": "胜负先征",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "花鬘",
+   "cfgIds": [
+    100520
+   ],
+   "role": "CONTROL",
+   "star": 5,
+   "innateCfgId": 920061,
+   "innateName": "反计",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200075,
+    200213
+   ],
+   "sourceName": "合流",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "苏则",
+   "cfgIds": [
+    240075
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "迷阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "苏妲己",
+   "cfgIds": [
+    100372
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920076,
+   "innateName": "奇术折冲",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200977
+   ],
+   "sourceName": "奇术折冲",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "荀彧",
+   "cfgIds": [
+    100024,
+    100149
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "袭屯夺气",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "荀彧&荀攸",
+   "cfgIds": [
+    100437
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "落雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "荀攸",
+   "cfgIds": [
+    100583,
+    100150
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "落雷",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "董卓",
+   "cfgIds": [
+    100009,
+    100480
+   ],
+   "role": "CONTROL",
+   "star": 5,
+   "innateCfgId": 920001,
+   "innateName": "酒池肉林",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200014
+   ],
+   "sourceName": "酒池肉林",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com 2018-10-18《S2SP武将攻略》：五星·董卓·汉·步 自带战法酒池肉林"
+  },
+  {
+   "name": "董姬",
+   "cfgIds": [
+    100047
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920059,
+   "innateName": "反计之策",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200220,
+    200737,
+    200852
+   ],
+   "sourceName": "攻心",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "董承",
+   "cfgIds": [
+    100100
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920060,
+   "innateName": "战必断金",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200228,
+    200230
+   ],
+   "sourceName": "战必断金",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "董白",
+   "cfgIds": [
+    100592
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920078,
+   "innateName": "飒沓如星",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200929
+   ],
+   "sourceName": "战必断金",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "董荼那",
+   "cfgIds": [
+    100493
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920063,
+   "innateName": "佯攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200227
+   ],
+   "sourceName": "佯攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "董袭",
+   "cfgIds": [
+    100245
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920060,
+   "innateName": "战必断金",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200228,
+    200230
+   ],
+   "sourceName": "反击之策",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "蒋济",
+   "cfgIds": [
+    100232
+   ],
+   "role": "CONTROL",
+   "star": 3,
+   "innateCfgId": 920058,
+   "innateName": "叫阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200913,
+    200906,
+    200679
+   ],
+   "sourceName": "叫阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "蒋琬",
+   "cfgIds": [
+    100257
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "十面埋伏",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "蒋钦",
+   "cfgIds": [
+    100159
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920090,
+   "innateName": "远攻之策",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200209
+   ],
+   "sourceName": "温酒斩将",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "蒯越",
+   "cfgIds": [
+    100097
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "迷阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "蔡夫人",
+   "cfgIds": [
+    100355
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920064,
+   "innateName": "始计",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200687,
+    200862,
+    300002
+   ],
+   "sourceName": "伐谋",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "蔡文姬",
+   "cfgIds": [
+    100004
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920081,
+   "innateName": "临危",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200728
+   ],
+   "sourceName": "不攻",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "蔡瑁",
+   "cfgIds": [
+    100231
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "迷阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "虞汜",
+   "cfgIds": [
+    240117
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "落雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "虞翻",
+   "cfgIds": [
+    100220
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920048,
+   "innateName": "愈战愈勇",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200863,
+    200643,
+    200034
+   ],
+   "sourceName": "愈战愈勇",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "蜀三相",
+   "cfgIds": [
+    100532
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "鱼鳞",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "袁姬",
+   "cfgIds": [
+    100359
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920074,
+   "innateName": "钝兵挫锐",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200658
+   ],
+   "sourceName": "疏数",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "袁术",
+   "cfgIds": [
+    100116
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920070,
+   "innateName": "百战无怯",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200252
+   ],
+   "sourceName": "胜敌益强",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "袁氏兄弟",
+   "cfgIds": [
+    100271
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920079,
+   "innateName": "扬威",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200976
+   ],
+   "sourceName": "扬威",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "袁绍",
+   "cfgIds": [
+    100006
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920052,
+   "innateName": "衡轭",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200781,
+    200089
+   ],
+   "sourceName": "大赏三军",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "袁遗",
+   "cfgIds": [
+    240044
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "不攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "裴元绍",
+   "cfgIds": [
+    100182
+   ],
+   "role": "CONTROL",
+   "star": 3,
+   "innateCfgId": 920061,
+   "innateName": "反计",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200075,
+    200213
+   ],
+   "sourceName": "反计",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "裴潜",
+   "cfgIds": [
+    240130
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "不攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "许劭",
+   "cfgIds": [
+    100281
+   ],
+   "role": "CONTROL",
+   "star": 2,
+   "innateCfgId": 920059,
+   "innateName": "反计之策",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200220,
+    200737,
+    200852
+   ],
+   "sourceName": "全军突击",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "许攸",
+   "cfgIds": [
+    100185
+   ],
+   "role": "CONTROL",
+   "star": 3,
+   "innateCfgId": 920062,
+   "innateName": "疾风迅雷",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200646
+   ],
+   "sourceName": "激水之疾",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "许褚",
+   "cfgIds": [
+    100080,
+    100473
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920053,
+   "innateName": "远攻强化",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200190,
+    200636
+   ],
+   "sourceName": "雄兵破敌",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "诸葛亮",
+   "cfgIds": [
+    100017,
+    100496
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920018,
+   "innateName": "诸葛锦囊",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200017
+   ],
+   "sourceName": "诸葛锦囊",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com 2015-10-21 更新公告：5星 诸葛亮 诸葛锦囊（伤害加成略降）"
+  },
+  {
+   "name": "诸葛恪",
+   "cfgIds": [
+    100522
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "疾风迅雷",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "诸葛瑾",
+   "cfgIds": [
+    100164
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "鱼鳞",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "诸葛靓",
+   "cfgIds": [
+    240118
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "迷阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "貂蝉",
+   "cfgIds": [
+    100005,
+    100337
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920039,
+   "innateName": "闭月",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200005
+   ],
+   "sourceName": "闭月",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：典故唯一指向（貂蝉「闭月」）；W0 表内为自带战法，type=主动、effect=暴走/防御降低。媒体所称「离间」不在 W0 表，不采用"
+  },
+  {
+   "name": "费祎",
+   "cfgIds": [
+    100258
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920086,
+   "innateName": "勠力同心",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200967
+   ],
+   "sourceName": "勠力同心",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "贺齐",
+   "cfgIds": [
+    100321
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920087,
+   "innateName": "远攻秘策",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200210
+   ],
+   "sourceName": "远攻秘策",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "贾诩",
+   "cfgIds": [
+    100011
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "w0-source",
+   "evidence": "W0",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "不攻",
+   "note": "该武将在率土之滨官网战法表有拆解/传承出处，选取的是可拆解的通用战法，效果类型与五维定位一致"
+  },
+  {
+   "name": "贾逵",
+   "cfgIds": [
+    100233
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "十面埋伏",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "赵云",
+   "cfgIds": [
+    100021,
+    100131
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920025,
+   "innateName": "银龙冲阵",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200021
+   ],
+   "sourceName": "银龙冲阵",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：网易大神《五虎将·赵云篇》：大营赵云 自带战法【银龙冲阵】，50% 瞬发"
+  },
+  {
+   "name": "赵俨",
+   "cfgIds": [
+    240101
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "落雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "赵忠",
+   "cfgIds": [
+    100169
+   ],
+   "role": "CONTROL",
+   "star": 3,
+   "innateCfgId": 920058,
+   "innateName": "叫阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200913,
+    200906,
+    200679
+   ],
+   "sourceName": "叫阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "赵统",
+   "cfgIds": [
+    100525
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920062,
+   "innateName": "疾风迅雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200646
+   ],
+   "sourceName": "疾风迅雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "赵范",
+   "cfgIds": [
+    240073
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920060,
+   "innateName": "战必断金",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200228,
+    200230
+   ],
+   "sourceName": "战必断金",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "赵韪",
+   "cfgIds": [
+    240041
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "迷阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "蹋顿",
+   "cfgIds": [
+    240136
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920076,
+   "innateName": "奇术折冲",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200977
+   ],
+   "sourceName": "奇术折冲",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "轲比能",
+   "cfgIds": [
+    240100
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920049,
+   "innateName": "一夫当关",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200674,
+    200265,
+    200816
+   ],
+   "sourceName": "利兵谋胜",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "辛毗",
+   "cfgIds": [
+    240131
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "迷阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "逢纪",
+   "cfgIds": [
+    100121
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "不攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "邓忠",
+   "cfgIds": [
+    100146
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920077,
+   "innateName": "破魂",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200107
+   ],
+   "sourceName": "破魂",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "邓艾",
+   "cfgIds": [
+    100310
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920056,
+   "innateName": "势无虚动",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200949
+   ],
+   "sourceName": "掎角之势",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "邓芝",
+   "cfgIds": [
+    100330
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920059,
+   "innateName": "反计之策",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200220,
+    200737,
+    200852
+   ],
+   "sourceName": "反计之策",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "邓茂",
+   "cfgIds": [
+    100270
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920075,
+   "innateName": "怯心夺志",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200659
+   ],
+   "sourceName": "怯心夺志",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "邹氏",
+   "cfgIds": [
+    100048
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920055,
+   "innateName": "令无空悬",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200280
+   ],
+   "sourceName": "养精蓄锐",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "郑泰",
+   "cfgIds": [
+    100284
+   ],
+   "role": "CONTROL",
+   "star": 2,
+   "innateCfgId": 920061,
+   "innateName": "反计",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200075,
+    200213
+   ],
+   "sourceName": "反计",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "郝昭",
+   "cfgIds": [
+    100475
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920050,
+   "innateName": "甚陷不惧",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200941,
+    200939,
+    300050
+   ],
+   "sourceName": "白刃",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "郭嘉",
+   "cfgIds": [
+    100476,
+    100078
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920003,
+   "innateName": "奇佐鬼谋",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200692
+   ],
+   "sourceName": "奇佐鬼谋",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com 2018-10-18《S2SP武将攻略》：五星·郭嘉·魏·骑 自带战法奇佐鬼谋"
+  },
+  {
+   "name": "郭图",
+   "cfgIds": [
+    100188
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "十面埋伏",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "郭汜",
+   "cfgIds": [
+    240056
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920073,
+   "innateName": "疏数",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200782,
+    200795,
+    200053
+   ],
+   "sourceName": "疏数",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "郭淮",
+   "cfgIds": [
+    240010
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920072,
+   "innateName": "胜负先征",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200981
+   ],
+   "sourceName": "胜负先征",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "郭皇后",
+   "cfgIds": [
+    100075
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920063,
+   "innateName": "佯攻",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200227
+   ],
+   "sourceName": "安抚军心",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "郭胜",
+   "cfgIds": [
+    100171
+   ],
+   "role": "CONTROL",
+   "star": 3,
+   "innateCfgId": 920062,
+   "innateName": "疾风迅雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200646
+   ],
+   "sourceName": "疾风迅雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "金旋",
+   "cfgIds": [
+    240071
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920061,
+   "innateName": "反计",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200075,
+    200213
+   ],
+   "sourceName": "反计",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "金环三杰",
+   "cfgIds": [
+    100491
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920071,
+   "innateName": "以诱待来",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200274
+   ],
+   "sourceName": "以诱待来",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "钟会",
+   "cfgIds": [
+    100591,
+    100154
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "全军突击",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "钟离牧",
+   "cfgIds": [
+    240097
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "十面埋伏",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "阎圃",
+   "cfgIds": [
+    240002
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "落雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "阚沢",
+   "cfgIds": [
+    100219
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920065,
+   "innateName": "锋矢",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200718,
+    200716
+   ],
+   "sourceName": "锋矢",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "阿会喃",
+   "cfgIds": [
+    100492
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920080,
+   "innateName": "蓄盈待竭",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200995
+   ],
+   "sourceName": "蓄盈待竭",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "陆抗",
+   "cfgIds": [
+    100574
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "铁戟金戈",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "陆胤",
+   "cfgIds": [
+    240111
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "迷阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "陆逊",
+   "cfgIds": [
+    100478,
+    100092
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920004,
+   "innateName": "火势风威",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200694
+   ],
+   "sourceName": "火势风威",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com 2018-10-18《S2SP武将攻略》：五星·陆逊·吴·步 自带战法火势风威"
+  },
+  {
+   "name": "陈兰",
+   "cfgIds": [
+    240060
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920073,
+   "innateName": "疏数",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200782,
+    200795,
+    200053
+   ],
+   "sourceName": "疏数",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "陈到",
+   "cfgIds": [
+    100133
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920033,
+   "innateName": "白毦亲兵",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200742
+   ],
+   "sourceName": "白毦亲兵",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：典故唯一指向（陈到统白毦兵）；W0 表内为自带战法，type=主动、effect=援护/受伤降低"
+  },
+  {
+   "name": "陈宫",
+   "cfgIds": [
+    100443,
+    100109
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "w0-source",
+   "evidence": "W0",
+   "sourceIds": [
+    200801
+   ],
+   "sourceName": "利兵谋胜",
+   "note": "该武将在率土之滨官网战法表有拆解/传承出处，选取的是可拆解的通用战法，效果类型与五维定位一致"
+  },
+  {
+   "name": "陈武",
+   "cfgIds": [
+    240124
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920077,
+   "innateName": "破魂",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200107
+   ],
+   "sourceName": "破魂",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "陈泰",
+   "cfgIds": [
+    240006
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "落雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "陈琳",
+   "cfgIds": [
+    100187
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920069,
+   "innateName": "垒实迎击",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200900,
+    200734,
+    200261
+   ],
+   "sourceName": "垒实迎击",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "陈登",
+   "cfgIds": [
+    100204
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "不攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "陈群",
+   "cfgIds": [
+    100227
+   ],
+   "role": "CONTROL",
+   "star": 3,
+   "innateCfgId": 920059,
+   "innateName": "反计之策",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200220,
+    200737,
+    200852
+   ],
+   "sourceName": "反计之策",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "陈表",
+   "cfgIds": [
+    240109
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "迷阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "陈骞",
+   "cfgIds": [
+    240105
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920085,
+   "innateName": "迷阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200127
+   ],
+   "sourceName": "迷阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "陶璜",
+   "cfgIds": [
+    240080
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920094,
+   "innateName": "犒劳",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200197
+   ],
+   "sourceName": "犒劳",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "陶谦",
+   "cfgIds": [
+    100106
+   ],
+   "role": "CONTROL",
+   "star": 3,
+   "innateCfgId": 920058,
+   "innateName": "叫阵",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200913,
+    200906,
+    200679
+   ],
+   "sourceName": "破胆",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "雷薄",
+   "cfgIds": [
+    240065
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920076,
+   "innateName": "奇术折冲",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200977
+   ],
+   "sourceName": "奇术折冲",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "雷铜",
+   "cfgIds": [
+    100137
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920074,
+   "innateName": "钝兵挫锐",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200658
+   ],
+   "sourceName": "钝兵挫锐",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "霍峻",
+   "cfgIds": [
+    240013
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920057,
+   "innateName": "合纵连横",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200964
+   ],
+   "sourceName": "合纵连横",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "霍弋",
+   "cfgIds": [
+    100331
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920063,
+   "innateName": "佯攻",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200227
+   ],
+   "sourceName": "破甲",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "韩当",
+   "cfgIds": [
+    100156
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920081,
+   "innateName": "临危",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200728
+   ],
+   "sourceName": "长兵方阵",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "韩悝",
+   "cfgIds": [
+    100176
+   ],
+   "role": "CONTROL",
+   "star": 3,
+   "innateCfgId": 920060,
+   "innateName": "战必断金",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200228,
+    200230
+   ],
+   "sourceName": "战必断金",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "韩暹",
+   "cfgIds": [
+    240059
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920080,
+   "innateName": "蓄盈待竭",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200995
+   ],
+   "sourceName": "蓄盈待竭",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "韩浩",
+   "cfgIds": [
+    240128
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920088,
+   "innateName": "胜兵求战",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200754
+   ],
+   "sourceName": "胜兵求战",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "韩玄",
+   "cfgIds": [
+    240070
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920060,
+   "innateName": "战必断金",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200228,
+    200230
+   ],
+   "sourceName": "战必断金",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "韩遂",
+   "cfgIds": [
+    100127,
+    100482
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920089,
+   "innateName": "鱼鳞",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200783
+   ],
+   "sourceName": "鹤翼",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "韩馥",
+   "cfgIds": [
+    240074
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920061,
+   "innateName": "反计",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200075,
+    200213
+   ],
+   "sourceName": "反计",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "顾雍",
+   "cfgIds": [
+    100222
+   ],
+   "role": "BUFF",
+   "star": 2,
+   "innateCfgId": 920091,
+   "innateName": "移花接木",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200239
+   ],
+   "sourceName": "移花接木",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "颜良",
+   "cfgIds": [
+    100058
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920078,
+   "innateName": "飒沓如星",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200929
+   ],
+   "sourceName": "激昂",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "颜良&文丑",
+   "cfgIds": [
+    100495
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920095,
+   "innateName": "谨言",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200670
+   ],
+   "sourceName": "谨言",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "马云禄",
+   "cfgIds": [
+    100019
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920075,
+   "innateName": "怯心夺志",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200659
+   ],
+   "sourceName": "愈战愈勇",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "马云騄",
+   "cfgIds": [
+    240127
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920079,
+   "innateName": "扬威",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200976
+   ],
+   "sourceName": "扬威",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "马元义",
+   "cfgIds": [
+    100183
+   ],
+   "role": "CONTROL",
+   "star": 3,
+   "innateCfgId": 920063,
+   "innateName": "佯攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200227
+   ],
+   "sourceName": "佯攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "马姬",
+   "cfgIds": [
+    100071
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920062,
+   "innateName": "疾风迅雷",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200646
+   ],
+   "sourceName": "锋矢",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "马岱",
+   "cfgIds": [
+    100139
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920058,
+   "innateName": "叫阵",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200913,
+    200906,
+    200679
+   ],
+   "sourceName": "击势",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "马忠",
+   "cfgIds": [
+    240085
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920066,
+   "innateName": "美人计",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200853,
+    200954
+   ],
+   "sourceName": "美人计",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "马玩",
+   "cfgIds": [
+    100344
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920064,
+   "innateName": "始计",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200687,
+    200862,
+    300002
+   ],
+   "sourceName": "退避",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "马腾",
+   "cfgIds": [
+    100062
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920059,
+   "innateName": "反计之策",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200220,
+    200737,
+    200852
+   ],
+   "sourceName": "百战无怯",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "马致远",
+   "cfgIds": [
+    100181
+   ],
+   "role": "CONTROL",
+   "star": 3,
+   "innateCfgId": 920063,
+   "innateName": "佯攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200227
+   ],
+   "sourceName": "佯攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "马良",
+   "cfgIds": [
+    100132
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 3,
+   "innateCfgId": 920082,
+   "innateName": "十面埋伏",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200715,
+    200801,
+    200024
+   ],
+   "sourceName": "敛众定气",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "马谡",
+   "cfgIds": [
+    100073
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 4,
+   "innateCfgId": 920083,
+   "innateName": "不攻",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200622
+   ],
+   "sourceName": "不攻",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "马超",
+   "cfgIds": [
+    100013,
+    100140
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920029,
+   "innateName": "血溅黄砂",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200013
+   ],
+   "sourceName": "血溅黄砂",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：OurPlay《马超队搭配技巧》：马超 自带战法【血溅黄砂】，攻击伤害提高、无法发动主动"
+  },
+  {
+   "name": "马隆",
+   "cfgIds": [
+    240078
+   ],
+   "role": "BUFF",
+   "star": 3,
+   "innateCfgId": 920051,
+   "innateName": "恃强淬锋",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200299,
+    200654
+   ],
+   "sourceName": "恃强淬锋",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "骆统",
+   "cfgIds": [
+    100248
+   ],
+   "role": "CONTROL",
+   "star": 2,
+   "innateCfgId": 920058,
+   "innateName": "叫阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200913,
+    200906,
+    200679
+   ],
+   "sourceName": "叫阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "骊姬",
+   "cfgIds": [
+    100377
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920073,
+   "innateName": "疏数",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200782,
+    200795,
+    200053
+   ],
+   "sourceName": "擅兵不寡",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "高干",
+   "cfgIds": [
+    240040
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920090,
+   "innateName": "远攻之策",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200209
+   ],
+   "sourceName": "远攻之策",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "高望",
+   "cfgIds": [
+    100174
+   ],
+   "role": "CONTROL",
+   "star": 3,
+   "innateCfgId": 920059,
+   "innateName": "反计之策",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200220,
+    200737,
+    200852
+   ],
+   "sourceName": "反计之策",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "高览",
+   "cfgIds": [
+    100119
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920093,
+   "innateName": "固阵",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200193
+   ],
+   "sourceName": "固阵",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "高顺",
+   "cfgIds": [
+    100115
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920032,
+   "innateName": "陷阵营",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200608
+   ],
+   "sourceName": "陷阵营",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：典故唯一指向（高顺统陷阵营）；W0 表内为自带战法，type=被动、effect=洞察/攻城属性提高"
+  },
+  {
+   "name": "魏延",
+   "cfgIds": [
+    100066
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920017,
+   "innateName": "傲将奇兵",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200064
+   ],
+   "sourceName": "傲将奇兵",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com 2015-10-21 更新公告：4星 魏延 傲将奇兵（伤害值上升）"
+  },
+  {
+   "name": "魏续",
+   "cfgIds": [
+    100269
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920062,
+   "innateName": "疾风迅雷",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200646
+   ],
+   "sourceName": "疾风迅雷",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "鲁肃",
+   "cfgIds": [
+    100163
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920084,
+   "innateName": "落雷",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200126
+   ],
+   "sourceName": "诱敌深入",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "鲍信",
+   "cfgIds": [
+    100045
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920067,
+   "innateName": "白刃",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200691
+   ],
+   "sourceName": "设伏",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "麴义",
+   "cfgIds": [
+    100122,
+    100483
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920035,
+   "innateName": "先登死士",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200702
+   ],
+   "sourceName": "先登死士",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：典故唯一指向（麴义统先登死士）；W0 表内为自带战法，type=主动"
+  },
+  {
+   "name": "麹义",
+   "cfgIds": [
+    240025
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 920068,
+   "innateName": "敛众定气",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200267,
+    200135,
+    200139
+   ],
+   "sourceName": "敛众定气",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "黄巾军",
+   "cfgIds": [
+    100192,
+    100193,
+    100194,
+    100195,
+    100196,
+    100197
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 1,
+   "innateCfgId": 920078,
+   "innateName": "飒沓如星",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200929
+   ],
+   "sourceName": "飒沓如星",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "黄忠",
+   "cfgIds": [
+    100442,
+    100130
+   ],
+   "role": "PHYSICAL_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920027,
+   "innateName": "定军扬威",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200680
+   ],
+   "sourceName": "定军扬威",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：网易大神《五虎将·黄忠篇》：前锋黄忠 自带战法【定军扬威】"
+  },
+  {
+   "name": "黄月英",
+   "cfgIds": [
+    100020
+   ],
+   "role": "STRATEGY_DAMAGE",
+   "star": 5,
+   "innateCfgId": 920019,
+   "innateName": "匠心不竭",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200020
+   ],
+   "sourceName": "匠心不竭",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：stzb.163.com 2015-10-21 更新公告：5星 黄月英 匠心不竭（伤害效果略降）"
+  },
+  {
+   "name": "黄权",
+   "cfgIds": [
+    100334
+   ],
+   "role": "CONTROL",
+   "star": 4,
+   "innateCfgId": 920060,
+   "innateName": "战必断金",
+   "match": "w0-linked-role",
+   "evidence": "W0/按定位",
+   "sourceIds": [
+    200228,
+    200230
+   ],
+   "sourceName": "远攻之策",
+   "note": "该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法"
+  },
+  {
+   "name": "黄盖",
+   "cfgIds": [
+    100587,
+    100162,
+    100439
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920031,
+   "innateName": "苦肉计",
+   "match": "stzb-innate",
+   "evidence": "W0+A2",
+   "sourceIds": [
+    200616
+   ],
+   "sourceName": "苦肉计",
+   "note": "率土之滨自带战法（W0 表中不可拆解），对应来源：典故唯一指向（周瑜打黄盖）；W0 表内为自带战法（无拆解出处），type=追击、effect=策略攻击伤害/混乱"
+  },
+  {
+   "name": "黄祖",
+   "cfgIds": [
+    100279
+   ],
+   "role": "BUFF",
+   "star": 5,
+   "innateCfgId": 920092,
+   "innateName": "速战兵法",
+   "match": "derived-by-role",
+   "evidence": "A2/派生",
+   "sourceIds": [
+    200621
+   ],
+   "sourceName": "速战兵法",
+   "note": "官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法"
+  },
+  {
+   "name": "主公",
+   "cfgIds": [
+    880001
+   ],
+   "role": "BUFF",
+   "star": 4,
+   "innateCfgId": 19001,
+   "innateName": "后世之识",
+   "match": "authored-protagonist",
+   "evidence": "A2/原创",
+   "sourceIds": [],
+   "sourceName": "M4-7 原创，不属率土之滨名录",
+   "note": "主角是穿越者原创角色，createSkillAssets 与 world.js 都硬编码 19001，保持同源"
+  }
+ ]
+}
