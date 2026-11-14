@@ -19,6 +19,13 @@ const HERO_SKILLS = existsSync(join(ROOT, 'conf', 'campaign', 'hero-skills.json'
   : {};
 
 function innateOf(cfg, cfgId) {
+  /* ★ M4-11 武将编辑器：overrides.generals[cfgId].skillCfgId 优先（0 = 编辑器
+     清空成白板），其余回落 hero-skills.json 按名映射。 */
+  const edited = loadOverrides().generals?.[String(Number(cfgId))]?.skillCfgId;
+  if (edited !== undefined) {
+    const eid = Number(edited);
+    return eid && skillById(eid) ? { id: eid, lv: 1, cfgId: eid } : null;
+  }
   const name = cfg.generalByCfg.get(cfgId)?.name;
   const id = name ? HERO_SKILLS[name] : 0;
   if (!id || !skillById(id)) return null;

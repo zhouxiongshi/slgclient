@@ -520,6 +520,19 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 
 ---
 
+### 9.25 M4-11 武将编辑器：全武将属性与自带战法的覆盖层编辑
+
+- **用户需求**：「给我提供武将编辑界面，可以编辑所有武将属性和战法技能」。编辑对象 = `generalByCfg` 全表 505 位（含主公）的战斗五维 / 五成长 / 统御 / 星级 + 自带战法（运行时 177 条战法表内任选，0 = 白板）。
+- **写入策略（与 GM 覆盖层同范式）**：一律写 `conf/campaign/overrides.json` 的 `generals` 段（cfgId → 覆盖字段），**原表（general.json / heroes-240.json / protagonist.json）逐字不动**，可重置可溯源。`gm/overrides.js` 的 sanitize 增形状保护（键为数字串、≤600 位），数值钳位与战法合法性由领域层负责。
+- **生效三路（同源）**：① `config.js loadConfig` 应用覆盖到 generalByCfg（面板/战斗/内政/外交/行军的唯一权威；应用前原行深拷贝到 `cfg.generalOriginal`）；② `editorSave` 对当前存档 `state.generals` 的 `skills[0]` 立即同步（改完即生效，无需重启）；③ `world.js innateOf` 优先读覆盖的 skillCfgId（新开局生效，0 = 白板短路按名映射）。
+- **代码分层**：领域逻辑在零业务耦合叶子 `server/domain/general-editor.js`（依赖 gm/overrides.js + skills.js，与 battle-narrative→skills、campaign→gm 同级先例）；HTTP 接线在 index.js（GET `/__slg/editor/state` 全表 + POST `/save` / `/reset`）；浮层 UI 在 `server/editor-ui.js`（纯浏览器 IIFE，类名 `slgEd-*` 不计入 ui-shell 一屏一窗统计，z-index 100840，Esc/点空白关闭，入口挂 interaction 设置面板「武将编辑器」按钮 → `window.__slgEditorOpen`）。
+- **量纲**：继承 M4-10 百分制——五维 1~100、成长率 1~100（进内核按 (100-base)/9 封顶逻辑不变）、统御 1~45、星级 1~5，越界一律钳边界；skillCfgId 不在运行时战法表内归 0。
+- **防退化**：`tests/m4-editor.test.js` 13 条（钳位、战法表内合法性、save 即时生效 + generalOriginal 记录、reset 恢复、存档 skills[0] 同步、未知 cfgId 拒绝、loadConfig 应用覆盖、innateOf 覆盖优先静态闸、原表不写盘红线、editor-ui 静态闸含禁 Math.random 与 Esc 关闭、index.js 端点齐备、设置面板入口）。**教训**：测试曾因失败退出未还原 overrides.json 残留污染后续文件的 loadConfig（general-balance 假红）——已改 afterEach 统一收敛回首次备份。
+- **真实取证**：起服后 curl 三端点（505 位 / 177 战法 / 12 区间；save 程昱 force 55→100 即生效；reset 恢复 55）。
+- **基线**：单测 **460/460**、双态冒烟 33/33 ×2、UI 审计 72×2、真鼠标 54×2、perf/layout/ui-probe/terms/compliance 全绿、`byteIdentical=true`。
+
+---
+
 ## 10. 文档地图（读哪本、信哪本）
 
 | 文档 | 管什么 | 权威性 |

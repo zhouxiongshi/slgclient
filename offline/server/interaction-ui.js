@@ -1127,6 +1127,8 @@
         ? '<button data-act="ontop">窗口置顶：' + (S.alwaysOnTop ? '开（点击关闭）' : '关（默认）') + '</button>'
           + '<button data-act="minimize">最小化到任务栏</button>'
         : '')
+      /* ★ M4-11 武将编辑器入口（浮层由 editor-ui.js 渲染，不属于本层窗口体系） */
+      + '<button data-act="editor">武将编辑器</button>'
       + '<button data-act="reset">恢复默认键位</button></div>'
       + (window.__slgWin && window.__slgWin.isElectron
         ? '<div class="muted" style="font-size:11px;margin-top:6px;line-height:1.7">'
@@ -1160,6 +1162,13 @@
       if (b.dataset.act === 'minimize') {
         Promise.resolve(window.__slgWin.minimize())
           .catch(function (err) { toast('最小化不可用：' + err.message, 'fail'); });
+        return;
+      }
+      /* ★ M4-11：打开武将编辑器浮层（editor-ui.js 挂在 window.__slgEditorOpen）。 */
+      if (b.dataset.act === 'editor') {
+        mask.remove();
+        if (typeof window.__slgEditorOpen === 'function') window.__slgEditorOpen();
+        else toast('编辑器脚本未就绪，请刷新页面后重试', 'fail');
         return;
       }
       if (b.dataset.act === 'reset') { S.keys = {}; persist(); openKeysAgain(mask); }

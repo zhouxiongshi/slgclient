@@ -21,7 +21,9 @@ import { createWorld, loadWorld, saveWorld, resolveWebDir, normalizeWorld, hasPr
 import { handleRequest, processTask, settleWorld, advanceToNextTurn } from './handlers.js';
 import { handshakeFrame, encodeFrame, decodeFrame, generateKey } from './codec.js';
 import { attachWebSocketServer } from './wsserver.js';
-import { createSkillAssets } from './skills.js';
+/* ★ M4-11 武将编辑器：领域逻辑在 domain/general-editor.js，本文件只接 HTTP */
+import { createSkillAssets, SKILLS } from './skills.js';
+import { editorList, editorSave, editorReset } from './domain/general-editor.js';
 import { loadOverrides, saveOverrides } from './gm/overrides.js';
 import { dossierFor } from './domain/dossier.js';
 import {
@@ -61,6 +63,9 @@ export const IX_SOURCE = 'window.SLG_TERMS=' + JSON.stringify(IX_TERMS) + ';\n'
 
 /** ★ P11 界面外壳：登录门禁 + 一屏一窗 + 浮窗收束（纯浏览器 IIFE，随响应下发）。 */
 export const SHELL_UI_SOURCE = readFileSync(resolve(ROOT, 'server/ui-shell.js'), 'utf8');
+
+/** ★ M4-11 武将编辑器浮层（纯浏览器 IIFE，随响应下发）。 */
+export const EDITOR_UI_SOURCE = readFileSync(resolve(ROOT, 'server/editor-ui.js'), 'utf8');
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -365,7 +370,8 @@ export async function startOfflineServer(options = {}) {
       const tag = gateCss + gateBoot + errHook
         + '<script src="/__slg/panels/ui.js" charset="utf-8"></script>'
         + '<script src="/__slg/interaction/ui.js" charset="utf-8"></script>'
-        + '<script src="/__slg/shell/ui.js" charset="utf-8"></script>';
+        + '<script src="/__slg/shell/ui.js" charset="utf-8"></script>'
+        + '<script src="/__slg/editor/ui.js" charset="utf-8"></script>';
       body = Buffer.from(/<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${tag}</body>`) : html + tag);
     }
       const headers = { 'Content-Type': type, ETag: etag, 'Cache-Control': 'no-cache' };
@@ -449,6 +455,53 @@ export async function startOfflineServer(options = {}) {
         'Content-Length': buf.length,
       });
       res.end(buf);
+      return;
+    }
+    /* ★ M4-11 武将编辑器：脚本下发 + 只读全表 + 保存/重置（写 GM 覆盖层）。 */
+    if (urlPath === '/__slg/editor/ui.js') {
+      const buf = Buffer.from(EDITOR_UI_SOURCE, 'utf8');
+      res.writeHead(200, {
+        'Content-Type': 'text/javascript; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'Content-Length': buf.length,
+      });
+      res.end(buf);
+      return;
+    }
+    if (urlPath === '/__slg/editor/state' && req.method === 'GET') {
+      try {
+        const list = editorList(cfg);
+        json(res, 200, { ...list, skills: SKILLS.map((s) => ({ cfgId: s.cfgId, name: s.name })) });
+      } catch (err) {
+        log('error', `editor state: ${err.stack || err.message}`);
+        json(res, 500, { ok: false, message: err.message });
+      }
+      return;
+    }
+    if (urlPath === '/__slg/editor/save' && req.method === 'POST') {
+      readJson(req, 16384, (body) => {
+        try {
+          const r = editorSave(cfg, state, body || {});
+          if (r.ok) save();
+          json(res, 200, r);
+        } catch (err) {
+          log('error', `editor save: ${err.stack || err.message}`);
+          json(res, 500, { ok: false, message: err.message });
+        }
+      });
+      return;
+    }
+    if (urlPath === '/__slg/editor/reset' && req.method === 'POST') {
+      readJson(req, 8192, (body) => {
+        try {
+          const r = editorReset(cfg, state, body || {});
+          if (r.ok) save();
+          json(res, 200, r);
+        } catch (err) {
+          log('error', `editor reset: ${err.stack || err.message}`);
+          json(res, 500, { ok: false, message: err.message });
+        }
+      });
       return;
     }
     if (urlPath === '/__slg/interaction/state' && req.method === 'GET') {

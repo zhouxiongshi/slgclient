@@ -30,7 +30,7 @@ const clampRule = (key, n) => {
 };
 
 export function emptyOverrides() {
-  return { tiles: [], facilities: [], city: null, rules: {}, story: {} };
+  return { tiles: [], facilities: [], city: null, rules: {}, story: {}, generals: {} };
 }
 
 export function sanitizeOverrides(input) {
@@ -66,7 +66,16 @@ export function sanitizeOverrides(input) {
     const text = src.story?.[key];
     if (typeof text === 'string' && text.trim()) story[key] = text.trim().slice(0, 200);
   }
-  return { tiles, facilities, city, rules, story };
+  /* ★ M4-11 武将编辑器覆盖段：cfgId → 覆盖字段。这里只做形状保护（键为
+     数字串、值为纯对象、≤600 位），数值钳位与战法合法性由
+     domain/general-editor.js sanitizeGeneralEdit 负责（它知道运行时战法表）。 */
+  const generals = {};
+  for (const [k, v] of Object.entries(src.generals || {})) {
+    if (!/^\d{1,9}$/.test(String(k)) || !v || typeof v !== 'object') continue;
+    generals[String(k)] = { ...v };
+    if (Object.keys(generals).length >= 600) break;
+  }
+  return { tiles, facilities, city, rules, story, generals };
 }
 
 let cache = null;

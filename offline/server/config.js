@@ -176,6 +176,24 @@ export function loadConfig(confDir = defaultConfDir()) {
     }
   } catch { /* heroes-240 不在时仍用原武将表（build-heroes.mjs 先行） */ }
   const generalByCfg = new Map((general.list || []).map((g) => [g.cfgId, g]));
+  /* ★ M4-11 武将编辑器：应用 overrides.generals 覆盖（面板/战斗/内政/外交/行军
+     的唯一权威 generalByCfg 在此收敛，所有消费点自动同源）。应用前原行深拷贝到
+     cfg.generalOriginal，供编辑器 reset 恢复。 */
+  const generalOriginal = new Map();
+  {
+    const gen = loadOverrides().generals || {};
+    for (const [k, patchRaw] of Object.entries(gen)) {
+      const row = generalByCfg.get(Number(k));
+      if (!row) continue;
+      generalOriginal.set(Number(k), { ...row });
+      for (const [field, v] of Object.entries(patchRaw)) {
+        if (['force', 'strategy', 'defense', 'speed', 'destroy',
+          'force_grow', 'strategy_grow', 'defense_grow', 'speed_grow', 'destroy_grow',
+          'cost', 'star'].includes(field)) row[field] = v;
+        else if (field === 'skillCfgId') row.skillCfgId = v;
+      }
+    }
+  }
   const armsByType = new Map((generalArms.arms || []).map((a) => [a.id, a]));
 
   const baseTileAt = (x, y) => {
@@ -204,6 +222,7 @@ export function loadConfig(confDir = defaultConfDir()) {
     mapRes,
     confs,
     generalByCfg,
+    generalOriginal,
     armsByType,
     tileAt,
     width: mapRes?.w ?? 200,
