@@ -49,6 +49,10 @@
     undo: [], pendingCommit: null, guideStep: 0, guideDismissed: false,
     ignored: {}, keys: {}, fontScale: 100, reduceMotion: false,
     drawer: null, lastFocus: null, fetchTimer: 0,
+    /* M4-6 窗口 / 弹层治理：
+       alwaysOnTop 不持久化——每次启动一律不置顶，只在本次运行内由玩家显式开启；
+       dismissedEvents 记住玩家主动收起的事件，避免 20s 轮询把同一张卡无限弹回。 */
+    alwaysOnTop: false, dismissedEvents: {}, eventPending: 0,
   };
   /* M4-2（GDD §10.7）：字号三档 小/中/大——连续缩放不可验收（5 分辨率 × 3 档全测），
      档位封顶 120%，超过的旧值归档到最大档。定义在顶部：初始化（下方 try 块）就要用。 */
@@ -202,6 +206,25 @@
       + '.slgIx-modal .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}'
       + '.slgIx-modal .acts button{padding:6px 15px;min-height:30px}'
       + '.slgIx-modal .acts .go{background:#4a5c34;border-color:#ba9a52}'
+      /* ★ M4-6：事件卡改「非模态右下角卡片」。旧实现整屏遮罩 + 必答（点遮罩不关闭）
+         + 20s 轮询无限重建，玩家不点抉择就永远被挡在最上层，连别的窗口都切不走。
+         现在遮罩透明且不吃点击，只有卡片本体可交互；另有「稍后处理」与未决事件徽标。
+         注意注释必须整行写在加号之前，不能夹在字符串拼接中间（会变成 NaN 丢规则）。 */
+      + '.slgIx-modal.slgIxEvent{inset:auto;right:16px;bottom:92px;'
+      + 'display:block;background:transparent;pointer-events:none}'
+      + '.slgIx-modal.slgIxEvent .box{width:min(420px,90vw);max-height:60vh;'
+      + 'pointer-events:auto;padding:13px 15px;box-shadow:0 12px 40px rgba(0,0,0,.72)}'
+      + '.slgIx-modal.slgIxEvent h3{font-size:14px;margin-bottom:7px}'
+      /* 右下角三层垂直排布：外壳开关 bottom:12 / 徽标 52 / 卡片 92，互不遮挡。
+         徽标给足点击尺寸，避免触发布局探针的 28px 小目标硬问题。 */
+      + '#slgIxEventBadge{position:fixed;right:16px;bottom:52px;z-index:100600;'
+      + 'min-width:128px;min-height:30px;'
+      + 'background:rgba(74,92,52,.96);color:#f0e2b8;border:1px solid #ba9a52;'
+      + 'border-radius:5px;padding:6px 11px;font:12px "Microsoft YaHei",sans-serif;'
+      + 'cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.5)}'
+      + 'html[data-slg-phase="login"] #slgIxEventBadge,'
+      + 'html[data-slg-window] #slgIxEventBadge,'
+      + 'html[data-slg-dialog="1"] #slgIxEventBadge{display:none!important}'
       + '#slgIxGuide{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:100250;'
       + 'width:min(520px,88vw);background:rgba(22,30,20,.98);border:1px solid #e3c46a;'
       + 'border-radius:5px;padding:11px 14px;box-shadow:0 6px 24px rgba(0,0,0,.6)}'
@@ -523,14 +546,44 @@
   /* ---------------- 4.5 M3-6 事件弹窗卡（GDD §8.3） ----------------
    *  数据来自 /__slg/interaction/state 的 pendingEvents（只读投影）；
    *  点选 POST /__slg/strategy/action eventChoice（落账在 strategy 层）。
-   *  选择是必答的（队列未决不堆叠，选完 loadState 拉下一条）；按钮带
-   *  data-ix-allow，避免被 interceptCosts 成本词预览二次拦截（两层弹窗协议）。 */
+   *  按钮带 data-ix-allow，避免被 interceptCosts 成本词预览二次拦截。
+   *
+   *  ★ M4-6：旧版是「整屏模态 + 必答（点遮罩不关）+ 20s 轮询无限重建」，玩家
+   *    不选就被永久挡在最上层，连别的窗口都切不走。现在改成：
+   *      1) 右下角非模态卡片，遮罩透明且不吃点击；
+   *      2) 「稍后处理」把事件 id 记进 dismissedEvents，本会话不再自动弹回；
+   *      3) 右下「未决事件 N」徽标随时重新打开，业务上的未决队列一条不少。 */
   var ACT = '/__slg/strategy/action';
   var LAYER_NAMES = { '史实节点': '史实节点', '条件': '时局', '关系': '人物' };
+  function updateEventBadge() {
+    var b = document.getElementById('slgIxEventBadge');
+    var n = S.eventPending || 0;
+    if (!n) { if (b) b.remove(); return; }
+    if (!b) {
+      b = el('button', '', ''); b.id = 'slgIxEventBadge'; b.type = 'button';
+      on(b, 'click', function () { S.dismissedEvents = {}; loadState(); });
+      (document.getElementById('slgIxRoot') || document.body).appendChild(b);
+    }
+    b.textContent = '未决事件 ' + n + '（点击处理）';
+  }
+  function dismissEvent(id, mask) {
+    if (id) S.dismissedEvents[id] = true;
+    if (mask) {
+      mask.remove();
+      var i = S.layers.indexOf(mask); if (i >= 0) S.layers.splice(i, 1);
+    }
+    updateEventBadge();
+    toast('事件已收起：右下「未决事件」可随时处理');
+  }
   function buildEventCards(d) {
     var list = d && Array.isArray(d.pendingEvents) ? d.pendingEvents : [];
+    S.eventPending = list.length;
+    var want = null;
+    for (var ei = 0; ei < list.length; ei++) {
+      if (list[ei] && !S.dismissedEvents[list[ei].id]) { want = list[ei]; break; }
+    }
+    updateEventBadge();
     var cur = document.querySelector('.slgIx-modal.slgIxEvent');
-    var want = list.length ? list[0] : null;
     if (cur && want && cur.dataset.evtId === want.id) return;
     if (cur) { cur.remove(); var li = S.layers.indexOf(cur); if (li >= 0) S.layers.splice(li, 1); }
     if (!want) return;
@@ -549,12 +602,16 @@
           + (c.preview ? '<div class="muted" style="font-size:11px;font-weight:normal;margin-top:3px">' + esc(c.preview) + '</div>' : '')
           + '</button>';
       }).join('') + '</div>'
-      + '<div class="muted" style="font-size:11px;margin-top:10px">抉择写入史册（结局回放可查）；本旬事件至多两件，逐件处理。</div>';
+      + '<button data-evt-later="1" data-ix-allow="1" style="margin-top:10px;'
+      + 'background:transparent;color:#a9a48f;border-color:#5c6b4e">稍后处理（不再自动弹出）</button>'
+      + '<div class="muted" style="font-size:11px;margin-top:10px">抉择写入史册（结局回放可查）；'
+      + '本旬事件至多两件，逐件处理。可先收起，游戏不会被弹窗挡住。</div>';
     box.innerHTML = html;
     mask.appendChild(box);
     (document.getElementById('slgIxRoot') || document.body).appendChild(mask);
     S.layers.push(mask);
     on(box, 'click', function (e) {
+      if (e.target.closest('[data-evt-later]')) { dismissEvent(want.id, mask); return; }
       var b = e.target.closest('[data-evt-choice]');
       if (!b || b.disabled) return;
       var btns = box.querySelectorAll('[data-evt-choice]');
@@ -584,7 +641,8 @@
         btns.forEach(function (x) { x.disabled = false; });
       });
     });
-    on(mask, 'click', function (e) { if (e.target === mask) e.stopPropagation(); }); // 必答卡：点遮罩不关闭
+    /* 非模态卡：点空白等同于「稍后处理」，且记录静音，20s 后不会自己弹回来。 */
+    on(mask, 'click', function (e) { if (e.target === mask) dismissEvent(want.id, mask); });
   }
 
   /* ---------------- 5. 6.2 决策预览 + 6.3 撤销 + 四态反馈 ---------------- */
@@ -1065,7 +1123,16 @@
       + '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
       + '<button data-act="font">字号：' + esc(fontLabel()) + '</button>'
       + '<button data-act="motion">' + (S.reduceMotion ? '动效：已减少' : '动效：正常') + '</button>'
+      + (window.__slgWin && window.__slgWin.isElectron
+        ? '<button data-act="ontop">窗口置顶：' + (S.alwaysOnTop ? '开（点击关闭）' : '关（默认）') + '</button>'
+          + '<button data-act="minimize">最小化到任务栏</button>'
+        : '')
       + '<button data-act="reset">恢复默认键位</button></div>'
+      + (window.__slgWin && window.__slgWin.isElectron
+        ? '<div class="muted" style="font-size:11px;margin-top:6px;line-height:1.7">'
+          + '窗口默认不置顶，可自由切换到其他应用、最小化或缩小；'
+          + '「置顶」仅本次运行有效，重启游戏自动关闭。</div>'
+        : '')
       + '<h4 style="margin-top:15px;color:#f0e2b8">字段缺口与降级方案（设计规格 2.2 / 章节 K）</h4>'
       + (gaps.length ? gaps.map(function (g) {
         return '<div class="delta"><b>' + esc(g.field) + '</b>（' + esc(g.use) + '）<br>'
@@ -1083,6 +1150,18 @@
         applyFontScale(); persist(); openKeysAgain(mask);
       }
       if (b.dataset.act === 'motion') { S.reduceMotion = !S.reduceMotion; var r = document.getElementById('slgIxRoot'); if (r) r.className = 'slgIx' + (S.reduceMotion ? ' reduce' : ''); persist(); openKeysAgain(mask); }
+      /* M4-6 窗口行为：只在玩家显式点击时改动，且状态不落 localStorage。 */
+      if (b.dataset.act === 'ontop') {
+        Promise.resolve(window.__slgWin.setAlwaysOnTop(!S.alwaysOnTop))
+          .then(function (on) { S.alwaysOnTop = !!on; openKeysAgain(mask); })
+          .catch(function (err) { toast('窗口设置不可用：' + err.message, 'fail'); });
+        return;
+      }
+      if (b.dataset.act === 'minimize') {
+        Promise.resolve(window.__slgWin.minimize())
+          .catch(function (err) { toast('最小化不可用：' + err.message, 'fail'); });
+        return;
+      }
       if (b.dataset.act === 'reset') { S.keys = {}; persist(); openKeysAgain(mask); }
     });
     on(box, 'keydown', function (e) {
@@ -1171,9 +1250,22 @@
       var tag = (e.target && e.target.nodeName) || '';
       var typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
       if (e.key === 'Escape') {
-        if (e.shiftKey) { closeAll(); var mods = document.querySelectorAll('.slgIx-modal, #slgIxDrawer'); mods.forEach(function (m) { m.remove(); }); return; }
+        if (e.shiftKey) {
+          closeAll();
+          var mods = document.querySelectorAll('.slgIx-modal, #slgIxDrawer');
+          mods.forEach(function (m) {
+            /* 事件卡必须走静音关闭，否则 20s 轮询又把它弹回来 */
+            if (m.classList && m.classList.contains('slgIxEvent')) dismissEvent(m.dataset.evtId, m);
+            else m.remove();
+          });
+          return;
+        }
         var top = S.layers[S.layers.length - 1];
-        if (top && top.classList && (top.classList.contains('slgIx-modal') || top.id === 'slgIxDrawer')) { top.remove(); S.layers.pop(); return; }
+        if (top && top.classList && (top.classList.contains('slgIx-modal') || top.id === 'slgIxDrawer')) {
+          if (top.classList.contains('slgIxEvent')) dismissEvent(top.dataset.evtId, top);
+          else { top.remove(); S.layers.pop(); }
+          return;
+        }
         if (closeTop()) return;
         return;
       }

@@ -276,8 +276,10 @@
     var pm = document.getElementById('slgPanelsMask');
     var panels = !!(pm && window.getComputedStyle(pm).display !== 'none');
     var wins = Array.prototype.slice.call(document.querySelectorAll('#slgUIv2 .win'));
-    /* 两种弹窗都要算：交互层预览 .slgIx-modal，城池/出征确认框 #slgUIv2 .modal */
-    var modals = document.querySelectorAll('.slgIx-modal, #slgUIv2 .modal').length;
+    /* 两种弹窗都要算：交互层预览 .slgIx-modal，城池/出征确认框 #slgUIv2 .modal。
+       ★ M4-6：事件卡 .slgIxEvent 已改为右下角非模态卡片，不能算「一屏一窗」的
+         模态弹窗——否则它一出现就把 dock / 图例全隐藏，玩家等于又被挡住一层。 */
+    var modals = document.querySelectorAll('.slgIx-modal:not(.slgIxEvent), #slgUIv2 .modal').length;
     var drawer = document.getElementById('slgIxDrawer');
     return { city: city, panels: panels, wins: wins, modals: modals, drawer: !!drawer };
   }

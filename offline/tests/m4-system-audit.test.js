@@ -3,7 +3,8 @@
  *   1) 8 旬加速模拟：零未捕获异常 / 零不变量违反 / 灭国闭环达成 / 确定性通过；
  *   2) 场景清单无 THREW（业务拒绝允许，异常不允许）；
  *   3) 武将平衡：零无效战法引用、零战法错配、零高维零战法、CSV 忠实；
- *   4) 已知设计口径：层级倒挂仍在（layer 是剧情权重不是强度档，报告里如实登记）。
+ *   4) 分层口径（M4-6）：layer 是剧情权重不是强度档，31 条设计备注单列保留，
+ *      不许再被记成数据缺陷；非史实人物必须标低置信。
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -73,4 +74,22 @@ test('M4-4·武将平衡：装配修复后三项归零 + CSV 忠实', () => {
   assert.equal(heroes.length, 240);
   // core 保底 2 条（M3-8 口径不能回退）
   assert.ok(heroes.filter((h) => h.layer === 'core').every((h) => (h.skills || []).length >= 2));
+});
+
+test('M4-6·分层口径：剧情权重不是强度档，31 条设计备注必须单列保留', () => {
+  const heroes = JSON.parse(readFileSync(new URL('../conf/campaign/heroes-240.json', import.meta.url), 'utf8')).heroes;
+  const src = readFileSync(new URL('../tools/hero-balance.mjs', import.meta.url), 'utf8');
+  /* 防回退：不许再把「core 低维 / minor 高维 / 重要层高维 / 虚构人物高属性」
+     记成 high bug。五维逐位忠实史实 CSV，改数值会破坏 M4-1 数据溯源红线。 */
+  assert.match(src, /const designNotes = \[\]/);
+  for (const k of ['core 低维', 'minor 高维', 'important 高维', '虚构人物高属性']) {
+    assert.match(src, new RegExp(`note\\('${k}'`), `${k} 必须留在设计备注里`);
+    assert.doesNotMatch(src, new RegExp(`add\\('(?:high|medium)', '${k}'`), `${k} 不许再冒充数据缺陷`);
+  }
+  assert.ok(heroes.every((h) => ['core', 'important', 'minor'].includes(h.layer)), 'layer 必须合法');
+  const fiction = heroes.filter((h) => h.source?.level !== '史实'
+    || /虚构|虚拟|无名|近现代/.test(h.type || ''));
+  assert.ok(fiction.length > 0);
+  assert.ok(fiction.every((h) => h.source?.confidence === '低'),
+    '非史实人物必须标低置信，否则「本作设定」会被误读成史实');
 });

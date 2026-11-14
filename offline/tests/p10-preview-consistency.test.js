@@ -77,13 +77,25 @@ test('A1 · 100 组参数：预演与正式结算逐位一致', () => {
 });
 
 test('性能 · 单次推演 ≤50ms（GDD §6.7 约束 3，3v3/8 回合）', () => {
-  const { state, army, from, target } = battlefield();
-  army.soldiers = [1200, 500, 0];
-  /* 先预热一次（首跑含模块级懒加载，不计入） */
-  previewAssault(state, cfg, { cityId: target, fromCityId: from, armyId: army.id, frac: 1 });
-  const t0 = process.hrtime.bigint();
-  const p = previewAssault(state, cfg, { cityId: target, fromCityId: from, armyId: army.id, frac: 1 });
-  const ms = Number(process.hrtime.bigint() - t0) / 1e6;
+  /* ★ 修 flaky：原来只测一次，check-release 一边跑全量单测、一边校验 Electron
+     报告时，偶发 GC / CPU 抢占会把这一枪打出 >50ms 的假红，整条发布闸跟着失败。
+     GDD 约束的是「稳态单次推演」，所以 5 次独立采样取中位数；每次都用新战场
+     并各自预热，既避免模块懒加载，也避免任何状态累积。真退化时中位数照样超标。 */
+  const samples = [];
+  let p;
+  for (let i = 0; i < 5; i += 1) {
+    const bf = battlefield();
+    bf.army.soldiers = [1200, 500, 0];
+    const opts = { cityId: bf.target, fromCityId: bf.from, armyId: bf.army.id, frac: 1 };
+    previewAssault(bf.state, cfg, opts); // 预热：首跑含懒加载，不计入
+    const t0 = process.hrtime.bigint();
+    p = previewAssault(bf.state, cfg, opts);
+    samples.push(Number(process.hrtime.bigint() - t0) / 1e6);
+  }
   assert.equal(p.ok, true);
-  assert.ok(ms <= 50, `单次推演 ${ms.toFixed(1)}ms 超预算（≤50ms）`);
+  samples.sort((a, b) => a - b);
+  const median = samples[2];
+  const worst = samples[samples.length - 1];
+  assert.ok(median <= 50,
+    `单次推演中位数 ${median.toFixed(1)}ms 超预算（≤50ms；5 次采样最差 ${worst.toFixed(1)}ms）`);
 });

@@ -447,8 +447,8 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 - **灭国闭环**：T62 `xuzhou` 归零（征服者与残城不接壤时由 `yangzhou` 接手，不是死锁），灭国后 10 旬无空壳决策/无异常，存档 JSON 回读一致。`brainRunner` 替换须显式回落 localBrain（strategyTick 整段替换，返回 null 会炸 sheet.strategy_orders）。
 - **真 bug 修复（formup 蒸发）**：UI 允许三槽全 0，旧 `strategyFormup` 直接清兵且差额不入账。现拒绝 `empty_formup`、余兵退回驻城守军（无驻城则留首槽）、事件簿记账。`tests/empire.test.js` +1 条。
 - **平衡修复（按五维装配）**：旧规则只给 core 传新战法池 → 117 位高维 0 战法、10 处高武/高智错配。现三层都传池：五维和 ≥340（或 core）配倾向战法、高武 ≥90 强制兵刃/高智 ≥90 强制谋略、≥390 配光环、core 保底 2 条，`fnv1a` 确定性。修复后三项归零（高维零战法 0 / 错配 0 / 无效引用 0），CSV 238/238 忠实。
-- **未修的已知设计口径（报告登记）**：① `layer` 是剧情权重不是强度档——minor 五维均值 383.5 > core 346.4 > important 290，改选层会牵动宿命/剧本/资料库；② 貂蝉（core、虚构、武力 8/魅力 100）等虚构人物属性需人工签核；③ ~~玩家挂机金 T8 归零恒 0~~ **M4-5 已推翻**：这是模拟脚本漏跑日产的假阳性，真链路玩家金充足（见 §9.20）；改为登记「金通胀 / 与 NPC 田赋量级倒挂」。
-- **测试**：`tests/m4-system-audit.test.js` 2 条（8 旬模拟零异常/灭国/确定性、平衡三项归零）。
+- **未修的已知设计口径（报告登记）**：① `layer` 是剧情权重不是强度档——minor 五维均值 383.5 > core 346.4 > important 290，改选层会牵动宿命/剧本/资料库（**M4-6 已把 31 条观感项改列 `designNotes`，不再冒充数据缺陷；选层与数值未动**）；② 貂蝉（core、虚构、武力 8/魅力 100）等虚构人物属性需人工签核；③ ~~玩家挂机金 T8 归零恒 0~~ **M4-5 已推翻**：这是模拟脚本漏跑日产的假阳性，真链路玩家金充足（见 §9.20）；改为登记「金通胀 / 与 NPC 田赋量级倒挂」。
+- **测试**：`tests/m4-system-audit.test.js`（M4-4 起 2 条：8 旬模拟零异常/灭国/确定性、平衡三项归零；M4-5 起 3 条；M4-6 起 4 条，新增分层口径设计备注防删断言）。
 - 基线：413/413 单测、29+29 双态冒烟、check-release 全绿。
 
 ### 9.20 M4-5 模拟脚本口径纠偏与验收入闸（2026-11-14）
@@ -460,6 +460,20 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 - **真链路复跑**：72 旬 / 198 场景 / 业务拒绝 21（旧 31，其中 9 次 `no_gold` 消失）/ 0 异常 / 0 不变量 / 0 可疑日志 / 0 console.error / 天下日志 991（旧 341）/ 灭国仍为 T62 `xuzhou` + 灭国后 10 旬 / 确定性通过。玩家金 **22,820 → 776,035(T60) → 937,935**，60 旬双跑 1.8 秒。
 - **新暴露的真实数值问题（登记未改）**：玩家固定 `gold_yield` 日产 ≈ 14,600 金/旬，NPC 逐城田赋 `60+商业×1.2`/城/旬 ≈ 600~800 金/旬，量级差约 20 倍；金逼近 `depot_capacity` 100 万后日产被截断且不再记流水。改 `conf/json/basic.json` 会牵动平衡基线与大量测试，属设计决策。
 - **纪律**：任何长时模拟 / 平衡脚本只准调 `settleWorld`，**不许自己拼结算链**；取结论前先做「真链路 vs 旧链路」反向对照，否则 Δ0 与「挂机金恒 0」都可能是工具没跑到造成的恒绿 / 恒假结论。
+
+### 9.21 M4-6 窗口行为与弹层治理（2026-11-14，玩家实机反馈）
+
+- **症状**：「游戏一直压在最上层，点不到其他应用，也无法缩小」+「弹窗一直出现在最上层」。两条都是真缺陷，且叠加放大。
+- **根因 ①（OS 层）**：`electron/main.cjs` 在自动化环境变量分支执行 `win.setAlwaysOnTop(true, 'screen-saver')`。`screen-saver` 在 Windows 是最高置顶层，**高于任务栏**，所以点不到别的应用、也点不到最小化按钮；只要进程继承了任一 `SLG_*=1` 变量（测试驱动会设置），正常游玩也会永久置顶。注释里写的理由是「防 Chromium 遮挡节流」，但 `backgroundThrottling:false` 早已根治，置顶纯属冗余有害项。
+- **根因 ②（页面层）**：`server/interaction-ui.js` 的事件卡是 `inset:0` 整屏遮罩 + **必答**（点遮罩只 `stopPropagation()` 不关闭）+ `setInterval(loadState, 20000)` 轮询重建。玩家不选就永远被挡住；即使强行关掉，20 秒后同一张卡又原样弹回。
+- **修法**：
+  1. `main.cjs`：显式 `alwaysOnTop:false / minimizable / maximizable / resizable / fullscreenable:true`，最小尺寸 1024×576 → **900×540**；自动化只 `win.focus()` 一次，不再置顶（CI 需强制前台时显式 `SLG_FORCE_TOP=1`，且只用 `floating` 层）；`second-instance` 改 `showInactive()` 不抢焦点；隔离目录名去掉 `Math.random()` 改 `process.hrtime.bigint()`。
+  2. 新增 `electron/preload.cjs`：`contextBridge` 只暴露 `__slgWin` 四项白名单（`isElectron / isAlwaysOnTop / setAlwaysOnTop / minimize`），主进程 `ipcMain.handle` 对应三条 IPC。设置面板里「窗口置顶」默认关、**不持久化**（重启必回不置顶），另给「最小化到任务栏」显式入口；仅 Electron 内显示，浏览器/HTTP 态自动隐藏。
+  3. 事件卡改右下角**非模态**（`inset:auto/right:16px/bottom:92px`、`pointer-events:none`，仅 `.box` 可点）；新增「稍后处理」→ `S.dismissedEvents` 会话内静音，ESC / Shift+ESC / 点空白三条关闭路径都走静音，杜绝 20 秒复活；「未决事件 N」徽标可随时重开，业务队列一条不少。右下角三层垂直排布（外壳开关 12 / 徽标 52 / 卡片 92），互不遮挡；`ui-shell.js` 的一屏一窗统计排除 `.slgIxEvent`，否则非模态卡仍会把 dock 全隐藏。
+- **真实取证（不是读源码）**：`electron/smoke.cjs` 末尾直接对 `BrowserWindow` 做 `isAlwaysOnTop / isMinimizable / isResizable / getMinimumSize`、真实 `minimize→restore`、`setSize(960,600)` 并还原，再用 `getComputedStyle` 验事件卡。源码态与打包态各 33/33 通过，`report.window` 记录：`alwaysOnTop=false`、`minSize=[900,540]`、`minimized/restored=true`、`smallSize=[960,600]`、`preload.keys` 四项、事件卡 `pointerEvents=none / right=16px / 背景透明`。`check-release` 6 节加静态纪律闸、7.8 加双态真实报告断言。
+- **顺带修的两处假红**：① `tests/p10-preview-consistency.test.js` 单次计时被 GC/并发负载打出 >50ms 会让整条发布闸偶发判红，改为 5 次独立新战场采样取中位数（仍守 GDD 50ms 预算）；② `tools/hero-balance.mjs` 把 31 条「core 低维 / minor 高维 / important 高维 / 虚构人物高属性」从 `issues` 移到 `designNotes` 单列保留——`layer` 是**剧情权重**不是强度档，五维逐位忠实 `three-kingdoms/characters.csv`，改数值会破坏 M4-1 数据溯源红线；同时新增真正可判定的硬检查（非史实人物必须 `confidence=低`、`layer` 枚举合法）。数据缺陷 0 / 设计备注 31，`check-release` 加断言「备注不许被删、也不许再混进 issues」。
+- **基线**：单测 **422/422**、双态冒烟 **33/33**、UI 审计 72/72、真鼠标 54/54、perf/layout/ui-probe 全绿、`byteIdentical=true`、check-release **89/89**。
+- **仍需人工拍板（不是 bug）**：金通胀（玩家 ≈14,600 金/旬 vs NPC 600~800 金/旬）、是否按强度档重排 `layer`（牵动宿命/剧本/资料库）、貂蝉等虚构人物五维签核。三者都涉及内容/数值口径，改前需产品确认。
 
 ---
 

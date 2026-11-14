@@ -6,7 +6,8 @@
  * 只读审查，不改数据。核对：
  *   1) 五维值域/分布（按 layer）、越界与离群；
  *   2) 派生字段一致性（义理 = 政×0.6+魅×0.4、相性 1..149、适性值域、生卒年）；
- *   3) 层级定位倒挂（core 低维 / minor 高维）与虚构人物属性；
+ *   3) 层级定位与虚构人物属性→designNotes（layer 是剧情权重档，不是强度档；
+ *      五维来自史实原表，改数值会破坏 CSV 忠实性与数据溯源，只能改口径）；
  *   4) 战法装配（cfgId 有效性、数量、与五维倾向是否错配）；
  *   5) 宿命组引用有效性、组合加成上限；
  *   6) 与 three-kingdoms/characters.csv 原表的忠实性。
@@ -30,6 +31,12 @@ const heroByName = new Map(heroes.map((h) => [h.name, h]));
 const sum = (h) => Object.values(h.five).reduce((s, v) => s + v, 0);
 const issues = [];
 const add = (severity, kind, subject, detail) => issues.push({ severity, kind, subject, detail });
+/* 设计备注与数据缺陷必须分开：M4-4 曾把「core 低维 / minor 高维 / 虚构人物高属性」
+   记成 31 条 high/medium bug，但 layer 是剧情权重（谁在剧本里出场），不是强度档，
+   五维又逐位忠实于 three-kingdoms/characters.csv。把它们当 bug 会诱导后人去改史实
+   数值，直接破坏 M4-1 的数据溯源红线。这里保留全部明细，只是不再混进 issues。 */
+const designNotes = [];
+const note = (kind, subject, detail) => designNotes.push({ kind, subject, detail });
 
 /* ---------------- 1) 五维分布 ---------------- */
 const DIMS = ['tong', 'wu', 'zhi', 'zheng', 'mei'];
@@ -71,17 +78,17 @@ for (const h of heroes) {
 const coreMean = byLayer.core.sumMean;
 const coreRows = heroes.filter((h) => h.layer === 'core').sort((a, b) => sum(a) - sum(b));
 for (const h of coreRows.slice(0, 8)) {
-  if (sum(h) < coreMean - 55) add('high', 'core 低维', h.name, `五维和 ${sum(h)}，core 均值 ${coreMean}；类型 ${h.type}；${h.source.level}`);
+  if (sum(h) < coreMean - 55) note('core 低维', h.name, `五维和 ${sum(h)}，core 均值 ${coreMean}；类型 ${h.type}；${h.source.level}`);
 }
 const minorTop = heroes.filter((h) => h.layer === 'minor' && sum(h) >= coreMean + 20)
   .sort((a, b) => sum(b) - sum(a));
 for (const h of minorTop.slice(0, 12)) {
-  add('high', 'minor 高维', h.name, `五维和 ${sum(h)} ≥ core 均值+20（${coreMean}），却在 minor 层、战法 ${(h.skills || []).length} 条`);
+  note('minor 高维', h.name, `五维和 ${sum(h)} ≥ core 均值+20（${coreMean}），却在 minor 层、战法 ${(h.skills || []).length} 条`);
 }
 const importantTop = heroes.filter((h) => h.layer === 'important' && sum(h) >= coreMean + 20)
   .sort((a, b) => sum(b) - sum(a));
 for (const h of importantTop.slice(0, 8)) {
-  add('medium', 'important 高维', h.name, `五维和 ${sum(h)}，战法 ${(h.skills || []).length} 条`);
+  note('important 高维', h.name, `五维和 ${sum(h)}，战法 ${(h.skills || []).length} 条`);
 }
 
 /* ---------------- 3) 虚构/传说人物 ---------------- */
@@ -89,7 +96,18 @@ const fiction = heroes.filter((h) => h.source?.level !== '史实' || /虚构|虚
 for (const h of fiction) {
   const top = Math.max(...Object.values(h.five));
   if (top >= 95 || sum(h) >= 380) {
-    add('medium', '虚构人物高属性', h.name, `${h.type}（${h.source.level}，${h.layer} 层），五维和 ${sum(h)}、单维峰值 ${top}`);
+    note('虚构人物高属性', h.name, `${h.type}（${h.source.level}，${h.layer} 层），五维和 ${sum(h)}、单维峰值 ${top}`);
+  }
+  /* 真正可自动判定的硬缺陷：非史实人物必须标低置信，否则「本作设定」会被
+     玩家误读成史实。属性高低本身不是 bug，标注缺失才是。 */
+  if (h.source?.confidence !== '低') {
+    add('high', '虚构人物未标注低置信', h.name,
+      `source.confidence=${h.source?.confidence}，应为「低」（数据溯源 M4-1）`);
+  }
+}
+for (const h of heroes) {
+  if (!['core', 'important', 'minor'].includes(h.layer)) {
+    add('high', '层级越界', h.name, `layer=${h.layer}，应为剧情权重三档之一`);
   }
 }
 
@@ -158,6 +176,7 @@ const report = {
   totals: { heroes: heroes.length, fates: fates.length, skills: skills.length,
     issues: issues.length, high: issues.filter((i) => i.severity === 'high').length,
     medium: issues.filter((i) => i.severity === 'medium').length,
+    designNotes: designNotes.length,
     invalidSkillRefs, mismatch, zeroSkillHighStat,
     csvChecked, csvMismatch, bonded: bonded.length, multiFate: multi.length },
   byLayer,
@@ -165,10 +184,11 @@ const report = {
   top10: heroes.slice().sort((a, b) => sum(b) - sum(a)).slice(0, 10)
     .map((h) => ({ name: h.name, layer: h.layer, sum: sum(h), skills: (h.skills || []).length })),
   issues,
+  designNotes,
 };
 mkdirSync(dirname(OUT), { recursive: true });
 writeFileSync(OUT, JSON.stringify(report, null, 2) + '\n');
 console.log(`[hero-balance] 240 位 / ${fates.length} 宿命组 / ${skills.length} 战法`);
-console.log(`[hero-balance] 问题 ${issues.length}（high ${report.totals.high} / medium ${report.totals.medium}）`);
+console.log(`[hero-balance] 数据缺陷 ${issues.length}（high ${report.totals.high} / medium ${report.totals.medium}）；设计备注 ${designNotes.length} 条（layer 为剧情权重档）`);
 console.log(`[hero-balance] 高维零战法 ${zeroSkillHighStat} 位、战法错配 ${mismatch} 处、CSV 核对 ${csvChecked} 位（不一致 ${csvMismatch}）`);
 console.log(`[hero-balance] 报告: ${OUT}`);

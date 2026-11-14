@@ -749,6 +749,55 @@ async function runSmoke(win, server, app) {
     report.pageErrors = await wc.executeJavaScript('window.__slgErrors || []', true);
     check('页面无未捕获异常（含战报详情渲染）', report.pageErrors.length === 0, report.pageErrors.slice(0, 6));
     check('无渲染进程 error 级控制台输出', report.consoleErrors.length === 0, report.consoleErrors.slice(0, 10));
+
+    /* ---------------- M4-6 窗口行为取证（真实 BrowserWindow，不是读源码） --------
+       玩家报「游戏一直压在最上层、点不到其他应用、也点不到任务栏最小化按钮」。
+       这里在真实窗口上逐项验证：默认不置顶、可最小化并恢复、可缩小，
+       渲染层只拿到白名单窗口 API、事件卡不吃点击。放最后做，且必须还原窗口状态。 */
+    const winState = {
+      alwaysOnTop: win.isAlwaysOnTop(),
+      minimizable: win.isMinimizable(),
+      maximizable: win.isMaximizable(),
+      resizable: win.isResizable(),
+      minSize: win.getMinimumSize(),
+      bounds: win.getBounds(),
+    };
+    win.minimize(); await sleep(300);
+    winState.minimized = win.isMinimized();
+    win.restore(); await sleep(300);
+    winState.restored = !win.isMinimized();
+    win.setSize(960, 600); await sleep(200);
+    winState.smallSize = win.getSize();
+    win.setBounds(winState.bounds); await sleep(200);
+    winState.restoredBounds = win.getBounds();
+    winState.preload = await wc.executeJavaScript(`(function(){
+      var w = window.__slgWin;
+      if (!w) return { ok:false, why:'no __slgWin' };
+      return { ok: w.isElectron === true
+        && ['isAlwaysOnTop','setAlwaysOnTop','minimize'].every(function(k){ return typeof w[k] === 'function'; }),
+        keys: Object.keys(w) };
+    })()`, true);
+    /* 临时建一张事件卡读计算样式：确认真的是右下角非模态、不吃点击 */
+    winState.eventCard = await wc.executeJavaScript(`(function(){
+      var d = document.createElement('div');
+      d.className = 'slgIx-modal slgIxEvent'; d.style.display = 'none';
+      (document.getElementById('slgIxRoot') || document.body).appendChild(d);
+      var s = getComputedStyle(d);
+      var out = { position:s.position, pointerEvents:s.pointerEvents, right:s.right,
+        bottom:s.bottom, backgroundColor:s.backgroundColor, display:s.display };
+      d.remove();
+      return out;
+    })()`, true);
+    report.window = winState;
+    check('窗口默认不置顶（可自由切换到其他应用）', winState.alwaysOnTop === false, winState);
+    check('窗口可最小化并恢复、可缩小到 960×600',
+      winState.minimizable === true && winState.minimized === true
+      && winState.restored === true && winState.smallSize[0] <= 1000
+      && winState.smallSize[1] <= 640, winState);
+    check('渲染层窗口 API 仅白名单四项', winState.preload?.ok === true, winState.preload);
+    check('事件卡非模态（透明、不吃点击、不整屏遮挡）',
+      winState.eventCard?.pointerEvents === 'none' && winState.eventCard?.right !== '0px',
+      winState.eventCard);
   } catch (err) {
     check('冒烟过程无异常', false, String(err && err.stack || err));
   }

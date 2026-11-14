@@ -51,18 +51,32 @@ function createWindow() {
   win = new BrowserWindow({
     width,
     height,
-    minWidth: Math.min(1024, width),
-    minHeight: Math.min(576, height),
+    /* ★ 玩家反馈：窗口「缩不小」。旧值 1024×576 把可拖动下限卡死，放宽到
+       900×540（布局矩阵仍以 ≥1280 为验收基准，小窗由断点样式自适应）。 */
+    minWidth: Math.min(900, width),
+    minHeight: Math.min(540, height),
     center: true,
     title: '霜寒定九州',
     backgroundColor: '#14161a',
     autoHideMenuBar: true,
     show: false,
+    /* ★ 玩家反馈：游戏一直压在其他应用上面，点不到别的窗口、也点不到任务栏的
+       最小化按钮。旧实现在自动化测试分支把窗口设成 screen-saver 级置顶，
+       该层在 Windows 高于任务栏；一旦进程继承了 SLG_* 环境变量，正常游玩也会
+       变成永久置顶。遮挡导致 rAF 停摆的问题已由 backgroundThrottling:false 根治，
+       所以这里把「默认绝不置顶 / 可最小化 / 可缩放」写成显式契约。 */
+    alwaysOnTop: false,
+    minimizable: true,
+    maximizable: true,
+    resizable: true,
+    fullscreenable: true,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
       spellcheck: false,
       webgl: true,
+      /* 窗口行为（置顶开关 / 最小化）的唯一受控通道；不暴露 node / ipcRenderer。 */
+      preload: path.join(__dirname, 'preload.cjs'),
       /* ★ 自动化必须关掉后台节流：窗口一旦被判定为遮挡/失焦，Chromium 会把
          requestAnimationFrame 降到 0，Cocos 的 director 就永远不建场景
          （FPS 0 / Draw call 0），测试看起来像「页面没加载」。 */
@@ -75,16 +89,18 @@ function createWindow() {
 
   win.once('ready-to-show', () => {
     win.show();
-    /* 自动化模式：置顶 + 抢焦点，避免被别的窗口盖住触发 Chromium 遮挡节流，
-       否则 Cocos 的 rAF 会停掉，场景永远起不来。测试结束进程即退出，不影响用户。 */
+    /* 自动化模式只做一次聚焦，绝不再置顶：遮挡节流已由 backgroundThrottling:false
+       与 webContents.setBackgroundThrottling(false) 双重兜住，无需霸占桌面。
+       若确实需要强制前台（无人值守的 CI），显式设 SLG_FORCE_TOP=1，且只用
+       floating 层——不会盖住任务栏与系统级窗口；默认关闭。 */
     const automated = process.env.SLG_SMOKE === '1' || process.env.SLG_AUDIT === '1'
       || process.env.SLG_MOUSE === '1' || process.env.SLG_PERF === '1' || process.env.SLG_LAYOUT === '1'
       || process.env.SLG_DIAG === '1';
     if (automated) {
       try {
-        win.setAlwaysOnTop(true, 'screen-saver');
         win.focus();
         win.webContents.setBackgroundThrottling(false);
+        if (process.env.SLG_FORCE_TOP === '1') win.setAlwaysOnTop(true, 'floating');
       } catch { /* ignore */ }
     }
     if (process.env.SLG_SMOKE === '1') {
@@ -150,7 +166,8 @@ if (process.env.SLG_SMOKE === '1' || process.env.SLG_AUDIT === '1'
   /* ★ 只用 pid 命名不够：pid 会被系统复用，复用时会捡到上一轮留下的 save.json，
      于是「举义页」被跳过，同一份脚本跑出来的路径数在 57/59 之间抖 —— 测试就不可复现了。
      加时间戳后缀，保证每轮真的是空存档。 */
-  const stamp = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+  /* 确定性：pid 会被系统复用，加时间戳 + 高精度单调计数；不引入随机数。 */
+  const stamp = Date.now().toString(36) + '-' + process.hrtime.bigint().toString(36);
   app.setPath('userData', path.join(os.tmpdir(), `slg-offline-${kind}-${process.pid}-${stamp}`));
 }
 
@@ -158,13 +175,31 @@ const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {
-  app.on('second-instance', () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
+  /* 二次启动只把已有窗口「显示出来」，不抢焦点：玩家正在别的应用里时，
+     不该被游戏强行拽回前台。 */
+  app.on('second-instance', () => {
+    if (!win) return;
+    if (win.isMinimized()) win.restore();
+    win.showInactive();
+  });
   app.whenReady().then(async () => {
     // ★ P2-2：去掉 Electron 默认 File/Edit/View 菜单（按 Alt 会弹出来，完全不像正式游戏）
     Menu.setApplicationMenu(null);
     try {
       server = await bootServer();
       ipcMain.handle('app:status', () => server.status());
+      /* 窗口行为 IPC：只在玩家于「快捷键 / 设置」里显式操作时才改。
+         永不自动置顶；置顶也只用 floating 层，不使用 screen-saver 层。 */
+      ipcMain.handle('win:is-always-on-top', () => !!(win && win.isAlwaysOnTop()));
+      ipcMain.handle('win:always-on-top', (_e, on) => {
+        if (!win) return false;
+        win.setAlwaysOnTop(!!on, 'floating');
+        return win.isAlwaysOnTop();
+      });
+      ipcMain.handle('win:minimize', () => {
+        if (win && win.isMinimizable()) win.minimize();
+        return true;
+      });
       createWindow();
     } catch (err) {
       logError(err);

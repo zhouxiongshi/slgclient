@@ -238,6 +238,18 @@ check('主进程单实例 / 异常日志 / 崩溃日志 / 启动失败提示',
   /crash\.log/.test(main) && /showErrorBox/.test(main), '');
 check('渲染进程隔离（contextIsolation=true / nodeIntegration=false）',
   /contextIsolation:\s*true/.test(main) && /nodeIntegration:\s*false/.test(main), '');
+/* M4-6：玩家实机反馈「游戏一直压在最上层、点不到其他应用、也点不到最小化」。
+   screen-saver 层在 Windows 高于任务栏，必须永久禁用；默认置顶必须显式为 false。
+   事件卡是另一半根因（整屏模态 + 必答 + 20s 轮询无限复活），一并在闸里卡住。 */
+const ixSrc = readFileSync(join(ROOT, 'server', 'interaction-ui.js'), 'utf8');
+check('窗口默认不置顶 / 可最小化 / 不抢焦点 / 弹层不再霸屏',
+  /alwaysOnTop:\s*false/.test(main) && /minimizable:\s*true/.test(main)
+    && /minWidth:\s*Math\.min\(900/.test(main)
+    && !/setAlwaysOnTop\(true,\s*'screen-saver'\)/.test(main)
+    && /showInactive\(\)/.test(main) && /preload:\s*path\.join/.test(main)
+    && existsSync(join(ROOT, 'electron', 'preload.cjs'))
+    && /dismissedEvents/.test(ixSrc) && /data-evt-later="1"/.test(ixSrc)
+    && /\.slgIx-modal\.slgIxEvent\{inset:auto/.test(ixSrc), '');
 const world = readFileSync(join(ROOT, 'server', 'world.js'), 'utf8');
 check('存档：版本校验 + 原子写 + 自动持久化 + 重启续跑',
   /SAVE_VERSION/.test(world) && /renameSync/.test(world) &&
@@ -352,6 +364,13 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
     Array.isArray(r?.pageErrors) && r.pageErrors.length === 0 &&
     Array.isArray(r?.consoleErrors) && r.consoleErrors.length === 0,
     `page=${r?.pageErrors?.length} console=${r?.consoleErrors?.length}`);
+  check(`${label}窗口默认不置顶 / 可最小化恢复 / 可缩小 / 事件卡非模态`,
+    r?.window?.alwaysOnTop === false && r?.window?.minimizable === true
+    && r?.window?.minimized === true && r?.window?.restored === true
+    && r?.window?.smallSize?.[0] <= 1000
+    && r?.window?.preload?.ok === true
+    && r?.window?.eventCard?.pointerEvents === 'none',
+    JSON.stringify(r?.window)?.slice(0, 260));
   check(`${label}原画面截图非黑屏`, (r?.screenshot?.variance ?? 0) > 25, JSON.stringify(r?.screenshot));
   check(`${label}原版战报详情成功渲染内核 rounds`,
     r?.warReportUI?.list?.ok === true && r?.warReportUI?.click?.ok === true,
@@ -458,6 +477,13 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
       && t.zeroSkillHighStat === 0 && t.csvMismatch === 0
       && (!csvAvailable || t.csvChecked >= 230),
     JSON.stringify({ ...t, csvAvailable }));
+  /* M4-6：31 条「层级倒挂 / 虚构人物高属性」是剧情权重档的设计口径，不是数据
+     缺陷（五维逐位忠实史实原表，改数值就破坏溯源）。必须单列保留、不许删掉，
+     也不许再混进 issues 冒充 bug。 */
+  check('武将分层口径：设计备注单列保留，数据缺陷归零',
+    t.issues === 0 && bal?.designNotes?.length >= 30 && t.designNotes >= 30,
+    JSON.stringify({ issues: t.issues, designNotes: t.designNotes,
+      listed: bal?.designNotes?.length }));
   if (!csvAvailable) requiresUser.push({
     name: '武将 CSV 忠实性未验（原表不在本机）',
     detail: `${csvPath} 不存在；hero-balance 会跳过逐维对照，需在有资料工程的机器上复跑`,
