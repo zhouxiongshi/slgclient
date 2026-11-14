@@ -7,7 +7,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadOverrides } from './gm/overrides.js';
 import {
-  clampFive, toGameStat, toGameGrow, toDestroyStat, toCostStat,
+  clampFive, toGameStat, toGameGrow, toDestroyStat, toCostStat, toPercentFromRaw,
 } from './domain/general-stat.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -74,8 +74,23 @@ export function loadConfig(confDir = defaultConfDir()) {
     defender: c.defender ?? 0,
   }));
 
+  /* ★ M4-10 三国志11 百分制：原表 general.json 是「百分制 ×100」的设计值
+     （force 8400 = 武力 84，中位 68 正落在三国志11 的常见区间）。
+     玩家要求所有人物基础属性上限 100，这里一次性把原表 5 个战斗维度归一到
+     0~100；之后再并入主公与史实派生（后者本身就是百分制），全表统一量纲。
+     `*_grow` 不动：它是 0~100 的成长率，进内核时按 /100*10 换算成每级点数。 */
+  const PCT_KEYS = ['force', 'strategy', 'defense', 'speed', 'destroy'];
+  const toPercent = (row) => {
+    for (const key of PCT_KEYS) {
+      if (Number(row?.[key]) > 100) row[key] = toPercentFromRaw(row[key]);
+    }
+    return row;
+  };
+  for (const g of general.list || []) toPercent(g);
+
   try {
     const protag = JSON.parse(readFileSync(resolve(confDir, 'campaign', 'protagonist.json'), 'utf8'));
+    if (protag.general) toPercent(protag.general);
     if (protag.general && !(general.list || []).some((g) => g.cfgId === protag.general.cfgId)) {
       general.list.push(protag.general);
     }
@@ -99,22 +114,41 @@ export function loadConfig(confDir = defaultConfDir()) {
       [4, 'base', 0.85],
     ];
     for (const h of heroDoc.heroes || []) {
-      if (cfgIds.has(Number(h.id)) || names.has(h.name)) continue;
       const five = h.five || {};
       const apt = h.aptitude || {};
       const star = STAR[h.layer] ?? 3;
-      const arms = APT2ARMS
-        .map(([id, key, w]) => [id, (key === 'base' ? 0.85 : Number(apt[key] ?? 0.9)) * w])
-        .sort((a, b) => b[1] - a[1] || a[0] - b[0])
-        .slice(0, 3)
-        .map((x) => x[0])
-        .sort((a, b) => a - b);
       const wu = clampFive(five.wu);
       const zhi = clampFive(five.zhi);
       const tong = clampFive(five.tong);
       const speedFive = (tong + wu) / 2;
       const fiveSum = ['tong', 'wu', 'zhi', 'zheng', 'mei']
         .reduce((s, k) => s + clampFive(five[k]), 0);
+      /* ★ M4-10 三国志11 口径：交集人物以**史载五维为权威**，覆盖原表主属性。
+         原表吕布防御 9700（=97）比史载统率 70 高 27，甚至压过诸葛亮 92——
+         这正是玩家说的「属性严重影响平衡」。star / arms / cost 保留原设计
+         （它们是稀有度与经济参数，不是能力值）。 */
+      const exist = (general.list || []).find(
+        (g) => Number(g.cfgId) === Number(h.id) || g.name === h.name,
+      );
+      if (exist) {
+        exist.force = toGameStat(wu);
+        exist.strategy = toGameStat(zhi);
+        exist.defense = toGameStat(tong);
+        exist.speed = toGameStat(speedFive);
+        exist.destroy = toDestroyStat(tong, wu);
+        exist.force_grow = toGameGrow(wu);
+        exist.strategy_grow = toGameGrow(zhi);
+        exist.defense_grow = toGameGrow(tong);
+        exist.speed_grow = toGameGrow(speedFive);
+        exist.destroy_grow = toGameGrow(speedFive);
+        continue;
+      }
+      const arms = APT2ARMS
+        .map(([id, key, w]) => [id, (key === 'base' ? 0.85 : Number(apt[key] ?? 0.9)) * w])
+        .sort((a, b) => b[1] - a[1] || a[0] - b[0])
+        .slice(0, 3)
+        .map((x) => x[0])
+        .sort((a, b) => a - b);
       general.list.push({
         name: h.name,
         cfgId: Number(h.id),

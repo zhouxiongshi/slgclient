@@ -529,16 +529,18 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
     t.issues === 0 && bal?.designNotes?.length >= 30 && t.designNotes >= 30,
     JSON.stringify({ issues: t.issues, designNotes: t.designNotes,
       listed: bal?.designNotes?.length }));
-  /* M4-8：史载五维 0~100 曾被 ×100 直接当战斗数值，极差百倍；派生层必须
-     压缩到与原表同量级，且攻城/统御不得再按剧情权重 layer 分档。 */
+  /* M4-8 曾把史载五维 ×100 当战斗数值（极差百倍）；M4-8 先改 2500+65v 压缩映射，
+     M4-10 用户拍板全面改三国志11 百分制（0~100 直通）。百分制下极差 10 倍是设计
+     本身，判据改为「不越界（1~100）+ 中位不塌（45~80）」，攻城/统御不得按 layer
+     分档（粒度天然粗，10/15 档以上即可）。 */
   const sb = bal?.statBalance;
   const sbRangeOk = ['force', 'strategy', 'defense', 'speed'].every((k) => {
     const r = sb?.ranges?.[k];
-    return !!r && r.min >= 2500 && r.max <= 9000 && r.ratio <= 3.6;
+    return !!r && r.min >= 1 && r.max <= 100 && r.median >= 45 && r.median <= 80;
   });
-  check('武将派生属性：极差 ≤3.6 倍 / 成长同原表 / 攻城统御不按剧情权重分档',
+  check('武将派生属性：百分制 1~100 不越界 / 中位 45~80 / 成长≥50 / 攻城统御不按剧情权重分档',
     !!sb && sb.derivedCount >= 100 && sb.growMedian >= 50
-      && sb.destroyDistinct >= 20 && sb.costDistinct >= 15 && sbRangeOk,
+      && sb.destroyDistinct >= 10 && sb.costDistinct >= 15 && sbRangeOk,
     JSON.stringify(sb));
   /* 静态闸：四个系统必须共用 general-stat，且不许回退到主公恒取固定值。 */
   const statMods = ['city-econ.js', 'interior-task.js', 'diplomacy.js', 'strategy.js'];
@@ -595,7 +597,7 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
 
 /* ---------------- 7.10 术语覆盖率（GDD §14.2-5，M0） ---------------- */
 {
-  const termsReport = readJson(join(REPORTS, 'terms.json'), null);
+  let termsReport = readJson(join(REPORTS, 'terms.json'), null);
   if (reportStale(join(REPORTS, 'terms.json'), 'check-terms.js')) {
     spawnSync(process.execPath, [join(ROOT, 'tools', 'check-terms.js')], { cwd: ROOT, stdio: 'ignore' });
     termsReport = readJson(join(REPORTS, 'terms.json'), null);

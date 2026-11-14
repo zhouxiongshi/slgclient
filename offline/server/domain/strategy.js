@@ -1219,7 +1219,7 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride, 
  *
  *   率土：行军时间 = 距离 × 30 ÷ 队伍速度；队伍速度取队内**最慢**武将。
  *   本作把「距离」换成路网里的真实里程（conf/.../map.json 每条 route 自带 km），
- *   速度换算为 60~160（五维 speed 0→60、10000→160），再折算成游戏日：
+ *   速度换算为 60~160（M4-10 三国志11 百分制：speed 0→60、100→160），再折算成游戏日：
  *
  *       行军日 = ceil( 里程km ÷ (55 × 速度/100) )，夹在 1~12 日
  *
@@ -1248,12 +1248,12 @@ export function marchKmBetween(fromId, toId) {
   return Math.round(Math.hypot(a.x - b.x, a.y - b.y) * 1.2);
 }
 
-/** 武将速度（60~160）：五维 speed 与装备加成折算，缺配置按 6000 兜底。
- *  ★ M4-8：主公不再恒取 7400，读 protagonist.json.speed，与面板显示同源。 */
+/** 武将速度（60~160）：五维 speed（0~100）与装备加成折算，缺配置按 60 兜底。
+ *  ★ M4-10 三国志11 百分制：speed 60 即基准 120，100 即 160，与面板同源。 */
 function generalSpeed(cfg, g) {
   if (!g) return 100;
-  const base = gameStatOf(cfg, g, 'speed', 6000);
-  return Math.max(20, Math.min(200, 60 + (base + (Number(g.speed_added) || 0)) * 0.01));
+  const base = gameStatOf(cfg, g, 'speed', 60);
+  return Math.max(20, Math.min(200, 60 + (base + (Number(g.speed_added) || 0))));
 }
 
 /** 队伍行军速度：取队内最慢武将（率土口径），空队按 100。 */

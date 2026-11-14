@@ -343,7 +343,8 @@ export function diplomacyAct(state, cfg, ctx, { action, faction, target, gold })
     }
     // 智力判定：我方最强谋士 vs 固定阈值，rngFor 确定性
     const bestIntellect = bestStatOf(state, cfg);
-    const chance = Math.max(0.2, Math.min(0.8, 0.3 + (bestIntellect - 6000) / 10000));
+    /* M4-10 三国志11 百分制：智力 60 为基准，每 +10 智力 +10% 成功率（上限 80%）。 */
+    const chance = Math.max(0.2, Math.min(0.8, 0.3 + (bestIntellect - 60) / 100));
     const rolled = rngFor(state.seed ?? 20261110, day, `diploSow:${fid}`).random();
     if (rolled >= chance) {
       p.sowFail = (p.sowFail || 0) + 1;
@@ -449,16 +450,16 @@ export function diplomacyAct(state, cfg, ctx, { action, faction, target, gold })
   return { ok: true, action, faction: fid, text: `${A.label}已成：态度 ${att.value} → ${after.value}。`, factors: after.factors, attitude: after.value };
 }
 
-/** 我方在城武将中谋略最强值（0~10000，与面板「谋略」同源；M4-8 统一口径）。 */
+/** 我方在城武将中谋略最强值（0~100，与面板「谋略」同源；M4-10 三国志11 百分制）。 */
 function bestStatOf(state, cfg) {
   const marching = new Set();
   for (const a of state.armys || []) if (a.marchId) for (const gid of a.generals || []) if (gid) marching.add(Number(gid));
   let best = 0;
   for (const g of state.generals || []) {
     if (marching.has(Number(g.id))) continue;
-    best = Math.max(best, gameStatOf(cfg, g, 'strategy', 6000) + (Number(g.strategy_added) || 0));
+    best = Math.max(best, gameStatOf(cfg, g, 'strategy', 60) + (Number(g.strategy_added) || 0));
   }
-  return best || 6000;
+  return best || 60;
 }
 
 /* ---------------- 状态机钩子（strategy 单向调用） ---------------- */

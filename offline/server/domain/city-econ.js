@@ -219,10 +219,10 @@ const POST_DEV = {
   personnel: { field: 'morale', stat: 'strategy', label: '民心', gain: 0.8 },
 };
 
-/** 官员属性（英文五维 + 装备加成），0~10000。
+/** 官员属性（英文五维 + 装备加成），0~100（M4-10 三国志11 百分制）。
  *  ★ M4-8：主公不再恒取 7400，改为读 protagonist.json 的对应维度，与战斗同源。 */
 function postStat(cfg, g, key) {
-  return gameStatOf(cfg, g, key, 6000) + (Number(g[`${key}_added`]) || 0);
+  return gameStatOf(cfg, g, key, 60) + (Number(g[`${key}_added`]) || 0);
 }
 
 /**
@@ -253,7 +253,7 @@ export function cityDevTick(state, cfg, ctx) {
     const cur = Number(e[conf.field]) ?? 0;
     const soft = cur >= 100 ? 0.3 : (cur >= 80 ? 0.6 : 1);   // 越高越难涨
     const half = marching.has(gid) ? 0.5 : 1;
-    const gain = Math.max(0.1, conf.gain * (0.5 + stat / 10000) * soft * half);
+    const gain = Math.max(0.1, conf.gain * (0.5 + stat / 100) * soft * half);
     const next = Math.min(conf.field === 'morale' ? 100 : 120, cur + gain);
     e[conf.field] = Math.round(next * 10) / 10;
     gains.push({
@@ -409,13 +409,14 @@ export function deliverGrain(state, cityId, grain) {
   return true;
 }
 
-/** 兵种适性：主属性/10000 → 100%~115%（只奖励不惩罚，保住既有首战平衡基线）。
- *  五维 ≥5000 起有加成，顶级武将（9500+）在强项兵种上 +14%。盾→defense、弓→strategy、骑→force。 */
+/** 兵种适性：主属性 0~100 → 85%~115%（只奖励不惩罚，保住既有首战平衡基线）。
+ *  M4-10 三国志11 百分制：属性 50 起过基线，100 在强项兵种上 +15%。
+ *  盾→defense、弓→strategy、骑→force。 */
 const ARMS_STAT = { 1: 'defense', 2: 'strategy', 3: 'force' };
 export function armsApt(g, armsIdx) {
   const stat = ARMS_STAT[armsIdx] || 'defense';
   const v = Number(g?.[stat]) || 0;
-  return Math.max(1, Math.min(1.15, 0.85 + 0.3 * (v / 10000)));
+  return Math.max(1, Math.min(1.15, 0.85 + 0.3 * (v / 100)));
 }
 
 /** 克制环：骑(3)→盾(1)→弓(2)→骑(3)，克制 ±15%（三战口径）。 */

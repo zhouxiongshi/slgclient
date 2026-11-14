@@ -172,28 +172,33 @@ if (existsSync(CSV)) {
   }
 }
 
-/* ---------------- 7) 派生战斗属性审查（M4-8） ----------------
- * 史载五维 0~100 与战斗数值 0~10000 是两套口径。旧实现把前者 ×100 直接当后者，
- * 造成百倍极差、成长只有原表一半、攻城/统御按剧情权重分三档。这里核对运行时
- * 真实配置（loadConfig 之后），不重算公式，避免审查工具自己跑出「恒绿」结论。 */
+/* ---------------- 7) 派生战斗属性审查（M4-8 / M4-10 百分制） ----------------
+ * 口径：三国志11 百分制，全表 0~100（上限硬约束）。判据不再是「极差 ≤3.6 倍」——
+ * 百分制下 10 与 100 本就差 10 倍，真正的底线是「不越界 + 中位不塌」。
+ * 这里核对运行时真实配置（loadConfig 之后），不重算公式，避免审查工具自证恒绿。 */
 const runtimeCfg = loadConfig();
-const derivedRows = [...runtimeCfg.generalByCfg.values()]
-  .filter((g) => Number(g.cfgId) >= 240001 && Number(g.cfgId) !== 880001);
+const allRows = [...runtimeCfg.generalByCfg.values()];
+const derivedRows = allRows.filter((g) => Number(g.cfgId) >= 240001 && Number(g.cfgId) !== 880001);
 const ranges = {};
 for (const k of ['force', 'strategy', 'defense', 'speed']) {
-  const v = derivedRows.map((g) => Number(g[k])).filter(Number.isFinite).sort((a, b) => a - b);
+  const v = allRows.map((g) => Number(g[k])).filter(Number.isFinite).sort((a, b) => a - b);
   const lo = v[0] || 0, hi = v[v.length - 1] || 0;
-  ranges[k] = { min: lo, max: hi, ratio: lo ? +(hi / lo).toFixed(2) : Infinity };
-  if (lo < 2500 || hi > 9000 || ranges[k].ratio > 3.6) {
-    add('high', '派生属性极差', k, `${lo}~${hi}，极差 ${ranges[k].ratio} 倍（应 2500~9000 / ≤3.6 倍）`);
+  const med = v[Math.floor(v.length / 2)] || 0;
+  ranges[k] = { min: lo, max: hi, median: med, ratio: lo ? +(hi / lo).toFixed(2) : Infinity };
+  if (lo < 1 || hi > 100) {
+    add('high', '属性越界', k, `${lo}~${hi}，三国志11 上限 100`);
+  } else if (med < 45 || med > 80) {
+    add('high', '属性中位异常', k, `中位 ${med}，应落在 45~80（名将与庸才都要有分布）`);
   }
 }
 const growVals = derivedRows.map((g) => Number(g.force_grow)).sort((a, b) => a - b);
 const growMedian = growVals[Math.floor(growVals.length / 2)] || 0;
 if (growMedian < 50) add('high', '派生成长偏低', 'force_grow', `中位 ${growMedian}，原表约 63`);
+/* 三国志11 没有独立攻城维度（靠兵器适性），本作保留但粒度天然粗：
+   底线是「不能退化成按 layer 的 3 档」，10 种取值以上即可。 */
 const destroyDistinct = new Set(derivedRows.map((g) => Number(g.destroy))).size;
 const costDistinct = new Set(derivedRows.map((g) => Number(g.cost))).size;
-if (destroyDistinct < 20) add('high', '攻城按层分档', 'destroy', `仅 ${destroyDistinct} 种取值`);
+if (destroyDistinct < 10) add('high', '攻城退化成按层分档', 'destroy', `仅 ${destroyDistinct} 种取值`);
 if (costDistinct < 15) add('high', '统御按层分档', 'cost', `仅 ${costDistinct} 种取值`);
 const protagRow = runtimeCfg.generalByCfg.get(880001);
 const statBalance = {

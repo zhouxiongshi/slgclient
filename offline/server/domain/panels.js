@@ -12,6 +12,8 @@ import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { slotBlock } from './slots.js';
+/* ★ M4-10：属性一律走唯一派生层（0~100 三国志11 百分制），面板不再自己读原表。 */
+import { toPercentFromRaw } from './general-stat.js';
 /* 刻意只 import oath.js（零依赖小模块）而不 import strategy.js ——
    它反向 import world.js，而 world.js 又 import 本文件，会成环。 */
 import { oathOf, oathFactionOf, strategyCity, factionTraitOf } from './oath.js';
@@ -144,11 +146,15 @@ function generalName(state, cfg, g) {
 }
 
 function baseStats(cfg, g) {
-  // 穿越者主公不在客户端名录里，基础五维取自 campaign/protagonist.json
-  const c = g.isProtagonist && PANEL_CONF.protagonist
-    ? PANEL_CONF.protagonist
-    : (cfg.generalByCfg?.get?.(g.cfgId) || {});
-  return Object.fromEntries(EQUIP_KEYS.map((k) => [k, Number(c[k]) || 0]));
+  /* ★ M4-10 三国志11 百分制：优先取 loadConfig 归一化后的 generalByCfg（0~100）。
+     主公若未并入表（cfg 未加载 campaign）才回退 protagonist.json，并同样归一到
+     百分制——面板是玩家唯一直接读属性的地方，绝不能把 0~10000 泄漏出去。 */
+  const row = cfg.generalByCfg?.get?.(g.cfgId);
+  const c = row || (g.isProtagonist && PANEL_CONF.protagonist ? PANEL_CONF.protagonist : {});
+  return Object.fromEntries(EQUIP_KEYS.map((k) => {
+    const v = Number(c[k]) || 0;
+    return [k, v > 100 ? toPercentFromRaw(v) : v];
+  }));
 }
 
 /** 槽位里存的是物品实例 id，需先回查 conf 定义；单件 ≤8%、四件合计 ≤25%。 */

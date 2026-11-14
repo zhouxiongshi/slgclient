@@ -73,7 +73,7 @@ offline/
 │   └── campaign/        章节、人物、命运、主角、战略层（strategy/map.json 72 城）、heroes-240.json / fate-groups.json / events.json
 ├── web/               原版客户端构建产物（web-desktop，磁盘逐字节不动）
 ├── electron/          Electron 壳（main.cjs + smoke.cjs 冒烟）
-├── tests/             单测 443 条 / 68 个文件（node --test）
+├── tests/             单测 446 条 / 68 个文件（node --test）
 ├── tools/             工具链
 │   ├── pack.js            打包 exe → build/SLG-Offline-win32-x64/
 │   ├── check-release.js   发行核查（92 项硬性验收，含画面指纹、合规台账、数据溯源、系统性验收 7.9d、武将派生属性、主角战法口径、窗口行为与真实点击 E2E）
@@ -114,7 +114,7 @@ node tools/smoke.js --packaged   # 打包态冒烟 33 项
 node tools/check-release.js      # 发行核查 92 项
 node tools/compliance-report.js  # 合规扫描（资产台账 / 禁入物 / 发行包）
 node tools/check-compliance.js   # 数据溯源扫描（554 条 source+confidence / 地图声明）
-node --test tests/*.test.js      # 单元测试 443 条
+node --test tests/*.test.js      # 单元测试 446 条
 node tools/explore-bugs.mjs      # 协议穷举探测
 node tools/build-heroes.mjs      # 重新生成 M3 武将数据层（需外部资料库 characters.csv）
 ```
@@ -124,7 +124,7 @@ node tools/build-heroes.mjs      # 重新生成 M3 武将数据层（需外部�
 ## 五、当前验证状态
 
 - ✅ 画面指纹 `ee987ec2…` 与原版逐字节一致（`pack.json`：`byteIdentical: true`，1582 个文件）
-- ✅ 单元测试 **443/443**（含 `tests/m4-general-balance.test.js` 8 条：M4-8 派生属性压缩映射 / 极差 ≤3.6 倍 / 成长同原表 / 攻城统御不按剧情权重分档 / 跨系统同口径 / 实战倍率 / UI 双单位标注；`tests/panels.test.js` 11 条：六面板回归 + 与战略层的数据／层级对齐断言、`tests/playtest-fixes.test.js` 实机试玩回归、`tests/save-slots.test.js` 存档档位、`tests/m3-heroes-fates.test.js` 7 条：M3 武将数据层与宿命 24 组、`tests/m3-events.test.js` 8 条：事件 DSL/引擎/构建期校验/补量计数、`tests/m3-scenarios.test.js` 7 条：六剧本四条开局校验、`tests/m3-runtime-wiring.test.js` 7 条：M3 运行期接线、`tests/m3-scenario-runtime.test.js` 6 条：六剧本运行期接入、`tests/m3-event-ui.test.js` 3 条：事件弹窗投影与 UI 纪律、`tests/m3-skills-80.test.js` 6 条：M3-8 战法 80 条总量/签名唯一/ui-kernel 同源/内核纪律/武将装配/内核实跑、`tests/m4-compliance.test.js` 4 条：M4-1 数据溯源合规（554 条 source+confidence 全覆盖、地图示意图声明双向核对、负例抓错）、`tests/m4-a11y.test.js` 5 条：M4-2 无障碍（字号三档制+旧值归档、G4 无鼠标出征快捷键链、G1 战报只读服务端结算、G2 零 Audio 依赖、G3 粮道/军标形状双编码+焦点可见）、`tests/m4-layout.test.js` 4 条：M4-3 布局矩阵（对比度 9 对全达标、抽屉五档断点 360/380/420/460/480、dock 防溢出、字号三档与断点解耦）、`tests/m4-system-audit.test.js` 3 条：系统性验收（8 旬模拟零异常/灭国闭环/确定性 + 日产链路自检、武将装配三项归零、M4-5 模拟脚本只准调 settleWorld 的静态闸）、`tests/empire.test.js` +1 条：全空编队拒绝与余兵退回驻城、`tests/m4-window-behavior.test.js` 7 条：M4-6 窗口默认不置顶/可最小化/白名单 preload/事件卡非模态不复活、`tests/m4-system-audit.test.js` +1 条：M4-6 分层口径设计备注不许被删、`tests/m4-protagonist-skill.test.js` 9 条：M4-7 主角指挥战法（三槽同源 / 洞察 3 回合 / 回击 30%+5% 每级 / 87% 策略伤害 / 减伤 30% / 战报同源 / 旧内核不污染））
+- ✅ 单元测试 **446/446**（含 `tests/m4-general-balance.test.js` 10 条：M4-10 三国志11 百分制（钳位单调 / 原表×100归一 / 全表1~100 / 史载五维权威覆盖 / Lv10成长收敛 ≤100 / 跨系统同口径 / 实战倍率 ≤3.5 / UI 单口径 0~100；`tests/panels.test.js` 11 条：六面板回归 + 与战略层的数据／层级对齐断言、`tests/playtest-fixes.test.js` 实机试玩回归、`tests/save-slots.test.js` 存档档位、`tests/m3-heroes-fates.test.js` 7 条：M3 武将数据层与宿命 24 组、`tests/m3-events.test.js` 8 条：事件 DSL/引擎/构建期校验/补量计数、`tests/m3-scenarios.test.js` 7 条：六剧本四条开局校验、`tests/m3-runtime-wiring.test.js` 7 条：M3 运行期接线、`tests/m3-scenario-runtime.test.js` 6 条：六剧本运行期接入、`tests/m3-event-ui.test.js` 3 条：事件弹窗投影与 UI 纪律、`tests/m3-skills-80.test.js` 6 条：M3-8 战法 80 条总量/签名唯一/ui-kernel 同源/内核纪律/武将装配/内核实跑、`tests/m4-compliance.test.js` 4 条：M4-1 数据溯源合规（554 条 source+confidence 全覆盖、地图示意图声明双向核对、负例抓错）、`tests/m4-a11y.test.js` 5 条：M4-2 无障碍（字号三档制+旧值归档、G4 无鼠标出征快捷键链、G1 战报只读服务端结算、G2 零 Audio 依赖、G3 粮道/军标形状双编码+焦点可见）、`tests/m4-layout.test.js` 4 条：M4-3 布局矩阵（对比度 9 对全达标、抽屉五档断点 360/380/420/460/480、dock 防溢出、字号三档与断点解耦）、`tests/m4-system-audit.test.js` 3 条：系统性验收（8 旬模拟零异常/灭国闭环/确定性 + 日产链路自检、武将装配三项归零、M4-5 模拟脚本只准调 settleWorld 的静态闸）、`tests/empire.test.js` +1 条：全空编队拒绝与余兵退回驻城、`tests/m4-window-behavior.test.js` 7 条：M4-6 窗口默认不置顶/可最小化/白名单 preload/事件卡非模态不复活、`tests/m4-system-audit.test.js` +1 条：M4-6 分层口径设计备注不许被删、`tests/m4-protagonist-skill.test.js` 9 条：M4-7 主角指挥战法（三槽同源 / 洞察 3 回合 / 回击 30%+5% 每级 / 87% 策略伤害 / 减伤 30% / 战报同源 / 旧内核不污染））
 - ✅ **M3-1 武将数据层**：`heroes-240.json` 240 位（60 核心 / 100 重要 / 80 在野，源 `three-kingdoms/characters.csv` 确定性选层 + 7 位补充条目）；`fate-groups.json` 宿命 24 组（8 组完整事件链、每组带史实依据与置信度）；`domain/fate-groups.js` 零依赖叶子（active/dormant/broken 三档判定、相性环形距离、登庸相性分项）
 - ✅ **M3-2 事件系统**：`domain/event-dsl.js`（字段/算子白名单，未知字段即拒绝）+ `domain/event-engine.js`（priority 降序、每旬 ≤2 条、exclusive 组内只出 1 其余冷却、once 永久排除、效果词白名单落账）+ `events.json` 52 条（37 史实节点 / 9 条件 / 6 关系，全部带史实依据与置信度，待人工签核）+ `tools/check-events.mjs` 构建期冲突检测
 - ✅ **M3-7 事件补量至 150 条（GDD §8 上限）**：`events-extra.json` 第二批 98 条（62 史实节点 / 20 条件 / 16 关系），`campaignEvents()` 合并加载、`check-events.mjs` 默认双文件校验（id 跨文件唯一）；剧本前史过滤——剧本起点之前的史实节点不重演（`strategyEventTick` 按 `scenarioYear` 过滤 yearMin）

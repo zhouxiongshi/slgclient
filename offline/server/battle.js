@@ -64,14 +64,22 @@ function makeHero(g, cfg) {
     };
   }
   const gc = cfg.generalByCfg.get(g.cfgId) || {
-    name: `武将${g.cfgId}`, force: 8000, strategy: 8000, defense: 8000,
-    speed: 7000, destroy: 2000, force_grow: 30, strategy_grow: 30,
+    name: `武将${g.cfgId}`, force: 60, strategy: 60, defense: 60,
+    speed: 60, destroy: 12, force_grow: 30, strategy_grow: 30,
     defense_grow: 30, speed_grow: 30, destroy_grow: 20, arms: [1],
   };
-  const attr = (base, grow) => ({
-    base: Math.round((base ?? 8000) / 100),
-    grow: Math.round(((grow ?? 30) / 100) * 10) / 10,
-  });
+  /* ★ M4-10：generalByCfg 已统一到三国志11 百分制（0~100），进内核不再 ÷100——
+     内核本来就是百分制（attack_base 60 就是武力 60）。`*_grow` 仍是 0~100 的
+     成长率，按 /100*10 换算成每级点数（原表 30 → 每级 +3）。
+     ★ 上限硬约束：三国志11 的能力上限是 100，所以每级点数再按 (100-base)/9 收敛，
+     Lv10 恰好不超过 100——高属性者成长慢，低属性者才练得动。 */
+  const attr = (base, grow) => {
+    const b = Math.round(Number(base ?? 60));
+    const raw = Math.round(((grow ?? 30) / 100) * 10 * 100) / 100;
+    /* cap 必须**向下**取到两位：向上取整会让 84 + 9×1.78 = 100.02 破上限。 */
+    const cap = Math.max(0, (100 - b) / 9);
+    return { base: b, grow: Math.min(raw, Math.floor(cap * 100) / 100) };
+  };
   const a = attr(gc.force, gc.force_grow);
   const d = attr(gc.defense, gc.defense_grow);
   const i = attr(gc.strategy, gc.strategy_grow);
