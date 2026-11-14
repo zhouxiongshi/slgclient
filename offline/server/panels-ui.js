@@ -285,11 +285,11 @@
         + ' · <span style="color:' + (g.loyal >= 80 ? '#9ec97f' : g.loyal >= 70 ? '#d8b45a' : '#e07a5f') + '">忠' + (g.loyal != null ? g.loyal : 88) + '</span>'
         + (g.appointed.length ? ' · 委任中' : '') + '</small></button>';
     });
-    out += '<h4>在野名士（可招贤）</h4>';
+    out += '<h4>在野名士（可招贤）<span class="muted" style="font-weight:normal;font-size:11px"> · 下列统率为史载五维 0~100</span></h4>';
     (data.prospects || []).forEach(function (p, i) {
       out += '<button class="genrow' + (ui.genId === -i - 1 ? ' on' : '') + '" data-act="prospect" data-i="' + i + '">'
         + esc(p.name) + '<small>' + esc(p.zi === '史无明载' ? '' : '字' + p.zi) + ' · ' + esc(p.faction)
-        + ' · 统' + esc(p.historyStats.统率) + '</small></button>';
+        + ' · 史载统率 ' + esc(p.historyStats.统率) + '</small></button>';
     });
     /* ★ P6 俘虏名册：招降按钮（金 300/次，政治判定，成功率随关押天数上升） */
     if ((data.captives || []).length) {
@@ -312,22 +312,29 @@
         + '<td class="muted">' + pct(a, b) + '</td></tr>';
     });
     var lore = g.lore;
-    var loreHtml = lore ? '<div class="card"><h3>史料档案</h3><div class="grid">'
+    var loreHtml = lore ? '<div class="card"><h3>史料档案 · 史载五维（0~100）</h3><div class="grid">'
       + ['统率', '武力', '智力', '政治', '魅力'].map(function (s) {
         return '<div><span class="k">' + s + '</span> <span class="v">' + esc(lore.historyStats[s]) + '</span></div>';
       }).join('')
       + '</div><div style="margin-top:8px" class="muted">字 ' + esc(lore.zi) + ' · 籍贯 ' + esc(lore.hometown)
       + ' · 势力 ' + esc(lore.faction) + ' · 分期 ' + esc(lore.era) + '</div>'
-      + '<div style="margin-top:6px">' + esc(lore.brief) + '</div></div>'
-      : '<div class="card muted">主公为本局穿越者，史无明载。五维取本局设定值。</div>';
+      + '<div style="margin-top:6px">' + esc(lore.brief) + '</div>'
+      + '<div style="margin-top:6px" class="muted">史载五维是史书评价（0~100），与上方本局战斗数值（0~10000）'
+      + '不是同一口径，数值不可直接比较；史实武将按统一映射折算进本局数值，上表面板始终显示折算后的值。</div></div>'
+      : '<div class="card muted">主公为本局穿越者，史无明载；上方五维是本局设定的战斗数值（0~10000），'
+      + '不是史载五维（0~100），二者不可直接比较。</div>';
     return '<h3>属性 · ' + esc(g.name)
       + ' <span class="tag mid">' + esc(g.careerName || '干才') + '</span>'
       + '<span class="muted" style="font-weight:normal;font-size:12px;margin-left:8px">'
-      + esc(g.careerNote || '') + '</span></h3><div class="card"><table><thead><tr>'
+      + esc(g.careerNote || '') + '</span>'
+      + '<span class="muted" style="font-weight:normal;font-size:11px;margin-left:8px">本局战斗数值 0~10000</span>'
+      + '</h3><div class="card"><table><thead><tr>'
       + '<th>维度</th><th>基础</th><th>＋装备</th><th>＋增量合计</th><th>最终</th><th>增幅</th>'
       + '</tr></thead><tbody>' + rows + '</tbody></table>'
       + '<div class="muted" style="margin-top:8px">装备单件 ≤8%、全套 ≤25%（当前武力增幅 '
-      + pct(g.added.force, g.base.force) + '）。不显示单一「战力」数值，保留搭配讨论空间。</div></div>'
+      + pct(g.added.force, g.base.force) + '）。不显示单一「战力」数值，保留搭配讨论空间。</div>'
+      + '<div class="muted" style="margin-top:5px">本表为战斗结算用的本局数值（0~10000，进战斗内核前 ÷100）；'
+      + '下方史料档案的史载五维为 0~100，两套口径不可直接比较。</div></div>'
       + loreHtml
       + '<div class="card"><h3>本局状态</h3>体力 ' + esc(g.physical) + ' · 经验 ' + fmt(g.exp)
       + ' · 状态 ' + esc(g.state) + ' · 在编岗位 ' + (g.appointed.length ? esc(g.appointed.join('、')) : '无')
@@ -458,7 +465,8 @@
       var rateRows = (prospect.recruitParts || []).map(function (p) {
         return '<tr><td>' + esc(p.label) + '</td><td class="v">' + (p.value > 0 ? '+' : '') + p.value + '%</td></tr>';
       }).join('');
-      body = '<h3>在野名士 · ' + esc(prospect.name) + '</h3><div class="card">'
+      body = '<h3>在野名士 · ' + esc(prospect.name)
+        + '<span class="muted" style="font-weight:normal;font-size:11px;margin-left:8px">史载五维 0~100；招贤后按统一映射折算为本局战斗数值</span></h3><div class="card">'
         + '<div class="grid">' + ['统率', '武力', '智力', '政治', '魅力'].map(function (s) {
           return '<div><span class="k">' + s + '</span> <span class="v">' + esc(prospect.historyStats[s]) + '</span></div>';
         }).join('') + '</div><div style="margin-top:8px">字 ' + esc(prospect.zi) + ' · 势力 ' + esc(prospect.faction)

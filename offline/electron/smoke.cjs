@@ -129,6 +129,9 @@ const SKILL_PROBE = `(async function(){
     if(!assets) return {ok:false, why:'loadDir failed'};
     var confs = assets.filter(function(a){ return a && a.json && a.json.cfgId; }).map(function(a){ return a.json; });
     var legacy = ['突击','百战精兵','重斩','锋矢'];
+    /* ★ 老占位以 cfgId 口径判定：原工程 4 个占位技能是历史 UUID 映射，cfgId 全部
+       < 10001；率土官网真实战法表里也有叫「重斩」「锋矢」的（cfgId 920015/920065），
+       只按名字匹配会把真实战法误判成占位残留（M4-8 假红）。 */
     return {
       ok: true,
       count: confs.length,
@@ -137,7 +140,11 @@ const SKILL_PROBE = `(async function(){
         lv1:c.levels[0].effect_value[0], lv10:c.levels[9].effect_value[0],
         p1:c.levels[0].probability, p10:c.levels[9].probability
       }; }),
-      legacy: confs.filter(function(c){ return legacy.indexOf(c.name) >= 0; }).map(function(c){ return c.name; }),
+      legacy: confs.filter(function(c){
+        return legacy.indexOf(c.name) >= 0 && Number(c.cfgId) < 10001;
+      }).map(function(c){ return c.name; }),
+      legacyDetail: confs.filter(function(c){ return legacy.indexOf(c.name) >= 0; })
+        .map(function(c){ return c.name + '@' + String(c.cfgId) + ':' + (typeof c.cfgId); }),
       /* M4-7：成长看「任一效果槽」，不能只盯首槽。主角指挥战法首槽是固定的
          3 回合洞察，成长在第 2 槽（回击概率 30% 起每级 +5%，Lv10=75%）。 */
       grown: confs.filter(function(c){
@@ -171,6 +178,33 @@ const SKILL_PANEL = `(function(){
   } catch(e){ return {ok:false, why:String(e&&e.stack||e)}; }
 })()`;
 
+/** 战报文本层同样按「是否合法战法名」判定，而不是按名字黑名单：率土真实战法表里
+ *  有「重斩」「锋矢」同名项（920015/920065），黑名单会把正确渲染判成占位残留。
+ *  合法名集合必须**与 server/skills.js 合并进运行时的文件完全一致**——少读一份，
+ *  那份表的战法就会被判成「旧占位残留」（实测漏 library-skills 时，「衔枚断后」
+ *  「穿云回响」「伏波奇谋」三条 910000 段战法连同主角的「后世之识」被一起误杀）。
+ *  顺序同 skills.js：内置表 → 主角专属 → 原创库 → 库补量 → 全武将初始战法。 */
+const ALLOWED_SKILL_NAMES = (() => {
+  const names = new Set();
+  const files = [
+    ['skills.json'],                                   // 内置 80 条主线
+    ['campaign', 'protagonist-skill.json'],            // 主角专属 19001
+    ['library-skills.json'],                           // 原创技能库 910000 段
+    ['library-skills-extra.json'],                     // 库补量 910100 段
+    ['innate-skills.json'],                            // 全武将初始战法 920000 段
+  ];
+  for (const parts of files) {
+    const p = path.join(__dirname, '..', 'conf', ...parts);
+    if (!fs.existsSync(p)) continue;
+    try {
+      const doc = JSON.parse(fs.readFileSync(p, 'utf8'));
+      const list = Array.isArray(doc) ? doc : (doc.skills || (doc.cfgId ? [doc] : []));
+      for (const s of list) if (s && s.name) names.add(s.name);
+    } catch { /* 配置损坏由 check-release 的静态闸兜底，这里不吞其它检查 */ }
+  }
+  return Array.from(names);
+})();
+
 /** 战报详情里真的渲染出了新战法名（而不是只调用了打开方法）。 */
 const REPORT_DETAIL_PROBE = `(function(){
   try {
@@ -198,8 +232,13 @@ const REPORT_DETAIL_PROBE = `(function(){
     // 旧占位技能必须是「完整技能名」：新战法表里有「全军突击」这类真实战法，
     // 子串 indexOf('突击') 会把它们误判成占位技能导致冒烟假失败。
     // 模板字符串会吞掉反斜杠，用 [(] / [0-9] 等无反斜杠写法。
-    var legacyHit = /使用技能[^<]*<color=[^>]*>(突击|百战精兵|重斩|锋矢)[(]lv[0-9]+/;
-    var legacy = ['突击','百战精兵','重斩','锋矢'];
+    // 旧占位技能必须是「完整技能名」：新战法表里有「全军突击」这类真实战法，
+    // 子串 indexOf('突击') 会把它们误判成占位技能导致冒烟假失败。
+    // 模板字符串会吞掉反斜杠，用 [(] / [0-9] 等无反斜杠写法。
+    var allowedNames = ${JSON.stringify(ALLOWED_SKILL_NAMES)};
+    var nameRe = /使用技能[^<]*<color=[^>]*>([^<(]+)[(]lv[0-9]+/;
+    var usedNames = skillTexts.map(function(t){ var m = nameRe.exec(t); return m ? m[1] : ''; })
+      .filter(function(x){ return !!x; });
     return {
       ok: skillTexts.length > 0,
       skillCount: skillTexts.length,
@@ -208,7 +247,8 @@ const REPORT_DETAIL_PROBE = `(function(){
       desNodes: desNodes.slice(0, 6),
       detailTitleVisible: texts.some(function(t){ return /战报详情/.test(t); }),
       sample: (anySkillVisible.length ? anySkillVisible : skillTexts).slice(0, 3).map(function(t){ return t.slice(0, 220); }),
-      hasLegacy: skillTexts.some(function(t){ return legacyHit.test(t); }),
+      usedNames: usedNames.slice(0, 8),
+      hasLegacy: usedNames.some(function(n){ return allowedNames.indexOf(n) < 0; }),
     };
   } catch(e){ return {ok:false, why:String(e&&e.stack||e)}; }
 })()`;

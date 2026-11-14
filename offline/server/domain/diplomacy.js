@@ -19,8 +19,9 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { marchGraph } from './march.js';
 import { rngFor } from './strategy-rng.js';
-/* ★ M2 离间智力判定：loreStat 走 oath.js（只依赖 node:fs 的叶子，无环） */
-import { loreStat } from './oath.js';
+/* ★ M4-8 离间智力判定：与战斗/内政/行军同一份属性基线（零依赖叶子，无环）。
+   旧实现把史载智力 ×80 且主公恒 7400，与面板显示的谋略值对不上。 */
+import { gameStatOf } from './general-stat.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const FACTIONS_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'factions.json');
@@ -341,7 +342,7 @@ export function diplomacyAct(state, cfg, ctx, { action, faction, target, gold })
       return { ok: false, code: 'no_intel', text: `${factionNameOf(fid)}都城尚无情报（需先侦察至「估算」档），细作不敢妄动，金已退还。`, factors: att.factors };
     }
     // 智力判定：我方最强谋士 vs 固定阈值，rngFor 确定性
-    const bestIntellect = bestStatOf(state);
+    const bestIntellect = bestStatOf(state, cfg);
     const chance = Math.max(0.2, Math.min(0.8, 0.3 + (bestIntellect - 6000) / 10000));
     const rolled = rngFor(state.seed ?? 20261110, day, `diploSow:${fid}`).random();
     if (rolled >= chance) {
@@ -448,15 +449,14 @@ export function diplomacyAct(state, cfg, ctx, { action, faction, target, gold })
   return { ok: true, action, faction: fid, text: `${A.label}已成：态度 ${att.value} → ${after.value}。`, factors: after.factors, attitude: after.value };
 }
 
-/** 我方在城武将中某维最强值（智力判定用；loreStat 折算与 interior-task 同口径）。 */
-function bestStatOf(state) {
+/** 我方在城武将中谋略最强值（0~10000，与面板「谋略」同源；M4-8 统一口径）。 */
+function bestStatOf(state, cfg) {
   const marching = new Set();
   for (const a of state.armys || []) if (a.marchId) for (const gid of a.generals || []) if (gid) marching.add(Number(gid));
   let best = 0;
   for (const g of state.generals || []) {
     if (marching.has(Number(g.id))) continue;
-    if (g.isProtagonist) { best = Math.max(best, 7400); continue; }
-    best = Math.max(best, Math.round(Number(loreStat(Number(g.cfgId), '智力')) * 80) + (Number(g.strategy_added) || 0));
+    best = Math.max(best, gameStatOf(cfg, g, 'strategy', 6000) + (Number(g.strategy_added) || 0));
   }
   return best || 6000;
 }

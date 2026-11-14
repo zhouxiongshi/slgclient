@@ -49,11 +49,16 @@ test('planTicks：好官缩短工期但不增加总产出（唯一口径）', ()
   assert.deepEqual(planTicks('relief', 9000), { ticks: 0, perTick: 0 });
 });
 
-test('officerStat 与 city-econ 的 postStat 同口径（主公取 7400 基线）', () => {
+test('officerStat 与 city-econ 的 postStat 同口径（主公按 protagonist.json 维度取值）', () => {
   const { state } = oathWorld();
   const protagonist = (state.generals || []).find((g) => g.isProtagonist);
   assert.ok(protagonist, '举义后应有主公');
-  assert.equal(officerStat(cfg, protagonist, 'strategy'), 7400);
+  /* ★ M4-8：旧实现把主公恒写成 7400，与面板谋略 7,800 对不上；
+     现在战斗/内政/外交/行军统一取 generalByCfg 的对应维度。 */
+  const row = cfg.generalByCfg.get(880001);
+  assert.equal(officerStat(cfg, protagonist, 'strategy'), row.strategy);
+  assert.equal(officerStat(cfg, protagonist, 'force'), row.force);
+  assert.equal(officerStat(cfg, protagonist, 'charm'), row.strategy);
 });
 
 /* 2 ─────────────────────────────────────────────────────────────────────── */

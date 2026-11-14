@@ -39,7 +39,9 @@ test('开局只有穿越者，酒馆每天 3 人且开城时分只能遇到其�
   const drawn = handleRequest(ctx, req('general.drawGeneral', { drawTimes: 10 }));
   assert.equal(drawn.msg.generals.length, 1);
   assert.equal(drawn.msg.generals[0].level, 1);
-  assert.equal(drawn.msg.generals[0].skills.filter(Boolean).length, 0);
+  /* 全武将初始战法表（920000+）启用时新武将会自带 1 条；不启用时为 0。
+     这里守「初始战法不超过 1 条」，不再把白板假设写死。 */
+  assert.ok(drawn.msg.generals[0].skills.filter(Boolean).length <= 1);
   assert.notEqual(drawn.msg.generals[0].cfgId, 880001);
   const again = handleRequest(ctx, req('general.drawGeneral', { drawTimes: 10 }));
   assert.equal(again.msg.generals.length, 0);

@@ -13,6 +13,8 @@ import { makeBuild, makeGeneral, makeFacilityList, nextId, mainCity } from '../w
 import { rngFor } from './strategy-rng.js';
 /* ★ M2-3 全局参数表（GDD §9.2）：零依赖叶子，所有新数值一律从这里读 */
 import { knobGet } from './knobs.js';
+/* ★ M4-8：行军速度与战斗/内政/外交共用同一份武将属性基线 */
+import { gameStatOf } from './general-stat.js';
 /* ★ M2-3 失败态与结局（GDD §3.4/§3.5）：零依赖叶子 */
 import { failstates, evaluateEnding, makeStandInGeneral } from './failstate.js';
 import { beginInteriorTask, cancelInteriorTask, interiorTaskView, roadEdgeKey } from './interior-task.js';
@@ -1246,12 +1248,11 @@ export function marchKmBetween(fromId, toId) {
   return Math.round(Math.hypot(a.x - b.x, a.y - b.y) * 1.2);
 }
 
-/** 武将速度（60~160）：五维 speed 与装备加成折算，缺配置按 6000 兜底。 */
+/** 武将速度（60~160）：五维 speed 与装备加成折算，缺配置按 6000 兜底。
+ *  ★ M4-8：主公不再恒取 7400，读 protagonist.json.speed，与面板显示同源。 */
 function generalSpeed(cfg, g) {
   if (!g) return 100;
-  const base = g.isProtagonist
-    ? 7400
-    : (Number(cfg?.generalByCfg?.get?.(Number(g.cfgId))?.speed) || 6000);
+  const base = gameStatOf(cfg, g, 'speed', 6000);
   return Math.max(20, Math.min(200, 60 + (base + (Number(g.speed_added) || 0)) * 0.01));
 }
 

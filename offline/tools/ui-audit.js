@@ -63,5 +63,8 @@ child.on('exit', (code) => {
     console.log(`[slg-offline:audit] 报告 ${reportPath}`);
     if (!r.passed) process.exitCode = 1;
   }
-  if (code && !process.exitCode) process.exitCode = code;
+  /* 同 smoke：以报告为准，Electron 收尾的非 0 退出码不再覆盖结论。 */
+  if (code && !process.exitCode) {
+    console.warn(`[slg-offline:audit] 子进程退出码 ${code}（报告已判通过，按通过处理）`);
+  }
 });

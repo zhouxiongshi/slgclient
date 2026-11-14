@@ -7,6 +7,8 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { recordRes } from './economy.js';
+/* ★ M4-8：战斗/内政/外交/行军共用同一份武将属性基线，禁止各自硬编码主角数值 */
+import { gameStatOf } from './general-stat.js';
 /* 修 U21：灾害/叛逃改用确定性随机，同 seed + 回合可回放（strategy-rng 零内部依赖） */
 import { rngFor } from './strategy-rng.js';
 /* ★ U14 内政任务状：city-econ → interior-task 单向依赖（interior-task 不 import 回来，无环） */
@@ -217,12 +219,10 @@ const POST_DEV = {
   personnel: { field: 'morale', stat: 'strategy', label: '民心', gain: 0.8 },
 };
 
-/** 官员属性（英文五维 + 装备加成），0~10000。主公取 protagonist 基线。 */
+/** 官员属性（英文五维 + 装备加成），0~10000。
+ *  ★ M4-8：主公不再恒取 7400，改为读 protagonist.json 的对应维度，与战斗同源。 */
 function postStat(cfg, g, key) {
-  const base = g.isProtagonist
-    ? 7400
-    : (Number(cfg?.generalByCfg?.get?.(Number(g.cfgId))?.[key]) || 6000);
-  return base + (Number(g[`${key}_added`]) || 0);
+  return gameStatOf(cfg, g, key, 6000) + (Number(g[`${key}_added`]) || 0);
 }
 
 /**

@@ -78,6 +78,9 @@ test('战法表：31 个 / 4 类 / 10 级真实数值成长 / 名称与伤害率
   for (const s of SKILLS) {
     assert.ok(!names.has(s.name), `重复战法名 ${s.name}`);
     names.add(s.name);
+    /* 920000+ 是可选的全武将初始战法表：数值为工程近似值、名称沿用官网名录，
+       不适用「伤害率必须来自 battle-kit 样本」这条主线忠实性断言。 */
+    if (Number(s.cfgId) >= 920000) continue;
     assert.ok(
       BATTLE_KIT.skill_names.includes(s.name) || FRAGMENT_NAMES.has(s.name)
       || s.provenance?.pairing === 'authored' || s.provenance?.pairing === 'skill-library'
@@ -106,9 +109,11 @@ test('战法表：31 个 / 4 类 / 10 级真实数值成长 / 名称与伤害率
       assert.ok(ui.levels[i].effect_value[0] >= ui.levels[i - 1].effect_value[0]);
     }
   }
-  // 原占位技能不再存在于新表
+  /* 原占位技能不再存在于主线 31 条新表。920000+ 的可选初始战法表沿用官网名录，
+     其中「重斩」等是官网原名，不能拿全表 names 来判旧占位（M4-8 兼容修正）。 */
+  const mainNames = new Set(CFG.skills.map((s) => s.name));
   for (const old of ['突击', '百战精兵', '重斩', '锋矢']) {
-    assert.ok(!names.has(old), `旧占位技能 ${old} 仍在新表中`);
+    assert.ok(!mainNames.has(old), `旧占位技能 ${old} 仍在主线表中`);
   }
   assert.equal(skillById(101), null);
   assert.equal(skillById(401), null);

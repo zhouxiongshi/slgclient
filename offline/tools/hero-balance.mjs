@@ -16,6 +16,8 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+/* ★ M4-8：审查运行时真实的 generalByCfg，不自己重算派生（M4-5「只调真链路」纪律）。 */
+import { loadConfig } from '../server/config.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'reports', 'hero-balance.json');
@@ -170,6 +172,38 @@ if (existsSync(CSV)) {
   }
 }
 
+/* ---------------- 7) 派生战斗属性审查（M4-8） ----------------
+ * 史载五维 0~100 与战斗数值 0~10000 是两套口径。旧实现把前者 ×100 直接当后者，
+ * 造成百倍极差、成长只有原表一半、攻城/统御按剧情权重分三档。这里核对运行时
+ * 真实配置（loadConfig 之后），不重算公式，避免审查工具自己跑出「恒绿」结论。 */
+const runtimeCfg = loadConfig();
+const derivedRows = [...runtimeCfg.generalByCfg.values()]
+  .filter((g) => Number(g.cfgId) >= 240001 && Number(g.cfgId) !== 880001);
+const ranges = {};
+for (const k of ['force', 'strategy', 'defense', 'speed']) {
+  const v = derivedRows.map((g) => Number(g[k])).filter(Number.isFinite).sort((a, b) => a - b);
+  const lo = v[0] || 0, hi = v[v.length - 1] || 0;
+  ranges[k] = { min: lo, max: hi, ratio: lo ? +(hi / lo).toFixed(2) : Infinity };
+  if (lo < 2500 || hi > 9000 || ranges[k].ratio > 3.6) {
+    add('high', '派生属性极差', k, `${lo}~${hi}，极差 ${ranges[k].ratio} 倍（应 2500~9000 / ≤3.6 倍）`);
+  }
+}
+const growVals = derivedRows.map((g) => Number(g.force_grow)).sort((a, b) => a - b);
+const growMedian = growVals[Math.floor(growVals.length / 2)] || 0;
+if (growMedian < 50) add('high', '派生成长偏低', 'force_grow', `中位 ${growMedian}，原表约 63`);
+const destroyDistinct = new Set(derivedRows.map((g) => Number(g.destroy))).size;
+const costDistinct = new Set(derivedRows.map((g) => Number(g.cost))).size;
+if (destroyDistinct < 20) add('high', '攻城按层分档', 'destroy', `仅 ${destroyDistinct} 种取值`);
+if (costDistinct < 15) add('high', '统御按层分档', 'cost', `仅 ${costDistinct} 种取值`);
+const protagRow = runtimeCfg.generalByCfg.get(880001);
+const statBalance = {
+  derivedCount: derivedRows.length, ranges, growMedian,
+  destroyDistinct, costDistinct,
+  protagonist: protagRow
+    ? { force: protagRow.force, strategy: protagRow.strategy, speed: protagRow.speed }
+    : null,
+};
+
 /* ---------------- 汇总 ---------------- */
 const report = {
   generatedAt: new Date().toISOString(),
@@ -185,9 +219,13 @@ const report = {
     .map((h) => ({ name: h.name, layer: h.layer, sum: sum(h), skills: (h.skills || []).length })),
   issues,
   designNotes,
+  statBalance,
 };
 mkdirSync(dirname(OUT), { recursive: true });
 writeFileSync(OUT, JSON.stringify(report, null, 2) + '\n');
+console.log(`[hero-balance] 派生战斗属性 ${statBalance.derivedCount} 位：极差 `
+  + `${Math.max(...Object.values(ranges).map((r) => r.ratio))} 倍 / 成长中位 ${growMedian}`
+  + ` / 攻城 ${destroyDistinct} 档 / 统御 ${costDistinct} 档`);
 console.log(`[hero-balance] 240 位 / ${fates.length} 宿命组 / ${skills.length} 战法`);
 console.log(`[hero-balance] 数据缺陷 ${issues.length}（high ${report.totals.high} / medium ${report.totals.medium}）；设计备注 ${designNotes.length} 条（layer 为剧情权重档）`);
 console.log(`[hero-balance] 高维零战法 ${zeroSkillHighStat} 位、战法错配 ${mismatch} 处、CSV 核对 ${csvChecked} 位（不一致 ${csvMismatch}）`);

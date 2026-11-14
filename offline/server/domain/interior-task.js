@@ -17,6 +17,8 @@
 import { recordRes } from './economy.js';
 /* ★ M2 招抚依赖「魅力」：游戏配置无此维，用史载五维折算（oath.js 只依赖 node:fs，无环） */
 import { loreStat } from './oath.js';
+/* ★ M4-8：内政与战斗/外交/行军共用同一份属性基线，魅力也走统一映射 */
+import { gameStatOf, charmStatOf } from './general-stat.js';
 /* ★ M2 修路/侦察/离间需要「相邻」校验：march.js 是零依赖叶子（只读 detail.json），无环 */
 import { canMarchBetween } from './march.js';
 
@@ -119,17 +121,19 @@ export function interiorTasks(state) {
   return st.interiorTasks;
 }
 
-/** 武将属性（0~10000）。与 city-econ 的 postStat 同口径，但本模块不依赖它。
- *  ★ M2：'charm'（魅力）游戏配置没有这一维，改用史载五维折算——
- *  ×80 对齐 0~10000 工期口径（魅力 85 → 6800 = 合格档），主角仍取 7400 基线。 */
+/** 武将属性（0~10000）。与 city-econ 的 postStat、diplomacy、generalSpeed 同口径。
+ *  ★ M2：'charm'（魅力）游戏配置没有这一维，用史载五维折算。
+ *  ★ M4-8：旧实现 ×80（魅力 15 → 1200、100 → 8000，极差百倍）与主公恒取 7400
+ *    都会让内政判定与战斗脱节；改走 general-stat 的统一映射，主公按谋略维度取值。 */
 export function officerStat(cfg, g, key) {
   if (!g) return 0;
   if (key === 'charm') {
-    if (g.isProtagonist) return 7400;
-    return Math.round(loreStat(Number(g.cfgId), '魅力') * 80) + (Number(g.charm_added) || 0);
+    const base = g.isProtagonist
+      ? gameStatOf(cfg, g, 'strategy', 6000)
+      : charmStatOf(loreStat(Number(g.cfgId), '魅力'));
+    return base + (Number(g.charm_added) || 0);
   }
-  const base = g.isProtagonist ? 7400 : Number(cfg?.generalByCfg?.get?.(Number(g.cfgId))?.[key]) || 6000;
-  return base + (Number(g[`${key}_added`]) || 0);
+  return gameStatOf(cfg, g, key, 6000) + (Number(g[`${key}_added`]) || 0);
 }
 
 /**

@@ -269,6 +269,11 @@ check('构建脚本可复现（npm run pack）', existsSync(join(ROOT, 'tools', 
  * 武将审查 <0.3s）；报告不入库，不会因此弄脏工作树。
  */
 {
+  /* ★ 除了「缺失 / 工具源码更新」，还必须比对**出厂源码**：只比对工具源码时，
+     改了 server/ 或 conf/ 但没动 tools/，报告不会被重算，7.7.5 就会把整片报告判过期
+     （本轮实测：smoke 全绿但 system-audit / hero-balance / terms / compliance 四份
+     停在上一轮，得人工记着重跑）。这里统一以 newestShippedSource() 为基准自愈。 */
+  const srcAt = newestShippedSource().at;
   const selfBoot = [
     ['system-audit.json', ['system-audit.mjs', 'sim-60turns.mjs'],
       [join(ROOT, 'tools', 'system-audit.mjs'), '--turns', '60']],
@@ -277,7 +282,7 @@ check('构建脚本可复现（npm run pack）', existsSync(join(ROOT, 'tools', 
   ];
   for (const [report, tools, argv] of selfBoot) {
     const p = join(REPORTS, report);
-    const stale = !existsSync(p) || tools.some((f) => {
+    const stale = !existsSync(p) || statSync(p).mtimeMs < srcAt || tools.some((f) => {
       const tp = join(ROOT, 'tools', f);
       return existsSync(tp) && statSync(p).mtimeMs < statSync(tp).mtimeMs;
     });
@@ -285,24 +290,27 @@ check('构建脚本可复现（npm run pack）', existsSync(join(ROOT, 'tools', 
   }
 }
 
-/* ---------------- 7.7.5 报告新鲜度：不许用旧报告给新代码背书 ----------------
- * check-release 的判定方式是「读 reports/*.json 下结论」，报告本身不自证新鲜度。
- * 于是会出现这种假绿：改完 server/ 只跑单测就直接 check，结果仍是 78/78 ——
- * 因为打包态那几份报告是上一轮产物，验的根本不是这份代码（本轮真实发生过：
- * 打包态报告停在 23:53，而源码 01:26 还在改）。这里把「报告时间 ≥ 最后一次
- * 出厂源码改动时间」变成硬条件。
- *
- * 口径：出厂源码 = 真正打进包里的目录（electron/ server/ conf/）；web/ 逐字节
- * 不可改，由指纹检查单独兜；tools/ 是开发侧工装、不进包，改核查脚本本身不该
- * 让全部报告作废（否则改一行这里就得全量重跑，等于逼人不改）。
+/* ---------------- 出厂源码新鲜度基准（7.7.4 自举 / 7.7.5 硬闸共用） ----------------
+ * 口径：出厂源码 = 真正打进包里的目录（electron/ server/ conf/ kernel/）；
+ * web/ 逐字节不可改，由指纹检查单独兜；tools/ 是开发侧工装、不进包，改核查脚本
+ * 本身不该让全部报告作废（否则改一行这里就得全量重跑，等于逼人不改）。
  * conf/campaign/ 是**运行时回写**的覆盖层与存档（每次开打都会写），不算源码，
- * 否则每玩一次游戏，全部报告就集体过期。 */
-{
+ * 否则每玩一次游戏，全部报告就集体过期；但其中的静态源配置单独列进 STATIC_SHIPPED。 */
+function newestShippedSource() {
   /* ★ M4-7：kernel/ 是真正打进包里的确定性内核，改了它必须重跑所有报告；
      旧清单漏掉这一层，会出现「内核换了、报告还是旧的」的假绿。 */
   const SHIPPED_DIRS = ['electron', 'server', 'conf', 'kernel'];
   const SKIP = new Set(['node_modules', 'reports', 'build', '.git']);
   const SKIP_REL = ['conf/campaign'];
+  /* conf/campaign/ 整目录被跳过是因为存档/覆盖层每次开打都会回写；但里面的
+     静态源配置（主角自带战法等）是出厂内容，改动同样必须让报告作废。 */
+  const STATIC_SHIPPED = [
+    'conf/campaign/protagonist-skill.json',
+    /* 全武将初始战法工作线：这两份都是「构建产物 / 人工证据表」，不是运行时回写，
+       却直接改变每位武将进战场的战法，改了就等于换了游戏手感 → 报告必须作废。 */
+    'conf/campaign/hero-skills.json',
+    'conf/campaign/innate-skill-overrides.json',
+  ];
   let newestAt = 0;
   let newestFile = '';
   const walk = (p) => {
@@ -320,16 +328,42 @@ check('构建脚本可复现（npm run pack）', existsSync(join(ROOT, 'tools', 
     }
   };
   for (const d of SHIPPED_DIRS) walk(join(ROOT, d));
-  /* conf/campaign/ 整目录被跳过是因为存档/覆盖层每次开打都会回写；但里面的
-     静态源配置（主角自带战法等）是出厂内容，改动同样必须让报告作废。 */
-  const STATIC_SHIPPED = ['conf/campaign/protagonist-skill.json'];
   for (const rel of STATIC_SHIPPED) {
     const f = join(ROOT, rel);
     if (!existsSync(f)) continue;
     const m = statSync(f).mtimeMs;
     if (m > newestAt) { newestAt = m; newestFile = f; }
   }
+  return { at: newestAt, file: newestFile };
+}
 
+/* 报告是否过期：缺失 / 早于出厂源码 / 早于生成它的工具源码。
+ * 三处「只在缺失时才重跑」的老写法是 7.7.5 假红的根因——报告在、但已经是上一轮的。 */
+let __shippedAt = null;
+function shippedAt() {
+  if (__shippedAt === null) __shippedAt = newestShippedSource().at;
+  return __shippedAt;
+}
+function reportStale(path, toolRel) {
+  if (!existsSync(path)) return true;
+  const at = statSync(path).mtimeMs;
+  if (at < shippedAt()) return true;
+  if (toolRel) {
+    const tp = join(ROOT, 'tools', toolRel);
+    if (existsSync(tp) && at < statSync(tp).mtimeMs) return true;
+  }
+  return false;
+}
+
+/* ---------------- 7.7.5 报告新鲜度：不许用旧报告给新代码背书 ----------------
+ * check-release 的判定方式是「读 reports/*.json 下结论」，报告本身不自证新鲜度。
+ * 于是会出现这种假绿：改完 server/ 只跑单测就直接 check，结果仍是全绿 ——
+ * 因为打包态那几份报告是上一轮产物，验的根本不是这份代码（本轮真实发生过：
+ * 打包态报告停在 23:53，而源码 01:26 还在改）。这里把「报告时间 ≥ 最后一次
+ * 出厂源码改动时间」变成硬条件。
+ */
+{
+  const { at: newestAt, file: newestFile } = newestShippedSource();
   /* 本地时间（这台机器 UTC+8），别用 UTC —— 差 8 小时会让「刚跑过」看着像隔了一天 */
   const fmt = (ms) => {
     const d = new Date(ms);
@@ -404,7 +438,7 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
 {
   const compliancePath = join(REPORTS, 'compliance.json');
   let compliance = readJson(compliancePath, null);
-  if (!compliance) {
+  if (reportStale(compliancePath, 'compliance-report.js')) {
     spawnSync(process.execPath, [join(ROOT, 'tools', 'compliance-report.js')], { cwd: ROOT, stdio: 'ignore' });
     compliance = readJson(compliancePath, null);
   }
@@ -427,7 +461,7 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
 {
   const provPath = join(REPORTS, 'data-provenance.json');
   let provenance = readJson(provPath, null);
-  if (!provenance) {
+  if (reportStale(provPath, 'check-compliance.js')) {
     const r = spawnSync(process.execPath, [join(ROOT, 'tools', 'check-compliance.js')], { cwd: ROOT, stdio: 'ignore' });
     provenance = readJson(provPath, null);
     if (!provenance && r.status !== 0) provenance = { ok: false, totals: { files: 0, entries: 0, missing: -1 } };
@@ -444,7 +478,7 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
 {
   const ctPath = join(REPORTS, 'contrast.json');
   let ct = readJson(ctPath, null);
-  if (!ct) {
+  if (reportStale(ctPath, 'check-contrast.js')) {
     const r = spawnSync(process.execPath, [join(ROOT, 'tools', 'check-contrast.js')], { cwd: ROOT, stdio: 'ignore' });
     ct = readJson(ctPath, null);
     if (!ct && r.status !== 0) ct = { ok: false, checked: 0, failed: 1 };
@@ -495,6 +529,26 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
     t.issues === 0 && bal?.designNotes?.length >= 30 && t.designNotes >= 30,
     JSON.stringify({ issues: t.issues, designNotes: t.designNotes,
       listed: bal?.designNotes?.length }));
+  /* M4-8：史载五维 0~100 曾被 ×100 直接当战斗数值，极差百倍；派生层必须
+     压缩到与原表同量级，且攻城/统御不得再按剧情权重 layer 分档。 */
+  const sb = bal?.statBalance;
+  const sbRangeOk = ['force', 'strategy', 'defense', 'speed'].every((k) => {
+    const r = sb?.ranges?.[k];
+    return !!r && r.min >= 2500 && r.max <= 9000 && r.ratio <= 3.6;
+  });
+  check('武将派生属性：极差 ≤3.6 倍 / 成长同原表 / 攻城统御不按剧情权重分档',
+    !!sb && sb.derivedCount >= 100 && sb.growMedian >= 50
+      && sb.destroyDistinct >= 20 && sb.costDistinct >= 15 && sbRangeOk,
+    JSON.stringify(sb));
+  /* 静态闸：四个系统必须共用 general-stat，且不许回退到主公恒取固定值。 */
+  const statMods = ['city-econ.js', 'interior-task.js', 'diplomacy.js', 'strategy.js'];
+  const statBad = statMods.filter((f) => {
+    const src = readFileSync(join(ROOT, 'server', 'domain', f), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '');
+    return !/gameStatOf\(/.test(src) || /isProtagonist\s*\?\s*7400/.test(src);
+  });
+  check('武将属性取数：战斗/内政/外交/行军共用同一基线（M4-8 静态闸）',
+    statBad.length === 0, statBad.join(' | '));
   if (!csvAvailable) requiresUser.push({
     name: '武将 CSV 忠实性未验（原表不在本机）',
     detail: `${csvPath} 不存在；hero-balance 会跳过逐维对照，需在有资料工程的机器上复跑`,
@@ -542,7 +596,7 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
 /* ---------------- 7.10 术语覆盖率（GDD §14.2-5，M0） ---------------- */
 {
   const termsReport = readJson(join(REPORTS, 'terms.json'), null);
-  if (!termsReport) {
+  if (reportStale(join(REPORTS, 'terms.json'), 'check-terms.js')) {
     spawnSync(process.execPath, [join(ROOT, 'tools', 'check-terms.js')], { cwd: ROOT, stdio: 'ignore' });
     termsReport = readJson(join(REPORTS, 'terms.json'), null);
   }

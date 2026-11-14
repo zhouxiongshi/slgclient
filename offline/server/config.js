@@ -6,6 +6,9 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadOverrides } from './gm/overrides.js';
+import {
+  clampFive, toGameStat, toGameGrow, toDestroyStat, toCostStat,
+} from './domain/general-stat.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -80,7 +83,9 @@ export function loadConfig(confDir = defaultConfDir()) {
   /* ★ M3-4 武将数据层入包（GDD §7.1）：heroes-240.json 的 240 位并入武将表。
      包内已有同名/同 cfgId 的沿用原条目；新武将（240001+）从五维确定性派生
      general.json 形状的模板条目。战法按名字走 hero-skills 表（world.js innateOf），
-     无需在此登记；build-heroes.mjs 缺文件时退化为原武将表。 */
+     无需在此登记；build-heroes.mjs 缺文件时退化为原武将表。
+     ★ M4-8：派生一律走 domain/general-stat.js 的压缩映射。旧实现把史载五维
+     ×100 直接当战斗数值，极差达百倍且成长只有原表一半；详见该模块头注释。 */
   try {
     const heroDoc = JSON.parse(readFileSync(resolve(confDir, 'campaign', 'heroes-240.json'), 'utf8'));
     const cfgIds = new Set((general.list || []).map((g) => Number(g.cfgId)));
@@ -104,20 +109,26 @@ export function loadConfig(confDir = defaultConfDir()) {
         .slice(0, 3)
         .map((x) => x[0])
         .sort((a, b) => a - b);
+      const wu = clampFive(five.wu);
+      const zhi = clampFive(five.zhi);
+      const tong = clampFive(five.tong);
+      const speedFive = (tong + wu) / 2;
+      const fiveSum = ['tong', 'wu', 'zhi', 'zheng', 'mei']
+        .reduce((s, k) => s + clampFive(five[k]), 0);
       general.list.push({
         name: h.name,
         cfgId: Number(h.id),
-        force: Math.round((Number(five.wu) || 50) * 100),
-        strategy: Math.round((Number(five.zhi) || 50) * 100),
-        defense: Math.round((Number(five.tong) || 50) * 100),
-        speed: Math.round(((Number(five.tong) || 50) * 0.5 + (Number(five.wu) || 50) * 0.5) * 100),
-        destroy: 500 + star * 300,
-        cost: 20 + star * 5,
-        force_grow: Math.round((Number(five.wu) || 50) / 2),
-        strategy_grow: Math.round((Number(five.zhi) || 50) / 2),
-        defense_grow: Math.round((Number(five.tong) || 50) / 2),
-        speed_grow: Math.round(((Number(five.tong) || 50) + (Number(five.wu) || 50)) / 4),
-        destroy_grow: 30 + star * 10,
+        force: toGameStat(wu),
+        strategy: toGameStat(zhi),
+        defense: toGameStat(tong),
+        speed: toGameStat(speedFive),
+        destroy: toDestroyStat(tong, wu),
+        cost: toCostStat(fiveSum),
+        force_grow: toGameGrow(wu),
+        strategy_grow: toGameGrow(zhi),
+        defense_grow: toGameGrow(tong),
+        speed_grow: toGameGrow(speedFive),
+        destroy_grow: toGameGrow(speedFive),
         physical_power_limit: 100,
         cost_physical_power: 1,
         probability: 7,

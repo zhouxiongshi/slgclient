@@ -39,12 +39,15 @@ function signature(s) {
   return `${k.skill_class}#${k.prepare ?? 0}#${fx.join('|')}`;
 }
 
-test('战法总量：主线+库+extra = 80，运行时表含主角专属共 81', () => {
+test('战法总量：主线+库+extra = 80，运行时表含主角专属（可另挂初始战法表）', () => {
   assert.equal(main.count, 31);
   assert.equal(lib.count, 20);
   assert.equal(extra.count, 29);
   assert.equal(main.count + lib.count + extra.count, 80, 'GDD §16 M3 战法 80 条');
-  assert.equal(SKILLS.length, 81, '另含 protagonist-skill.json 主角专属');
+  /* 运行时还可能加载 conf/innate-skills.json（全武将初始战法工作线，920000+）。
+     本用例只守「80 条主线口径 + 主角专属唯一」，不把可选扩展表钉死成 81。 */
+  assert.ok(SKILLS.length >= 81, '至少含 80 条主线 + 主角专属');
+  assert.equal(SKILLS.filter((s) => Number(s.cfgId) === 19001).length, 1, '主角专属必须唯一');
   for (let i = 0; i < 29; i += 1) assert.equal(EXTRA_SKILLS[i].cfgId, 910100 + i, `cfgId 连续 ${i}`);
 });
 
