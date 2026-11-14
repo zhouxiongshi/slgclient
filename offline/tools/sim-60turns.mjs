@@ -10,20 +10,21 @@
  *   2. 校验「可持续养兵 ≈ 势力粮产/旬」换算律（README 数值锚）；
  *   3. 回归：平衡改动跑一遍，输出与上一版 diff。
  *
- * 本脚本只读世界推进函数（strategyTick / strategyResolveMarches / cityEconTick 的真实路径），
- * 不复制任何结算逻辑——脚本算的就是游戏算的。
+ * ★ M4-5：与 system-audit 同口径，统一调唯一真入口 handlers.settleWorld。
+ *   旧版本手写「clock.day+=1 + strategyResolveMarches + cityEconTick + strategyTick」，
+ *   漏了 applyDays 日产/章节事件，又重复跑了 cityEconTick（strategyTick 内部已调）。
+ *   现在注入固定 now 推 1 游戏日/次，脚本算的就是游戏算的，且完全确定性。
  */
 import { createWorld, normalizeWorld } from '../server/world.js';
 import { loadConfig } from '../server/config.js';
+import { settleWorld } from '../server/handlers.js';
+import { chapterRules } from '../server/domain/campaign.js';
 import { createHash } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
-import {
-  ensureStrategy, oathOptions, chooseOath, strategyTick, strategyResolveMarches,
-} from '../server/domain/strategy.js';
-import { cityEconTick } from '../server/domain/city-econ.js';
+import { ensureStrategy, oathOptions, chooseOath } from '../server/domain/strategy.js';
 
-function ctxOf(pushes) {
-  return { push: (t, m) => { if (pushes) pushes.push({ t, m }); } };
+function ctxOf(state, cfg, pushes) {
+  return { state, cfg, push: (t, m) => { if (pushes) pushes.push({ t, m }); } };
 }
 
 function ownedStats(state) {
@@ -51,20 +52,23 @@ export function runSim({ seed = 20261113, turns = 60, pushes = false } = {}) {
   if (!oath.ok) throw new Error(`sim: 举义失败 ${JSON.stringify(oath)}`);
 
   const series = [];
-  const ctx = ctxOf(pushes ? [] : null);
+  const ctx = ctxOf(state, cfg, pushes ? [] : null);
   const chat = [];
-  const fullCtx = { push: (t, m) => { chat.push(m?.msg || ''); } };
+  const fullCtx = { state, cfg, push: (t, m) => { chat.push(m?.msg || ''); } };
+  const msPerDay = Math.max(1, Math.round(chapterRules().realMsPerDay / (state.clock.scale || 1)));
+  const CLOCK_BASE = 1700000000000;
+  state.clock.lastRealMs = CLOCK_BASE;
+  state.clock.accMs = 0;
+  let fakeNow = CLOCK_BASE;
   let turn = 0;
   let guard = 0;
   const st0 = state.strategy;
   while (turn < turns && guard < turns * 40) {
     guard += 1;
     const before = st0.turn;
-    state.clock.day = Math.max(1, Math.floor(Number(state.clock.day) || 1)) + 1;
-    strategyResolveMarches(state, cfg, fullCtx);
-    cityEconTick(state, cfg, fullCtx);
-    const tick = strategyTick(state, cfg, fullCtx);
-    if (tick && st0.turn > before) {
+    fakeNow += msPerDay;
+    settleWorld(fullCtx, fakeNow);
+    if (st0.turn > before) {
       turn = st0.turn;
       series.push({ turn, day: Math.floor(Number(state.clock.day) || 1), ...ownedStats(state), battles: chat.length });
     }

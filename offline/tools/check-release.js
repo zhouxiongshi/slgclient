@@ -251,6 +251,28 @@ check('可双击的独立 Windows 可执行文件存在',
   existsSync(exe) ? `${(statSync(exe).size / 1024 / 1024).toFixed(1)} MB` : 'missing');
 check('构建脚本可复现（npm run pack）', existsSync(join(ROOT, 'tools', 'pack.js')), '');
 
+/* ---------------- 7.7.4 系统性验收 / 平衡报告自举（M4-5） ----------------
+ * reports/ 在 .gitignore 里，干净克隆中这两份报告并不存在，而 7.7.5 新鲜度与
+ * 7.9d 结论断言都要读它们。缺失或工具源码更新就就地重跑（60 旬双跑约 1.8s，
+ * 武将审查 <0.3s）；报告不入库，不会因此弄脏工作树。
+ */
+{
+  const selfBoot = [
+    ['system-audit.json', ['system-audit.mjs', 'sim-60turns.mjs'],
+      [join(ROOT, 'tools', 'system-audit.mjs'), '--turns', '60']],
+    ['hero-balance.json', ['hero-balance.mjs'],
+      [join(ROOT, 'tools', 'hero-balance.mjs')]],
+  ];
+  for (const [report, tools, argv] of selfBoot) {
+    const p = join(REPORTS, report);
+    const stale = !existsSync(p) || tools.some((f) => {
+      const tp = join(ROOT, 'tools', f);
+      return existsSync(tp) && statSync(p).mtimeMs < statSync(tp).mtimeMs;
+    });
+    if (stale) spawnSync(process.execPath, argv, { cwd: ROOT, stdio: 'ignore', timeout: 120000 });
+  }
+}
+
 /* ---------------- 7.7.5 报告新鲜度：不许用旧报告给新代码背书 ----------------
  * check-release 的判定方式是「读 reports/*.json 下结论」，报告本身不自证新鲜度。
  * 于是会出现这种假绿：改完 server/ 只跑单测就直接 check，结果仍是 78/78 ——
@@ -304,6 +326,8 @@ check('构建脚本可复现（npm run pack）', existsSync(join(ROOT, 'tools', 
     ['战法术语表', 'terms.json'],
     ['合规台账', 'compliance.json'],
     ['数据来源台账', 'data-provenance.json'],
+    ['系统性验收', 'system-audit.json'],
+    ['武将平衡审查', 'hero-balance.json'],
   ];
   const bad = [];
   for (const [, file] of TARGETS) {
@@ -315,7 +339,7 @@ check('构建脚本可复现（npm run pack）', existsSync(join(ROOT, 'tools', 
   check('全部验收报告不早于最后一次出厂源码改动（最新源码：'
     + (newestFile ? relative(ROOT, newestFile) + ' @ ' + fmt(newestAt) : '—') + '）',
   bad.length === 0,
-  bad.length ? '过期/缺失，请重跑对应工具：' + bad.join(' | ') : '12 份报告全部新鲜');
+  bad.length ? '过期/缺失，请重跑对应工具：' + bad.join(' | ') : `${TARGETS.length} 份报告全部新鲜`);
 }
 
 /* ---------------- 7.8 冒烟：源码目录态 + 打包产物态 ---------------- */
@@ -398,6 +422,66 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
   check('注入 UI 色彩对比度全部达标（正文 ≥4.5:1 / 大字 ≥3:1，GDD §10.7）',
     ct?.ok === true && ct?.checked >= 9 && ct?.failed === 0,
     JSON.stringify(ct?.results?.filter((x) => !x.ok) || `${ct?.checked} 对`));
+}
+
+/* ---------------- 7.9d 系统性验收 / 武将平衡（M4-5） ----------------
+ * 报告由 7.7.4 自举（仅缺失或工具源码更新时跑），这里只读结论，避免每次核查都重写
+ * generatedAt。三重校验＝报告结论 + 工具新鲜度 + 链路静态闸；
+ * 运行时校验由 tests/m4-system-audit.test.js 的 8 旬实时模拟承担。
+ */
+{
+  const sysPath = join(REPORTS, 'system-audit.json');
+  const balPath = join(REPORTS, 'hero-balance.json');
+  const sys = readJson(sysPath, null);
+  const bal = readJson(balPath, null);
+  const s = sys?.summary || {};
+  const t = bal?.totals || {};
+  check('系统性验收：60 旬多势力模拟零异常 / 零不变量 / 零可疑日志 / 确定性通过',
+    !!sys && s.turnsRun >= 60 && s.errors === 0 && s.invariants === 0
+      && s.scenarioErrors === 0 && s.suspiciousLogs === 0 && s.consoleErrors === 0
+      && sys.deterministic === true,
+    JSON.stringify({ turnsRun: s.turnsRun, errors: s.errors, invariants: s.invariants,
+      scenarioErrors: s.scenarioErrors, deterministic: sys?.deterministic }));
+  check('系统性验收：灭国闭环达成且灭国后 ≥10 旬继续运转',
+    !!sys?.conquest?.eliminated && Number(sys.conquest.postTurns) >= 10,
+    JSON.stringify(sys?.conquest?.events?.slice(-1)));
+  check('系统性验收：模拟走 settleWorld 真链路，日产入账、玩家金恒正',
+    s.dayChain === 'settleWorld' && s.dailyIncomeOk === true && s.playerGoldNeverZero === true,
+    JSON.stringify({ dayChain: s.dayChain, dailyIncomeOk: s.dailyIncomeOk,
+      playerGoldNeverZero: s.playerGoldNeverZero }));
+  /* CSV 原表是仓库外的资料工程产物；换台机器没有它时忠实性无从验起，
+     如实列入 requires_user，而不是假装通过或把整闸判红。 */
+  const csvPath = 'D:/WorkBuddy/three-kingdoms/characters.csv';
+  const csvAvailable = existsSync(csvPath);
+  check('武将平衡：240 位 / 零无效战法引用 / 零错配 / 零高维零战法 / CSV 忠实',
+    t.heroes === 240 && t.invalidSkillRefs === 0 && t.mismatch === 0
+      && t.zeroSkillHighStat === 0 && t.csvMismatch === 0
+      && (!csvAvailable || t.csvChecked >= 230),
+    JSON.stringify({ ...t, csvAvailable }));
+  if (!csvAvailable) requiresUser.push({
+    name: '武将 CSV 忠实性未验（原表不在本机）',
+    detail: `${csvPath} 不存在；hero-balance 会跳过逐维对照，需在有资料工程的机器上复跑`,
+  });
+  /* 防退化：脚本若再手写结算链，会重新得出「玩家挂机金恒 0」的假阳性结论。 */
+  const chainBad = [];
+  for (const f of ['system-audit.mjs', 'sim-60turns.mjs']) {
+    const p = join(ROOT, 'tools', f);
+    if (!existsSync(p)) { chainBad.push(`${f}: 缺失`); continue; }
+    const src = readFileSync(p, 'utf8');
+    if (!/import \{ settleWorld \} from '\.\.\/server\/handlers\.js'/.test(src)) chainBad.push(`${f}: 未走 settleWorld`);
+    if (/state\.clock\.day\s*[+]?=/.test(src)) chainBad.push(`${f}: 手动累加游戏日（漏日产）`);
+    if (/cityEconTick\(/.test(src)) chainBad.push(`${f}: 外部重跑城经`);
+  }
+  check('模拟脚本只调 settleWorld，未退化成手写结算链（M4-5 口径）',
+    chainBad.length === 0, chainBad.join(' | '));
+  /* tools/ 不进出厂源码扫描，工具改了报告不重跑也不会被 7.x 新鲜度发现，这里单独兜。 */
+  const stale = [];
+  const toolMtime = (f) => statSync(join(ROOT, 'tools', f)).mtimeMs;
+  if (existsSync(sysPath) && statSync(sysPath).mtimeMs
+      < Math.max(toolMtime('system-audit.mjs'), toolMtime('sim-60turns.mjs'))) stale.push('system-audit.json');
+  if (existsSync(balPath) && statSync(balPath).mtimeMs < toolMtime('hero-balance.mjs')) stale.push('hero-balance.json');
+  check('系统性验收 / 武将平衡报告不早于各自工具源码（工具改了必须重跑）',
+    stale.length === 0, stale.length ? '请重跑：' + stale.join(' | ') : '报告与工具同版本');
 }
 
 /* ---------------- 7.10 术语覆盖率（GDD §14.2-5，M0） ---------------- */

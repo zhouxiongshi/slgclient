@@ -25,6 +25,21 @@ test('M4-4·8 旬加速模拟：零异常 / 零不变量 / 灭国闭环 / 确定
   assert.equal(js, js2, '同种子两次运行必须逐旬一致');
   // 存档回读场景必须成功
   assert.ok(a.scenarios.some((x) => x.name === '存档·JSON 回读' && x.ok));
+  /* M4-5：真链路自检——日产入账、玩家金全程为正，杜绝「挂机金恒 0」假结论回潮 */
+  assert.equal(a.summary.dayChain, 'settleWorld');
+  assert.equal(a.summary.dailyIncomeOk, true, '每旬都应看得到 gold_yield 与属地日产流水');
+  assert.equal(a.summary.playerGoldNeverZero, true, '真链路玩家金有日产，不应归零');
+  assert.ok(a.series.every((s) => s.player.goldYield > 0));
+});
+
+test('M4-5·模拟脚本只准调 settleWorld，不准再手写结算链', () => {
+  for (const p of ['../tools/system-audit.mjs', '../tools/sim-60turns.mjs']) {
+    const src = readFileSync(new URL(p, import.meta.url), 'utf8');
+    assert.match(src, /import \{ settleWorld \} from '\.\.\/server\/handlers\.js'/, `${p} 必须走世界推进唯一真入口`);
+    assert.doesNotMatch(src, /state\.clock\.day\s*[+]?=/, `${p} 不许手动累加游戏日（漏日产）`);
+    assert.doesNotMatch(src, /cityEconTick\(/, `${p} 不许外部重跑城经（strategyTick 内部已调）`);
+    assert.doesNotMatch(src, /strategyTick\(state/, `${p} 不许绕过 settleWorld 直接跑旬结算`);
+  }
 });
 
 test('M4-4·武将平衡：装配修复后三项归零 + CSV 忠实', () => {

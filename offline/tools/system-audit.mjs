@@ -5,7 +5,16 @@
  *
  * 时间口径（GDD §9.2）：世界时钟 60 秒/游戏日、旬长 10 日。真实挂机 30 分钟 = 30 日 = 3 旬；
  * 为使「一方灭掉一方」可观测，本脚本按 30 分钟 ×20 加速 = 600 日 = 60 旬推进
- * （与 tools/sim-60turns.mjs 同口径）。所有推进只调真实领域函数，不复制任何结算逻辑。
+ * （与 tools/sim-60turns.mjs 同口径）。所有推进只调真实入口，不复制任何结算逻辑。
+ *
+ * ★ M4-5 口径纠偏：世界推进的唯一真入口是 handlers.settleWorld
+ *   （tickFacilities → totalYield → settleCampaign[时钟 + applyDays 日产 + 章节事件]
+ *    → strategyResolveMarches → strategyTick[内含 cityEconTick] → 酒馆 → 建造）。
+ *   M4-4 这里曾手写「clock.day+=1 + cityEconTick + strategyResolveMarches + strategyTick」，
+ *   漏了 applyDays 日产与章节事件，又把 cityEconTick 跑了两遍，
+ *   于是得出「玩家挂机金 T8 归零、经济闭环缺口」的**假阳性**结论。
+ *   真实链路玩家金有 gold_yield 日产（默认 1000/日，叠加城池/设施加成）。
+ *   现在注入固定 now 让 advanceClock 每次恰好推进 1 游戏日，全程确定性。
  *
  * 输出：reports/system-audit.json（逐旬指标 / 全场景清单 / 不变量 / 灭国链 / 日志结论）。
  */
@@ -14,16 +23,17 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createWorld, normalizeWorld } from '../server/world.js';
 import { loadConfig } from '../server/config.js';
+import { settleWorld } from '../server/handlers.js';
+import { chapterRules } from '../server/domain/campaign.js';
 import { createHash } from 'node:crypto';
 import {
-  ensureStrategy, oathOptions, chooseOath, strategyTick, strategyResolveMarches, localBrain,
+  ensureStrategy, oathOptions, chooseOath, localBrain,
   strategyAttack, strategyConfirmBattle, strategyRetreatBattle, strategyDigestDone,
   strategyRecallMarch, strategyReorderMarch, strategyFormup, strategyTransport,
   strategyInvest, cancelInvest, rewardGeneral, recruitCaptive, strategyEventChoice,
   strategyEventTick, strategySetScenario, strategyViewState, previewAssault,
   factionConfFor, clearThreat, strategyFateView, marchableFrom,
 } from '../server/domain/strategy.js';
-import { cityEconTick } from '../server/domain/city-econ.js';
 import { canMarchBetween } from '../server/domain/march.js';
 import { strategyAppoint, strategyCancelAppointment } from '../server/domain/appointment.js';
 import { diplomacyAct } from '../server/domain/diplomacy.js';
@@ -90,7 +100,9 @@ export function runAudit({ seed = 20261114, turns = 60 } = {}) {
   ensureStrategy(state);
 
   const logs = [];                    // ctx.push 全量（含 chat.push 消息）
-  const ctx = { push: (t, m) => { logs.push({ t, m }); } };
+  /* settleWorld 读 ctx.state / ctx.cfg；场景函数读 ctx.push。同一个 ctx 复用，
+     保证「世界推进」和「玩家操作」看到的是同一个 state 对象。 */
+  const ctx = { state, cfg, push: (t, m) => { logs.push({ t, m }); } };
   const consoleErrors = [];
   const origErr = console.error;
   console.error = (...args) => { consoleErrors.push(args.map(String).join(' ')); };
@@ -174,12 +186,18 @@ export function runAudit({ seed = 20261114, turns = 60 } = {}) {
     return true;
   }
 
-  const dayLoop = (turnNo) => {
+  /* ★ M4-5：只调 settleWorld，不再手写结算链。
+     固定时钟基准：advanceClock 按 (now - lastRealMs) 推天数，每次 +msPerDay 恰好 1 游戏日；
+     不读墙钟、不调 Math.random，同种子双跑逐旬一致。 */
+  const msPerDay = Math.max(1, Math.round(chapterRules().realMsPerDay / (state.clock.scale || 1)));
+  const CLOCK_BASE = 1700000000000;
+  state.clock.lastRealMs = CLOCK_BASE;
+  state.clock.accMs = 0;
+  let fakeNow = CLOCK_BASE;
+  const dayLoop = () => {
     const before = st.turn;
-    state.clock.day = Math.max(1, Math.floor(Number(state.clock.day) || 1)) + 1;
-    strategyResolveMarches(state, cfg, ctx);
-    cityEconTick(state, cfg, ctx);
-    strategyTick(state, cfg, ctx);
+    fakeNow += msPerDay;
+    settleWorld(ctx, fakeNow);
     return st.turn > before;
   };
 
@@ -240,12 +258,15 @@ export function runAudit({ seed = 20261114, turns = 60 } = {}) {
 
   while (guard < (turns + 140) * 40 && series.length < turns + 90) {
     guard += 1;
-    const rolled = dayLoop(series.length);
+    const rolled = dayLoop();
     if (!rolled) continue;
     const turnNo = st.turn;
     const counts = factionCityCounts(state);
     const row = { turn: turnNo, day: Math.floor(Number(state.clock.day) || 1), phase, counts: { ...counts },
-      player: { cities: counts.player || 0, gold: Math.floor(state.roleRes?.gold || 0), grain: Math.floor(state.roleRes?.grain || 0) },
+      player: { cities: counts.player || 0, gold: Math.floor(state.roleRes?.gold || 0),
+        grain: Math.floor(state.roleRes?.grain || 0),
+        goldYield: Math.floor(Number(state.roleRes?.gold_yield) || 0),
+        dailyLedger: (state.resLedger || []).filter((x) => x.res === 'gold' && x.reason === '属地日产').length },
       events: (st.pendingEvents || []).length, marches: (st.marches || []).length,
       chat: logs.length, errors: errors.length };
     series.push(row);
@@ -345,6 +366,11 @@ export function runAudit({ seed = 20261114, turns = 60 } = {}) {
       errors: errors.length, invariants: invariants.length,
       suspiciousLogs: suspicious.length, consoleErrors: consoleErrors.length,
       chatLines: chatLines.length,
+      /* M4-5 链路自检：证明这轮模拟确实走了 settleWorld 的日产链路，
+         防止脚本再次退化成「手写结算链 → 挂机金恒 0」的假结论。 */
+      dayChain: 'settleWorld',
+      dailyIncomeOk: series.length > 0 && series.every((s) => s.player.goldYield > 0 && s.player.dailyLedger > 0),
+      playerGoldNeverZero: series.length > 0 && series.every((s) => s.player.gold > 0),
     },
     conquest, series, scenarios, errors, invariants: invariants.slice(0, 60),
     suspiciousLogs: suspicious.slice(0, 30), consoleErrors: consoleErrors.slice(0, 30),
@@ -369,9 +395,11 @@ function main() {
   console.log(`[system-audit] 旬数 ${a.summary.turnsRun} / 场景 ${a.summary.scenarios}（失败 ${a.summary.scenarioFailed}）`);
   console.log(`[system-audit] 异常 ${a.summary.errors} / 不变量 ${a.summary.invariants} / 可疑日志 ${a.summary.suspiciousLogs} / console.error ${a.summary.consoleErrors}`);
   console.log(`[system-audit] 灭国: ${a.conquest.eliminated || '未达成'} @T${a.conquest.atTurn}，灭国后 ${a.conquest.postTurns} 旬`);
+  console.log(`[system-audit] 日结链路: ${a.summary.dayChain} / 日产入账 ${a.summary.dailyIncomeOk} / 玩家金恒正 ${a.summary.playerGoldNeverZero}`);
   console.log(`[system-audit] 确定性: ${a.deterministic ? '通过' : '失败'}`);
   console.log(`[system-audit] 报告: ${OUT}`);
-  if (a.summary.errors || a.summary.invariants || !a.deterministic) process.exitCode = 1;
+  if (a.summary.errors || a.summary.invariants || !a.deterministic
+      || !a.summary.dailyIncomeOk || !a.summary.playerGoldNeverZero) process.exitCode = 1;
 }
 
 if (process.argv[1] && process.argv[1].endsWith('system-audit.mjs')) main();

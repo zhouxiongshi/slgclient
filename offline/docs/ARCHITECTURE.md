@@ -447,9 +447,19 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 - **灭国闭环**：T62 `xuzhou` 归零（征服者与残城不接壤时由 `yangzhou` 接手，不是死锁），灭国后 10 旬无空壳决策/无异常，存档 JSON 回读一致。`brainRunner` 替换须显式回落 localBrain（strategyTick 整段替换，返回 null 会炸 sheet.strategy_orders）。
 - **真 bug 修复（formup 蒸发）**：UI 允许三槽全 0，旧 `strategyFormup` 直接清兵且差额不入账。现拒绝 `empty_formup`、余兵退回驻城守军（无驻城则留首槽）、事件簿记账。`tests/empire.test.js` +1 条。
 - **平衡修复（按五维装配）**：旧规则只给 core 传新战法池 → 117 位高维 0 战法、10 处高武/高智错配。现三层都传池：五维和 ≥340（或 core）配倾向战法、高武 ≥90 强制兵刃/高智 ≥90 强制谋略、≥390 配光环、core 保底 2 条，`fnv1a` 确定性。修复后三项归零（高维零战法 0 / 错配 0 / 无效引用 0），CSV 238/238 忠实。
-- **未修的已知设计口径（报告登记）**：① `layer` 是剧情权重不是强度档——minor 五维均值 383.5 > core 346.4 > important 290，改选层会牵动宿命/剧本/资料库；② 貂蝉（core、虚构、武力 8/魅力 100）等虚构人物属性需人工签核；③ 玩家挂机金 T8 归零恒 0——金收入只有 UI 手动 `interior.collect`，NPC 有每旬田赋金而玩家没有，属节奏缺口待下一批评估。
+- **未修的已知设计口径（报告登记）**：① `layer` 是剧情权重不是强度档——minor 五维均值 383.5 > core 346.4 > important 290，改选层会牵动宿命/剧本/资料库；② 貂蝉（core、虚构、武力 8/魅力 100）等虚构人物属性需人工签核；③ ~~玩家挂机金 T8 归零恒 0~~ **M4-5 已推翻**：这是模拟脚本漏跑日产的假阳性，真链路玩家金充足（见 §9.20）；改为登记「金通胀 / 与 NPC 田赋量级倒挂」。
 - **测试**：`tests/m4-system-audit.test.js` 2 条（8 旬模拟零异常/灭国/确定性、平衡三项归零）。
 - 基线：413/413 单测、29+29 双态冒烟、check-release 全绿。
+
+### 9.20 M4-5 模拟脚本口径纠偏与验收入闸（2026-11-14）
+
+- **根因（工具缺陷，不是产品缺陷）**：`server/handlers.js settleWorld` 是世界推进的**唯一**真入口（`tickFacilities → totalYield → settleCampaign[advanceClock + applyDays 日产 + runDay 章节事件] → strategyResolveMarches → strategyTick[内含 cityEconTick] → 酒馆 → 建造`）。`tools/system-audit.mjs` 与 `tools/sim-60turns.mjs` 都手写了 `clock.day+=1 + strategyResolveMarches + cityEconTick + strategyTick`：漏了 `applyDays`（`gold_yield` 默认 1000/日）与章节/建造，又把 `cityEconTick` 跑了两遍。于是 M4-4 得出「玩家挂机金 T8 归零、经济闭环缺口」的**假阳性**，还据此建议补玩家田赋金（方向相反）。
+- **纠偏**：两脚本统一改为注入固定 `now` 调 `settleWorld(ctx, fakeNow)`，每次恰好 1 游戏日（`CLOCK_BASE=1700000000000`、`msPerDay=realMsPerDay/scale`），不读墙钟、不用 `Math.random`。对照实验：同世界跑 10 日 `roleRes.gold` 10000→20000 且流水记「属地日产 +10000」，旧脚本这笔从未发生。
+- **链路自检进报告**：`summary.dayChain='settleWorld'` / `dailyIncomeOk`（每旬有 `gold_yield` 与「属地日产」流水）/ `playerGoldNeverZero`，逐旬 `series[].player` 增记 `goldYield`、`dailyLedger`；工具与单测都把三项列为硬断言。
+- **防退化三闸**：① `tests/m4-system-audit.test.js` 新增静态断言——两脚本必须 import `settleWorld`，不得出现手动累加 `state.clock.day`、外部 `cityEconTick(`、直接 `strategyTick(state`；② `check-release` 新增 **7.9d** 读 `system-audit.json` / `hero-balance.json` 断言结论 + 同一静态闸 + 「报告不早于工具源码」（`tools/` 不进出厂源码扫描，单独兜）；③ 两份报告纳入 7.x 新鲜度清单（12→14 份）。另外新增 **7.7.4 自举**：`reports/` 被 `.gitignore` 忽略，干净克隆里报告不存在，故在新鲜度检查前先做「缺失或工具源码更新 → 就地重跑」（约 2 秒），已用「移走报告再跑核查」做反向对照；报告不入库，重跑不会弄脏工作树。CSV 原表不在本机时忠实性列入 `requires_user`。运行时校验由单测的 8 旬实时模拟承担。
+- **真链路复跑**：72 旬 / 198 场景 / 业务拒绝 21（旧 31，其中 9 次 `no_gold` 消失）/ 0 异常 / 0 不变量 / 0 可疑日志 / 0 console.error / 天下日志 991（旧 341）/ 灭国仍为 T62 `xuzhou` + 灭国后 10 旬 / 确定性通过。玩家金 **22,820 → 776,035(T60) → 937,935**，60 旬双跑 1.8 秒。
+- **新暴露的真实数值问题（登记未改）**：玩家固定 `gold_yield` 日产 ≈ 14,600 金/旬，NPC 逐城田赋 `60+商业×1.2`/城/旬 ≈ 600~800 金/旬，量级差约 20 倍；金逼近 `depot_capacity` 100 万后日产被截断且不再记流水。改 `conf/json/basic.json` 会牵动平衡基线与大量测试，属设计决策。
+- **纪律**：任何长时模拟 / 平衡脚本只准调 `settleWorld`，**不许自己拼结算链**；取结论前先做「真链路 vs 旧链路」反向对照，否则 Δ0 与「挂机金恒 0」都可能是工具没跑到造成的恒绿 / 恒假结论。
 
 ---
 
