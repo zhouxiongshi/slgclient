@@ -11,13 +11,26 @@
  */
 import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync, writeFileSync, existsSync, mkdtempSync, copyFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 
 const ROOT = resolve(dirname(), '..');
 function dirname() { return new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'); }
 
-const OVERRIDES_FILE = resolve(ROOT, 'conf/campaign/overrides.json');
+const REAL_OVERRIDES_FILE = resolve(ROOT, 'conf/campaign/overrides.json');
+/* ★ 并行测试隔离：`npm test` 的 --test-concurrency=4 会让本文件与 http-endpoints.test.js
+   同时写同一个 overrides.json，历史上造成 editorSave 偶发假红（发布闸 482/1 fail，
+   单独重跑却 483/483 全绿）。在 loadConfig 首次动态 import 之前把 gm/overrides.js
+   的 FILE 指向进程私有副本，两个进程就不再抢文件；仓库里的真覆盖层全程只读。 */
+const TEST_DIR = mkdtempSync(join(tmpdir(), 'slg-editor-overrides-'));
+const OVERRIDES_FILE = join(TEST_DIR, 'overrides.json');
+if (existsSync(REAL_OVERRIDES_FILE)) {
+  copyFileSync(REAL_OVERRIDES_FILE, OVERRIDES_FILE);
+} else {
+  writeFileSync(OVERRIDES_FILE, JSON.stringify({ tiles: [], facilities: [], city: null, rules: {}, story: {}, generals: {} }, null, 2));
+}
+process.env.SLG_OVERRIDES_FILE = OVERRIDES_FILE;
 /* 首次备份 = 真实初始状态；无论测试中途怎么写盘、哪怕失败退出，
    afterEach 都统一收敛回这份原始内容——否则残留覆盖会污染
    后续任何测试文件的 loadConfig（general-balance 假红已验证过）。 */
@@ -178,6 +191,15 @@ test('红线：编辑器不写任何原表文件，写入只经 saveOverrides', 
   const gm = read('server/gm/overrides.js');
   assert.match(gm, /'conf\/campaign\/overrides\.json'|conf.*campaign.*overrides/, '写入目标只许是覆盖层');
   assert.doesNotMatch(gm.replace(/\/\*[\s\S]*?\*\//g, ''), /general\.json|heroes-240|protagonist\.json/, '覆盖层模块不碰原表');
+});
+
+test('覆盖层路径隔离：生产默认路径不变，测试进程走私有副本', async () => {
+  const gm = read('server/gm/overrides.js');
+  const { OVERRIDES_PATH } = await import('../server/gm/overrides.js');
+  assert.equal(OVERRIDES_PATH, OVERRIDES_FILE, '测试进程必须落在私有副本，不碰仓库覆盖层');
+  assert.match(gm, /const DEFAULT_FILE = resolve\([^\n]*conf\/campaign\/overrides\.json'\);/,
+    '未设 SLG_OVERRIDES_FILE 时仍指向仓库覆盖层');
+  assert.match(gm, /process\.env\.SLG_OVERRIDES_FILE/, '隔离通道只能是显式环境变量');
 });
 
 test('editor-ui.js：纯浏览器脚本静态闸', () => {

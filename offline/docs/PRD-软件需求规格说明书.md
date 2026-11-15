@@ -749,7 +749,7 @@
 | 缺口 | 现状 | 处置 |
 |---|---|---|
 | GDD §11.1 规划的 `domain/battle-preview.js` / `domain/attribution.js` / `battle-preview-ui.js` 独立模块 | 未落地，能力由 `strategy.js previewAssault` + `battle-narrative.js` 承担 | 保持现状，登记为「实现位置与 GDD 规划不一致」，不新建空壳模块 |
-| `previewNarrative` 的 `odds` 字段 | JSDoc 声明但返回值未包含 | SDD §17 登记，待补 |
+| `previewNarrative` 的 `odds` 字段 | JSDoc 曾声明，返回值未包含 | 已关闭：JSDoc 对齐实际返回（`verdict/tone/headline/rows/tips/myNotes/defenderNotes/ratio`）。**刻意不补 `odds` 定值**——R-16.3 要求情报不足时给区间不给定值，见 `SDD §17 DEV-20` |
 | 逐将战前 delta | `fieldGaps` 显式降级 | 待排期 |
 
 **验收标准**
@@ -1498,7 +1498,7 @@
 | 并行会话在同一仓库跑验收，互相覆盖 `reports/`、抢 8004/8088 | 中 | 高（假绿/假红） | `SLG_SMOKE_REPORT_DIR` 隔离、核 mtime 与 `startedAt`、只清理自己启动的 PID |
 | `web/` 被误改导致发行闸红 | 低 | 高 | 指纹 + `byteIdentical` + 第 2 组静态闸；UI 一律注入 |
 | 改内核未回填 TS 源，build 后丢失 | 中 | 高 | 文档红线 + `check-release` 出厂源码清单 + 10 份产物逐字节比对 |
-| `overrides.json` 测试污染导致平衡报告假红 | 中 | 中 | `afterEach` 收敛回首次备份并 `git checkout -- conf/campaign/overrides.json` |
+| `overrides.json` 测试污染导致平衡报告 / 发布闸假红 | 中 | 中 | `afterEach` 收敛 + **测试进程用 `SLG_OVERRIDES_FILE` 指向私有副本**（`npm test` 以 `--test-concurrency=4` 并行，`m4-editor` 与 `http-endpoints` 曾抢同一文件，表现为 `482 tests / 1 fail` 而单独重跑 483/483 全绿） |
 | 覆盖层写入破坏原表 | 低 | 高 | 形状保护 + 原子写 + 「不写原表」单测 |
 | 内容资产被当成史实二次发布 | 中 | 高（合规） | 证据分级 + `caveat` + `provenance.json` + 换皮清单 |
 | 玩家找不到功能入口 | 中 | 中 | `#slgIxQuick` 常驻入口 + 真鼠标回归；教训「入口不可见 = 功能不存在」 |

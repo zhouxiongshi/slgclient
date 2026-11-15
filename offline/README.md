@@ -43,12 +43,11 @@ offline/
 │   ├── index.js           HTTP/WS 入口、静态资源、世界时钟定时器、/__slg/* 管理口
 │   ├── handlers.js        消息路由与全部 handler（保持变薄，逻辑下沉 domain/）
 │   ├── world.js           世界状态、初始城池/领地/武将/战法装配、存档归一化与兼容
-│   ├── battle.js          战斗结算（内核接入 + 动画数据 + 战报）
+│   ├── battle.js          战斗结算（第 16 行接 ../kernel/index.js：动画数据 + 战报）
 │   ├── skills.js          运行时资源注入 + 战略层/战斗动画/城池窗口 DOM 覆盖层
 │   ├── config.js          配置加载（原版 json 全量 + facility 等级表）
 │   ├── codec.js           协议加解密（AES-128-CBC + GZIP，与原版一致）
 │   ├── clock.js           世界时钟（realMsPerDay=60000，scale 1/4，单次最多推 40 天）
-│   ├── kernel.js          battle-core 接入
 │   ├── wsserver.js        WebSocket 服务
 │   ├── gm/                GM 覆盖层（只写 overrides，不动原配置）
 │   └── domain/            领域模块
@@ -175,7 +174,7 @@ node tools/build-heroes.mjs      # 重新生成 M3 武将数据层（需外部�
 - `../../REPORT.md` —— 项目总报告
 - `docs/DESIGN-loop.md` —— 设计基线：经济闭环、演义主线、名将替身、GM 覆盖层、序章 40 日
 - `docs/ARCHITECTURE.md` —— 模块分层与依赖方向
-- `docs/FEASIBILITY-v1.md` —— 一局完整流程的定义
+- `../../docs/FEASIBILITY-v1.md` —— 一局完整流程的定义（在仓库外 `slg/docs/`，不在 `offline/docs/`）
 - `../../docs/体系设计方案-待确认.md` —— 六面板与战法六源的完整设计（8 项决策已按推荐采纳）
 - `../../docs/P0原型-验收说明.md` —— P0 可点原型的范围、入口、验收数字与后续阶段
 - 与 `docs/DESIGN-loop.md` 冲突时以该文件为准

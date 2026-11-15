@@ -5,7 +5,18 @@ import { readFileSync, writeFileSync, renameSync, mkdirSync, statSync } from 'no
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const FILE = resolve(dirname(fileURLToPath(import.meta.url)), '../../conf/campaign/overrides.json');
+const DEFAULT_FILE = resolve(dirname(fileURLToPath(import.meta.url)), '../../conf/campaign/overrides.json');
+/* ★ 测试隔离：npm test 以 --test-concurrency=4 并行跑测试文件，多个进程同时读写
+   同一个 overrides.json 会互相覆盖，历史上造成 editorSave / 平衡报告偶发假红
+   （check-release 报「482 tests / 1 fail」而单独重跑 483/483 全绿）。
+   测试进程可用 SLG_OVERRIDES_FILE 指到自己的临时副本；未设置时行为与原来逐字一致，
+   生产运行与 GM 页不受影响。登记见 SDD §15.4。 */
+const FILE = process.env.SLG_OVERRIDES_FILE
+  ? resolve(process.env.SLG_OVERRIDES_FILE)
+  : DEFAULT_FILE;
+
+/** 当前生效的覆盖层路径（导出供测试与 GM 页取证，不用于写入判定）。 */
+export const OVERRIDES_PATH = FILE;
 
 const num = (v) => {
   const n = Number(v);

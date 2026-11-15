@@ -1566,7 +1566,7 @@ flowchart TD
   "seed": 20261113,
   "strategy": {
     "turn": 14, "lastTurnDay": 130, "playerCity": 101,
-    "resources": { "player": { "gold": 820, "grain": 0 } },
+    "resources": { "player": { "gold": 820, "grain": 1400 } },
     "cities": { "101": { "owner": "player", "troops": 800, "defense": 0.5, "besieged": false } },
     "cityEcon": {
       "101": { "pop": 42000, "devAgri": 62, "devTrade": 55, "devArms": 50, "devDef": 48,
@@ -1588,8 +1588,8 @@ flowchart TD
 ```
 
 **注意三点**：
-1. `resources.grain` 在 v2 里保留但恒为 0（迁移后不再写入），视图一律从 `cityEcon.store` 汇总。
-   > **2026-11-15 校准（`SDD §17 DEV-17`）**：实际实现把 `resources[faction].grain` 用作**城库汇总的只读显示值**（`accrueFactionGrain` 按城累加、`refreshGrainSummary` 刷新），并非「恒为 0」；被禁止的是绕过四个唯一写入口直接赋值（`WB-06`）。实账仍是 `cityEcon[id].store`，本节的设计意图不变，描述待后续修订。
+1. `resources[faction].grain` 在 v2 里是**城库汇总的只读显示值**（`accrueFactionGrain` 按城累加、`refreshGrainSummary` 刷新），既不是实账、也不恒为 0；实账与一切对外视图一律取 `cityEcon[id].store`。禁止绕过四个唯一写入口直接赋值（`WB-06`）。
+   > **2026-11-15 修订（`SDD §17 DEV-17`）**：v1.1 正文曾写「保留但恒为 0」，与实现不符；现按实测口径改正，设计意图（实账在城库）不变。
 2. `undoStack` 恒为空数组（读档清空），保留字段是为了崩溃恢复时结构一致。
 3. 每个新字段都有 `ensureXxx`，所以示例里缺字段的旧档也能读——**但语义默认值必须写对**（`store` 默认 2000，不是 0）。
 

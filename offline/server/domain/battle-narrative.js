@@ -262,7 +262,9 @@ function fmt(n) {
 /**
  * 战前推演的人话版。
  * 入参就是 previewAssault 的返回对象（含 forces / spreadLines / variantLines）。
- * @returns {{verdict, verdictTone, headline, rows, odds, tips, defenderNotes, myNotes}}
+ * @returns {{verdict, tone, headline, rows, tips, myNotes, defenderNotes, ratio} | null}
+ *   注：不返回 odds 胜率定值——情报不足时只给区间不给定值（GDD §6.7 / PRD R-16.3），
+ *   守军区间在 rows 的「守军估算」与 tips 的兵力散布两条里表达。`p.ok` 为假时返回 null。
  */
 export function previewNarrative(p) {
   if (!p || !p.ok) return null;
