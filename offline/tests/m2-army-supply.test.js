@@ -37,7 +37,7 @@ test('L2·通畅：出发城有粮即自给，锚点本身就是补给节点', (
   const line = supplyLineForArmy(state, 'player', march);
   assert.equal(line.connected, true, '出发城有存粮即通畅');
   assert.equal(line.nodeId, from, '补给节点就是出发城');
-  assert.equal(line.need, 100, '0.1 粮/兵：1000 兵每旬 100 粮');
+  assert.equal(line.need, 1000, '0.1 粮/兵/日 × 10 日：1000 兵每旬 1000 粮');
 });
 
 test('L2·BFS：出发城空库时沿己方城图找最近的存粮节点', () => {
@@ -78,7 +78,7 @@ test('L2·断绝：出发城失守即断，armySupplyTick 第 3 旬开始逃兵'
   assert.ok(r1.cut[0].days === 10);
 });
 
-test('L2·取粮：通畅时每旬从补给节点城库扣 0.1/兵', () => {
+test('L2·取粮：通畅时每旬从补给节点城库扣 1 粮/兵（0.1/日 × 10 日）', () => {
   const { state, st } = oathWorld();
   const from = playerCityIds(st)[0];
   st.cityEcon[from].store = 3000;
@@ -86,8 +86,8 @@ test('L2·取粮：通畅时每旬从补给节点城库扣 0.1/兵', () => {
   st.marches = [march];
   const r = armySupplyTick(state, { push() {} });
   assert.equal(r.fed.length, 1, '通畅应上报取粮');
-  assert.equal(r.fed[0].need, 100);
-  assert.equal(st.cityEcon[from].store, 2900, '节点城库实扣 100');
+  assert.equal(r.fed[0].need, 1000);
+  assert.equal(st.cityEcon[from].store, 2000, '节点城库实扣 1000');
   assert.equal(march.supplyOk, true);
 });
 

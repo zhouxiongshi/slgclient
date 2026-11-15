@@ -116,8 +116,10 @@ test('势力特技：公孙瓒军饷 -20%', () => {
   const soldiers = countSoldiers(state);
   // 与真实链路同口径：campaign.js 把 factionTraitOf(state).upkeepPct 并进 applyDays 的 rules
   assert.equal(factionTraitOf(state).upkeepPct, -20);
+  /* 举义之后已有城：军饷改走参数表 0.1 粮/兵/日，不再吃调用方传入的 1。
+     公孙瓒 -20% 仍叠在这上面。 */
   const r = applyDays(state, cfg, 1, { upkeepPerSoldier: 1, upkeepPct: -20 });
-  assert.equal(r.upkeepPaid, Math.floor(soldiers * 0.8));
+  assert.equal(r.upkeepPaid, Math.floor(soldiers * 0.1 * 0.8));
 });
 
 test('势力特技：吕布行军快一日抵达', () => {

@@ -17,6 +17,13 @@ import { canMarchBetween } from './march.js';
 /* ★ M2-3：粮耗口径走全局参数表（knobs.js 零依赖，无环） */
 import { knobGet } from './knobs.js';
 
+/** 一旬口粮：兵力 × 每日口粮 × 旬长。默认 1000 兵一旬 1000 粮。 */
+export function grainForTurn(state, troops) {
+  const per = Number(knobGet(state, 'grainPerSoldierDay')) || 0.1;
+  const turn = Number(knobGet(state, 'turnDays')) || 10;
+  return Math.round(Math.max(0, Number(troops) || 0) * per * turn);
+}
+
 /* 城名只读 map.json（与 city-econ / tavern 同一口径）。本模块不能 import city-econ，
    否则 city-econ → supply → city-econ 成环。 */
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -153,7 +160,7 @@ export function marchSupplyEstimate(state, fromCityId, soldiers, days = 1) {
  *    通行/封锁，无归属字段），「路径未被敌方控制」由己方图 BFS 天然保证：
  *    ownedAdjacency 只在己方城之间连边，敌城/封锁关隘根本进不了图。
  *  - 部队锚点 = 行军行的出发城（march.from）。锚点失守 → 补给断。
- *  - 需求 = 0.1 粮/兵/旬（与出征粮 GRAIN_PER_TROOP 同一单兵口径）。
+ *  - 需求 = 每兵每日口粮 × 一旬天数（默认 0.1×10 = 1 粮/兵/旬，GDD §5.10）。
  */
 export function supplyLineForArmy(state, factionId, march) {
   const st = state?.strategy;
@@ -164,7 +171,7 @@ export function supplyLineForArmy(state, factionId, march) {
   if (!row || row.owner !== fid) return { connected: false, reason: 'from_lost', anchor };
   const econ = st.cityEcon || {};
   const storeOf = (id) => Math.max(0, Math.floor(Number(econ[id]?.store) || 0));
-  const need = Math.round((Number(march?.troops) || 0) * (knobGet(state, 'grainPerSoldierDay') ?? 0.1));
+  const need = grainForTurn(state, march?.troops);
   if (storeOf(anchor) > 0) {
     return { connected: true, nodeId: anchor, hops: 0, store: storeOf(anchor), need, anchor };
   }
@@ -207,7 +214,7 @@ export function armySupplyTick(state, ctx) {
     const line = supplyLineForArmy(state, fid, mm);
     if (line.connected) {
       const e = st.cityEcon?.[line.nodeId];
-      const need = Math.round((Number(mm.troops) || 0) * (knobGet(state, 'grainPerSoldierDay') ?? 0.1));
+      const need = grainForTurn(state, mm.troops);
       if (e && need > 0) e.store = Math.max(0, Math.floor(Number(e.store) || 0) - need);
       if ((Number(mm.supplyCutDays) || 0) > 0) {
         recordEvent(state, `${cityName(mm.from)}方向的部队补给恢复，士心安。`);

@@ -18,6 +18,7 @@ import {
   yieldBonusByResource as _yieldBonus, filledPostCount as _filledPosts,
   careerOf,
 } from '../server/domain/panels.js';
+import { desText } from '../server/domain/battle-narrative.js';
 import { applyDays as _applyDays } from '../server/domain/economy.js';
 import { loyaltyTick } from '../server/domain/city-econ.js';
 import { startOfflineServer, PANELS_UI_SOURCE } from '../server/index.js';
@@ -43,7 +44,7 @@ test('战法库：80 条、每条 ≥2 条公开获取途径、研习兜底、�
   for (const s of panelState(fresh(), cfg).library) {
     const r = byId.get(s.cfgId);
     assert.equal(s.name, r.ui?.name ?? r.name);
-    assert.equal(s.des, r.ui?.des ?? '');
+    assert.equal(s.des, desText(r, 1) || r.ui?.des || '');
   }
 });
 
@@ -131,12 +132,13 @@ test('收支流水：锻造/政令扣费逐笔入账、带事由；面板输出�
   }
   panelAction(s, cfg, { type: 'proposal', id: 'farm' });
   assert.ok((s.resLedger || []).some((e) => e.reason.includes('政令')), '政令应入流水');
-  // 面板输出：entries 逆序（最新在前）、net 覆盖五资源
+  // 面板输出：entries 逆序（最新在前）、net 覆盖木铁石粮金和军工
   const v = panelState(s, cfg);
   const lg = v.interior.output.ledger;
   assert.ok(lg.entries.length >= 1);
   assert.equal(lg.entries[0], (s.resLedger || [])[(s.resLedger || []).length - 1]);
-  assert.equal(lg.net.length, 5);
+  assert.equal(lg.net.length, 6);
+  assert.ok(lg.net.some((n) => n.key === 'jungong'));
   const goldDelta = (s.resLedger || []).filter((e) => e.res === 'gold')
     .reduce((a, e) => a + e.delta, 0);
   assert.equal(Number(s.roleRes.gold), goldBefore + goldDelta, '扣费与流水一致');

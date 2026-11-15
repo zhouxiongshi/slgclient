@@ -16,6 +16,7 @@ import assert from 'node:assert/strict';
 import { loadConfig } from '../server/config.js';
 import { createWorld, normalizeWorld } from '../server/world.js';
 import { handleRequest } from '../server/handlers.js';
+import { chapterRules } from '../server/domain/campaign.js';
 
 const cfg = loadConfig();
 
@@ -231,7 +232,7 @@ test('资源按游戏日产出、政令恢复、仓库封顶', () => {
   const d0 = state.roleRes.decree = 0;
   tick(ctx);
   assert.ok(state.roleRes.wood >= w0 + expectedWoodYield * 2 - 1);
-  assert.equal(state.roleRes.decree, Math.min(cfg.basic.role.decree_limit, d0 + 60));
+  assert.equal(state.roleRes.decree, Math.min(cfg.basic.role.decree_limit, d0 + 2 * chapterRules().decreePerDay));
   // 爆仓封顶
   const cap = state.roleRes.depot_capacity;
   state.roleRes.wood = cap;

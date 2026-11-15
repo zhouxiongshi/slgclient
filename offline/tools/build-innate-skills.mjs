@@ -589,11 +589,11 @@ for (const name of heroNames) {
         : '该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法'),
   });
 }
-/* 主角：M4-7 的原创指挥战法「后世之识」，是平行工作产物，保留不覆盖 */
+/* 主角：原创指挥战法「坐镇中军」，是平行工作产物，保留不覆盖 */
 heroSkills[protagonist.general.name] = 19001;
 audit.push({
   name: protagonist.general.name, cfgIds: [protagonist.general.cfgId], role: 'BUFF', star: 4,
-  innateCfgId: 19001, innateName: '后世之识', match: 'authored-protagonist', evidence: 'A2/原创',
+  innateCfgId: 19001, innateName: '坐镇中军', match: 'authored-protagonist', evidence: 'A2/原创',
   sourceIds: [], sourceName: 'M4-7 原创，不属率土之滨名录',
   note: '主角是穿越者原创角色，createSkillAssets 与 world.js 都硬编码 19001，保持同源',
 });

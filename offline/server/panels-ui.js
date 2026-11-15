@@ -98,7 +98,7 @@
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }).then(function (r) { return r.json(); }).then(function (r) {
-      toast(r.reason ? ({ no_army: '没有这支队伍', marching: '队伍行军中，不可整编', dup_general: '同一武将不能重复上阵', in_other_army: '该武将已在别的队伍', too_many_troops: '兵力分配超出该队现有兵力', not_own_city: '只能运输到己方城池', bad_amount: '数量不合法', no_grain: '粮草不足', no_gold: '金钱不足', no_general: '找不到该武将' }[r.reason] || ('失败：' + r.reason)) : (r.ok ? '完成' : '失败'), !r.ok);
+      toast(r.text || r.hint || (r.reason ? ({ no_army: '没有这支队伍', marching: '队伍行军中，不可整编', dup_general: '同一武将不能重复上阵', in_other_army: '该武将已在别的队伍', too_many_troops: '兵力分配超出该队现有兵力', not_own_city: '只能运输到己方城池', bad_amount: '数量不合法', no_grain: '粮草不足', no_gold: '金钱不足', no_general: '找不到该武将' }[r.reason] || ('失败：' + r.reason)) : (r.ok ? '完成' : '失败')), !r.ok);
       if (r.ok) fetchState();
       if (cb) cb(r);
     }).catch(function (e) { toast('操作失败：' + e.message, true); });
@@ -336,7 +336,11 @@
       + '<div class="muted" style="margin-top:5px">本表为战斗结算用的本局数值（0~100，三国志11 口径，进内核不再缩放）；'
       + '下方史料档案的史载五维同为 0~100，可以直接比较。</div></div>'
       + loreHtml
-      + '<div class="card"><h3>本局状态</h3>体力 ' + esc(g.physical) + ' · 经验 ' + fmt(g.exp)
+      + '<div class="card"><h3>本局状态</h3>体力 ' + esc(g.physical)
+      + ' · Lv' + esc(g.level)
+      + (g.progress && g.progress.capped ? ' · 已满 10 级'
+        : (' · 经验 ' + fmt(g.progress ? g.progress.exp : g.exp) + '/' + fmt(g.progress ? g.progress.need : 0)))
+      + (g.progress && g.progress.next ? (' · ' + esc(g.progress.next)) : '')
       + ' · 状态 ' + esc(g.state) + ' · 在编岗位 ' + (g.appointed.length ? esc(g.appointed.join('、')) : '无')
       + (g.loyal != null ? ' · 忠诚 <b class="v" style="color:' + (g.loyal >= 80 ? '#9ec97f' : g.loyal >= 70 ? '#d8b45a' : '#e07a5f') + '">' + g.loyal + '</b>（旬俸 ' + fmt(g.salaryPerXun || 20 * (g.star || 3)) + ' 金/旬）'
         + '<button class="btn" data-act="reward" data-id="' + g.id + '">赏赐</button>'
@@ -377,14 +381,31 @@
   }
 
   function genSkillHtml(g) {
-    var out = '<h3>战法 · ' + esc(g.name) + '</h3>';
+    var guide = (data.interior && data.interior.output && data.interior.output.guide) || {};
+    var out = '<h3>战法 · ' + esc(g.name) + '</h3>'
+      + '<div class="card"><div class="muted">自带槽入营就有，不能换成别的战法，在这里升级。'
+      + '学习槽要武将 5 级。觉醒槽要武将 10 级，并且自带战法升到 10 级。'
+      + '同一条战法同时最多 2 人装配。当前军工 <b class="v">' + fmt(guide.jungong || 0) + '</b>。'
+      + esc(guide.rule || '') + '</div></div>';
     g.slots.forEach(function (s) {
       out += '<div class="card"><span class="tag ' + (s.skill ? 'ok' : s.locked ? 'no' : 'mid') + '">'
         + ['自带', '学习', '觉醒'][s.pos] + '</span>';
       if (s.skill) {
         out += '<b class="v">' + esc(s.skill.name) + '</b> <span class="muted">Lv' + esc(s.skill.level)
           + ' · 发动率 ' + esc(s.skill.probability == null ? '—' : s.skill.probability + '%') + '</span>'
-          + '<div style="margin-top:6px">' + esc(s.skill.des) + '</div>';
+          + '<div style="margin-top:6px">' + esc(s.skill.des || '没有效果说明') + '</div>';
+        if (s.skill.maxed) {
+          out += '<div class="muted" style="margin-top:6px">已满 10 级</div>';
+        } else {
+          out += '<div class="muted" style="margin-top:6px">下一级：' + esc(s.skill.nextDes || '没有效果说明') + '</div>';
+          if (s.skill.upgradeBlock) {
+            out += '<div class="muted" style="margin-top:6px">' + esc(s.skill.upgradeBlock)
+              + '。这一级要军工 ' + esc(s.skill.upgradeCost) + '。</div>';
+          } else {
+            out += '<button class="btn" data-act="lvskill" data-gid="' + g.id + '" data-pos="' + s.pos + '">'
+              + '升级到 Lv' + (Number(s.skill.level) + 1) + '（军工 ' + esc(s.skill.upgradeCost) + '）</button>';
+          }
+        }
       } else {
         out += '<span class="muted">空槽位 · ' + esc(s.lockText) + '</span>';
       }
@@ -392,12 +413,15 @@
     });
     var unlocked = data.library.filter(function (x) { return x.status === 'unlocked'; }).slice(0, 8);
     out += '<div class="card"><h3>装配已解锁战法</h3><div class="muted" style="margin-bottom:8px">'
-      + '槽位规则沿用既有设计：自带不可替换、Lv5 开学习槽、Lv20＋自带 10 级开觉醒槽；每条战法同时最多 2 人装配。</div>';
+      + '槽位规则：自带不可替换、Lv5 开学习槽、Lv10 且自带 10 级开觉醒槽；每条战法同时最多 2 人装配。</div>';
     unlocked.forEach(function (s) {
-      out += '<button class="btn" data-act="learn" data-gid="' + g.id + '" data-pos="1" data-cfg="' + s.cfgId + '">'
-        + esc(s.name) + ' → 学习槽</button>';
+      out += '<div class="card"><b class="v">' + esc(s.name) + '</b>'
+        + '<div style="margin-top:6px">' + esc(s.des || '没有效果说明') + '</div>'
+        + '<button class="btn" data-act="learn" data-gid="' + g.id + '" data-pos="1" data-cfg="' + s.cfgId + '">'
+        + esc(s.name) + ' → 学习槽</button></div>';
     });
-    out += '<div style="margin-top:8px"><button class="btn" data-act="tab" data-id="library">去战法库看全部 51 条</button></div></div>';
+    out += '<div style="margin-top:8px"><button class="btn" data-act="tab" data-id="library">去战法库看全部 '
+      + data.library.length + ' 条</button></div></div>';
     return out;
   }
 
@@ -627,18 +651,21 @@
 
   function viewInterior() {
     var it = data.interior, out = '';
-    out += '<h3>内政委任台</h3><div class="card"><h3>资源流水线</h3><table><thead><tr>'
-      + '<th>资源</th><th>库存</th><th>基础产量</th><th>委任加成</th><th>府库上限</th><th>满仓预警</th></tr></thead><tbody>'
+    var guide = it.output.guide || {};
+    out += '<h3>内政委任台</h3><div class="card"><h3>资源流水线</h3>'
+      + '<div class="muted" style="margin-bottom:8px">' + esc(guide.rule || '') + '</div><table><thead><tr>'
+      + '<th>资源</th><th>库存</th><th>用途</th><th>基础产量</th><th>委任加成</th><th>府库上限</th><th>满仓预警</th></tr></thead><tbody>'
       + it.output.resources.map(function (r) {
-        var full = r.capacity && r.stock >= r.capacity;
+        var full = r.full || (r.capacity && r.stock >= r.capacity);
         var eff = Math.floor((r.yield || 0) * (1 + (r.bonusPct || 0) / 100));
-        return '<tr><td>' + esc(r.label) + '</td><td class="v">' + fmt(r.stock) + '</td><td>+' + fmt(r.yield)
+        return '<tr><td>' + esc(r.label) + '</td><td class="v">' + fmt(r.stock) + '</td>'
+          + '<td class="muted">' + esc(r.use || '') + '</td><td>+' + fmt(r.yield)
           + '</td><td>' + (r.bonusPct ? '<span class="up">+' + r.bonusPct + '%（实际 +' + fmt(eff) + '）</span>'
             : '<span class="muted">—</span>') + '</td>'
           + '<td class="muted">' + (r.capacity ? fmt(r.capacity) : '—') + '</td><td>'
-          + (full ? '<span class="tag no">已满仓</span>' : '<span class="muted">正常</span>') + '</td></tr>';
+          + (full ? '<span class="tag no">已满仓，日产不再入库</span>' : '<span class="muted">正常</span>') + '</td></tr>';
       }).join('') + '</tbody></table>'
-      + '<div class="muted">★ 委任加成已真实生效：每日常规入账即按此比例上浮，收支流水可查。</div></div>';
+      + '<div class="muted">委任加成已计入每天入账。花掉库存的按钮在「府库」。</div></div>';
 
     /* ★ M4-12：生效设施与城池内页同源 —— 两处内政入口不再各说各话。
        协议侧已隐藏未参与结算的原版占位设施，这里把隐藏数量如实写明。 */
@@ -721,18 +748,22 @@
       }).join('') + '</div>';
 
     var list = data.items.filter(function (i) { return ui.itemFilter === 'all' || i.kind === ui.itemFilter; });
-    // ★ P1：用途总表——每项资源一个唯一主用途，玩家不再问「这资源干嘛的」
-    var RES_USE = {
-      wood: '建筑与设施升级', iron: '锻造兵刃与征兵', stone: '城墙与城防工事',
-      grain: '征兵与军饷（兵越多吃得越多）', gold: '战法研习、招募与委任俸禄', decree: '政令与提案',
-    };
-    out += '<div class="card"><h3>资源</h3><div class="grid">' + data.interior.output.resources.map(function (r) {
+    var guide = (data.interior.output && data.interior.output.guide) || {};
+    var fullNames = (data.interior.output.resources || []).filter(function (r) { return r.full; }).map(function (r) { return r.label; });
+    out += '<div class="card"><h3>资源</h3><div class="muted" style="margin-bottom:8px">' + esc(guide.rule || '') + '</div>'
+      + (fullNames.length ? '<div class="muted" style="color:#e07a5f;margin-bottom:8px">已满仓，日产不再入库：' + esc(fullNames.join('、')) + '</div>' : '')
+      + '<div class="grid">' + data.interior.output.resources.map(function (r) {
       var eff = Math.floor((r.yield || 0) * (1 + (r.bonusPct || 0) / 100));
       return '<div><span class="k">' + esc(r.label) + '</span> <span class="v">' + fmt(r.stock) + '</span>'
+        + (r.full ? ' <span class="tag no">已满</span>' : '')
         + '<div class="muted">日产 +' + fmt(r.yield)
         + (r.bonusPct ? '（委任 +<span class="up">' + r.bonusPct + '%</span> → 实际 +' + fmt(eff) + '）' : '')
-        + '</div><div class="muted">用途：' + esc(RES_USE[r.key] || '—') + '</div></div>';
-    }).join('') + '</div></div>';
+        + '</div><div class="muted">用途：' + esc(r.use || '—') + '</div></div>';
+    }).join('') + '</div>'
+      + '<div style="margin-top:8px">' + (guide.actions || []).map(function (a) {
+        return '<button class="btn" data-act="armory" data-id="' + esc(a.id) + '" title="' + esc(a.note || '') + '">'
+          + esc(a.label) + '</button>';
+      }).join('') + '</div></div>';
 
     // ★ P0-3：收支流水——玩家第一次能回答「我的资源怎么没的」
     var lg = data.interior.output && data.interior.output.ledger;
@@ -970,6 +1001,18 @@
     if (act === 'research') return post({ type: 'research', cfgId: Number(t.getAttribute('data-cfg')), amount: 10 });
     if (act === 'learn') return post({ type: 'learn', gId: Number(t.getAttribute('data-gid')),
       pos: Number(t.getAttribute('data-pos')), cfgId: Number(t.getAttribute('data-cfg')) });
+    if (act === 'lvskill') return post({ type: 'lvSkill', gId: Number(t.getAttribute('data-gid')),
+      pos: Number(t.getAttribute('data-pos')) });
+    if (act === 'armory') {
+      var guideAct = (((data.interior || {}).output || {}).guide || {}).actions || [];
+      var picked = null;
+      for (var ai = 0; ai < guideAct.length; ai++) if (guideAct[ai].id === id) picked = guideAct[ai];
+      if (!picked) return;
+      var body = {};
+      Object.keys(picked.body || {}).forEach(function (k) { body[k] = picked.body[k]; });
+      if (picked.needsCity) body.cityId = Number((data.strategy || {}).playerCity) || 0;
+      return strategyAction(body);
+    }
     if (act === 'proposal') return confirmBox('颁行后本回合不可更改，确认？', function () {
       post({ type: 'proposal', id: id });
     });

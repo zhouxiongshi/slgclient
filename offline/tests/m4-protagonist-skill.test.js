@@ -1,5 +1,5 @@
 /**
- * M4-7 主角自带战法 19001「后世之识」——玩家指定的指挥战法三效果。
+ * M4-7 主角自带战法 19001「坐镇中军」——玩家指定的指挥战法三效果。
  *
  * 覆盖：
  *   1. 配置同源：ui.des 占位 = kernel.effects 槽数 = include_effect；回击概率 30% 起、
@@ -135,7 +135,7 @@ test('叙述：面板/战报读到的就是指定效果，%n% 按等级填掉', 
   assert.equal(p.target, '自身与一名友军');
   assert.ok(p.effect.includes('洞察') && p.effect.includes('回击') && p.effect.includes('受到伤害降低'));
   assert.ok(p.trigger.includes('开战即生效'));
-  assert.match(actSentence({ t: 'skill', fName: '主角', skill: '后世之识', loss: 120, counter: true }),
+  assert.match(actSentence({ t: 'skill', fName: '主角', skill: '坐镇中军', loss: 120, counter: true }),
     /受击回击/);
   assert.match(actSentence({ t: 'immune', toName: '主角', state: '犹豫' }), /洞察生效，免疫/);
 });
@@ -163,7 +163,7 @@ test('内核实跑：回击按等级概率触发、伤害率恒 87%、自身受�
   for (const e of counterHits) {
     assert.equal(e.payload.effect_type, 'STRATEGY_DAMAGE');
     assert.equal(e.payload.rate_pct_at_level, 87, '武将 Lv10 也不得把 87% 二次放大');
-    assert.equal(e.payload.skill, '后世之识');
+    assert.equal(e.payload.skill, '坐镇中军');
   }
   assert.ok(r.events.some((e) => e.kind === 'skill_trigger' && e.payload.counter), '回击必须有发动事件供战报取数');
 
@@ -190,7 +190,7 @@ test('战报同源：回击伤害进 skillHit（c_id=19001），不是只在内�
   const r = fight(10);
   const idMap = { a0: 1, a1: 2, d0: 3 };
   const skillLookup = {
-    a0: new Map([['后世之识', { ...reportSkillFields(CFG_ID, 10), class: '指挥' }]]),
+    a0: new Map([['坐镇中军', { ...reportSkillFields(CFG_ID, 10), class: '指挥' }]]),
   };
   const rounds = kernelEventsToRounds(r, idMap, skillLookup);
   const skillHits = rounds.flatMap((x) => x.b).flatMap((h) => [...h.a_bs, ...h.a_as, ...h.d_as]);

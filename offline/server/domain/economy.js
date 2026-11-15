@@ -3,6 +3,8 @@
  * 不刷怪，不发武将，不加蝴蝶进度。
  */
 
+import { knobGet } from './knobs.js';
+
 const STOCK = ['wood', 'iron', 'stone', 'grain', 'gold'];
 
 export function countSoldiers(state) {
@@ -46,9 +48,15 @@ export function applyDays(state, cfg, days, rules) {
   const r = state.roleRes;
   const cap = r.depot_capacity || 1000000;
   const limit = cfg.basic.role?.decree_limit ?? 20;
-  const decreePerDay = rules.decreePerDay ?? 30;
+  /* 缺省 2：上限 20 时，大约一旬才能攒满一次行动预算。30/日会让政令永远顶满。 */
+  const decreePerDay = rules.decreePerDay ?? 2;
+  /* 序章沿用章节军饷。玩家已有城之后改按参数表：每兵每天 0.1 粮，和城产对得上。 */
+  const ownsCity = Object.values(state.strategy?.cities || {}).some((row) => row?.owner === 'player');
+  const perSoldier = ownsCity
+    ? (Number(knobGet(state, 'grainPerSoldierDay')) || 0.1)
+    : (rules.upkeepPerSoldier ?? 0);
   const cost = Math.floor(
-    countSoldiers(state) * (rules.upkeepPerSoldier ?? 0)
+    countSoldiers(state) * perSoldier
     * (1 + (Number(rules.upkeepPct) || 0) / 100),
   );
   const startDay = Math.floor(Number(state.clock?.day) || 1);
@@ -64,10 +72,14 @@ export function applyDays(state, cfg, days, rules) {
   for (const k of STOCK) before[k] = Number(r[k]) || 0;
   let upkeepPaid = 0;
   let salaryPaid = 0;
+  let goldYielded = 0;
   for (let i = 0; i < days; i += 1) {
     for (const k of STOCK) {
       const base = Math.floor(r[`${k}_yield`] || 0);
       const gain = base > 0 ? Math.floor(base * (1 + (Number(resBonus[k]) || 0) / 100)) : base;
+      if (k === 'gold' && gain > 0) {
+        goldYielded += Math.max(0, Math.min(gain, cap - (r.gold || 0)));
+      }
       r[k] = Math.min(cap, (r[k] || 0) + gain);
     }
     const pay = Math.min(r.grain || 0, cost);
@@ -78,15 +90,23 @@ export function applyDays(state, cfg, days, rules) {
     salaryPaid += sal;
     r.decree = Math.min(limit, (r.decree || 0) + decreePerDay);
   }
+  /* GDD §5.10 固定支出闸：有城之后，城防与俸饷约占金产的 35%（落在 30%–45%）。 */
+  let maintainPaid = 0;
+  if (ownsCity && goldYielded > 0) {
+    const due = Math.round(goldYielded * 0.35);
+    maintainPaid = Math.min(r.gold || 0, due);
+    r.gold -= maintainPaid;
+  }
   // 流水：按整段结算记净变化。gold 拆成「属地日产」与「委任俸禄」两笔，
   //   两笔之和恒等于实际净变化（满仓截断也如实入账）；其余资源记一笔净差。
   for (const k of STOCK) {
     let delta = (Number(r[k]) || 0) - before[k];
-    if (k === 'gold') delta += salaryPaid;   // 先把俸禄从净差里摘出来
+    if (k === 'gold') delta += salaryPaid + maintainPaid;
     if (delta) recordRes(state, k, delta, '属地日产', startDay);
   }
   if (upkeepPaid) recordRes(state, 'grain', -upkeepPaid, '军饷', startDay + days - 1);
   if (salaryPaid) recordRes(state, 'gold', -salaryPaid, '委任俸禄', startDay + days - 1);
+  if (maintainPaid) recordRes(state, 'gold', -maintainPaid, '城防俸饷', startDay + days - 1);
   return { days, upkeepPaid, salaryPaid, soldiers: countSoldiers(state) };
 }
 

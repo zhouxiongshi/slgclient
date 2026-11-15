@@ -252,9 +252,11 @@ test('协议：技能列表非空 / 升级按 pos 生效 / 旧技能 ID 被拒�
     const oldLv = g.skills[0].lv;
 
     const lv = await client.request('general.lvSkill', { gId: g.id, pos: 0 });
-    assert.equal(lv.msg.ok, true, `按 pos 升级失败：${lv.msg.reason}`);
+    assert.equal(lv.msg.ok, false, '1 级武将不能把战法升到 2 级');
+    assert.equal(lv.msg.reason, 'need_general_level');
+    assert.match(lv.msg.hint, /武将要到/);
     const after = (await client.request('general.myGenerals', {})).msg.generals.find((x) => x.id === g.id);
-    assert.equal(after.skills[0].lv, oldLv + 1, '升级没有改变技能等级');
+    assert.equal(after.skills[0].lv, oldLv, '等级不够时不应把战法升上去');
 
     const bad = await client.request('general.upSkill', { gId: g.id, cfgId: 101, pos: 2 });
     assert.equal(bad.msg.ok, false);

@@ -4,7 +4,7 @@
   "days": 40,
   "realMsPerDay": 60000,
   "maxDaysPerSettle": 40,
-  "decreePerDay": 30,
+  "decreePerDay": 2,
   "upkeepPerSoldier": 0.4,
   "upkeepNote": "起点曾按 0.02 试算：基础日产约 1000，5000 兵一天只吃 100 粮，40 日内不会缺粮。0.4 时 1000 兵一天 400 粮，配上磨坊仍有余；5000 兵一天 2000 粮，大约第 10 日见底，且第 3 日还没破产。",
   "marchSecPerTile": 1.5,

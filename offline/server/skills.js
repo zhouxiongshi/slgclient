@@ -314,7 +314,11 @@ export function patchClientBundle(source) {
                 iconNameLab.string = skillConf.name;`,
       `              if (skillConf) {
                 icon.getComponent(SkillIconLogic).setData(skill || { cfgId: gSkill.cfgId, generals: [] }, gSkill);
-                iconNameLab.string = skillConf.name;`,
+                var sdes = skillConf.des || '';
+                var lvIdx = Math.max(0, ((gSkill && gSkill.lv) || 1) - 1);
+                var svals = (skillConf.levels && skillConf.levels[lvIdx] && skillConf.levels[lvIdx].effect_value) || [];
+                for (var sk = 0; sk < svals.length; sk++) sdes = sdes.replace('%n%', String(svals[sk]));
+                iconNameLab.string = sdes ? (skillConf.name + '\\n' + sdes) : skillConf.name;`,
     ],
     [
       `            window.__slgBack = function () {
@@ -846,6 +850,35 @@ export function patchClientBundle(source) {
             EventMgr.emit(LogicEvent.updateCityAddition, data.msg.cityId, addition);
             }
           }`,
+    ],
+    [
+      `          this.nameLab.string = conf.name;
+          this.icon.getComponent(SkillIconLogic).setData(skill, null);
+          this.limitLab.string = this._skill.generals.length + "/" + conf.limit;`,
+      `          this.nameLab.string = conf ? conf.name : ('战法' + skill.cfgId);
+          if (conf) this.icon.getComponent(SkillIconLogic).setData(skill, null);
+          var sdes = (conf && conf.des) || '';
+          var svals = (conf && conf.levels && conf.levels[0] && conf.levels[0].effect_value) || [];
+          for (var sk = 0; sk < svals.length; sk++) sdes = sdes.replace('%n%', String(svals[sk]));
+          var sn = (skill.generals && skill.generals.length) || 0;
+          this.limitLab.string = (sdes || '没有效果说明') + '　' + sn + '/' + ((conf && conf.limit) || 0);`,
+    ],
+    [
+      `          var des1 = conf.des;
+
+          for (var _index = 0; _index < conf.levels[0].effect_value.length; _index++) {`,
+      `          var des1 = conf.des || '没有效果说明';
+
+          for (var _index = 0; _index < ((conf.levels && conf.levels[0] && conf.levels[0].effect_value) || []).length; _index++) {`,
+    ],
+    [
+      `          var des2 = conf.des;
+
+          for (var _index2 = 0; _index2 < conf.levels[1].effect_value.length; _index2++) {`,
+      `          var des2 = conf.des || '';
+          var nextFx = (conf.levels && conf.levels[1] && conf.levels[1].effect_value) || [];
+
+          for (var _index2 = 0; _index2 < nextFx.length; _index2++) {`,
     ],
   ];
   let out = source;
@@ -4293,6 +4326,59 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     });
   }
 
+  /* 物资去处：说明和按钮都用服务端 guide，这里不自己算花费。 */
+  function paintMaterialGuide(box, guide, cityId, onDone) {
+    var full = (guide.resources || []).filter(function (r) { return r.full; });
+    var html = '<h4 style="margin-top:0">物资去处</h4>'
+      + '<div class="cost">' + esc(guide.rule || '') + '</div>'
+      + '<div class="cost">军工 <b style="color:#f0d998">' + fmt(guide.jungong || 0) + '</b>'
+      + '。军工不进仓库，也不会每天自己涨。</div>';
+    if (full.length) {
+      html += '<div class="cost" style="color:#e07a5f">已满仓，今天的产量不再入库：'
+        + full.map(function (r) { return esc(r.label); }).join('、') + '。</div>';
+    }
+    (guide.resources || []).forEach(function (r) {
+      html += '<div class="cost"><b style="color:#f0d998">' + esc(r.label) + '</b> '
+        + fmt(r.stock)
+        + (r.yield ? (' · 日产 +' + fmt(r.yield)) : '')
+        + (r.full ? ' · 已满' : '')
+        + ' — ' + esc(r.use || '') + '</div>';
+    });
+    box.innerHTML = html;
+    var row = el('div', '');
+    row.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-top:8px';
+    (guide.actions || []).forEach(function (a) {
+      var b = mkBtn(a.label, '', function () {
+        var body = {};
+        Object.keys(a.body || {}).forEach(function (k) { body[k] = a.body[k]; });
+        if (a.needsCity) body.cityId = cityId;
+        postJSON('/__slg/strategy/action', body).then(function (rs) {
+          if (rs.ok) toast(rs.text || '已办妥', true);
+          else toast(rs.hint || rs.reason || '做不到', false);
+          if (onDone) onDone();
+        });
+      });
+      if (a.note) b.title = a.note;
+      row.appendChild(b);
+    });
+    box.appendChild(row);
+  }
+
+  function mountMaterialCard(parent, cityId, onDone) {
+    var box = el('div', 'card', '<h4 style="margin-top:0">物资去处</h4><div class="cost">读取中…</div>');
+    parent.appendChild(box);
+    send('role.myRoleRes', {}).then(function (rsp) {
+      var guide = rsp.msg && rsp.msg.guide;
+      if (!guide) {
+        box.innerHTML = '<h4 style="margin-top:0">物资去处</h4><div class="cost">没有读到用途说明。</div>';
+        return;
+      }
+      paintMaterialGuide(box, guide, cityId, onDone);
+    }).catch(function () {
+      box.innerHTML = '<h4 style="margin-top:0">物资去处</h4><div class="cost">用途说明读取失败。</div>';
+    });
+  }
+
   function tabInteriorView(c, body) {
     /* ★ P6 己方非主城：城池内政任务（开垦/招商/募兵/修城/赈灾），每城每旬一次
        ★ P7：加上逐城民心/治安与四项开发度等级，城与城的差别看得见 */
@@ -4357,15 +4443,17 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       }
       body.appendChild(taskCard);
 
+      mountMaterialCard(body, c.id, function () {
+        fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
+      });
       var invCard = el('div', 'card', '<h4 style="margin-top:0">委派内政</h4>'
-        + '<div class="cost">每项委派有成本与工期：执行武将越强，旬数越少（强将 1 旬，普通 2 旬，无驻城武将 3 旬），'
-        + '总产出不变。开发度直接提升该城日产与征兵效率。委任五职后，驻在本城的官员每旬还会自动推动对应开发。</div>');
-      /* ★ M2：练兵充能 / 招抚期一览（数据来自 econ 视图） */
-      var today0 = Number((cache && cache.day) || 0);
-      var stat0 = [];
-      if (Number(c.drillCharges) > 0) stat0.push('练兵充能 ×' + c.drillCharges);
-      if (Number(c.appeaseUntil) > today0) stat0.push('招抚生效至第 ' + c.appeaseUntil + ' 日');
-      if (stat0.length) invCard.appendChild(el('div', 'cost', stat0.join('　')));
+        + '<div class="cost">只留能回到粮、金、兵、人口的六项。执行武将越强，旬数越少，总产出不变。'
+        + '征兵按兵扣木、铁、粮、金。设施升级扣木、铁、石、粮、金和政令。战法升级只扣军工，在「武将」页办。</div>');
+      var sink = el('div', '');
+      sink.style.cssText = 'display:flex;gap:6px;margin:6px 0';
+      sink.appendChild(mkBtn('去征兵', 'ghost', function () { window.__slgCityInterior(c.id, 'army'); }));
+      sink.appendChild(mkBtn('去府库升级设施', 'ghost', function () { window.__slgCityInterior(c.id, 'home'); }));
+      invCard.appendChild(sink);
       var mkInv = function (label, kind, cost, note) {
         /* ★ 修 bug-12：按项冷却 —— 只置灰刚办过的那一项，并写明哪天可再办 */
         var today = Number((cache && cache.day) || 0);
@@ -4406,56 +4494,6 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       mkInv('募兵整编', 'barracks', 350, '兵营 +3 → 征兵更快，民心 +1');
       mkInv('修筑城防', 'defense', 400, '城防 +2、治安 +2，守军 +150');
       if (c.disaster || c.modUntil) mkInv('开仓赈灾', 'relief', 500, '解除减产，民心 +6、治安 +3');
-      /* ★ M2 内政 12 类（GDD §5.4）：新增兴学/招抚/屯田/练兵，全部走同一任务对象 */
-      mkInv('兴学', 'study', 600, '酒馆来访贤才 +1 位（常设）');
-      mkInv('招抚', 'appease', 450, '治安 +5、叛逃风险 −30%（90 日）');
-      mkInv('屯田', 'tuntian', 500, '农田 +2、城库 +800 粮');
-      mkInv('练兵', 'drill', 550, '下次自本城出征攻击 +5%（一充能）');
-      /* ★ M2 边任务：修路/侦察/离间要指定相邻城，下拉列出 marchRoutes（服务端二次校验相邻） */
-      var mkEdgeInv = function (label, kind, cost, note) {
-        var today = Number((cache && cache.day) || 0);
-        var days = (c.investDays || {});
-        var last = Number(days[kind] || 0) || 0;
-        var cdDay = (last && today - last < 10) ? last + 10 : 0;
-        var doing = (c.interiorTasks || []).some(function (t) { return t.kind === kind && t.status === 'active'; });
-        var routes = (c.marchRoutes || []);
-        var row = el('div', 'row', '<span>' + label + '<span class="cost">　' + note + '</span></span>');
-        var sel = el('select');
-        sel.style.cssText = 'max-width:130px';
-        routes.forEach(function (rt) {
-          var o = el('option');
-          o.value = rt.id;
-          o.textContent = (rt.name || ('城' + rt.id)) + (rt.km ? ' ' + rt.km + '里' : '');
-          sel.appendChild(o);
-        });
-        var b = mkBtn(cdDay ? ('第 ' + cdDay + ' 日可再办') : (doing ? (label + '（进行中）') : (label + '（' + cost + ' 金）')),
-          (cdDay || doing) ? 'ghost' : '', function () {
-            fetch('/__slg/strategy/action', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'invest', cityId: c.id, kind: kind, targetCityId: Number(sel.value) || 0 }),
-            }).then(function (r2) { return r2.json(); }).then(function (rs) {
-              if (rs.ok) {
-                var tk = rs.task || {};
-                toast(label + '已委派给 ' + (tk.officer || '无专员') + '，' + tk.ticks + ' 旬完工（第 ' + tk.endDay + ' 日）', true);
-                fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
-              } else if (rs.reason === 'busy') toast('这项还在办，第 ' + rs.nextDay + ' 日完工', false);
-              else if (rs.reason === 'cooldown') toast('这项内政本旬办过了，第 ' + rs.nextDay + ' 日可再办', false);
-              else if (rs.reason === 'no_gold') toast('金不足（需 ' + rs.cost + '）', false);
-              else if (rs.reason === 'not_adjacent' || rs.reason === 'no_target') toast('目标必须是行军可达的相邻城', false);
-              else if (rs.reason === 'target_own_city') toast('侦察/离间只能指敌城', false);
-              else if (rs.reason === 'road_done') toast('这条驿道已经修过了', false);
-              else toast('无法办理：' + (rs.reason || '未知'), false);
-            });
-          });
-        b.style.margin = '0';
-        if (cdDay || doing || !routes.length) b.disabled = true;
-        row.appendChild(sel);
-        row.appendChild(b);
-        invCard.appendChild(row);
-      };
-      mkEdgeInv('修路（选邻城）', 'road', 700, '该边行军 −1 日（双向）');
-      mkEdgeInv('侦察（选邻城）', 'scout', 200, '敌城情报 +1 档');
-      mkEdgeInv('离间（选敌城）', 'sow', 800, '守军 −3%、离心 +1');
       body.appendChild(invCard);
 
       /* ★ M2-4 委任对象化（GDD §5.6）：「我不用管，但我知道它在干什么」——
@@ -4487,7 +4525,6 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       mkAppt('develop', '劝农商', '开垦/招商轮转，抬农田市集');
       mkAppt('recruit', '缮甲兵', '募兵整编，抬兵营');
       mkAppt('defend', '固城防', '修筑城防，抬守备');
-      mkAppt('transport', '屯军粮', '屯田积谷，直入城库');
       appts.forEach(function (a) {
         var stTag = a.status === 'blocked'
           ? '<span style="color:#ff9d6b">暂停：' + esc(a.blockedReason || '缺金') + '</span>'
@@ -4822,6 +4859,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         }));
         card.appendChild(collect);
         body.appendChild(card);
+        mountMaterialCard(body, cid, function () { tabHome(body, c); });
 
         /* 设施列表抽到 renderHomeFacilityList()：升级后只重画这张卡。
            原来升级走 tabHome(body,c) 整页重来，滚动条同样被踹回顶部。 */
@@ -5218,36 +5256,79 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
 
   function renderGensInto(hostEl) {
     hostEl.innerHTML = '<div class="empty">读取中…</div>';
-    send('general.myGenerals', {}).then(function (rsp) {
+    Promise.all([send('general.myGenerals', {}), send('role.myRoleRes', {})]).then(function (rs) {
       hostEl.innerHTML = '';
-      var gens = (rsp.msg.generals || []);
+      var gens = (rs[0].msg.generals || []);
+      var roleRes = (rs[1].msg && rs[1].msg.role_res) || {};
+      var guide = (rs[1].msg && rs[1].msg.guide) || {};
+      var jungong = Number(roleRes.jungong || 0);
+      hostEl.appendChild(el('div', 'card',
+        '<h4 style="margin-top:0">武将战法</h4>'
+        + '<div class="cost">自带槽入营就有，不能换成别的战法，在这页升级。'
+        + '学习槽要武将 5 级，觉醒槽要武将 10 级且自带战法 10 级，装配去六府「战法」页。'
+        + '同一条战法同时最多 2 人学会。'
+        + '当前军工 <b style="color:#f0d998">' + fmt(jungong) + '</b>。'
+        + esc(guide.rule || '') + '</div>'));
       if (!gens.length) { hostEl.appendChild(el('div', 'empty', '帐下无人。')); return; }
+      var slotName = ['自带', '学习', '觉醒'];
       gens.forEach(function (g) {
         var card = el('div', 'card');
+        var prog = g.progress || {};
+        var expText = prog.capped
+          ? '已满 10 级'
+          : ('经验 ' + fmt(prog.exp || 0) + '/' + fmt(prog.need || 0));
         card.innerHTML = '<div class="row" style="border:none;padding:0 0 4px">'
           + '<b class="star' + (g.star >= 5 ? '5' : g.star === 4 ? '4' : '3') + '">'
           + (g.name || '武将' + g.cfgId) + '</b>'
           + '<span>★' + (g.star || 0) + ' · Lv' + g.level
+          + ' · ' + expText
           + ' · ' + (['盾步', '弓兵', '骑兵'][(Number(g.curArms) || 1) - 1])
           + ' · 攻距 ' + atkDistOf(g) + '</span></div>'
-          + '<div>' + (g.skills || []).filter(Boolean).map(function (sk) {
-            return '<span class="chip">' + (sk.name || ('技' + sk.cfgId)) + ' lv' + sk.lv + '</span>';
-          }).join('') + '</div>';
-        var skillBar = el('div', '');
-        skillBar.style.marginTop = '6px';
-        (g.skills || []).forEach(function (sk, pos) {
-          if (!sk) return;
-          var b = mkBtn('强化「' + (sk.name || '技' + sk.cfgId) + '」', 'ghost', function () {
-            send('general.lvSkill', { gId: g.id, pos: pos }).then(function (rsp) {
-              if (rsp.code === 0) toast('「' + (sk.name || '技') + '」已强化', true);
-              else toast('强化失败：' + errText(rsp), false);
-              renderGensInto(hostEl);
-            });
-          });
-          b.style.margin = '2px 6px 2px 0';
-          skillBar.appendChild(b);
+          + '<div class="cost">' + esc(prog.next || '') + '</div>';
+        [0, 1, 2].forEach(function (pos) {
+          var sk = (g.skills || [])[pos];
+          var box = el('div', '');
+          box.style.cssText = 'margin-top:8px;padding-top:6px;border-top:1px dashed #3a3428';
+          if (!sk) {
+            var innateLv = ((g.skills || [])[0] && g.skills[0].lv) || 0;
+            var rule = pos === 0
+              ? '这名武将没有自带战法。'
+              : pos === 1
+                ? (g.level >= 5 ? '学习槽已开。到六府「战法」页，从已解锁战法里装配。' : '学习槽未开：武将要到 5 级。')
+                : (g.level >= 10 && innateLv >= 10
+                  ? '觉醒槽已开。到六府「战法」页装配。'
+                  : '觉醒槽未开：武将 10 级，并且自带战法升到 10 级。');
+            box.innerHTML = '<span class="winTag">' + slotName[pos] + '</span> <span class="cost">' + rule + '</span>';
+          } else {
+            var title = sk.name || ('战法' + sk.cfgId);
+            box.innerHTML = '<span class="winTag">' + slotName[pos] + '</span> '
+              + '<b style="color:#f0d998">' + esc(title) + '</b>'
+              + ' <span class="cost">Lv' + sk.lv
+              + (sk.probability != null ? ' · 发动率 ' + sk.probability + '%' : '')
+              + (sk.maxed ? ' · 已满级' : '') + '</span>'
+              + '<div style="margin-top:4px;line-height:1.7">' + esc(sk.des || '没有效果说明') + '</div>'
+              + (sk.maxed ? '' : '<div class="cost">下一级：' + esc(sk.nextDes || '没有效果说明') + '</div>');
+            if (!sk.maxed) {
+              var cost = Number(sk.upgradeCost) || 0;
+              if (sk.upgradeBlock) {
+                box.appendChild(el('div', 'cost', esc(sk.upgradeBlock) + '。这一级要军工 ' + fmt(cost) + '。'));
+              } else {
+                var b = mkBtn('升级到 Lv' + (Number(sk.lv) + 1) + '（军工 ' + fmt(cost) + '）', jungong < cost ? 'ghost' : '', function () {
+                  send('general.lvSkill', { gId: g.id, pos: pos }).then(function (up) {
+                    var msg = up.msg || {};
+                    if (msg.ok) toast('「' + title + '」升到 Lv' + msg.lv + '，花了军工 ' + fmt(msg.cost), true);
+                    else toast(msg.hint || ('升级失败：' + errText(up)), false);
+                    renderGensInto(hostEl);
+                  });
+                });
+                b.style.margin = '4px 0 0';
+                if (jungong < cost) b.disabled = true;
+                box.appendChild(b);
+              }
+            }
+          }
+          card.appendChild(box);
         });
-        card.appendChild(skillBar);
         hostEl.appendChild(card);
       });
     });

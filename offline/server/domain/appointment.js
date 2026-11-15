@@ -19,7 +19,6 @@ export const GOALS = {
   develop: { label: '劝农商', kinds: ['agri', 'trade'], desc: '开垦/招商轮转，抬农田与市集开发度' },
   recruit: { label: '缮甲兵', kinds: ['barracks'], desc: '募兵整编，抬兵营开发度与征兵效率' },
   defend:  { label: '固城防', kinds: ['defense'], desc: '修筑城防，抬城防与守备' },
-  transport: { label: '屯军粮', kinds: ['tuntian'], desc: '屯田积谷，抬农田并直接入城库' },
 };
 
 /** 委任数组（挂在 state.strategy.appointments，旧档自动补空数组）。 */
@@ -138,6 +137,12 @@ export function appointmentTick(state, cfg, ctx) {
   const out = { started: [], blocked: [], resumed: [], ended: [] };
   for (const a of list) {
     if (a.status === 'done' || a.status === 'cancelled') continue;
+    if (!GOALS[a.goal]) {
+      a.status = 'done';
+      a.blockedReason = '这项委任已取消';
+      out.ended.push(appointmentView(state, a));
+      continue;
+    }
     const row = st.cities?.[a.cityId];
     // 城丢失 → 委任自动结束（GDD §5.6 硬规则）
     if (!row || row.owner !== 'player') {

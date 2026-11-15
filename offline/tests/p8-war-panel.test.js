@@ -95,7 +95,7 @@ test('P8 出兵按实出兵力扣粮，并回传队伍与人数（bug-5）', () 
   assert.equal(r.armyId, field.army.id, '回传实际出征队伍');
   assert.equal(r.troops, total, '回传队伍总兵力');
   assert.equal(r.deploy, Math.round(total * 0.5), '实出 = 队伍兵力 × 比例');
-  assert.equal(r.grainCost, Math.ceil(r.deploy * 0.1), '粮草按实出人数算，不按整队');
+  assert.equal(r.grainCost, Math.ceil(r.deploy * 0.1 * r.marchDays), '粮草按实出人数 × 行军日算，不按整队');
   const after = state.roleRes.grain + (state.strategy.cityEcon?.[field.from]?.store || 0);
   assert.equal(before - after, r.grainCost, '扣除的粮与回报一致');
   assert.equal(st.marches[0].troops, r.deploy, '行军记录带实出兵力');

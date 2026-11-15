@@ -1,11 +1,11 @@
 {
   "cfgId": 19001,
-  "name": "后世之识",
+  "name": "坐镇中军",
   "trigger": 4,
   "dir": "zhihui",
   "ui": {
     "cfgId": 19001,
-    "name": "后世之识",
+    "name": "坐镇中军",
     "des": "战斗开始时，自身与一名友军获得 %n% 回合洞察（免疫控制）；自身受到攻击时，有 %n%% 概率回击一次，造成 87% 策略伤害；自身受到伤害降低 %n%%。",
     "trigger": 4,
     "target": 5,
@@ -27,7 +27,7 @@
   },
   "kernel": {
     "cfgId": 19001,
-    "name": "后世之识",
+    "name": "坐镇中军",
     "skill_class": "指挥",
     "prepare": 0,
     "probability_init": 1,

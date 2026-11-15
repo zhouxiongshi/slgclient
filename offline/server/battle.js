@@ -17,6 +17,43 @@ import { runBattle, DEFAULT_BATTLE_CONFIG, crc32Utf8 } from '../kernel/index.js'
 import { generalToArray, findGeneral, nextId } from './world.js';
 import { kernelSkillAt, reportSkillFields, SKILLS, LEVEL_COUNT, attackDistanceOf } from './skills.js';
 import { skillProfile, actSentence } from './domain/battle-narrative.js';
+import { knobGet } from './domain/knobs.js';
+
+/** GDD §6.2：一方兵力降到开战时的这个比例及以下，算溃败。 */
+export const ROUT_RATIO = 0.1;
+
+/**
+ * 兵力进入伤害（GDD §6.3 的兵力系数）。
+ * 内核把兵力当生命、伤害不读兵力，所以 800 兵和 5000 兵打出的伤害曾经一样。
+ * 以 800 为 1，指数小于 1：添兵有用，单槽堆到上限也不会按人数线性秒杀。
+ */
+export function troopStrikeMul(troops) {
+  const t = Math.max(1, Number(troops) || 1);
+  return Math.max(0.5, Math.min(3.2, Math.pow(t / 800, 0.55)));
+}
+
+/**
+ * 胜负只看溃败，不看「谁还剩得多」。
+ * 回合打满而双方都还在一成以上：未决（1），攻方不占城。
+ * 返回 2 攻方胜 / 0 守方胜 / 1 未决。
+ */
+/** 兵力明显多于守军时，攻方伤害提高。均势（不到 1.15 倍）不加，避免「人多一点点就占城」。 */
+export function attackerOddsMul(atkTroops, defTroops) {
+  const odds = Math.max(0, Number(atkTroops) || 0) / Math.max(1, Number(defTroops) || 0);
+  if (odds < 1.15) return 1;
+  return Math.min(6.5, 1 + (odds - 1) * 11.2);
+}
+
+export function judgeBattle({ winner, aStart, dStart, aLeft, dLeft }) {
+  const aRout = aStart > 0 && aLeft / aStart <= ROUT_RATIO;
+  const dRout = dStart > 0 && dLeft / dStart <= ROUT_RATIO;
+  if (dRout && !aRout) return 2;
+  if (aRout && !dRout) return 0;
+  if (aRout && dRout) return aLeft >= dLeft ? 2 : 0;
+  if (winner === 1) return 2;
+  if (winner === 2) return 0;
+  return 1;
+}
 
 /** 真实兵力 → 内核兵力 1:1（配合下面的 troop_factor 微调）。
  *  原先用 10 会把 1000 兵压成 100 兵，1 回合就打完；实测 1:1 + troop_factor=0.2
@@ -407,7 +444,8 @@ export function battleSeedFor(armyId, x, y, day) {
   return crc32Utf8(`${armyId}:${x}:${y}:${Math.max(1, Math.floor(Number(day) || 1))}`);
 }
 
-export function resolveBattle({ cfg, state, army, x, y, seed, defenseOverride = null, withAnim = true }) {
+export function resolveBattle({ cfg, state, army, x, y, seed, defenseOverride = null, withAnim = true, siege = false }) {
+  const siegeBattle = siege;
   /* withAnim=false：推演用。推演只要数值与叙事，不需要回放动作流；
      而 buildBattleAnim 要为每个动作生成一句人话（战法档案 + 措辞），
      一次推演要跑 4~5 场内核，累计就顶爆 GDD §6.7 的单次 ≤50ms 预算。 */
@@ -429,21 +467,29 @@ export function resolveBattle({ cfg, state, army, x, y, seed, defenseOverride = 
     }).filter(([, v]) => v));
   };
 
+  const atkHead = beginSoldiers.reduce((s, n) => s + n, 0);
+  const defHead = (defense.soldiers || []).reduce((s, n) => s + Math.max(0, Number(n) || 0), 0);
+  const mass = attackerOddsMul(atkHead, defHead);
   attackers.forEach(({ slot, g }, i) => {
     const uid = `a${i}`;
     idMap[uid] = g.id;
     const unit = makeUnit(uid, 1, g, cfg, beginSoldiers[slot], slot);
-    /* ★ M2 练兵（GDD §5.4）：+10 士气折算攻击 +5%，随队伍走；
-       previewAssault 与正式结算用同一 army.drillMorale 口径，推演与真打逐位一致 */
-    const drill = Math.max(0, Math.min(10, Number(army.drillMorale) || 0));
-    if (drill > 0) unit.hero.attack_base = Math.round(unit.hero.attack_base * (1 + 0.005 * drill));
+    unit.hero.attack_base = Math.max(1, Math.round(unit.hero.attack_base * troopStrikeMul(beginSoldiers[slot]) * mass));
     buildLookup(uid, unit);
     units.push(unit);
   });
+  const wall = siegeBattle ? (Number(knobGet(state, 'siegeWallMul')) || 1) : 1;
+  const terrain = String(defenseOverride?.terrain || '');
+  const terrainMul = /山|险|隘/.test(terrain) ? 1.12 : 1;
   defenders.forEach((g, i) => {
     const uid = `d${i}`;
     idMap[uid] = g.id;
-    const unit = makeUnit(uid, 2, g, cfg, defense.soldiers[i] ?? 0, i);
+    const troops = defense.soldiers[i] ?? 0;
+    const unit = makeUnit(uid, 2, g, cfg, troops, i);
+    unit.hero.attack_base = Math.max(1, Math.round(unit.hero.attack_base * troopStrikeMul(troops)));
+    if (wall !== 1 || terrainMul !== 1) {
+      unit.hero.defence_base = Math.max(1, Math.round(unit.hero.defence_base * wall * terrainMul));
+    }
     buildLookup(uid, unit);
     units.push(unit);
   });
@@ -453,7 +499,14 @@ export function resolveBattle({ cfg, state, army, x, y, seed, defenseOverride = 
      这样「战前推演」可以算出与正式结算**逐位相同**的种子，预演结果才有意义。
      旧口径含 battleLog.length，等于预演必错一档。 */
   const battleSeed = seed ?? battleSeedFor(army.id, x, y, state.clock?.day ?? 1);
-  const kernel = runBattle({ units, seed: battleSeed, config: battleConfig() });
+  /* troop_factor 0.2 时 8 回合打不垮守军（兵力只是生命）。1.25 让约 1.5 倍的军队
+     能在回合上限内打崩小城；双方都还剩一成以上时仍是未决，不按人头多判胜。 */
+  const fightCfg = {
+    ...battleConfig(),
+    round_limit: Math.round(Number(knobGet(state, 'roundMax')) || 8),
+    troop_factor: 0.45,
+  };
+  const kernel = runBattle({ units, seed: battleSeed, config: fightCfg });
 
   // 按槽位回填：没上阵的槽位余兵记 0（它们本来就没有兵）
   const attackRemain = [0, 0, 0];
@@ -463,12 +516,24 @@ export function resolveBattle({ cfg, state, army, x, y, seed, defenseOverride = 
   const defenseRemain = defenders.map((_, i) =>
     Math.max(0, Math.round((kernel.final_troops[`d${i}`] ?? 0) * TROOP_SCALE)));
 
-  const aTotal = kernel.total_troops_by_side['1'] ?? attackRemain.reduce((s, n) => s + n, 0);
-  const dTotal = kernel.total_troops_by_side['2'] ?? defenseRemain.reduce((s, n) => s + n, 0);
-  let resultCode = 1;
-  if (kernel.winner === 1) resultCode = 2;
-  else if (kernel.winner === 2) resultCode = 0;
-  else resultCode = aTotal > dTotal ? 2 : (aTotal < dTotal ? 0 : 1);
+  const aStart = beginSoldiers.reduce((s, n) => s + n, 0);
+  const dStart = defense.soldiers.reduce((s, n) => s + Math.max(0, Number(n) || 0), 0);
+  const aLeft0 = attackRemain.reduce((s, n) => s + n, 0);
+  const dLeft0 = defenseRemain.reduce((s, n) => s + n, 0);
+  const resultCode = judgeBattle({
+    winner: kernel.winner, aStart, dStart, aLeft: aLeft0, dLeft: dLeft0,
+  });
+  /* GDD §6.2 追击：溃败之后，败方再损「胜方骑兵占比 × pursuitRate」。未决不追。 */
+  if (resultCode === 2 || resultCode === 0) {
+    const winnerBegin = resultCode === 2 ? beginSoldiers : defense.soldiers;
+    const start = winnerBegin.reduce((s, n) => s + Math.max(0, Number(n) || 0), 0);
+    const cav = Math.max(0, Number(winnerBegin[2]) || 0);
+    const cut = start > 0 ? (cav / start) * ((Number(knobGet(state, 'pursuitRate')) || 0) / 100) : 0;
+    if (cut > 0) {
+      const side = resultCode === 2 ? defenseRemain : attackRemain;
+      for (let i = 0; i < side.length; i += 1) side[i] = Math.max(0, Math.round(side[i] * (1 - cut)));
+    }
+  }
 
   const begAttackArmy = armySnapshot(army, beginSoldiers);
   const endAttackArmy = armySnapshot(army, attackRemain);

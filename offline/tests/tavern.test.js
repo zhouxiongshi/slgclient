@@ -47,7 +47,7 @@ test('开局只有穿越者，酒馆每天 3 人且开城时分只能遇到其�
   assert.equal(again.msg.generals.length, 0);
 });
 
-test('学习格 5 级开，觉醒格要 20 级且自带 10 级，天赋默认关', () => {
+test('学习格 5 级开，觉醒格要 10 级且自带 10 级，天赋默认关', () => {
   const state = normalizeWorld(createWorld(cfg), cfg);
   const ctx = makeCtx(state);
   const g = state.generals[0];
@@ -58,8 +58,10 @@ test('学习格 5 级开，觉醒格要 20 级且自带 10 级，天赋默认关
   assert.equal(handleRequest(ctx, req('general.upSkill', { gId: g.id, cfgId: learn, pos: 1 })).msg.ok, true);
   assert.equal(g.skills[1].cfgId, learn);
   assert.equal(handleRequest(ctx, req('general.upSkill', { gId: g.id, cfgId: 10002, pos: 2 })).msg.reason, 'slot_locked');
-  g.level = 20;
+  g.level = 9;
   g.skills[0].lv = 10;
+  assert.equal(handleRequest(ctx, req('general.upSkill', { gId: g.id, cfgId: 10002, pos: 2 })).msg.reason, 'slot_locked');
+  g.level = 10;
   assert.equal(handleRequest(ctx, req('general.upSkill', { gId: g.id, cfgId: 10002, pos: 2 })).msg.ok, true);
   unlockTalent(g);
   assert.equal(g.talentUnlocked, true);

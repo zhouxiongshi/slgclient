@@ -11,6 +11,7 @@ import { ensureTavern } from './domain/tavern.js';
 import { ensureFates } from './domain/fate.js';
 import { ensureStrategy } from './domain/strategy.js';
 import { ensurePanels } from './domain/panels.js';
+import { applyGeneralExp } from './domain/general-progress.js';
 import { loadOverrides, applyTileOverlay } from './gm/overrides.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -52,6 +53,7 @@ function makeRoleRes(cfg) {
     grain_yield: r.grain_yield ?? 1000,
     gold_yield: r.gold_yield ?? 1000,
     depot_capacity: r.depot_capacity ?? 1000000,
+    jungong: 0,
   };
 }
 
@@ -402,7 +404,9 @@ export function normalizeWorld(state, cfg) {
     }
   }
   if (state.campaign && state.campaign.chapter == null) state.campaign.chapter = 1;
+  if (state.roleRes && !Number.isFinite(Number(state.roleRes.jungong))) state.roleRes.jungong = 0;
   for (const g of state.generals || []) {
+    applyGeneralExp(g, 0);
     if (!Array.isArray(g.skills)) g.skills = [null, null, null];
     while (g.skills.length < 3) g.skills.push(null);
     if (g.isProtagonist || g.skills[0]) continue;

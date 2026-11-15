@@ -11,7 +11,9 @@
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { slotBlock } from './slots.js';
+import { slotBlock, skillUpgradeCost, skillUpgradeBlock, SKILL_LEVEL_CAP, skillActionHint } from './slots.js';
+import { generalProgress } from './general-progress.js';
+import { materialGuide } from './armory.js';
 /* ★ M4-10：属性一律走唯一派生层（0~100 三国志11 百分制），面板不再自己读原表。 */
 import { toPercentFromRaw } from './general-stat.js';
 /* 刻意只 import oath.js（零依赖小模块）而不 import strategy.js ——
@@ -42,6 +44,8 @@ export const PANEL_CONF = {
   mainSkills: load('conf/skills.json').skills,
   libSkills: load('conf/library-skills.json').skills,
   libExtraSkills: (() => { try { return load('conf/library-skills-extra.json').skills; } catch { return []; } })(),
+  innateSkills: (() => { try { return load('conf/innate-skills.json').skills; } catch { return []; } })(),
+  protagonistSkill: (() => { try { return load('conf/campaign/protagonist-skill.json'); } catch { return null; } })(),
   map: (() => { try { return load('conf/campaign/strategy/map.json'); } catch { return { cities: [] }; } })(),
   factions: (() => { try { return load('conf/campaign/strategy/factions.json'); } catch { return { factions: [] }; } })(),
   protagonist: (() => { try { return load('conf/campaign/protagonist.json').general; } catch { return null; } })(),
@@ -50,14 +54,28 @@ export const PANEL_CONF = {
 const SKILLS = [...PANEL_CONF.mainSkills, ...PANEL_CONF.libSkills, ...PANEL_CONF.libExtraSkills];
 // ★ P6：战法描述补射程——与内核/原客户端技能面板同一函数，保证描述=计算
 import { applyRangeNote } from '../skills.js';
+import { desText } from './battle-narrative.js';
 for (const s of SKILLS) applyRangeNote(s);
+for (const s of PANEL_CONF.innateSkills) applyRangeNote(s);
 const SKILL_BY_ID = new Map(SKILLS.map((s) => [Number(s.cfgId), s]));
+/** 武将自带战法不进战法库列表，但武将页必须能读到名字和说明。 */
+const SKILL_ANY_ID = new Map([
+  ...SKILLS.map((s) => [Number(s.cfgId), s]),
+  ...PANEL_CONF.innateSkills.map((s) => [Number(s.cfgId), s]),
+]);
+if (PANEL_CONF.protagonistSkill?.cfgId) {
+  applyRangeNote(PANEL_CONF.protagonistSkill);
+  SKILL_ANY_ID.set(Number(PANEL_CONF.protagonistSkill.cfgId), PANEL_CONF.protagonistSkill);
+}
+function skillConfOf(cfgId) {
+  return SKILL_ANY_ID.get(Number(cfgId)) || null;
+}
 const ITEM_BY_ID = new Map(PANEL_CONF.items.items.map((i) => [Number(i.id), i]));
 const RECIPE_BY_ID = new Map(PANEL_CONF.recipes.recipes.map((r) => [Number(r.cfgId), r]));
 const LORE_BY_CFG = new Map(PANEL_CONF.lore.list.map((r) => [Number(r.cfgId), r]));
 const EQUIP_KEYS = ['force', 'strategy', 'defense', 'speed', 'destroy'];
 const SLOT_IDS = PANEL_CONF.items.slots.map((s) => s.id);
-const RES_LABEL = { wood: '木', iron: '铁', stone: '石', grain: '粮', gold: '金', decree: '政令' };
+const RES_LABEL = { wood: '木', iron: '铁', stone: '石', grain: '粮', gold: '金', decree: '政令', jungong: '军工' };
 const STAT_LABEL = { force: '武力', strategy: '谋略', defense: '防御', speed: '速度', destroy: '攻城' };
 
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
@@ -307,21 +325,19 @@ export function careerOf(g) {
 }
 
 function interiorOutput(state, cfg) {
-  const res = state.roleRes || {};
   const bonusPct = postBonusPct(state);
   const resBonus = yieldBonusByResource(state);
+  const guide = materialGuide(state);
   // 收支流水视图（P0-3）：府库面板展示「钱花哪了」；净变化取最近 30 条按资源合计
   const ledgerSrc = Array.isArray(state.resLedger) ? state.resLedger : [];
-  const netKeys = ['wood', 'iron', 'stone', 'grain', 'gold'];
+  const netKeys = ['wood', 'iron', 'stone', 'grain', 'gold', 'jungong'];
   const netSrc = ledgerSrc.slice(-30);
   return {
     bonusPct,
-    resources: ['wood', 'iron', 'stone', 'grain', 'gold', 'decree'].map((k) => ({
-      key: k, label: RES_LABEL[k],
-      stock: Number(res[k]) || 0,
-      yield: Number(res[`${k}_yield`]) || 0,
-      bonusPct: resBonus[k] || 0,
-      capacity: k === 'decree' ? null : Number(res.depot_capacity) || 0,
+    guide,
+    resources: guide.resources.map((row) => ({
+      ...row,
+      bonusPct: resBonus[row.key] || 0,
     })),
     ledger: {
       entries: ledgerSrc.slice(-14).reverse(),
@@ -373,21 +389,33 @@ export function panelState(state, cfg) {
     const lore = LORE_BY_CFG.get(Number(g.cfgId)) || null;
     const slots = [0, 1, 2].map((pos) => {
       const s = g.skills?.[pos];
-      const conf = s?.cfgId ? SKILL_BY_ID.get(Number(s.cfgId)) : null;
+      const cfgId = s && typeof s === 'object' ? s.cfgId : s;
+      const conf = cfgId ? skillConfOf(cfgId) : null;
       const block = slotBlock(g, pos, 'replace');
       return {
         pos,
         locked: !!block,
         lockText: block === 'innate_locked' ? '自带战法，不可替换'
-          : pos === 1 ? '需武将 Lv5 解锁' : '需 Lv20 且自带战法 10 级',
-        skill: conf ? {
-          cfgId: conf.cfgId,
-          name: conf.ui?.name ?? conf.name,
-          des: conf.ui?.des ?? '',
-          trigger: conf.trigger,
-          level: int(s.lv, 1),
-          probability: conf.ui?.levels?.[int(s.lv, 1) - 1]?.probability ?? null,
-        } : null,
+          : block === 'slot_locked' && pos === 1 ? '需武将 Lv5 解锁'
+            : block === 'slot_locked' ? '需 Lv10 且自带战法 10 级'
+              : '已开启',
+        skill: conf ? (() => {
+          const lv = int(s?.lv, 1);
+          const maxed = lv >= SKILL_LEVEL_CAP;
+          const upBlock = skillUpgradeBlock(g, s);
+          return {
+            cfgId: conf.cfgId,
+            name: conf.ui?.name ?? conf.name,
+            des: desText(conf, lv) || conf.ui?.des || conf.des || '',
+            nextDes: maxed ? '' : (desText(conf, lv + 1) || ''),
+            upgradeCost: maxed ? 0 : skillUpgradeCost(lv),
+            upgradeBlock: upBlock === 'need_general_level' ? skillActionHint(upBlock, 0, lv + 1) : '',
+            maxed,
+            trigger: conf.trigger,
+            level: lv,
+            probability: conf.ui?.levels?.[lv - 1]?.probability ?? null,
+          };
+        })() : null,
       };
     });
     const gname = generalName(state, cfg, g);
@@ -399,7 +427,7 @@ export function panelState(state, cfg) {
       yili: yiliOf(g.cfgId),
       camp,
       isProtagonist: !!g.isProtagonist, level: int(g.level, 1), star: int(g.star, 0),
-      exp: int(g.exp, 0), physical: int(g.physical_power, 100),
+      exp: int(g.exp, 0), progress: generalProgress(g), physical: int(g.physical_power, 100),
       state: isDeployed(state, g.id) ? '在编' : '闲置',
       career: careerOf(g).career,
       careerName: CAREER_NAMES[careerOf(g).career],
@@ -464,7 +492,7 @@ export function panelState(state, cfg) {
     return {
       cfgId: id,
       name: s.ui?.name ?? s.name,
-      des: s.ui?.des ?? '',
+      des: desText(s, unl?.level || 1) || s.ui?.des || '',
       range: s.ui?.range ?? null,
       trigger: r.trigger, tags: r.tags, sourceGroup: r.sourceGroup,
       target: s.ui?.target ?? null, arms: s.ui?.arms ?? [],
@@ -614,6 +642,7 @@ export function panelState(state, cfg) {
       facilities: interiorFacilities(state, cfg),
     },
     strategy: {
+      playerCity: Number(state.strategy?.playerCity) || 0,
       chapter: int(state.campaign?.chapter, 1),
       ending: state.campaign?.ending || null,
       cityCount: myCities.length,
@@ -759,6 +788,23 @@ export function panelAction(state, cfg, action = {}) {
       return done(`投入残卷 ${used}，研习进度 ${row.progress}/${need}`, { progress: row.progress, need });
     }
 
+    if (type === 'lvSkill') {
+      needGeneral();
+      const pos = int(action.pos, -1);
+      const cur = g.skills?.[pos];
+      const blocked = skillUpgradeBlock(g, cur);
+      if (blocked) return fail(skillActionHint(blocked, 0, int(cur?.lv, 1) + 1));
+      const cost = skillUpgradeCost(cur.lv);
+      if ((Number(state.roleRes?.jungong) || 0) < cost) return fail(skillActionHint('not_enough_jungong', cost));
+      state.roleRes.jungong -= cost;
+      const conf = skillConfOf(cur.cfgId);
+      const title = conf?.ui?.name ?? conf?.name ?? '战法';
+      recordRes(state, 'jungong', -cost, `战法升级·${title}`);
+      cur.lv += 1;
+      const next = cur.lv >= SKILL_LEVEL_CAP ? 0 : skillUpgradeCost(cur.lv);
+      return done(`「${title}」升到 ${cur.lv} 级，花了 ${cost} 军工。下一级再花 ${next} 军工。`, { lv: cur.lv, cost });
+    }
+
     if (type === 'learn') {
       needGeneral();
       const pos = int(action.pos, -1);
@@ -766,7 +812,7 @@ export function panelAction(state, cfg, action = {}) {
       const s = SKILL_BY_ID.get(cfgId);
       if (!s) return fail('战法不存在');
       const block = slotBlock(g, pos, 'replace');
-      if (block) return fail(pos === 0 ? '自带战法不可替换' : pos === 1 ? '需 Lv5 解锁该槽' : '需 Lv20 且自带战法 10 级');
+      if (block) return fail(pos === 0 ? '自带战法不可替换' : pos === 1 ? '需 Lv5 解锁该槽' : '需 Lv10 且自带战法 10 级');
       if (!state.skillbook.unlocked[String(cfgId)]) return fail('该战法尚未解锁，请先到战法库查看获取途径');
       const by = equippedBy(state, cfgId).filter((id) => id !== gId);
       if (by.length >= 2) return fail('每条战法同时最多 2 人装配');

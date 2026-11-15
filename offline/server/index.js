@@ -43,6 +43,7 @@ import { panelState, panelAction, panelSelfCheck } from './domain/panels.js';
 import { interactionState } from './domain/interaction.js';
 /* ★ M2-3 失败态四出路（GDD §3.4）：破产裁军/卖粮、兵尽紧急征兵·雇佣、无将代将、迁都 */
 import { disarmForGold, sellGrain, emergencyConscript, relocateCapital } from './domain/failstate.js';
+import { craftJungong, smeltStone, investDev } from './domain/armory.js';
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -629,6 +630,12 @@ export async function startOfflineServer(options = {}) {
         /* ★ M2-3 失败态四出路（GDD §3.4）：裁军 / 卖粮 / 紧急征兵·雇佣兵 / 迁都 */
         else if (act === 'disarm') result = disarmForGold(state, ctx, { armyId: Number(body.armyId), count: Number(body.count) });
         else if (act === 'sellGrain') result = sellGrain(state, ctx, { grain: Number(body.grain) });
+        else if (act === 'craft') result = craftJungong(state, ctx, { count: Number(body.count) || 0, drain: !!body.drain });
+        else if (act === 'smeltStone') result = smeltStone(state, ctx, { count: Number(body.count) || 0, drain: !!body.drain });
+        else if (act === 'investDev') result = investDev(state, ctx, {
+          cityId: Number(body.cityId) || 0, field: String(body.field || ''),
+          count: Number(body.count) || 0, drain: !!body.drain,
+        });
         else if (act === 'emergencyConscript') result = emergencyConscript(state, ctx, {
           cityId: Number(body.cityId), count: Number(body.count), mercenary: !!body.mercenary,
         });

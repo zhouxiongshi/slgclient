@@ -18,6 +18,7 @@ import { advanceInteriorTasks } from './interior-task.js';
 import { supplyTick, armySupplyTick } from './supply.js';
 /* ★ M2-4 委任对象化（GDD §5.6）：旬界自动派单，走 interior-task 同源（无环） */
 import { appointmentTick } from './appointment.js';
+import { knobGet } from './knobs.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const MAP_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'map.json');
@@ -132,6 +133,31 @@ export function cityYield(state, cityId) {
     moraleMod, specialty: c.specialty || '', disaster: e.disaster,
     supplyCut: !!e.supplyCut, supplyDays: Number(e.supplyDays) || 0,
   };
+}
+
+function ownedCityCount(state) {
+  return Object.values(state.strategy?.cities || {}).filter((row) => row?.owner === 'player').length;
+}
+
+/**
+ * 府库日产。还没有城时沿用配置里的基础产量（序章坞堡）。
+ * 已有城之后，每天固定 1000 不再叠上城产，木铁石粮金都要靠城和设施，才能花到征兵和升级上。
+ */
+export function playerStockYield(state, key, base, facility = 0, build = 0) {
+  const cl = cityLayer(state);
+  const diff = Number(knobGet(state, 'difficultyRes')) || 1;
+  const local = Math.max(0, Math.floor(Number(facility) || 0)) + Math.max(0, Math.floor(Number(build) || 0));
+  const city = Math.round((Number(cl[key]) || 0) * diff);
+  if (ownedCityCount(state) > 0) return city + local;
+  return Math.round(((Number(base) || 0) + local) * diff);
+}
+
+export function playerGrainYield(state, baseGrain, facilityGrain, buildGrain) {
+  return playerStockYield(state, 'grain', baseGrain, facilityGrain, buildGrain);
+}
+
+export function playerGoldYield(state, baseGold, facilityGold) {
+  return playerStockYield(state, 'gold', baseGold, facilityGold, 0);
 }
 
 /** 玩家名下全部城的加成层汇总（handlers.totalYield 叠加用）。 */
@@ -318,15 +344,9 @@ export function loyaltyTick(state, cfg, ctx) {
   }
   // 叛逃
   const defected = [];
-  const econAll = state.strategy?.cityEcon || {};
-  const day0 = day;
   for (const g of [...(state.generals || [])]) {
     const loyal = g.loyal ?? 88;
-    let p = loyal < 40 ? 0.10 : (loyal < 70 ? 0.03 : 0);
-    /* ★ M2 招抚（GDD §5.4）：驻城有活跃招抚（90 日内）时叛逃概率 −30% */
-    const eApp = econAll[Number(g.cityId)];
-    if (p > 0 && eApp && (Number(eApp.appeaseUntil) || 0) > day0) p *= 0.7;
-    // 修 U21：叛逃掷骰走确定性 rngFor，同 seed + 日 + 武将结果恒定。
+    const p = loyal < 40 ? 0.10 : (loyal < 70 ? 0.03 : 0);
     if (p > 0 && rngFor(state.seed ?? 20261110, day, `defect:${g.id}`).random() < p) defected.push(g);
   }
   for (const g of defected) {

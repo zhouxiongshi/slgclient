@@ -17,7 +17,7 @@ import { knobGet } from './knobs.js';
 import { gameStatOf } from './general-stat.js';
 /* ★ M2-3 失败态与结局（GDD §3.4/§3.5）：零依赖叶子 */
 import { failstates, evaluateEnding, makeStandInGeneral } from './failstate.js';
-import { beginInteriorTask, cancelInteriorTask, interiorTaskView, roadEdgeKey } from './interior-task.js';
+import { beginInteriorTask, cancelInteriorTask, interiorTaskView } from './interior-task.js';
 /* ★ U20 粮道（supply 只依赖 march，不反向 import 本文件） */
 import { supplyMap, marchSupplyEstimate } from './supply.js';
 /* 修 U08：招降成功率收敛到唯一公式，面板图鉴/预览/实际掷骰同源 */
@@ -33,6 +33,7 @@ import { quoteMarch, openMonth, closeMonth, noteMove, noteCity, booksOf } from '
 import { onTileCleared, chapterRules, noticeRecruit } from './campaign.js';
 import { dayFraction, ensureTavern } from './tavern.js';
 import { recordRes } from './economy.js';
+import { grantBattleExp, levelUpSentence } from './general-progress.js';
 import {
   ensureCityEcon, consumeMarchGrain, deliverGrain, cityEconTick, cityName,
   cityYield, armsApt, armsCounter, ARMS_NAMES, devLevel, cityDevTick,
@@ -1082,7 +1083,7 @@ export function counterVariantFor(state, cityId, arriveDay) {
  * 一场战斗的完整落地：扣兵、给经验、写战报、推通道。
  * 战略攻城与本地清剿共用，保证「战报一定进存档」（试玩 P0-2）。
  */
-function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride, seed, defMul = 1 }) {
+function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride, seed, defMul = 1, siege = false }) {
   const before = [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(army.soldiers?.[i]) || 0)));
   const f = Math.min(1, Math.max(0.05, Number(frac) || 1));
   const commit = before.map((v) => Math.max(0, Math.round(v * f)));
@@ -1103,7 +1104,9 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride, 
     ? { ...defenseOverride, soldiers: defRows.map((v) => Math.round(v * defMul * fate.mul * (counter > 0 ? 0.87 : counter < 0 ? 1.15 : 1))) }
     : defenseOverride;
   const battleArmy = { ...army, soldiers: commit };
-  const result = resolveBattle({ cfg, state, army: battleArmy, x, y, defenseOverride: defense2, seed });
+  const result = resolveBattle({
+    cfg, state, army: battleArmy, x, y, defenseOverride: defense2, seed, siege,
+  });
   const remain = result.endAttackSoldiers;
 
   // 全歼的槽位留一成溃兵归营：单机不该出现「一次败仗把家底清零」的死循环
@@ -1115,11 +1118,6 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride, 
   }
   army.soldiers = [0, 1, 2].map((i) =>
     Math.max(0, before[i] - (commit[i] - remain[i]) + recovered[i]));
-
-  for (const [gid, exp] of Object.entries(result.expByGeneral)) {
-    const g = state.generals?.find((x2) => x2.id === Number(gid));
-    if (g) g.exp += exp;
-  }
 
   const aTotal = commit.reduce((s, n) => s + n, 0);
   const dTotal = (defenseOverride?.soldiers || []).reduce((s, n) => s + n, 0);
@@ -1134,16 +1132,24 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride, 
   const place = defenseOverride?.place || `(${x},${y})`;
   const win = result.report.result === 2;
   const rec = recovered.reduce((s, n) => s + n, 0);
+  const draw = result.report.result === 1;
   let summary = win
     ? `攻陷${place}：我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}，歼敌 ${dLoss}。`
-    : `攻${place}不利：我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}，歼敌 ${dLoss}`
-      + (rec > 0 ? `，溃兵 ${rec} 归营。` : '。');
+    : draw
+      ? `攻${place}未决：双方收兵。我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}，歼敌 ${dLoss}。守军未溃，城池未下。`
+      : `攻${place}不利：我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}，歼敌 ${dLoss}`
+        + (rec > 0 ? `，溃兵 ${rec} 归营。` : '。');
   const counterNote = counter > 0
     ? `我军${ARMS_NAMES[atkArms]}克制守军${ARMS_NAMES[defArms]}（战力+15%）。`
     : (counter < 0 ? `守军${ARMS_NAMES[defArms]}克制我军${ARMS_NAMES[atkArms]}（战力-15%）。` : '');
   const fateNote = fate.notes.length ? `${fate.notes.join('；')}。` : '';
   // 额外字段：原客户端忽略，我们自己的战报面板读它做复盘
   result.report.summary = summary + counterNote + fateNote;
+  const expLine = levelUpSentence(grantBattleExp(state, cfg, result.expByGeneral));
+  if (expLine) {
+    summary += expLine;
+    result.report.summary += expLine;
+  }
   result.report.analysis = {
     aTotal, dTotal, aLoss, dLoss, recovered: rec, win,
     aBegin: commit, aRemain: remain,
@@ -1233,8 +1239,65 @@ const MARCH_DAYS_MIN = 1;
    率土/三战里跨州远征本来就是十几到几十日，这里放宽到 40 日，
    并由 marchSupplyStops 给出「途中休整」提示，长线不再和邻城一个耗时。 */
 const MARCH_DAYS_MAX = 40;
-/* ★ M2-3：粮耗口径已并入全局参数表（knobs.grainPerSoldierDay，默认 0.1） */
+/* ★ M2-3：粮耗口径已并入全局参数表（knobs.grainPerSoldierDay，默认 0.1/兵/日） */
+/** GDD §6.1：每一槽 500–5000。超过的兵留在城里，不能编进一队。 */
+export const SLOT_CAP = 5000;
 /** 辎重队速度固定：车马慢，比最慢的步卒还慢一截。 */
+
+/** 出征粮 = 实出兵力 × 每日口粮 × 行军日。冬季走河路再乘 crossRiverWinterCost。 */
+export function marchGrainCost(state, deploy, days, terrain = '') {
+  const per = Number(knobGet(state, 'grainPerSoldierDay')) || 0.1;
+  const span = Math.max(1, Math.floor(Number(days) || 1));
+  let cost = Math.ceil(Math.max(1, Number(deploy) || 0) * per * span);
+  const month = ((Math.floor(((Number(state.clock?.day) || 1) - 1) / 30) % 12) + 1);
+  if (month >= 10 && /河|江|渡/.test(String(terrain || ''))) {
+    cost = Math.ceil(cost * (Number(knobGet(state, 'crossRiverWinterCost')) || 1));
+  }
+  return cost;
+}
+
+/**
+ * 玩家行军抵达前的截击。只对邻接的诸侯（不含汉室、不含此行目标）掷一次。
+ * 命中扣约一成二兵力；余部仍攻城。兵力掉到 200 以下则退回，不再攻城。
+ */
+function tryFieldIntercept(state, mm, army) {
+  const st = ensureStrategy(state);
+  const rate = (Number(knobGet(state, 'interceptPerEdge')) || 0) / 100;
+  if (!(rate > 0) || !army) return { hit: false };
+  const passive = new Set(['player', 'han', 'neutral', '']);
+  const hostile = neighborsOf(mm.from).filter((id) => {
+    if (id === mm.to) return false;
+    const owner = st.cities?.[id]?.owner || '';
+    return owner && !passive.has(owner);
+  });
+  if (!hostile.length) return { hit: false };
+  const p = Math.min(0.4, rate * hostile.length);
+  const roll = rngFor(state.seed ?? 20261110, mm.arriveDay || 1, `intercept:${mm.id}`).random();
+  if (roll >= p) return { hit: false };
+  const slots = [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(army.soldiers?.[i]) || 0)));
+  const total = slots.reduce((s, n) => s + n, 0);
+  if (total <= 0) return { hit: false };
+  const loss = Math.max(1, Math.round(total * 0.12));
+  let left = loss;
+  for (const i of [0, 1, 2].slice().sort((a, b) => slots[b] - slots[a])) {
+    if (left <= 0) break;
+    const cut = Math.min(slots[i], left);
+    slots[i] -= cut;
+    left -= cut;
+  }
+  army.soldiers = slots;
+  const remain = slots.reduce((s, n) => s + n, 0);
+  const where = cityName(hostile[0]);
+  const abort = remain < 200;
+  return {
+    hit: true,
+    loss,
+    abort,
+    text: abort
+      ? `途经${where}方向遭截击，折损 ${loss}，前军溃散，未能抵城。`
+      : `途经${where}方向遭截击，折损 ${loss}，余部仍抵城下。`,
+  };
+}
 const TRANSPORT_SPEED = 70;
 
 /** 两城之间的行军里程（km）。优先取 route.km，缺失时按坐标距离估。 */
@@ -1274,15 +1337,13 @@ export function marchDaysBy(km, speed) {
   return Math.max(MARCH_DAYS_MIN, Math.min(MARCH_DAYS_MAX, raw));
 }
 
-/** 战术锁：同一出发城 + 目标城的行军日（含势力特技 marchDelta）。
- *  ★ M2 修路：驿道完工的边行军 −1 日（最低 1 日，双向生效；interior-task 完工写入 roadWorks）。 */
+/** 同一出发城 + 目标城的行军日（含势力特技 marchDelta）。 */
 export function marchPlan(state, cfg, fromId, toId, army) {
   const km = marchKmBetween(fromId, toId);
   const speed = armySpeed(state, cfg, army);
   const base = marchDaysBy(km, speed);
-  const roadCut = Number(state.strategy?.roadWorks?.[roadEdgeKey(fromId, toId)]) || 0;
-  const days = Math.max(1, Math.min(MARCH_DAYS_MAX, base + factionTraitOf(state).marchDelta - roadCut));
-  return { km, speed, days, roadCut };
+  const days = Math.max(1, Math.min(MARCH_DAYS_MAX, base + factionTraitOf(state).marchDelta));
+  return { km, speed, days };
 }
 
 /** 战略层城战（P2 行军版）：出兵不再瞬时开打，而是生成行军队列，
@@ -1325,36 +1386,37 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
     ctx.push?.('general.push', standin);
   }
   if ((army.soldiers || []).every((n) => !(n > 0))) return { ok: false, code: 4, reason: 'no_troops' };
-  // 行军粮：按**实际出战**兵力 × 0.1/程（bug-5：旧实现按整队算粮，界面又说按比例出兵）
-  // 优先从出发城城库扣（前线囤粮，三国志14 补给线口径），城库不足吃全局池并 +25% 损耗
+  /* GDD §6.1：单槽超过 5000 的兵退回出发城，不能整槽拉出去。 */
+  let overflow = 0;
+  army.soldiers = [0, 1, 2].map((i) => {
+    const n = Math.max(0, Math.floor(Number(army.soldiers?.[i]) || 0));
+    if (n > SLOT_CAP) { overflow += n - SLOT_CAP; return SLOT_CAP; }
+    return n;
+  });
+  if (overflow > 0 && fromState) {
+    fromState.troops = Math.max(0, Math.round(Number(fromState.troops) || 0) + overflow);
+  }
+  // 行军粮：实出兵力 × 每日口粮 × 行军日（GDD：1 兵 1 旬吃 1 粮，路程按日计）
+  // 优先从出发城城库扣，城库不足吃全局池并 +25% 损耗
   const troopsTotal = (army.soldiers || []).reduce((s, v) => s + Math.max(0, Number(v) || 0), 0);
   const ratio = Math.max(0.01, Math.min(1, Number(frac) || 1));
   const deploy = Math.max(1, Math.round(troopsTotal * ratio));
-  const grainCost = Math.ceil(deploy * knobGet(state, 'grainPerSoldierDay'));
+  const plan = marchPlan(state, cfg, home, id, army);
+  const grainCost = marchGrainCost(state, deploy, plan.days, target.terrain);
   const pay = consumeMarchGrain(state, home, grainCost);
   if (!pay.enough) {
     return { ok: false, code: 5, reason: 'no_grain', need: grainCost };
   }
 
   if (!Array.isArray(st.marches)) st.marches = [];
-  /* ★ M2 练兵：出发城有充能 → 本队攻击 +5%（battle.js 按 army.drillMorale 折算，
-     previewAssault 用同一口径预演，推演与正式逐位一致；一支部队耗一充能） */
-  const drillCharges = Number(st.cityEcon?.[home]?.drillCharges) || 0;
-  const drillMorale = drillCharges > 0 ? 10 : 0;
-  if (drillMorale > 0) {
-    st.cityEcon[home].drillCharges = drillCharges - 1;
-    army.drillMorale = drillMorale;
-  }
   const departDay = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
-  // ★ P7：时长由里程与队伍速度算（势力特技 marchDelta 已并入 marchPlan）
-  const plan = marchPlan(state, cfg, home, id, army);
   const marchDays = plan.days;
   const row = {
     id: (st.marchSeq = (st.marchSeq || 0) + 1),
     side: 'player', from: home, to: id,
     departDay, arriveDay: departDay + marchDays,
     armyId: army.id, frac: ratio, grainCost, troops: deploy,
-    km: plan.km, speed: plan.speed, drillMorale,
+    km: plan.km, speed: plan.speed,
     /* ★ P11 / GDD §3.2 门 3→4→5「遭遇 → 推演 → 确认 → 结算」：
        玩家从出征面板发的兵默认在抵达时先挂在「遭遇」待决，不自动开打。
        协议层老调用方不传此标志，行为保持不变（测试与 NPC 不受影响）。 */
@@ -1368,9 +1430,7 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
   const fromName = map.cities.find((c) => c.id === home)?.name || '本城';
   recordEvent(state, `大军自${fromName}开拔，出征${target.name}，`
     + `行程 ${Math.round(plan.km)} 里、速度 ${plan.speed}`
-    + (plan.roadCut ? `（驿道 −${plan.roadCut} 日）` : '')
-    + `，预计第 ${row.arriveDay} 日抵城下（耗粮 ${grainCost}）`
-    + (drillMorale ? '，练兵加成 +5% 攻击' : '') + '。');
+    + `，预计第 ${row.arriveDay} 日抵城下（耗粮 ${grainCost}）。`);
   ctx.push?.('chat.push', {
     rid: 0, nickName: '系统', type: 0,
     msg: `【天下】我军自${fromName}开拔，进军${target.name}，程 ${Math.round(plan.km)} 里，预计 ${marchDays} 日后抵达。`,
@@ -1379,8 +1439,6 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
   return {
     ok: true, marching: true, marchId: row.id, arriveDay: row.arriveDay,
     city: target.name, grainCost, marchDays, km: plan.km, speed: plan.speed, from: fromName,
-    drillMorale,
-    roadCut: plan.roadCut || 0,
     // ★ 出征面板：把「哪支队 / 实出多少 / 留守多少」原样回给界面，UI 不再自己猜
     armyId: army.id, troops: troopsTotal, deploy, frac: ratio,
     supplyStops: Math.max(0, Math.floor(marchDays / 10)),
@@ -1428,7 +1486,7 @@ export function strategyResolveMarches(state, cfg, ctx) {
     const army = (state.armys || []).find((a) => a.id === mm.armyId);
     if (army) {
       delete army.marchId;
-      delete army.drillMorale;   // ★ M2：一场战斗消耗一次练兵加成
+      delete army.drillMorale;
     }
     const target = map.cities.find((c) => c.id === mm.to);
     const tstate = st.cities[mm.to];
@@ -1442,13 +1500,23 @@ export function strategyResolveMarches(state, cfg, ctx) {
       recordEvent(state, `出征${target.name}的队伍中途溃散，无果而返。`);
       continue;
     }
+    const ambush = tryFieldIntercept(state, mm, army);
+    if (ambush.hit) {
+      recordEvent(state, ambush.text);
+      if (ambush.abort || (army.soldiers || []).every((n) => !(n > 0))) {
+        results.push({ kind: 'intercept', abort: true, loss: ambush.loss, cityId: mm.to });
+        continue;
+      }
+    }
     const level = Math.max(1, Math.min(3, target.level || 1));
     /* ★ M2-5 张力守恒 #2：实际战斗的守军折算按该抵达日的敌方预案（与推演同口径）。
        defMul 传给 settleArmyBattle 统一相乘，dLoss 基线保持 raw 守军数。 */
     const variant = counterVariantFor(state, mm.to, mm.arriveDay);
     const defenseOverride = defenseFor(cfg, mm.to, target, tstate, level);
+    defenseOverride.terrain = target.terrain || '';
     const fought = settleArmyBattle(state, cfg, ctx, {
       army, frac: mm.frac, x: 8000 + mm.to, y: 100 + level, defenseOverride, defMul: variant.defMul,
+      siege: true,
       /* ★ 验收 #10：种子按「到达日」算，战前推演能算出一模一样的种子。
          ★ 张力守恒 #3：优先用出征时锁定的 lockedSeed（确认即锁）。 */
       seed: mm.lockedSeed ?? battleSeedFor(army.id, 8000 + mm.to, 100 + level, mm.arriveDay),
@@ -1591,7 +1659,7 @@ export function strategyRecallMarch(state, cfg, ctx, { marchId }) {
     const army = (state.armys || []).find((a) => a.id === mm.armyId);
     if (army) {
       delete army.marchId;
-      delete army.drillMorale;   // ★ M2：撤回的队伍练兵加成随行军行一并作废
+      delete army.drillMorale;
       army.cityId = Number(mm.from) || st.playerCity;
     }
     refund = Math.round((Number(mm.grainCost) || 0) * 0.5);
@@ -1701,6 +1769,8 @@ export function strategyFormup(state, cfg, ctx, { armyId, generals, soldiers }) 
     if (other) return { ok: false, reason: 'in_other_army', generalId: gid, armyId: other.id };
   }
   const troops = [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(soldiers?.[i]) || 0)));
+  const over = troops.findIndex((n) => n > SLOT_CAP);
+  if (over >= 0) return { ok: false, reason: 'over_cap', slot: over, cap: SLOT_CAP, have: troops[over] };
   const cur = (army.soldiers || []).map((v) => Math.max(0, Math.floor(Number(v) || 0)));
   const totalCur = cur.reduce((s, v) => s + v, 0);
   const totalNew = troops.reduce((s, v) => s + v, 0);
@@ -1799,13 +1869,13 @@ export function rewardGeneral(state, cfg, ctx, { generalId, amount }) {
  *  本函数只做旧接口兼容：老 UI 与老调用方仍走 `invest`，返回里多了 task 字段与完工日。
  *  行为变化（刻意）：开发类不再即时生效，而是按执行武将能力 1~3 旬完工，
  *  每旬在事件簿留一条带归因的记录（「长安农田 +1.5（荀彧·9600）」）。 */
-export function strategyInvest(state, cfg, ctx, { cityId, kind, targetCityId }) {
+export function strategyInvest(state, cfg, ctx, { cityId, kind }) {
   const st = ensureStrategy(state);
   ensureCityEcon(state);
   const id = Number(cityId);
   const tstate = st.cities[id];
   if (!tstate || tstate.owner !== 'player') return { ok: false, reason: 'not_own_city' };
-  const r = beginInteriorTask(state, cfg, ctx, { cityId: id, kind, targetCityId: Number(targetCityId) || 0 });
+  const r = beginInteriorTask(state, cfg, ctx, { cityId: id, kind });
   if (!r.ok) return r;
   /* 城名权威来源是 map.json（cityName），interior-task 零依赖不自己读图，由这里回写一次 */
   if (r.task) r.task.city = cityName(id);
@@ -1864,10 +1934,6 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
   if (!army) return { ok: false, reason: 'no_army' };
   const before = [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(army.soldiers?.[i]) || 0)));
   const f = Math.min(1, Math.max(0.05, Number(frac) || 1));
-  const commit = before.map((v) => Math.max(0, Math.round(v * f)));
-  const aTotal = commit.reduce((s2, n) => s2 + n, 0);
-  if (aTotal <= 0) return { ok: false, reason: 'no_troops' };
-
   /* ★ 行军口径必须与 strategyAttack 完全一致：marchPlan 已含势力特技 marchDelta，
      种子又按 arriveDay 取，所以差一天就会打出不同战报（这里踩过坑）。 */
   const plan = marchPlan(state, cfg, from, to, army);
@@ -1876,9 +1942,16 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
   const days = plan.days;
   const today = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
   const arriveDay = today + days;
+  /* 截击与正式抵达用同一 marchId / 到达日：先扣再乘出兵比例。只改影子队伍，不动存档。 */
+  const shadow = { soldiers: before.slice() };
+  tryFieldIntercept(state, { id: (st.marchSeq || 0) + 1, from, to, arriveDay }, shadow);
+  const commit = shadow.soldiers.map((v) => Math.max(0, Math.round(v * f)));
+  const aTotal = commit.reduce((s2, n) => s2 + n, 0);
+  if (aTotal <= 0) return { ok: false, reason: 'no_troops' };
 
   const level = Math.max(1, Math.min(3, target.level || 1));
   const defense = defenseFor(cfg, to, target, tstate, level);
+  defense.terrain = target.terrain || '';
   const mainArms = (rows) => rows.indexOf(Math.max(...rows));
   const atkArms = mainArms(commit) + 1;
   const defArms = mainArms(defense.soldiers.map((v) => Math.max(0, Number(v) || 0))) + 1;
@@ -1900,15 +1973,13 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
   const dTotal = defense.soldiers.reduce((s2, n) => s2 + n, 0);
 
   const seed = battleSeedFor(army.id, 8000 + to, 100 + level, arriveDay);
-  /* ★ M2 练兵：与 strategyAttack 同一口径——出发城有充能就算 +5% 攻击，
-     否则推演会漏掉练兵加成，预演与正式结算就对不上（张力守恒 #3 前提） */
-  const drill = (Number(st.cityEcon?.[from]?.drillCharges) || 0) > 0 ? 10 : 0;
   /* ★ 张力守恒 #3「确认即锁」：正式战斗的种子在 strategyAttack 出征时已写进
      march 行（lockedSeed）；推演用同一 arriveDay 推同一 seed，所以
      「今天出发」的推演与正式结算逐位一致——变招只发生在抵达日变化时。 */
   const runB = (def2) => resolveBattle({
-    cfg, state: structuredClone(state), army: { ...army, soldiers: commit, drillMorale: drill },
+    cfg, state: structuredClone(state), army: { ...army, soldiers: commit },
     x: 8000 + to, y: 100 + level, defenseOverride: def2, seed,
+    siege: true,
     /* 推演不需要回放动作流（战报才有），跳过可省一大半耗时 */
     withAnim: false,
   });
@@ -2464,9 +2535,6 @@ export function strategyViewState(state, cfg = null) {
           investDays: e.investDays || {}, lastInvestDay: e.lastInvestDay || 0,
           /* ★ P11 兵役台账：人口/户数/适龄壮丁/已征/本旬可征，界面与结算同源 */
           levy: levyView(state, c.id, { rate: knobGet(state, 'conscriptRate') }),
-          /* ★ M2 练兵充能 / 招抚期：界面显示「下次出征 +5%」与「叛逃风险 −30% 至第 N 日」 */
-          drillCharges: Number(e.drillCharges) || 0,
-          appeaseUntil: Number(e.appeaseUntil) || 0,
           /* ★ U14 该城在施/最近完工的内政任务状（进度、执行武将、每旬增量、预计完工） */
           interiorTasks: interiorTaskView(state, c.id),
           /* ★ U20 粮道：连通到都城的跳数与里程；断绝时给原因，界面必须显示断粮后果 */

@@ -12,18 +12,21 @@ import {
   makeBuild, makeArmy, makeFacilityList,
 } from './world.js';
 import { resolveBattle } from './battle.js';
-import { skillById, LEVEL_COUNT } from './skills.js';
+import { skillById } from './skills.js';
+import { desText } from './domain/battle-narrative.js';
 import { marchMs, rewindDays } from './clock.js';
 import { facilityBonus, recordRes } from './domain/economy.js';
 /* ★ M4-12：生效设施单一权威清单 —— 结算判据与两处 UI 的显示清单同源。 */
 import { EFFECTIVE_ADDITIONS, isActiveFacility, facilityView } from './domain/facility-catalog.js';
-import { cityLayer, ensureCityEcon, conscriptFactor, cityYield, cityName } from './domain/city-econ.js';
+import { cityLayer, ensureCityEcon, conscriptFactor, cityYield, cityName, playerGoldYield, playerGrainYield, playerStockYield } from './domain/city-econ.js';
 /* ★ P11 兵役制：一户一丁 / 妇孺免征 / 一旬一征 / 先养人口，唯一权威源 */
 import { checkLevy, commitLevy, levyView, farmConflictOf } from './domain/levy.js';
 import {
   chapterRules, settleCampaign, chooseChapter, onTileCleared, applyChoice, noticeRecruit,
 } from './domain/campaign.js';
-import { slotBlock } from './domain/slots.js';
+import { slotBlock, skillUpgradeCost, skillUpgradeBlock, SKILL_LEVEL_CAP, skillActionHint } from './domain/slots.js';
+import { grantBattleExp, levelUpSentence, generalProgress } from './domain/general-progress.js';
+import { materialGuide } from './domain/armory.js';
 import { rngFor } from './domain/strategy-rng.js';
 import { ensureTavern, guestsNow, announceTavern, todaysGuests, dayFraction, exploreTalent, cityNameOf } from './domain/tavern.js';
 /* ★ U15 相性/义理/关系网：登庸成功率与面板构成条同源 */
@@ -241,11 +244,11 @@ function totalYield(state, cfg) {
   const by = buildYield(state);
   const cl = cityLayer(state);
   const r = state.roleRes;
-  r.wood_yield = (base.wood_yield ?? 1000) + fa.wood + by.wood + (cl.wood || 0);
-  r.iron_yield = (base.iron_yield ?? 1000) + fa.iron + by.iron + (cl.iron || 0);
-  r.stone_yield = (base.stone_yield ?? 1000) + fa.stone + by.stone + (cl.stone || 0);
-  r.grain_yield = (base.grain_yield ?? 1000) + fa.grain + by.grain + (cl.grain || 0);
-  r.gold_yield = (base.gold_yield ?? 1000) + fa.gold + (cl.gold || 0);
+  r.wood_yield = playerStockYield(state, 'wood', base.wood_yield ?? 1000, fa.wood, by.wood);
+  r.iron_yield = playerStockYield(state, 'iron', base.iron_yield ?? 1000, fa.iron, by.iron);
+  r.stone_yield = playerStockYield(state, 'stone', base.stone_yield ?? 1000, fa.stone, by.stone);
+  r.grain_yield = playerGrainYield(state, base.grain_yield ?? 1000, fa.grain, by.grain);
+  r.gold_yield = playerGoldYield(state, base.gold_yield ?? 1000, fa.gold);
   r.depot_capacity = (base.depot_capacity ?? 1000000) + fa.capacity;
   r.city_layer = cl;   // 内政面板「城池加成」明细展示用
   return r;
@@ -380,9 +383,24 @@ function withGeneralNames(state, cfg, list) {
     ...g,
     name: cfg.generalByCfg.get(g.cfgId)?.name || '',
     star: g.star ?? 0,
-    skills: (g.skills || []).map((s) => (s
-      ? { ...s, name: skillById(s.cfgId)?.ui?.name || '' }
-      : null)),
+    skills: (g.skills || []).map((s) => {
+      if (!s) return null;
+      const conf = skillById(s.cfgId);
+      const lv = Math.max(1, Math.trunc(Number(s.lv) || 1));
+      const maxed = lv >= SKILL_LEVEL_CAP;
+      const block = skillUpgradeBlock(g, s);
+      return {
+        ...s,
+        name: conf?.ui?.name || conf?.name || '',
+        des: desText(conf, lv),
+        nextDes: maxed ? '' : desText(conf, lv + 1),
+        upgradeCost: maxed ? 0 : skillUpgradeCost(lv),
+        upgradeBlock: block === 'need_general_level' ? skillActionHint(block, 0, lv + 1) : '',
+        maxed,
+        probability: conf?.ui?.levels?.[lv - 1]?.probability ?? null,
+      };
+    }),
+    progress: generalProgress(g),
   }));
 }
 function syncOwnedSkills(state) {
@@ -419,10 +437,9 @@ export function processTask(ctx, task) {
     army.state = 1;
     army.to_x = 0; army.to_y = 0; army.end = 0;
     noteIfGeneralDown(state, ctx, army);
-    for (const [gid, exp] of Object.entries(expByGeneral)) {
-      const g = findGeneral(state, Number(gid));
-      if (g) g.exp += exp;
-    }
+    const ups = grantBattleExp(state, cfg, expByGeneral);
+    const expLine = levelUpSentence(ups);
+    if (expLine && report) report.summary = `${report.summary || ''}${expLine}`;
     state.warReports.unshift(report);
     if (state.warReports.length > 100) state.warReports.length = 100;
 
@@ -543,7 +560,7 @@ export function handleRequest(ctx, req) {
       rsp.msg = { citys: clone(state.citys) };
       break;
     case 'role.myRoleRes':
-      rsp.msg = { role_res: roleResOf(state) };
+      rsp.msg = { role_res: roleResOf(state), guide: materialGuide(state) };
       break;
     case 'role.myRoleBuild':
       rsp.msg = { mr_builds: clone(state.builds) };
@@ -964,6 +981,7 @@ export function handleRequest(ctx, req) {
       const g = findGeneral(state, gId);
       let ok = false;
       let reason = '';
+      let paid = 0;
       if (g) {
         const slots = ensureSlots(g);
         if (name === 'general.upSkill') {
@@ -996,13 +1014,15 @@ export function handleRequest(ctx, req) {
         } else {
           // ★ 修复：按槽位取技能，客户端不传 cfgId
           const cur = slots[pos];
-          if (!cur) reason = 'empty_slot';
-          else if (cur.lv >= LEVEL_COUNT) reason = 'max_level';
+          const blocked = skillUpgradeBlock(g, cur);
+          if (blocked) reason = blocked;
           else {
-            const cost = 120 * cur.lv;
-            if ((state.roleRes.gold ?? 0) < cost) reason = 'not_enough_gold';
+            const cost = skillUpgradeCost(cur.lv);
+            if ((state.roleRes.jungong ?? 0) < cost) reason = 'not_enough_jungong';
             else {
-              state.roleRes.gold -= cost;
+              state.roleRes.jungong -= cost;
+              paid = cost;
+              recordRes(state, 'jungong', -cost, '战法升级', state.clock?.day);
               cur.lv += 1;
               ok = true;
               ctx.push('roleRes.push', roleResOf(state));
@@ -1017,7 +1037,19 @@ export function handleRequest(ctx, req) {
         ctx.push('general.push', g);
         ctx.save();
       }
-      rsp.msg = { gId, cfgId, pos, ok, reason };
+      const curLv = g ? (ensureSlots(g)[pos]?.lv || 0) : 0;
+      const nextLv = (curLv || 1) + (ok ? 0 : 1);
+      const need = (reason === 'not_enough_jungong' || reason === 'need_general_level')
+        ? skillUpgradeCost(Math.max(1, curLv || 1))
+        : paid;
+      rsp.msg = {
+        gId, cfgId, pos, ok, reason,
+        lv: curLv,
+        cost: need,
+        gold: Math.floor(Number(state.roleRes?.gold) || 0),
+        jungong: Math.floor(Number(state.roleRes?.jungong) || 0),
+        hint: ok ? '' : skillActionHint(reason, need, nextLv),
+      };
       break;
     }
 

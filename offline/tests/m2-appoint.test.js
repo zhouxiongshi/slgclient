@@ -94,9 +94,9 @@ test('M2-4·委任：同城同目标 busy；取消只停后续派单、在施任
   const { state, st } = oathWorld();
   state.roleRes.gold = 100000;
   const cid = playerCity(st);
-  const r1 = strategyAppoint(state, cfg, { push() {} }, { cityId: cid, goal: 'transport' });
+  const r1 = strategyAppoint(state, cfg, { push() {} }, { cityId: cid, goal: 'recruit' });
   assert.equal(r1.ok, true);
-  const r2 = strategyAppoint(state, cfg, { push() {} }, { cityId: cid, goal: 'transport' });
+  const r2 = strategyAppoint(state, cfg, { push() {} }, { cityId: cid, goal: 'recruit' });
   assert.equal(r2.ok, false);
   assert.equal(r2.reason, 'busy');
   // 取消
