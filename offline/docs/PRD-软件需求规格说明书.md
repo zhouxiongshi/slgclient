@@ -749,7 +749,7 @@
 | 缺口 | 现状 | 处置 |
 |---|---|---|
 | GDD §11.1 规划的 `domain/battle-preview.js` / `domain/attribution.js` / `battle-preview-ui.js` 独立模块 | 未落地，能力由 `strategy.js previewAssault` + `battle-narrative.js` 承担 | 保持现状，登记为「实现位置与 GDD 规划不一致」，不新建空壳模块 |
-| `previewNarrative` 的 `odds` 字段 | JSDoc 曾声明，返回值未包含 | 已关闭：JSDoc 对齐实际返回（`verdict/tone/headline/rows/tips/myNotes/defenderNotes/ratio`）。**刻意不补 `odds` 定值**——R-16.3 要求情报不足时给区间不给定值，见 `SDD §17 DEV-20` |
+| `previewNarrative` 的 `odds` 字段 | JSDoc 曾声明，返回值未包含 | 已在 `2f07bc0` 关闭：JSDoc 对齐实际返回（`verdict/tone/headline/rows/tips/myNotes/defenderNotes/ratio`）。**刻意不补 `odds` 定值**——R-16.3 要求情报不足时给区间不给定值，见 `SDD §17 DEV-20` |
 | 逐将战前 delta | `fieldGaps` 显式降级 | 待排期 |
 
 **验收标准**

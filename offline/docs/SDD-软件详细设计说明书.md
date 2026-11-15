@@ -1930,8 +1930,8 @@ build/SLG-Offline-win32-x64/
 | `DEV-08` | `README.md:33/76/127` | 战法 80 条 / 单测 471 条 / 70 个文件 | 运行时 177 / 73 文件（单测条数以 `npm test` 输出为准） | README 为 M3-8 阶段快照；本文 §4.5 给统一口径 |
 | `DEV-09` | `ARCH §9.22/§9.23/§9.25` 等 | 431 / 443 / 460 单测、90/92 发布闸 | 随迭代变化，核查时 92/92 | 迭代日志按当时快照保留，不作现值引用 |
 | `DEV-10` | `skills.js` 头注释 / P0 文档 | 「注入 48 个新战法」 | 第一版战法表已废弃；现 177 条运行时表 | 注释属历史残留；不改代码以免引入无关变更 |
-| `DEV-11` | `offline/docs/FEASIBILITY-v1.md` | README §9 引用该文档 | 文档在**仓库外** `slg/docs/FEASIBILITY-v1.md`，`offline/docs/` 下确实没有 | 已修：README 引用改为 `../../docs/FEASIBILITY-v1.md` 并注明位置；不是文档缺失 |
-| `DEV-12` | `README.md:51` 提到 `server/kernel.js` | 文件不存在 | 真实接入是 `server/battle.js:16 → ../kernel/index.js` | 已修：目录树删掉该行，接入点写进 `battle.js` 说明 |
+| `DEV-11` | `offline/docs/FEASIBILITY-v1.md` | README §9 引用该文档 | 文档在**仓库外** `slg/docs/FEASIBILITY-v1.md`，`offline/docs/` 下确实没有 | 已在 `2f07bc0` 修复：README 引用改为 `../../docs/FEASIBILITY-v1.md` 并注明位置；不是文档缺失 |
+| `DEV-12` | `README.md:51` 提到 `server/kernel.js` | 文件不存在 | 真实接入是 `server/battle.js:16 → ../kernel/index.js` | 已在 `2f07bc0` 修复：目录树删掉该行，接入点写进 `battle.js` 说明 |
 
 ### 17.3 设计规格与实现的口径差异
 
@@ -1941,10 +1941,10 @@ build/SLG-Offline-win32-x64/
 | `DEV-14` | **UI 文案与实现不一致**：`interaction-ui.js:744` 写「粮尽后每旬士气 −5」，`supply.js` 实际是「民心 −3」 | 同上 | 文案待校准；不改数值（会影响平衡报告） |
 | `DEV-15` | **内政阈值量纲未同步**：`interior-task.js planTicks` 用 `8600/6800`，官员属性已是 0~100 | `interior-task.js:131`、`general-stat.js` | 高属性官员不命中缩短工期分支；登记待下一个平衡周期一并校准（PRD `OP-03`） |
 | `DEV-16` | **公式口径偏差**：M4-10 迭代记录写内政 `0.5+stat/200`、适性 `0.85+0.3*v/200`；代码为 `0.5+stat/100`、`armsApt=clamp(0.85+0.3*v/100,1.00,1.15)` | `city-econ.js:282`、`aptitude.js:20-40` | 以代码为当前事实；若要改回记录口径须重跑平衡脚本（PRD R-11.6） |
-| `DEV-17` | **国库粮语义**：GDD §11.4 注 1 曾写「`resources.grain` 在 v2 里保留但恒为 0」，实际 `accrueFactionGrain` 会 `grain += g`、`refreshGrainSummary` 写汇总值（只读汇总但**非零**） | `strategy.js:647-728`、GDD §11.4 | 已修：GDD §11.4 注 1 与 JSON 示例按实测改为「城库汇总的只读显示值，非实账、非恒 0」；`WB-06` 只禁止直接赋值，不禁止四个唯一写入口 |
+| `DEV-17` | **国库粮语义**：GDD §11.4 注 1 曾写「`resources.grain` 在 v2 里保留但恒为 0」，实际 `accrueFactionGrain` 会 `grain += g`、`refreshGrainSummary` 写汇总值（只读汇总但**非零**） | `strategy.js:647-728`、GDD §11.4 | 已在 `2f07bc0` 修复：GDD §11.4 注 1 与 JSON 示例按实测改为「城库汇总的只读显示值，非实账、非恒 0」；`WB-06` 只禁止直接赋值，不禁止四个唯一写入口 |
 | `DEV-18` | **存档结构**：GDD §11.4 规划 `{saveVersion, undoStack, migrationLog, migrations[v] 注册表, validateSave 安全模式}`；实际是 `version=3 + normalizeWorld` 语义补字段 + 版本白名单 1/2/3，无统一迁移注册表、无 `undoStack` 入档 | `world.js:37,331-431` | 当前靠 `ensureXxx` 兜底；统一迁移链属规划项（PRD FR-04 标 ✅ 但口径以此为准） |
 | `DEV-19` | **推演台模块名**：GDD §11.1 规划 `domain/battle-preview.js` / `attribution.js` / `battle-preview-ui.js` / `advice.js` / `faction-special.js`；实际由 `strategy.previewAssault` + `battle-narrative.js` + `interaction.js.agenda` 承担 | `server/domain/` 文件清单 | 能力已落地但文件归属不同；不建空壳模块，追溯以本文为准（PRD `OP-08`） |
-| `DEV-20` | `previewNarrative` JSDoc 曾声明 `odds` / `verdictTone`，return 实际是 `tone` / `ratio` 且无 `odds` | `battle-narrative.js:265,319` | 已修：JSDoc 对齐实际返回；**不补 `odds` 胜率定值**——与 PRD R-16.3 / GDD §6.7「情报不足给区间不给定值」冲突，区间由 rows 与 tips 表达 |
+| `DEV-20` | `previewNarrative` JSDoc 曾声明 `odds` / `verdictTone`，return 实际是 `tone` / `ratio` 且无 `odds` | `battle-narrative.js:265,319` | 已在 `2f07bc0` 修复：JSDoc 对齐实际返回；**不补 `odds` 胜率定值**——与 PRD R-16.3 / GDD §6.7「情报不足给区间不给定值」冲突，区间由 rows 与 tips 表达 |
 | `DEV-21` | **主角战法命名**：`protagonist-skill.json` 名「坐镇中军」，`ARCH §9.22` 记「后世之识」 | 配置 + 架构文档 | 一律以 `cfgId 19001` 引用；命名待产品统一（PRD `OP-04`） |
 | `DEV-22` | **`state.seed` 未写入**：`createWorld/normalizeWorld/index.js` 均无赋值，全代码 `?? 20261110` 兜底，仅工具/测试注入 | `world.js`、`strategy-rng.js` 调用点 | 正常游玩随机序列恒定（可复现但缺变化）；如要每局不同须先定存档兼容（PRD `OP-09`） |
 | `DEV-23` | `strategy-map.js` 在 `server/` 目录内未发现任何 import | 静态 import 扫描 | 疑为构建期工具专用模块；保留，不删 |
