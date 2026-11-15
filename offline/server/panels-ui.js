@@ -640,6 +640,22 @@
       }).join('') + '</tbody></table>'
       + '<div class="muted">★ 委任加成已真实生效：每日常规入账即按此比例上浮，收支流水可查。</div></div>';
 
+    /* ★ M4-12：生效设施与城池内页同源 —— 两处内政入口不再各说各话。
+       协议侧已隐藏未参与结算的原版占位设施，这里把隐藏数量如实写明。 */
+    var fac = it.facilities || { rows: [], hiddenCount: 0, allCount: 0 };
+    out += '<div class="card"><h3>生效设施（与城池内页同源）</h3>'
+      + '<div class="muted" style="margin-bottom:8px">仅列参与本版本结算或解锁玩法的设施'
+      + (fac.hiddenCount ? '；另有 ' + fac.hiddenCount + ' 项原版占位设施未生效，已隐藏且不可升级' : '')
+      + '。升级在城池内页「府库」办理。</div>'
+      + (fac.rows.length
+        ? '<table><thead><tr><th>设施</th><th>等级</th><th>实际作用</th></tr></thead><tbody>'
+          + fac.rows.map(function (f) {
+            return '<tr><td>' + esc(f.name) + '</td><td class="v">Lv' + esc(f.level) + '/' + esc(f.maxLevel)
+              + '</td><td class="muted">' + esc(f.effectText) + '</td></tr>';
+          }).join('') + '</tbody></table>'
+        : '<div class="muted">本城暂无设施数据。</div>')
+      + '</div>';
+
     out += '<div class="card"><h3>三条硬约束</h3><div class="grid">'
       + [['民心', it.constraints.morale.morale, '过低触发减产'], ['治安', it.constraints.order.order, '过低触发流寇'],
          ['腐败', it.constraints.corruption.corruption, '随城数上升，人事可压制']].map(function (p) {

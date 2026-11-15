@@ -15,6 +15,8 @@ import { resolveBattle } from './battle.js';
 import { skillById, LEVEL_COUNT } from './skills.js';
 import { marchMs, rewindDays } from './clock.js';
 import { facilityBonus, recordRes } from './domain/economy.js';
+/* ★ M4-12：生效设施单一权威清单 —— 结算判据与两处 UI 的显示清单同源。 */
+import { EFFECTIVE_ADDITIONS, isActiveFacility, facilityView } from './domain/facility-catalog.js';
 import { cityLayer, ensureCityEcon, conscriptFactor, cityYield, cityName } from './domain/city-econ.js';
 /* ★ P11 兵役制：一户一丁 / 妇孺免征 / 一旬一征 / 先养人口，唯一权威源 */
 import { checkLevy, commitLevy, levyView, farmConflictOf } from './domain/levy.js';
@@ -210,12 +212,9 @@ function facilityAdditions(state, cfg) {
       cfg.facilityAdditions(f.type).forEach((aType, i) => {
         const bonus = facilityBonus(state, aType, chapterRules());
         const v = Math.floor((values[i] || 0) * (1 + bonus));
-        if (aType === 17) y.wood += v;
-        else if (aType === 18) y.iron += v;
-        else if (aType === 19) y.grain += v;
-        else if (aType === 20) y.stone += v;
-        else if (aType === 21) y.gold += v;
-        else if (aType === 23) y.capacity += v;
+        /* ★ M4-12：写入轴与 EFFECTIVE_ADDITIONS 同源，界面说生效的设施这里必读。 */
+        const axis = EFFECTIVE_ADDITIONS[aType];
+        if (axis) y[axis] += v;
       });
     }
   }
@@ -687,13 +686,20 @@ export function handleRequest(ctx, req) {
       const clientCid = (state.citys || []).some((x) => Number(x.cityId) === cityId)
         ? cityId : (Number(mainCity(state)?.cityId) || 1);
       const list = ownFacilityList(state, cfg, realCid);
-      const facilities = (list || []).map((f) => ({
+      const rawFacilities = (list || []).map((f) => ({
         ...clone(f),
         maxLevel: cfg.facilityMaxLevel(f.type),
         nextNeed: cfg.facilityNeed(f.type, f.level + 1),
         nextTime: cfg.facilityTime(f.type, f.level + 1),
       }));
-      rsp.msg = { cityId: clientCid, realCityId: realCid, facilities };
+      /* ★ M4-12：两处设施 UI（本城/城池内页）与六府内政都只读这一份结果。
+         默认隐藏 20 项「未参与结算」的原版占位设施；GM 可用
+         SLG_LEGACY_FACILITIES=1 取回全量做对照（逐项带 active 标记）。 */
+      const view = facilityView(cfg, rawFacilities);
+      rsp.msg = {
+        cityId: clientCid, realCityId: realCid, facilities: view.rows,
+        allCount: view.allCount, hiddenCount: view.hiddenCount, legacy: view.legacy,
+      };
       break;
     }
     case 'city.upFacility': {
@@ -709,6 +715,17 @@ export function handleRequest(ctx, req) {
       if (!isOwnCity(state, realCid)) {
         rsp.code = CODE.InvalidParam;
         rsp.msg = { reason: 'not_own_city', cityId: realCid };
+        break;
+      }
+      /* ★ M4-12：配置里存在但未参与本版本结算的「过度设施」不许再扣资源升级。
+         未知 fType 不在这里拦，继续走原有的 no_such_facility 分支（错误优先级不变）。 */
+      const knownFacility = (cfg.facility.list || []).find((x) => Number(x.type) === fType);
+      if (knownFacility && !isActiveFacility(cfg, knownFacility)) {
+        rsp.code = CODE.UpError;
+        rsp.msg = {
+          reason: 'facility_disabled', fType, name: knownFacility.name,
+          hint: '该设施未参与本版本结算，升级不生效',
+        };
         break;
       }
       const list = ownFacilityList(state, cfg, realCid);

@@ -533,6 +533,19 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 
 ---
 
+### 9.26 M4-12 生效设施单一权威清单：清理「过度设施」、统一两处内政入口
+
+- **玩家反馈**：「左上角菜单上的内政和直接用鼠标点击城市的内政设施不一样，左上角的设施有些设施没用上，属于过度设施」。
+- **取证结论**：原版 `conf/json/facility/facility.json` 共 26 项设施，但离线结算 `handlers.facilityAdditions` 只消费 6 种 addition 类型（木/铁/粮/石/金产量 + 府库容量）。另外**集市(15) 虽不进产量，却是 `interior.transform` 府库兑换的硬门槛，必须保留**。合计 **7 项生效设施**：集市、伐木场、炼铁场、磨坊、采石场、民居、仓库；其余 **19 项**（主城、四营、军营、预备役所、五势力点将台、封禅台、校场、统帅厅、募兵所、社稷坛、城墙、女墙）加的是带兵上限/行军速度/招募概率/城防耐久等服务端根本不读的属性——升级只扣资源，是纯资源陷阱。
+- **单一权威**：新增零环依赖叶子 `server/domain/facility-catalog.js`。生效判据不硬编码 type，而是查 `cfg.facilityAdditions(type)` 是否命中 `EFFECTIVE_ADDITIONS`（与结算写入轴同一张表）+ `GATE_FACILITIES` 门槛表；配置变了清单自动跟着变，杜绝「界面说生效、结算不生效」。
+- **四路同源**：① `handlers.facilityAdditions` 改用 `EFFECTIVE_ADDITIONS[aType]` 写入；② `city.facilities` 协议出口 `facilityView()` 默认只回 7 项，附 `allCount/hiddenCount` 与逐项 `effectText`；③ 六府·内政 `panelState().interior.facilities` 走同一 catalog（按本地主城键取数，注意战略层 playerCity 是另一套编号）；④ 城池内页两张设施卡与六府面板都渲染同一批数据与说明。
+- **禁止资源陷阱**：`city.upFacility` 对配置里存在但未生效的设施返回 `facility_disabled`，不扣任何资源；未知 fType 仍走原 `no_such_facility`，归属校验优先级不变。
+- **可回退**：`SLG_LEGACY_FACILITIES=1` 让协议取回全量 26 项（逐项带 `active` 标记）供 GM 对照。原表 26 项与存档 `state.facilities` 全量模板逐字不动，旧档兼容。
+- **防退化**：`tests/m4-facility-catalog.test.js` 7 条（7/19 分流、集市门槛、协议返回、升级拒绝且资源不变、两处 UI 同源、GM 回退、静态闸）；`tests/protocol.test.js` 操作链改用生效设施 19 磨坊（原 fType 1 疾风营已被明确拒绝）。
+- **基线**：单测 **471/471**、术语覆盖率 100%、双态冒烟 33/33 ×2、UI 审计 72×2、真鼠标 54×2、`byteIdentical=true`。
+
+---
+
 ## 10. 文档地图（读哪本、信哪本）
 
 | 文档 | 管什么 | 权威性 |

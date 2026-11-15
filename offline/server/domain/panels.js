@@ -18,6 +18,8 @@ import { toPercentFromRaw } from './general-stat.js';
    它反向 import world.js，而 world.js 又 import 本文件，会成环。 */
 import { oathOf, oathFactionOf, strategyCity, factionTraitOf } from './oath.js';
 import { ensureCityEcon, cityYield, armsApt, ARMS_NAMES } from './city-econ.js';
+/* ★ M4-12：六府·内政的设施区段与 city.facilities 协议共用同一份生效清单。 */
+import { facilityView } from './facility-catalog.js';
 /* 战略台以并行会话的战略层为唯一口径：行军可达/关隘取 march.js，出征账取 strategy-log.js。
    刻意不 import strategy.js —— 它反向 import world.js，而 world.js 又 import 本文件，会成环。 */
 import { marchableNeighbors, marchGraph } from './march.js';
@@ -332,6 +334,31 @@ function interiorOutput(state, cfg) {
 }
 
 /* -------------------------------------------------------------------------- */
+/* M4-12 生效设施（六府·内政 ←→ 城池内页同源）                                */
+/* -------------------------------------------------------------------------- */
+
+/** 从存档取本城设施清单，走与 city.facilities 完全相同的 catalog 过滤。
+ *  注意：战略层 playerCity 是战略城编号（如 101），而原版设施按本地主城
+ *  编号（通常 1）存；优先本地主城键，与协议默认 cityId 保持一致。 */
+function interiorFacilities(state, cfg) {
+  const localId = Number(state.citys?.[0]?.cityId) || 1;
+  const strategicId = Number(state.strategy?.playerCity) || localId;
+  const list = state.facilities?.[String(localId)]
+    || state.facilities?.[`s${strategicId}`]
+    || state.facilities?.[String(strategicId)]
+    || [];
+  const view = facilityView(cfg, list, { legacy: false });
+  return {
+    rows: view.rows.map((f) => ({
+      name: f.name, type: f.type, level: Number(f.level) || 0,
+      maxLevel: cfg.facilityMaxLevel(f.type), effectText: f.effectText,
+    })),
+    allCount: view.allCount,
+    hiddenCount: view.hiddenCount,
+  };
+}
+
+/* -------------------------------------------------------------------------- */
 /* 面板聚合状态（GET /__slg/panels/state）                                    */
 /* -------------------------------------------------------------------------- */
 
@@ -584,6 +611,7 @@ export function panelState(state, cfg) {
       proposals: proposalsFor(state),
       appliedThisTurn: state.interior.appliedTurn === turnOf(state) ? state.interior.appliedThisTurn : null,
       output: interiorOutput(state, cfg),
+      facilities: interiorFacilities(state, cfg),
     },
     strategy: {
       chapter: int(state.campaign?.chapter, 1),

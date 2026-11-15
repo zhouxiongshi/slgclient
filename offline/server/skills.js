@@ -4251,6 +4251,11 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     card.innerHTML = head + '<div class="empty">读取中…</div>';
     send('city.facilities', { cityId: clientCityId(), realCityId: c.id }, true).then(function (rsp) {
       var list2 = (rsp.msg && rsp.msg.facilities) || [];
+      /* ★ M4-12：协议只回参与结算的生效设施，这里把隐藏数量如实写出来，
+         避免玩家以为「设施变少了是 bug」。两处设施卡片共用同一份回包。 */
+      head += '<div class="cost">仅显示参与本版本结算的生效设施'
+        + ((rsp.msg && rsp.msg.hiddenCount) ? '；另有 ' + fmt(rsp.msg.hiddenCount) + ' 项原版占位设施未生效，已隐藏且不可升级' : '')
+        + '</div>';
       card.innerHTML = head;
       if (!list2.length) { card.appendChild(el('div', 'empty', '本城暂无设施数据。')); return; }
       var COST = [['wood', '木'], ['iron', '铁'], ['stone', '石'], ['grain', '粮'], ['gold', '金'], ['decree', '令']];
@@ -4263,6 +4268,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         }).join(' · ') + (f.nextTime ? '　工期 ' + f.nextTime + 's' : '');
         row.innerHTML = '<span><b style="color:#f0d998">' + esc(f.name) + '</b> '
           + '<span class="winTag">Lv' + f.level + '/' + f.maxLevel + '</span>'
+          + '<div class="cost">' + esc(f.effectText || '') + '</div>'
           + '<div class="cost">' + chips + '</div></span>';
         if (f.up_time > 0) {
           row.appendChild(el('span', 'cost', '升级中…'));
@@ -4734,13 +4740,15 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
      升级后走 onAfterUpgrade()（= 重绘府库页），因为升级会扣资源、上方资源行必须跟着变。
      ★ 玩家反馈的「升级就跳回顶部」由 tabHome 自身的滚动还原兜住（见 restoreHomeScroll）。 */
   function renderHomeFacilityList(card, c, cid, list, res, onAfterUpgrade) {
-    card.innerHTML = '<h4 style="margin-top:0">设施</h4>';
+    card.innerHTML = '<h4 style="margin-top:0">设施</h4>'
+      + '<div class="cost">仅显示参与本版本结算的生效设施；原版占位设施未生效，已隐藏且不可升级。</div>';
     if (!list.length) { card.appendChild(el('div', 'empty', '本城暂无设施数据。')); return; }
     list.forEach(function (f) {
       var row = el('div', 'row');
       var left = el('div', '');
       left.innerHTML = '<b style="color:#f0d998">' + f.name + '</b> <span class="winTag">Lv'
-        + f.level + '/' + f.maxLevel + '</span>';
+        + f.level + '/' + f.maxLevel + '</span>'
+        + '<div class="cost">' + esc(f.effectText || '') + '</div>';
       var cost = f.nextNeed || {};
       var chips = '';
       [['wood', '木'], ['iron', '铁'], ['stone', '石'], ['grain', '粮'], ['gold', '金'], ['decree', '令']]
