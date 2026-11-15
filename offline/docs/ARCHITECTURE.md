@@ -544,6 +544,21 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 - **防退化**：`tests/m4-facility-catalog.test.js` 7 条（7/19 分流、集市门槛、协议返回、升级拒绝且资源不变、两处 UI 同源、GM 回退、静态闸）；`tests/protocol.test.js` 操作链改用生效设施 19 磨坊（原 fType 1 疾风营已被明确拒绝）。
 - **基线**：单测 **471/471**、术语覆盖率 100%、双态冒烟 33/33 ×2、UI 审计 72×2、真鼠标 54×2、`byteIdentical=true`。
 
+### 9.27 OP 决策收口（2026-11-15：内政阈值 / 金侧阀门 / 士气 / 字段降级）
+
+四项由产品拍板的需求收口，全部**不动原表、不重做分层**，顺序按 `PRD §0.3`：先改文档与 `FIELD-CONTRACT`，再改服务端权威源，最后接 UI。
+
+| 决策 | 改动 | 权威登记 |
+|---|---|---|
+| `OP-03` 内政阈值按百分制校准 | `interior-task.js` 导出 `OFFICER_TICKS_TOP=85 / OFFICER_TICKS_OK=68` 替换 8600/6800；旧测试用 9000/7000/4000 恰好掩盖了量纲失配，补 85/84/68/67 边界断言 | `FIELD-CONTRACT.md §A` |
+| `OP-01` 本版加支出阀门 | `economy.js applyDays` 新增**国库沉淀税**，参数 `goldHoardTaxPct` 默认 4%/旬，免税额 = 10 旬周转金；只改存量、每笔进府库流水、设 0 可关闭 | `GDD §5.10.1` |
+| `OP-02` 删 knob + 修文案 | 删零消费的 `moraleRout`，槽位换给 `goldHoardTaxPct`（参数表仍 30 项）；UI 文案校准为「民心 −3、治安 −1」；`GDD §6.6` 标注本版不实装 | `SDD §17 DEV-13/14` |
+| `GAP-01` 字段降级定性 | `fieldGaps` 三项定性为**刻意降级的设计特性**而非待补缺口，撤销待排期；`FR-24` 升 ✅。补精确侦察值会废掉情报区间玩法，补逐将 delta 等于无证据编造 | `SDD §17.4`、`interaction.js` 章节 K |
+
+**四条不变量**：① 参数表恒 30 项（`m2-failstate.test.js` 硬断言）；② 沉淀税只写 `roleRes.gold`，不碰 `cityEcon.store` 与双账本写入轴（`WB-06`）；③ 面板层禁 `Math.random()`；④ 注入层字符串拼接的注释必须写在 `+` 之前或整个表达式之外（P11 一元加号教训，`tests/p11-ui-integrity.test.js` 有静态闸）。
+
+**取证**：`npm test` 492/492；`sim-60turns --turns 60` 末旬金 172,501 → 104,130（−42.7%），净增中位 2,690 → 1,366 金/旬且逐旬递减，确定性双跑逐旬一致。对照报告 `reports/goldflow-before.json` / `goldflow-after.json`。
+
 ---
 
 ## 10. 文档地图（读哪本、信哪本）

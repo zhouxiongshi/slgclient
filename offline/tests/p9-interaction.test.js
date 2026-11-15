@@ -63,3 +63,22 @@ test('交互态：建言只列可行动项，且带跳转与来源', () => {
   assert.match(d.turnPreview.note, /快进|结算/);
   assert.ok(Array.isArray(d.turnPreview.willHappen) && d.turnPreview.willHappen.length >= 3);
 });
+
+/* ★ GAP-01（2026-11-15 产品裁决）：fieldGaps 三项是刻意降级的设计特性，
+   不是「待补齐的字段缺口」。这条测试锁的不是「清单存在」，而是「谁都不许
+   为了把清单清零而硬造数值」——补精确侦察值会废掉情报区间玩法，
+   补逐将 delta 等于无证据编造，主动结亲/结义属于新玩法。 */
+test('fieldGaps：三项显式降级，have=false 且都有降级口径（不许编造数值）', () => {
+  const state = oathWorld();
+  const d = interactionState(state, cfg);
+  assert.ok(Array.isArray(d.fieldGaps) && d.fieldGaps.length === 3, '三项降级必须逐条在册');
+  const topics = ['结亲', '侦察', 'delta'];
+  for (const topic of topics) {
+    assert.ok(d.fieldGaps.some((g) => String(g.field).includes(topic)), `缺少 ${topic} 的降级登记`);
+  }
+  for (const g of d.fieldGaps) {
+    assert.equal(g.have, false, `${g.field} 不得被标成「已提供」`);
+    assert.ok(String(g.fallback || '').length >= 8, `${g.field} 必须给出可显示的降级口径`);
+    assert.ok(String(g.use || '').length > 0, `${g.field} 必须写明用途`);
+  }
+});

@@ -17,6 +17,7 @@ import { ensureCityEcon } from '../server/domain/city-econ.js';
 import {
   KINDS, TICK_DAYS, planTicks, officerStat, interiorTasks, interiorTaskView,
   advanceInteriorTasks, cancelInteriorTask, beginInteriorTask,
+  OFFICER_TICKS_TOP, OFFICER_TICKS_OK,
 } from '../server/domain/interior-task.js';
 
 const cfg = loadConfig();
@@ -33,11 +34,13 @@ function oathWorld() {
 
 /* 1 ─────────────────────────────────────────────────────────────────────── */
 
-test('planTicks：好官缩短工期但不增加总产出（唯一口径）', () => {
-  const good = planTicks('agri', 9000);   // >= 8600 → 1 旬
-  const mid = planTicks('agri', 7000);    // >= 6800 → 2 旬
-  const bad = planTicks('agri', 4000);    // → 3 旬
-  const none = planTicks('agri', 0);      // 无官 → 3 旬
+test('planTicks：好官缩短工期但不增加总产出（百分制阈值，唯一口径）', () => {
+  /* ★ OP-03：旧测试用 9000/7000/4000 这种 0~10000 量纲的值，恰好把
+     「阈值没跟着 M4-10 百分制改」这件事掩盖了。改用真实属性区间并卡边界。 */
+  const good = planTicks('agri', 92);   // >= 85 → 1 旬
+  const mid = planTicks('agri', 75);    // >= 68 → 2 旬
+  const bad = planTicks('agri', 50);    // < 68 → 3 旬
+  const none = planTicks('agri', 0);    // 无官 → 3 旬
   assert.equal(good.ticks, 1);
   assert.equal(mid.ticks, 2);
   assert.equal(bad.ticks, 3);
@@ -45,8 +48,16 @@ test('planTicks：好官缩短工期但不增加总产出（唯一口径）', ()
   for (const p of [good, mid, bad, none]) {
     assert.equal(p.perTick * p.ticks, KINDS.agri.total, '每旬增量 × 旬数必须等于总产出');
   }
+  /* 边界与量纲红线：阈值必须是百分制，且高属性官真的比庸官快 */
+  assert.equal(OFFICER_TICKS_TOP, 85);
+  assert.equal(OFFICER_TICKS_OK, 68);
+  assert.equal(planTicks('agri', 85).ticks, 1, '上档含等号');
+  assert.equal(planTicks('agri', 84).ticks, 2);
+  assert.equal(planTicks('agri', 68).ticks, 2, '合格档含等号');
+  assert.equal(planTicks('agri', 67).ticks, 3);
+  assert.ok(planTicks('agri', 100).ticks < planTicks('agri', 50).ticks, '百分制下委任收益必须真实存在');
   // 应急项没有工期
-  assert.deepEqual(planTicks('relief', 9000), { ticks: 0, perTick: 0 });
+  assert.deepEqual(planTicks('relief', 92), { ticks: 0, perTick: 0 });
 });
 
 test('officerStat 与 city-econ 的 postStat 同口径（主公按 protagonist.json 维度取值）', () => {

@@ -24,7 +24,11 @@ export const KNOBS = {
   adjBonusMax: { value: 15, min: 8, max: 25, note: '相邻加成上限（%）' },
   supplyLossPer100: { value: 2, min: 1, max: 4, note: '调运损耗（%/百里）' },
   interceptPerEdge: { value: 8, min: 5, max: 12, note: '被截概率（%/敌方边）' },
-  moraleRout: { value: 20, min: 15, max: 30, note: '溃败阈值' },
+  /* ★ OP-01 / OP-02（2026-11-15 产品决策）：
+     删掉 moraleRout —— 定义以来全仓零消费点，GDD §6.6 的军队士气本版不实装，
+     留着只会让玩家误以为存在士气机制。腾出的槽位给真正生效的金侧支出阀门。
+     免税额 = 10 旬金毛产（自动随规模缩放），超出部分每旬按此比例回收；0 = 关闭阀门。 */
+  goldHoardTaxPct: { value: 4, min: 0, max: 10, note: '国库沉淀税（%/旬，超出 10 旬周转金部分）' },
   roundMax: { value: 8, min: 6, max: 12, note: '战斗回合上限' },
   pursuitRate: { value: 30, min: 20, max: 40, note: '追击损失（%）' },
   battleJitter: { value: 0.02, min: 0, max: 0.05, note: '战斗抖动（必须与种子绑定）' },

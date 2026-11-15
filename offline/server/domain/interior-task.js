@@ -123,9 +123,16 @@ export function pickOfficer(state, cfg, cityId, key) {
   return { id: best.id, name, stat: Math.round(bestStat) };
 }
 
+/* ★ OP-03 量纲校准（2026-11-15）：官员属性自 M4-10 起统一为三国志11 百分制 0~100，
+   旧阈值 8600/6800 是 0~10000 量纲遗留，导致**任何官员都命不中缩短工期分支**——
+   高属性官与庸官一样慢一旬，委任收益归零。按原值 ÷100 校准，只动派生判据，
+   原表 general.json / heroes-240.json 逐字不动。登记见 FIELD-CONTRACT.md §内政工期。 */
+export const OFFICER_TICKS_TOP = 85;  // 一流文官：1 旬完工
+export const OFFICER_TICKS_OK = 68;   // 合格：基准工期
+
 /**
  * 工期与每旬增量（唯一口径，面板与 tick 共用）。
- *  stat >= 8600（一流文官）→ 1 旬；>= 6800（合格）→ 基准 2 旬；否则 3 旬；无官 → 基准 ×1.5 = 3 旬。
+ *  stat >= 85 → 1 旬；>= 68 → 基准；否则 基准+1 旬；无官 → 基准 ×1.5。
  *  阈值只影响工期，不影响总产出——「官好办得快」而不是「官好给得多」，避免经济通胀。
  */
 export function planTicks(kind, stat) {
@@ -133,8 +140,8 @@ export function planTicks(kind, stat) {
   if (!K || K.instant) return { ticks: 0, perTick: 0 };
   let ticks = K.ticks;
   if (!stat) ticks = Math.ceil(K.ticks * 1.5);
-  else if (stat >= 8600) ticks = 1;
-  else if (stat >= 6800) ticks = K.ticks;
+  else if (stat >= OFFICER_TICKS_TOP) ticks = 1;
+  else if (stat >= OFFICER_TICKS_OK) ticks = K.ticks;
   else ticks = K.ticks + 1;
   ticks = clamp(ticks, 1, 6);
   return { ticks, perTick: Math.round((K.total / ticks) * 100) / 100 };

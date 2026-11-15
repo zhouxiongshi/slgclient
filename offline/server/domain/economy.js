@@ -97,17 +97,37 @@ export function applyDays(state, cfg, days, rules) {
     maintainPaid = Math.min(r.gold || 0, due);
     r.gold -= maintainPaid;
   }
-  // 流水：按整段结算记净变化。gold 拆成「属地日产」与「委任俸禄」两笔，
-  //   两笔之和恒等于实际净变化（满仓截断也如实入账）；其余资源记一笔净差。
+  /* ★ OP-01 国库沉淀税（GDD §5.10 固定支出闸的金侧补充，2026-11-15 产品决策）：
+     真链路挂机 60 旬现金 12,371 → 172,501（≈2,690 金/旬，几乎线性、只进不出），
+     扩张后可达 ≈14,600 金/旬，是 NPC 田赋 600~800 的约 20 倍。根因不是产量超标，
+     而是金侧缺少随存量增长的支出。对「超出 10 旬周转金」的沉淀部分按旬收税，
+     让存量从无限线性增长变为向稳态收敛：
+       - 免税额 = 10 × 每旬金毛产，自动随规模缩放，不惩罚开局也不惩罚扩张；
+       - 税率走参数表 `goldHoardTaxPct`，GM 设 0 即关闭阀门；
+       - 只影响存量，不动产量、原表、战斗数值；每笔都进府库流水（P1 可解释）。 */
+  let hoardTaxPaid = 0;
+  const taxPct = Number(knobGet(state, 'goldHoardTaxPct')) || 0;
+  if (ownsCity && goldYielded > 0 && taxPct > 0) {
+    const turnDays = Math.max(1, Number(knobGet(state, 'turnDays')) || 10);
+    const perTurnYield = (goldYielded / days) * turnDays;
+    const exempt = Math.floor(perTurnYield * 10);
+    const excess = Math.max(0, (Number(r.gold) || 0) - exempt);
+    hoardTaxPaid = Math.min(Number(r.gold) || 0,
+      Math.floor(excess * (taxPct / 100) * (days / turnDays)));
+    r.gold -= hoardTaxPaid;
+  }
+  // 流水：按整段结算记净变化。gold 拆成「属地日产」与各项支出，
+  //   之和恒等于实际净变化（满仓截断也如实入账）；其余资源记一笔净差。
   for (const k of STOCK) {
     let delta = (Number(r[k]) || 0) - before[k];
-    if (k === 'gold') delta += salaryPaid + maintainPaid;
+    if (k === 'gold') delta += salaryPaid + maintainPaid + hoardTaxPaid;
     if (delta) recordRes(state, k, delta, '属地日产', startDay);
   }
   if (upkeepPaid) recordRes(state, 'grain', -upkeepPaid, '军饷', startDay + days - 1);
   if (salaryPaid) recordRes(state, 'gold', -salaryPaid, '委任俸禄', startDay + days - 1);
   if (maintainPaid) recordRes(state, 'gold', -maintainPaid, '城防俸饷', startDay + days - 1);
-  return { days, upkeepPaid, salaryPaid, soldiers: countSoldiers(state) };
+  if (hoardTaxPaid) recordRes(state, 'gold', -hoardTaxPaid, '国库沉淀税', startDay + days - 1);
+  return { days, upkeepPaid, salaryPaid, maintainPaid, hoardTaxPaid, soldiers: countSoldiers(state) };
 }
 
 /** 曲辕犁：磨坊（加成类型 19）的产量额外 +20%。其他设施不加。 */

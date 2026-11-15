@@ -938,6 +938,17 @@ if (ownsCity && goldYielded > 0) {
   const due = Math.round(goldYielded * 0.35);       // 固定支出闸（反通胀）
   maintainPaid = min(r.gold||0, due); r.gold -= maintainPaid;
 }
+// ★ OP-01 国库沉淀税（GDD §5.10.1）：金侧缺的「随存量增长」支出口
+taxPct = knobGet(state,'goldHoardTaxPct') || 0;     // 默认 4，0 = 关闭阀门
+if (ownsCity && goldYielded > 0 && taxPct > 0) {
+  turnDays = max(1, knobGet(state,'turnDays') || 10);
+  exempt   = floor((goldYielded/days) * turnDays * 10);  // 10 旬周转金免税
+  excess   = max(0, (r.gold||0) - exempt);
+  hoardTaxPaid = min(r.gold||0, floor(excess * taxPct/100 * (days/turnDays)));
+  r.gold -= hoardTaxPaid;
+}
+// 流水：gold 的 delta 要加回 salaryPaid + maintainPaid + hoardTaxPaid；
+//       沉淀税另记一笔 reason='国库沉淀税'，玩家在府库面板可查。
 ```
 
 ### 7.3 逐城经济（`city-econ.js`）
@@ -1937,9 +1948,9 @@ build/SLG-Offline-win32-x64/
 
 | 编号 | 差异 | 证据 | 影响 / 处置 |
 |---|---|---|---|
-| `DEV-13` | **军队士气未实装**：`knobs.js` 定义 `moraleRout=20` 但 server 内零消费点；`army.drillMorale` 只有 `delete` 无赋值；溃败实际由 `battle.js ROUT_RATIO=0.1` 兵力比判定 | `knobs.js:27`、`battle.js:27`、`strategy.js:1504/1632/1677` | GDD §6.6「士气与溃败」未落地。默认按兵力比；待决定补字段还是删 knob（PRD `OP-02`） |
-| `DEV-14` | **UI 文案与实现不一致**：`interaction-ui.js:744` 写「粮尽后每旬士气 −5」，`supply.js` 实际是「民心 −3」 | 同上 | 文案待校准；不改数值（会影响平衡报告） |
-| `DEV-15` | **内政阈值量纲未同步**：`interior-task.js planTicks` 用 `8600/6800`，官员属性已是 0~100 | `interior-task.js:131`、`general-stat.js` | 高属性官员不命中缩短工期分支；登记待下一个平衡周期一并校准（PRD `OP-03`） |
+| `DEV-13` | **军队士气未实装**（已定性）：`knobs.js` 曾定义 `moraleRout=20` 但零消费，`army.drillMorale` 只有 `delete`；溃败由 `battle.js ROUT_RATIO=0.1` 兵力比判定 | `knobs.js`、`battle.js:27`、`strategy.js` | 已在 `2026-11-15` 按产品决策**删除该 knob 占位**（槽位换给 `goldHoardTaxPct`，参数表仍 30 项）；GDD §6.6 标注为保留草案、本版不实装（PRD `OP-02` 已关闭） |
+| `DEV-14` | **UI 文案与实现不一致**（已修）：`interaction-ui.js` 曾写「粮尽后每旬士气 −5」，`supply.js` 实际是「民心 −3、治安 −1，第 3 旬起逃散 2%」 | `interaction-ui.js` 失败态·粮道断、`supply.js:7` | 已按实现校准文案，**不改任何数值**；`tests/op01-economy-and-morale.test.js` 剥注释后静态断言锁死 |
+| `DEV-15` | **内政阈值量纲未同步**（已修）：`interior-task.js planTicks` 曾用 `8600/6800`，官员属性自 M4-10 起已是 0~100 | `interior-task.js` 的 `OFFICER_TICKS_TOP/OK`、`general-stat.js` | 已按产品决策校准为 **85 / 68** 并导出为常量；旧测试用 9000/7000/4000 恰好掩盖了失配，现补 85/84/68/67 边界断言（PRD `OP-03` 已关闭） |
 | `DEV-16` | **公式口径偏差**：M4-10 迭代记录写内政 `0.5+stat/200`、适性 `0.85+0.3*v/200`；代码为 `0.5+stat/100`、`armsApt=clamp(0.85+0.3*v/100,1.00,1.15)` | `city-econ.js:282`、`aptitude.js:20-40` | 以代码为当前事实；若要改回记录口径须重跑平衡脚本（PRD R-11.6） |
 | `DEV-17` | **国库粮语义**：GDD §11.4 注 1 曾写「`resources.grain` 在 v2 里保留但恒为 0」，实际 `accrueFactionGrain` 会 `grain += g`、`refreshGrainSummary` 写汇总值（只读汇总但**非零**） | `strategy.js:647-728`、GDD §11.4 | 已在 `2f07bc0` 修复：GDD §11.4 注 1 与 JSON 示例按实测改为「城库汇总的只读显示值，非实账、非恒 0」；`WB-06` 只禁止直接赋值，不禁止四个唯一写入口 |
 | `DEV-18` | **存档结构**：GDD §11.4 规划 `{saveVersion, undoStack, migrationLog, migrations[v] 注册表, validateSave 安全模式}`；实际是 `version=3 + normalizeWorld` 语义补字段 + 版本白名单 1/2/3，无统一迁移注册表、无 `undoStack` 入档 | `world.js:37,331-431` | 当前靠 `ensureXxx` 兜底；统一迁移链属规划项（PRD FR-04 标 ✅ 但口径以此为准） |
@@ -1957,10 +1968,10 @@ build/SLG-Offline-win32-x64/
 
 | 编号 | 缺口 | 状态 |
 |---|---|---|
-| `GAP-01` | `interaction/state.fieldGaps` 3 项：玩家主动结亲/结义、敌方侦察精确值、逐将战前 delta | 🟡 显式降级，待排期 |
+| `GAP-01` | `interaction/state.fieldGaps` 3 项：玩家主动结亲/结义、敌方侦察精确值、逐将战前 delta | ✅ **已定性，不是缺口**（2026-11-15 产品裁决）：刻意降级的设计特性，撤销「待排期」；`interaction.js` 章节 K 注释逐条写明为何不补，PRD FR-24 已升 ✅ |
 | `GAP-02` | 无鼠标完成一次出征的独立键盘 E2E；灰度截图区分粮道状态为人工判据 | 🟡 部分覆盖 |
 | `GAP-03` | GDD §11.4 的统一迁移注册表与「安全模式」 | 📐 规划 |
-| `GAP-04` | GDD §6.6 军队士气与 `moraleRout` 消费点 | 📐 规划（见 DEV-13） |
+| `GAP-04` | GDD §6.6 军队士气与 `moraleRout` 消费点 | ⛔ **本版不做**（2026-11-15 产品裁决）：删占位 knob、修误导文案，承认按兵力比判定；如将来实现须先恢复参数并登记 FIELD-CONTRACT（见 DEV-13） |
 | `GAP-05` | 7 项 `requires_user`（Steamworks 账号费、商店素材、内容分级、第三方换皮、法务版号、代码签名多机实测、SDK 可选） | ⏳ 由用户处理，发布闸单列 |
 
 ### 17.5 使用本章的规则
