@@ -919,7 +919,7 @@
   function jumpTo(kind, id) {
     try {
       if (kind === 'city' && typeof window.__slgCityWindow === 'function') window.__slgCityWindow(id);
-      else if (kind === 'war' && typeof window.__slgWarWindow === 'function') window.__slgWarWindow({ tab: 'go' });
+      else if (kind === 'war' && typeof window.__slgWarWindow === 'function') window.__slgWarWindow();
       else if (kind === 'captive' && window.__slgPanels) window.__slgPanels.open('general');
       else if (kind === 'general' && window.__slgPanels) window.__slgPanels.open('general');
       else if (window.__slgPanels) window.__slgPanels.open('strategy');

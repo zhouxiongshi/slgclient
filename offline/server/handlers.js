@@ -14,6 +14,8 @@ import {
 import { resolveBattle } from './battle.js';
 import { skillById } from './skills.js';
 import { desText } from './domain/battle-narrative.js';
+/* ★ M4-13：两条占领路径共用同一套俘虏判定 */
+import { captureFromBattle } from './domain/captives.js';
 import { marchMs, rewindDays } from './clock.js';
 import { facilityBonus, recordRes } from './domain/economy.js';
 /* ★ M4-12：生效设施单一权威清单 —— 结算判据与两处 UI 的显示清单同源。 */
@@ -445,6 +447,22 @@ export function processTask(ctx, task) {
 
     // 胜利后占领该格：沿用原有 roleBuild.push 逻辑。黄巾格先清掉守军并还原产量，再推送。
     if (report.result === 2) {
+      /* ★ M4-13：地图格占领同样落俘虏。过去只有战略层 settleArmyBattle 写
+         state.captives，而玩家常规 army.assign 走的是这条路径 —— 于是占下的
+         大多数地盘「抓了将却没处招降」，招降按钮永远不出现。 */
+      const added = captureFromBattle(state, cfg, {
+        report,
+        place: `(${task.x},${task.y})`,
+        day: Math.floor(Number(state.clock?.day) || 1),
+        seed: state.seed ?? 20261110,
+      });
+      if (added.length) {
+        const names = added.map((c) => c.name).join('、');
+        report.summary = `${report.summary || ''} 阵前擒得敌将「${names}」，可在武将府招降／释放／处斩。`;
+        for (const c of added) {
+          recordEvent(state, `(${task.x},${task.y}) 告捷，敌将「${c.name}」被俘，押入大营听候发落。`);
+        }
+      }
       onTileCleared(state, cfg, task.x, task.y);
       const [type, level] = cfg.tileAt(task.x, task.y);
       const exists = state.builds.find((b) => b.x === task.x && b.y === task.y);

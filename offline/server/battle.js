@@ -18,6 +18,10 @@ import { generalToArray, findGeneral, nextId } from './world.js';
 import { kernelSkillAt, reportSkillFields, SKILLS, LEVEL_COUNT, attackDistanceOf } from './skills.js';
 import { skillProfile, actSentence } from './domain/battle-narrative.js';
 import { knobGet } from './domain/knobs.js';
+/* ★ M4-13：兵种适性的唯一数值源（零依赖叶子），展示层与战斗结算同源 */
+import { armsApt } from './domain/aptitude.js';
+/* ★ M4-13：地图格守军同样按坐标确定性分配，不再复用写死的 6 个 cfgId */
+import { garrisonCfgIds } from './domain/garrison.js';
 
 /** GDD §6.2：一方兵力降到开战时的这个比例及以下，算溃败。 */
 export const ROUT_RATIO = 0.1;
@@ -146,12 +150,24 @@ function makeHero(g, cfg) {
 }
 
 function makeUnit(unitId, side, general, cfg, troops, pos = 0) {
+  const hero = makeHero(general, cfg);
+  /* ★ M4-13：兵种适性从「只展示」变成「真进战斗」。
+     取该武将五维在当前兵种上的适性系数（1.00~1.15），乘到攻/防基础值；
+     界面上的「适性 X%」用的是同一个 armsApt()，描述与计算同源。
+     只动攻防、不动速度/智力：速度会改变 actionOrder，进而漂事件指纹。
+     clamp 100 守住三国志11 的能力上限（M4-10 红线）。 */
+  const gc = cfg.generalByCfg.get(Number(general.cfgId));
+  const apt = gc
+    ? armsApt({ force: gc.force, strategy: gc.strategy, defense: gc.defense }, general.curArms || 1)
+    : 1;
+  hero.attack_base = Math.min(100, Math.max(1, Math.round(hero.attack_base * apt)));
+  hero.defence_base = Math.min(100, Math.max(1, Math.round(hero.defence_base * apt)));
   return {
     unit_id: unitId,
     side,
     /* ★ P6 战位：0=前锋 1=中军 2=大营，战法射程按此结算 */
     pos: Number(pos) || 0,
-    hero: makeHero(general, cfg),
+    hero,
     troops: Math.max(1, Math.ceil(troops / TROOP_SCALE)),
     max_troops: Math.max(1, Math.ceil(troops / TROOP_SCALE)),
     speed: general.curArms ? 100 + general.curArms : 100,
@@ -175,15 +191,25 @@ export function makeDefenders(cfg, state, x, y, override = null) {
   }
   const [, level] = cfg.tileAt(x, y);
   const tier = cfg.npcArmy.armys?.[Math.max(0, (level || 1) - 1)] || cfg.npcArmy.armys?.[0];
-  const layout = tier?.army?.[0] || { lvs: [1, 1, 1], cfgIds: [100002, 100003, 100004] };
   const garrison = (state.garrisons || []).find((g) => g.x === x && g.y === y && !g.cleared);
   const soldierCount = garrison?.soldiers ?? tier?.soldiers ?? 1000;
   const ids = [910001, 910002, 910003];
+  /* ★ M4-13：坐标 → 守将名单确定性哈希。旧代码写死 army[0] 的
+     [100002,100003,100004]，全地图每块地都是同三个人。 */
+  const cfgIds = garrisonCfgIds(cfg, {
+    cityId: Number(x) * 1000 + Number(y),
+    owner: 'han',
+    level: level || 1,
+    exclude: [
+      ...(state.generals || []).map((g) => Number(g.cfgId)),
+      ...(state.captives || []).map((c) => Number(c.cfgId)),
+    ],
+  });
   return {
-    generals: layout.cfgIds.slice(0, 3).map((cfgId, k) => ({
+    generals: cfgIds.slice(0, 3).map((cfgId, k) => ({
       id: ids[k],
       cfgId,
-      level: Math.max(1, layout.lvs?.[k] ?? 1),
+      level: Math.max(1, level || 1),
       curArms: (k % 3) + 1,
       star: 3,
       physical_power: 100, order: 0, exp: 0, cityId: 0,
@@ -196,7 +222,7 @@ export function makeDefenders(cfg, state, x, y, override = null) {
       }),
       state: 0,
     })),
-    soldiers: [soldierCount, soldierCount, soldierCount],
+    soldiers: cfgIds.slice(0, 3).map(() => soldierCount),
     level: level || 1,
   };
 }
@@ -347,6 +373,10 @@ export function buildBattleAnim({ kernel, attackers, defense, army, beginSoldier
   const rounds = [];
   for (const [round, evs] of [...byRound.entries()].sort((a, b) => a[0] - b[0])) {
     const acts = [];
+    /* ★ M4-13：距离轨迹由内核单独返回（不进 events、不影响事件指纹），
+       这里把它翻成战报里看得见的一句话。玩家此前完全看不到距离规则生效，
+       才觉得「战法写了距离、战斗里却没有距离」。 */
+    const rangeNotes = (kernel.range_trace || []).filter((t) => t.round === round);
     const skillLoss = new Map();
     for (const ev of evs) {
       if (ev.kind !== 'damage') continue;
@@ -396,7 +426,28 @@ export function buildBattleAnim({ kernel, attackers, defense, army, beginSoldier
       const prof = act.skill ? skillProfile(act.skill, act.lv || 1) : null;
       if (prof) { act.effect = prof.effect; act.cls = prof.cls; }
       act.text = actSentence(act);
+      /* ★ M4-13：把「射程之外的敌军」写进战法叙述。轨迹按 actor + 战法名匹配，
+         只在实际发生过滤时追加，其它战报文本逐字不变。 */
+      if ((act.t === 'skill' || act.t === 'hit') && rangeNotes.length) {
+        const rn = rangeNotes.find((t) => t.kind === 'skill' && t.actor === ev.actor
+          && String(t.skill ?? '') === String(p.skill ?? ''));
+        if (rn && rn.out_of_range.length) {
+          act.rangeNote = `有效距离 ${rn.range} · 仅及 ${rn.reachable}/${rn.total} 名敌军`
+            + `（最近相隔 ${rn.nearest} 格，${rn.out_of_range.length} 人在射程外）`;
+          act.text += `〔${act.rangeNote}〕`;
+        }
+      }
       acts.push(act);
+    }
+    /* 普攻超距打空时内核不产生 damage 事件（静默跳过），单独补一句叙述。
+       否则玩家只看到「这一回合某人没动作」，永远不知道是站位太靠后。 */
+    for (const rn of rangeNotes.filter((t) => t.kind === 'normal')) {
+      const f = { s: rn.actor[0], i: Number(rn.actor.slice(1)) || 0 };
+      const posName = ['前锋', '中军', '大营'][Math.min(2, f.i)] || '后阵';
+      acts.push({
+        t: 'range', f, fName: nameOf(f),
+        text: `${nameOf(f)} 列于${posName}，攻距 ${rn.range}，最近敌军相隔 ${rn.nearest} 格——弓矢不及，本回合未能出手`,
+      });
     }
     if (acts.length) rounds.push({ round, acts });
   }

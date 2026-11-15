@@ -39,6 +39,10 @@ import {
   cityYield, armsApt, armsCounter, ARMS_NAMES, devLevel, cityDevTick,
 } from './city-econ.js';
 import { SKILLS, LEVEL_COUNT, skillById } from '../skills.js';
+/* ★ M4-13：守将按城池确定性分配，不再复用 npc_army 写死的 6 个 cfgId */
+import { garrisonCfgIds, garrisonLabel } from './garrison.js';
+/* ★ M4-13：俘虏生成 / 释放 / 处斩统一入口，两条占领路径共用 */
+import { captureFromBattle } from './captives.js';
 /* ★ 修「推演返回一串代码」：推演的语义（人话）由这一处统一生成，
    前端只排版；战报/回放共用同一批战法说明。 */
 import { skillProfile, previewNarrative } from './battle-narrative.js';
@@ -1029,21 +1033,32 @@ function pickArmy(state, armyId, cityId = 0) {
   return best;
 }
 
-/** 守军将领：按城池等级取 npc_army 编成，装备新战法。
+/** 守军将领：按城池 id + 势力 + 等级确定性分配（M4-13）。
  *  ★ 单位数与城池等级挂钩（小城 1 将 / 郡城 2 将 / 州治 3 将）：
  *    旧实现一律 3 将，玩家开局只有主公 1 将，1v3 必然被集火打死，
- *    第一场仗怎么打都是败（试玩 P0-3）。 */
-function defenseFor(cfg, cityId, target, tstate, level) {
-  const tier = cfg.npcArmy.armys?.[level - 1] || cfg.npcArmy.armys?.[0];
-  const layout = tier?.army?.[0] || { lvs: [1, 1, 1], cfgIds: [100002, 100003, 100004] };
-  const unitCount = Math.max(1, Math.min(3, level >= 3 ? 3 : (level === 2 ? 2 : 1)));
-  const slotTroops = Math.max(1, Math.ceil(tstate.troops / unitCount));
+ *    第一场仗怎么打都是败（试玩 P0-3）。
+ *  ★ M4-13：旧代码写死 `npc_army.armys[level-1].army[0].cfgIds.slice(0,unitCount)`，
+ *    而那份配置全表只有 100002~100006 六个值、7/8 个等级完全相同，导致
+ *    1 级城永远只有「十常士」一个守将，换任何城都是同一批人。
+ *    现在改由 domain/garrison.js 从全表 505 位按城池哈希取将，
+ *    npc_army.json 只保留兵力/等级语义。同一座城反复攻打守将恒定
+ *    （推演与正式结算必须一致），不同城不会撞名。 */
+function defenseFor(cfg, cityId, target, tstate, level, state = null) {
   const conf = factionConf();
-  const name = tstate.owner === 'han'
-    ? conf.neutral.name
-    : (conf.factions.find((f) => f.id === tstate.owner)?.name || '守军');
+  const faction = conf.factions.find((f) => f.id === tstate.owner);
+  const name = tstate.owner === 'han' ? conf.neutral.name : (faction?.name || '守军');
+  const exclude = [
+    ...(state?.generals || []).map((g) => Number(g.cfgId)),
+    ...(state?.captives || []).map((c) => Number(c.cfgId)),
+  ];
+  const cfgIds = garrisonCfgIds(cfg, {
+    cityId, owner: tstate.owner, level, exclude,
+    preferNames: faction?.startGenerals || [],
+  });
+  const unitCount = cfgIds.length;
+  const slotTroops = Math.max(1, Math.ceil(tstate.troops / unitCount));
   return {
-    generals: layout.cfgIds.slice(0, unitCount).map((cfgId, k) => ({
+    generals: cfgIds.map((cfgId, k) => ({
       id: 950000 + Number(cityId) * 10 + k,
       cfgId,
       level: Math.max(1, Math.min(LEVEL_COUNT, level + 2)),
@@ -1182,27 +1197,22 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride, 
   state.warReports.unshift(result.report);
   if (state.warReports.length > 100) state.warReports.length = 100;
 
-  /* ★ P6 招降链前置：胜仗可能俘获一名有名有姓的守将（确定性判定，同一场只掷一次）。
-   *   概率 30%；已招募/已在押的不重复。入 state.captives，之后可在六府「武将」页招降。 */
+  /* ★ M4-13：俘虏判定收敛到 domain/captives.js，与地图格占领路径同源。
+     旧实现用「候选字符串长度×31 + 天数×7 + 兵力」当骰子、再过 30% 闸门，
+     既与战果无关，又常常一场胜仗一个人也抓不到。现在按歼敌比确定性判定。 */
   if (win) {
     const day = Math.floor(Number(state.clock?.day) || 1);
-    state.captives = Array.isArray(state.captives) ? state.captives : [];
-    const ownedCfg = new Set((state.generals || []).map((g) => Number(g.cfgId)));
-    let defs = [];
-    try { defs = JSON.parse(result.report.b_d_general || '[]'); } catch { /* 守军无名 */ }
-    const cand = defs
-      .map((row) => Number(row?.[1]))
-      .filter((id) => id && id !== 880001 && !ownedCfg.has(id)
-        && !state.captives.some((c) => c.cfgId === id));
-    const roll = ((cand.join(',') || 'x').length * 31 + day * 7 + Math.floor(aTotal)) % 100;
-    if (cand.length && roll < 30) {
-      const cfgId = cand[day % cand.length];
-      const name = cfg?.generalByCfg?.get(cfgId)?.name || `武将${cfgId}`;
-      state.captives.push({ cfgId, name, from: place, loyal: 50, days: 0, day });
-      summary += ` 阵前擒得敌将「${name}」！可在武将府招降。`;
+    const added = captureFromBattle(state, cfg, {
+      report: result.report, place, day, seed: state.seed ?? 20261110,
+    });
+    if (added.length) {
+      const names = added.map((c) => c.name).join('、');
+      summary += ` 阵前擒得敌将「${names}」！可在武将府招降，也可释放或处斩。`;
       result.report.summary = summary + counterNote;
-      result.report.analysis.captive = name;
-      recordEvent(state, `${place}一战告捷，敌将「${name}」被俘，押入大营听候发落。`);
+      result.report.analysis.captive = names;
+      for (const c of added) {
+        recordEvent(state, `${place}一战告捷，敌将「${c.name}」被俘，押入大营听候发落。`);
+      }
     }
   }
 
@@ -1466,8 +1476,13 @@ export function strategyResolveMarches(state, cfg, ctx) {
     if (mm.confirmBattle && !mm.confirmed && mm.kind !== 'transport') {
       if (!mm.pendingBattle) {
         mm.pendingBattle = true;
+        mm.pendingSinceDay = today;
         const nm = map.cities.find((c) => c.id === mm.to)?.name || cityName(mm.to);
         recordEvent(state, `前锋抵${nm}城下，两军对阵，请主公定夺（推演 / 开战 / 撤军）。`);
+      } else if (today - (mm.pendingSinceDay ?? mm.arriveDay) > 30) {
+        /* ★ M4-13：久候无令则自动班师。旧版 pending 行永不 resolved，
+           army.marchId 一直不清，玩家若没发现「③ 遭遇」页签，这支兵就永久锁死。 */
+        strategyRetreatBattle(state, cfg, ctx, { marchId: mm.id });
       }
       continue;
     }
@@ -1512,7 +1527,7 @@ export function strategyResolveMarches(state, cfg, ctx) {
     /* ★ M2-5 张力守恒 #2：实际战斗的守军折算按该抵达日的敌方预案（与推演同口径）。
        defMul 传给 settleArmyBattle 统一相乘，dLoss 基线保持 raw 守军数。 */
     const variant = counterVariantFor(state, mm.to, mm.arriveDay);
-    const defenseOverride = defenseFor(cfg, mm.to, target, tstate, level);
+    const defenseOverride = defenseFor(cfg, mm.to, target, tstate, level, state);
     defenseOverride.terrain = target.terrain || '';
     const fought = settleArmyBattle(state, cfg, ctx, {
       army, frac: mm.frac, x: 8000 + mm.to, y: 100 + level, defenseOverride, defMul: variant.defMul,
@@ -1722,7 +1737,7 @@ export function strategyReorderMarch(state, ctx, { marchId, dir } = {}) {
   const slot = Math.max(1, Math.ceil(troops / 3));
   const level = 2;
   const defenseOverride = {
-    ...defenseFor(cfg, 9000 + Number(g.id), { name: g.name }, { troops, owner: g.faction || 'han' }, level),
+    ...defenseFor(cfg, 9000 + Number(g.id), { name: g.name }, { troops, owner: g.faction || 'han' }, level, state),
     name: g.name,
     place: g.name,
     soldiers: [slot, slot, slot],
@@ -1950,7 +1965,9 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
   if (aTotal <= 0) return { ok: false, reason: 'no_troops' };
 
   const level = Math.max(1, Math.min(3, target.level || 1));
-  const defense = defenseFor(cfg, to, target, tstate, level);
+  /* ★ M4-13：推演与正式结算必须传同一个 state —— 守将排除名单同源，
+     否则两边会从守将池里取到不同的人，折损对不上（本轮真实踩到 600 vs 594）。 */
+  const defense = defenseFor(cfg, to, target, tstate, level, state);
   defense.terrain = target.terrain || '';
   const mainArms = (rows) => rows.indexOf(Math.max(...rows));
   const atkArms = mainArms(commit) + 1;

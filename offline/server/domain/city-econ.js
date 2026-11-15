@@ -429,15 +429,10 @@ export function deliverGrain(state, cityId, grain) {
   return true;
 }
 
-/** 兵种适性：主属性 0~100 → 85%~115%（只奖励不惩罚，保住既有首战平衡基线）。
- *  M4-10 三国志11 百分制：属性 50 起过基线，100 在强项兵种上 +15%。
- *  盾→defense、弓→strategy、骑→force。 */
-const ARMS_STAT = { 1: 'defense', 2: 'strategy', 3: 'force' };
-export function armsApt(g, armsIdx) {
-  const stat = ARMS_STAT[armsIdx] || 'defense';
-  const v = Number(g?.[stat]) || 0;
-  return Math.max(1, Math.min(1.15, 0.85 + 0.3 * (v / 100)));
-}
+/* ★ M4-13：兵种适性抽到零依赖叶子 domain/aptitude.js，展示层与战斗结算同源。
+   battle.js 直接引用它（不经本文件），避免 city-econ 的传递依赖形成环。
+   这里 re-export 保持 panels / strategy / 既有单测的 import 路径不变。 */
+export { armsApt, aptTriple, bestArms } from './aptitude.js';
 
 /** 克制环：骑(3)→盾(1)→弓(2)→骑(3)，克制 ±15%（三战口径）。 */
 export const ARMS_NAMES = { 1: '盾步', 2: '弓兵', 3: '骑兵' };

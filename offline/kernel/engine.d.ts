@@ -21,6 +21,7 @@ export declare class BattleEngine {
     private units;
     private events;
     private prepare;
+    private rangeTrace;
     private round;
     constructor(options: BattleOptions);
     private emit;

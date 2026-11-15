@@ -26,6 +26,8 @@ import { createSkillAssets, SKILLS } from './skills.js';
 import { editorList, editorSave, editorReset } from './domain/general-editor.js';
 import { loadOverrides, saveOverrides } from './gm/overrides.js';
 import { dossierFor } from './domain/dossier.js';
+/* ★ M4-13：俘虏处置（放归 / 处斩），与招降共用同一份名册 */
+import { releaseCaptive, executeCaptive } from './domain/captives.js';
 import {
   strategyViewState, oathOptions, chooseOath, strategyFormup, strategyTransport,
   rewardGeneral, strategyInvest, recruitCaptive, strategyAttack, strategyRecallMarch, cancelInvest,
@@ -612,6 +614,8 @@ export async function startOfflineServer(options = {}) {
         /* ★ U14 撤销在施内政任务（已投入不退，界面必须写明） */
         else if (act === 'cancelInvest') result = cancelInvest(state, ctx, { taskId: String(body?.taskId || '') });
         else if (act === 'captive') result = recruitCaptive(state, cfg, ctx, body);
+        else if (act === 'captiveRelease') result = releaseCaptive(state, body);
+        else if (act === 'captiveExecute') result = executeCaptive(state, body);
         else if (act === 'attack') {
           const fracRaw = Number(body.frac);
           result = strategyAttack(state, cfg, ctx, {

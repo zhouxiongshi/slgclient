@@ -1318,7 +1318,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     document.getElementById('slgBtnZoomOut').onclick = function () { if (window.__slgZoom) window.__slgZoom(-1); };
     document.getElementById('slgBtnWar').onclick = function () {
       /* ★ 出征面板：沙盘顶部常驻入口，不用先点城再滚到底 */
-      if (typeof window.__slgWarWindow === 'function') window.__slgWarWindow({ tab: 'go' });
+      if (typeof window.__slgWarWindow === 'function') window.__slgWarWindow();
       else if (window.__slgToast) window.__slgToast('出征面板尚未就绪，请稍候', false);
     };
     document.getElementById('slgBtnHome').onclick = function () {
@@ -1471,11 +1471,37 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
   var lastFetchAt = 0;   // ★ P2：动画与服务器时钟对齐（拉取时刻起本地外推）
   var rafId = null;      // ★ P2：行军动画帧句柄
   var lastRafAt = 0;
+  var lastPendingCount = -1;   // -1 = 首次拉取，不把「本来就有待决」误报成刚抵达
+  /* ★ M4-13：沙盘 dock 常驻角标，出征窗没开也能看见「有仗要打」。 */
+  function markWarBadge(n) {
+    var b = document.getElementById('slgBtnWar');
+    if (!b) return;
+    b.textContent = n > 0 ? ('出征 ● ' + n) : '出征';
+    b.style.color = n > 0 ? '#ff9d6b' : '';
+  }
   function refresh() {
     lastFetchAt = Date.now();
     fetch('/__slg/strategy/state').then(function (r) { return r.json(); }).then(function (s) {
+      var prev = lastPendingCount;
+      var cnt = (s.pendingBattles || []).length;
+      lastPendingCount = cnt;
       lastState = s; restorePick(); draw(s);
       if (window.__slgHudTick) window.__slgHudTick();
+      /* ★ M4-13：抵达挂起后主动引导。旧版 UI 完全不监听 pendingBattles，
+         队伍卡在城下、角标不亮、没有提示，玩家只能自己发现「③ 遭遇」页签；
+         两套 E2E 甚至靠 JS 注入直接跳页，把这个断点掩盖了。 */
+      if (prev >= 0 && cnt > prev) {
+        var p0 = (s.pendingBattles || [])[0];
+        if (document.getElementById('slgWarWin')) {
+          war.tab = 'encounter';
+          renderWar(s);
+        }
+        if (window.__slgToast) {
+          window.__slgToast('前锋已抵 ' + ((p0 && (p0.toName || p0.to)) || '目标城')
+            + ' 城下，待主公定夺：可在「③ 遭遇」推演、确认开战或收兵', true);
+        }
+      }
+      markWarBadge(cnt);
     }).catch(function () {});
   }
 
@@ -3358,6 +3384,14 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       if (!war.from || !warOwnCities(s).some(function (c) { return c.id === war.from; })) {
         war.from = s.playerCity;
       }
+      /* ★ M4-13：未显式指定页签时按待办智能落页。过去所有入口硬编码
+         tab:'go'，队伍已抵城下待决，玩家从沙盘/六府/城内页任一入口进来
+         都被拉回「① 集结」，必须自己再找「③ 遭遇」——这是流程断裂的主因。
+         有遭遇先遭遇、有新城先消化，否则回集结。 */
+      if (!opts.tab) {
+        war.tab = (s.pendingBattles || []).length ? 'encounter'
+          : ((s.digest || []).length ? 'digest' : 'go');
+      }
       renderWar(s);
     }).catch(function (e) {
       /* 渲染异常不再静默：否则面板只画一半，玩家以为「没这个功能」 */
@@ -3396,11 +3430,18 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       ['diplo', '外交'],
       ['log', '战报'],
     ];
+    /* ★ M4-13：makeWindow 会把旧窗整块删掉重建，容器一换 scrollTop 必然归零。
+       集结页每选一次出发城/队伍/目标/比例都要重绘，过去每次都滚回顶部，
+       玩家得重新往下找出征按钮。在重绘边界上记住并还原。 */
+    scrollRemember('war', document.querySelector('#slgWarWin .body'));
     var body = makeWindow('slgWarWin', '出征',
       '<div class="sub">第 ' + s.day + ' 日 · 我军 ' + own.length + ' 城 · 在途 ' + queue.length + ' 支</div>',
       tabs, war.tab,
       function (t) { war.tab = t; renderWar(cache || s); },
       function () { var w = document.getElementById('slgWarWin'); if (w) w.remove(); });
+    /* ★ M4-13：makeWindow 会把旧窗整块删掉重建，容器一换 scrollTop 必然归零。
+       集结页每选一次出发城/队伍/目标/比例都要重绘，过去每次都滚回顶部，
+       玩家得重新往下找出征按钮。在重绘边界上记住并还原。 */
     body.innerHTML = '';
     if (war.tab === 'go') warGoPanel(s, fromCity, idle, body);
     else if (war.tab === 'queue') warQueuePanel(s, queue, body);
@@ -3408,6 +3449,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     else if (war.tab === 'digest') warDigestPanel(s, digest, body);
     else if (war.tab === 'diplo') warDiploPanel(s, body);
     else warLogPanel(s, body);
+    scrollApply('war', body);
     /* ★ #18：面板每次重绘都把「选到一半的输入」落一次，切走再回来原样还在 */
     saveWar();
   }
@@ -3450,8 +3492,20 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         postJSON('/__slg/strategy/action', { action: 'battleConfirm', marchId: p.marchId })
           .then(function (rs) {
             if (!rs || !rs.ok) { toast('开战失败：' + warReason(rs && rs.reason), false); return; }
-            toast(rs.result === 2 ? '攻下 ' + rs.city + '！请到「消化」页安置新城' : '战斗已结算，战报已生成', rs.result === 2);
-            war.tab = 'log'; warRefresh(s);
+            /* ★ M4-13：结算后按结果落到下一道门，不再一律丢去战报页。
+               占城直接进「④ 消化」；抓到将即时告知招降入口，不必自己钻进六府。 */
+            fetchState().then(function (s2) {
+              cache = s2; buildNeighbors(s2);
+              var dig = (s2.digest || []).length;
+              var caps = (s2.captives || []).length;
+              war.tab = (rs.result === 2 && dig) ? 'digest' : 'log';
+              renderWar(s2);
+              var msg = rs.result === 2
+                ? ('攻下 ' + rs.city + '！已切到「④ 消化」安置新城')
+                : '战斗已结算，战报已生成';
+              if (caps) msg += '；阵前擒得敌将，可在六府「武将」页招降／放归／处斩';
+              toast(msg, rs.result === 2);
+            }).catch(function () { war.tab = 'log'; warRefresh(s); });
           });
       }));
       bar.appendChild(mkBtn('临阵收兵', 'ghost', function () {
@@ -3603,6 +3657,29 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     body.appendChild(armyCard);
 
     var army = idle.filter(function (a) { return a.id === war.armyId; })[0] || null;
+    /* ★ M4-13：距离与适性在出征前就要看得见、能据此换将。
+       过去只在编队页有一行小字，战报里又完全不提，玩家自然觉得这条规则没意义。 */
+    if (army) {
+      var posNames = ['前锋', '中军', '大营'];
+      var standRows = (army.generals || []).map(function (g, i) {
+        if (!g) return '<div class="cost">' + posNames[i] + ' 位：空缺</div>';
+        var ad = atkDistOf(g);
+        var reach = ad >= i + 3 ? '可及敌大营' : (ad >= i + 2 ? '可及敌中军' : '仅及敌前锋');
+        var weak = ad < i + 2;
+        return '<div style="padding:3px 0"><b style="color:#f0d998">' + posNames[i] + '</b> · '
+          + esc(g.name || '武将') + '<span class="cost">　适性 ' + (g.apt || 100)
+          + '%（已计入攻防） · 攻距 ' + ad + ' · '
+          + (weak ? '<span style="color:#ff9d6b">' + reach + '</span>' : reach) + '</span></div>';
+      }).join('');
+      body.appendChild(el('div', 'card',
+        '<h4 style="margin-top:0">站位 · 射程 · 适性</h4>' + standRows
+        + '<div class="cost" style="margin-top:6px;line-height:1.8">'
+        + '槽位即战位（一=前锋 0 / 二=中军 1 / 三=大营 2）；跨阵营距离 = 我方槽位 + 敌方槽位 + 1（1~5）。'
+        + '攻距不足会打空普攻，战法「有效距离」不足会只命中部分敌军或完全落空——'
+        + '短手将放前锋、弓兵与远射战法放中军大营，才打满输出。'
+        + '适性百分比与战斗结算同源，直接乘进该将攻防；战报会写明每次「弓矢不及」与「仅及 N/M 人」。'
+        + '</div>'));
+    }
     var routes = (fromCity.marchRoutes || []).filter(function (r) {
       var t = cityOf(s, r.id);
       return t && t.owner !== 'player';
@@ -3912,6 +3989,11 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
      所以「谁先打」是玩家真决策：弱队先消耗、强队补刀，或强队先破城，都要能改顺序。 */
   function warQueuePanel(s, queue, body) {
     var sel = {};
+    /* ★ M4-13：P11 之后抵达是「挂起等确认」，不再当天自动结算。
+       队列页过去仍显示「已抵城下 / 撤不回来」并渲染撤回按钮，
+       点下去服务端必回 already_arrived —— 流程在这里断掉。 */
+    var pendIds = {};
+    (s.pendingBattles || []).forEach(function (x) { pendIds[x.marchId] = 1; });
     var card = el('div', 'card', '<h4 style="margin-top:0">在途 ' + queue.length + ' 支'
       + '<span class="cost" style="font-weight:normal">　顺序即同日结算顺序</span></h4>');
     if (!queue.length) {
@@ -3946,6 +4028,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         var ck = document.createElement('input');
         ck.type = 'checkbox';
         ck.checked = !!sel[m.id];
+        ck.disabled = !!pendIds[m.id];      // 待决遭遇不能走批量撤回
         ck.style.cssText = 'margin:0 4px 0 0;vertical-align:-1px;cursor:pointer;';
         ck.onchange = function () { if (ck.checked) sel[m.id] = true; else delete sel[m.id]; paint(); };
 
@@ -3955,7 +4038,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
           + (m.kind === 'transport' ? '辎重队' : ('队伍#' + (m.armyId || '?'))) + '</b>'
           + '<span class="cost">　' + esc(m.fromName || m.from) + ' → ' + esc(m.toName || m.to) + '</span>'
           + '<div class="cost">程 ' + fmt(m.km) + ' 里 · 第 ' + m.departDay + ' 日发 → 第 ' + m.arriveDay + ' 日到 · '
-          + (left > 0 ? ('余 <b style="color:#f0d998">' + left + '</b> 日（' + pct + '%）') : '<b style="color:#ff9d6b">已抵城下</b>')
+          + (left > 0 ? ('余 <b style="color:#f0d998">' + left + '</b> 日（' + pct + '%）')
+            : (pendIds[m.id] ? '<b style="color:#ff9d6b">已抵城下 · 待主公定夺</b>' : '<b style="color:#ff9d6b">已抵城下</b>'))
           + (m.kind === 'transport'
             ? '　粮 ' + fmt(m.grain)
             : '　兵 ' + fmt(m.troops) + ' · 耗粮 ' + fmt(m.grainCost))
@@ -3972,21 +4056,27 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         up.style.margin = '0'; dn.style.margin = '0';
         if (idx === 0) up.disabled = true;
         if (idx === queue.length - 1) dn.disabled = true;
-        var btn = mkBtn('撤回', 'ghost', function () {
-          confirmBox('撤回行军', [
-            '<b>' + esc(m.fromName || m.from) + ' → ' + esc(m.toName || m.to) + '</b>',
-            '<span class="cost">' + (m.kind === 'transport'
-              ? '粮车折返，八成粮回府库（两成路上损耗）。'
-              : '队伍回到出发城并解锁，行军粮退回一半。') + '</span>',
-          ], '撤回', '继续行军', function () {
-            postJSON('/__slg/strategy/action', { action: 'recall', marchId: m.id }).then(function (rs) {
-              if (rs && rs.ok) {
-                toast('已撤回' + rs.from + '，退回粮 ' + fmt(rs.refund), true);
-                warRefresh(s);
-              } else toast('撤回失败：' + warReason(rs && rs.reason), false);
-            }).catch(function () { toast('撤回失败：服务端无响应', false); });
+        var btn;
+        if (pendIds[m.id]) {
+          /* 待决遭遇：给一条直达「③ 遭遇」的路，别再让玩家自己找页签 */
+          btn = mkBtn('去遭遇定夺', '', function () { war.tab = 'encounter'; renderWar(cache || s); });
+        } else {
+          btn = mkBtn('撤回', 'ghost', function () {
+            confirmBox('撤回行军', [
+              '<b>' + esc(m.fromName || m.from) + ' → ' + esc(m.toName || m.to) + '</b>',
+              '<span class="cost">' + (m.kind === 'transport'
+                ? '粮车折返，八成粮回府库（两成路上损耗）。'
+                : '队伍回到出发城并解锁，行军粮退回一半。') + '</span>',
+            ], '撤回', '继续行军', function () {
+              postJSON('/__slg/strategy/action', { action: 'recall', marchId: m.id }).then(function (rs) {
+                if (rs && rs.ok) {
+                  toast('已撤回' + rs.from + '，退回粮 ' + fmt(rs.refund), true);
+                  warRefresh(s);
+                } else toast('撤回失败：' + warReason(rs && rs.reason), false);
+              }).catch(function () { toast('撤回失败：服务端无响应', false); });
+            });
           });
-        });
+        }
         btn.style.margin = '0';
         ops.appendChild(up); ops.appendChild(dn); ops.appendChild(btn);
 
@@ -3999,7 +4089,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     body.appendChild(card);
     body.appendChild(el('div', 'cost',
       '行军日数 = 里程 ÷（55 × 队速/100），队速取队内最慢武将，长途最多 40 日。'
-      + '已抵城下的队伍当天就会结算，撤不回来。'));
+      + '抵城后不会自动结算：队伍进入「③ 遭遇」等待你推演、确认开战或临阵收兵；'
+      + '此时不能再撤回，请到遭遇页定夺。'));
   }
 
   function warReorder(s, marchId, dir) {
@@ -4105,6 +4196,9 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
   var SCROLL_MEM = {};
   var SCROLL_TIMERS = {};
   function scrollSlot(kind) {
+    /* ★ M4-13：出征窗也用同一套滚动记忆，key 换成出征自己的页签与出发城，
+       否则会与城池页的 tab/currentCity 串味，切一次页就还原错位置。 */
+    if (kind === 'war') return 'war|' + war.tab + '|' + (war.from || '-');
     return kind + '|' + tab + '|' + (currentCity == null ? '-' : currentCity);
   }
   function scrollRemember(kind, node) {
@@ -4239,7 +4333,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       war.setAttribute('data-ix-allow', '1'); // 只开面板，不是真正出征，免决策预览
       war.onclick = function () {
         window.__slgCityClose();
-        if (window.__slgWarWindow) window.__slgWarWindow({ cityId: c.id, from: c.id, tab: 'go' });
+        if (window.__slgWarWindow) window.__slgWarWindow({ cityId: c.id, from: c.id });
       };
       nav.appendChild(war);
     }
@@ -4739,7 +4833,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       mineBox.appendChild(el('div', 'cost', '征兵与配将在「征兵」页；出兵、撤军、看行军在出征面板。'));
       mineBox.appendChild(mkBtn('自本城出征', '', function () {
         window.__slgCityClose();
-        window.__slgWarWindow({ from: c.id, tab: 'go' });
+        window.__slgWarWindow({ from: c.id });
       }));
       body.appendChild(mineBox);
     } else if (origins.length) {
@@ -4759,7 +4853,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         + ' 出兵。出征面板里能挑具体队伍、看实出人数与行军日数，出发后还能撤回。'));
       box.appendChild(mkBtn('打开出征面板', '', function () {
         window.__slgCityClose();
-        window.__slgWarWindow({ cityId: c.id, from: best.city.id, tab: 'go' });
+        window.__slgWarWindow({ cityId: c.id, from: best.city.id });
       }));
       body.appendChild(box);
     } else if (adjacentOwn.length) {

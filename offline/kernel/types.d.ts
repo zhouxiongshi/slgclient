@@ -161,6 +161,25 @@ export interface BattleEvent {
     payload: Record<string, unknown>;
     evidence: string;
 }
+/**
+ * 战位距离轨迹（可观测层，独立于 events）。
+ * ★ M4-13：距离规则过去只在内核里静默过滤目标，战报/推演/编队都看不到
+ *   「谁够不着谁」，玩家自然觉得这条规则没有意义。这里单独记一条轨迹，
+ *   绝不塞进 events —— event_fingerprint = hash16(stableStringify(events))
+ *   与黄金向量必须保持逐字节不变（M4-7 教训：事件 payload 加字段会漂指纹）。
+ *   只在确实发生「普攻超距打空 / 战法目标被射程筛掉」时写入，常规战斗为空数组。
+ */
+export interface RangeTrace {
+    round: number;
+    actor: string;
+    kind: 'normal' | 'skill';
+    skill?: string;
+    range: number;
+    nearest: number;
+    reachable: number;
+    total: number;
+    out_of_range: string[];
+}
 /** 伤害结算中间量，字段名与 Python calc_damage 对齐以便逐项比对 */
 export interface CalcDamageResult {
     base: number;
@@ -188,6 +207,8 @@ export interface BattleResult {
     total_troops_by_side: Record<string, number>;
     rng_calls: number;
     event_fingerprint: string;
+    /** M4-13：距离判定的可观测轨迹（不参与事件指纹，缺省为空数组，旧用例行为不变） */
+    range_trace: RangeTrace[];
 }
 export interface BattleOptions {
     units: UnitInput[];

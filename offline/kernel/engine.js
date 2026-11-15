@@ -66,6 +66,9 @@ export class BattleEngine {
         this.units = [];
         this.events = [];
         this.prepare = [];
+        /* ★ M4-13：距离轨迹与事件流物理分离，只记「超距打空 / 射程筛掉目标」，
+           不进 events，保证 event_fingerprint 与黄金向量逐字节不变。 */
+        this.rangeTrace = [];
         this.round = 0;
         // 配置在构造时快照，外部之后修改配置不会影响本场战斗的可复现性
         this.cfg = structuredCloneSafe(options.config);
@@ -362,9 +365,33 @@ export class BattleEngine {
         }, 'E2');
         for (const effect of skill.effects) {
             // 追击战法（三战口径）：目标 = 该武将的普攻目标（战位最近敌军），不吃射程表
-            const targets = skill.skill_class === '追击' && String(effect.target_type).startsWith('enemy')
+            const isChase = skill.skill_class === '追击' && String(effect.target_type).startsWith('enemy');
+            const targets = isChase
                 ? [this.nearestFoe(unit, undefined, 'order')].filter((x) => Boolean(x))
                 : this.effectTargets(effect, unit);
+            /* ★ M4-13 距离可观测：把「射程之外的敌军」记进独立轨迹。
+               追击战法不吃 effect.range，但它随普攻目标走，超 attack_range 时同样打空；
+               一并记录，玩家才看得到「把短手将摆在大营，整条输出链都断了」。 */
+            if (String(effect.target_type).startsWith('enemy')) {
+                const foes = this.enemies(unit.side);
+                const range = isChase
+                    ? (unit.attack_range ?? 9)
+                    : (Number.isFinite(effect.range) ? effect.range : 9);
+                const out = foes.filter((f) => this.slotDist(unit, f) > range);
+                if (out.length || (isChase && targets.length === 0 && foes.length)) {
+                    this.rangeTrace.push({
+                        round: this.round,
+                        actor: unit.unit_id,
+                        kind: 'skill',
+                        skill: skill.name,
+                        range,
+                        nearest: foes.length ? Math.min(...foes.map((f) => this.slotDist(unit, f))) : 0,
+                        reachable: foes.length - out.length,
+                        total: foes.length,
+                        out_of_range: out.map((f) => f.unit_id),
+                    });
+                }
+            }
             for (const target of targets) {
                 if (target.alive)
                     this.applyEffect(effect, unit, target, skill.name, phase, skill);
@@ -391,6 +418,7 @@ export class BattleEngine {
         this.units = cloneUnits(inputs);
         this.events = [];
         this.prepare = [];
+        this.rangeTrace = [];
         this.round = 0;
         const warnings = [...this.cfg.unresolved];
         const sides = [...new Set(this.units.map((u) => u.side))].sort((a, b) => a - b);
@@ -426,6 +454,20 @@ export class BattleEngine {
                 // 普攻目标 = 攻击距离内最近的敌军（前锋顶前，溃败后依次补位）。
                 // 超出攻击距离则本回合无普攻（战法仍可越排释放），避免短手武将站大营白打。
                 const target = this.nearestFoe(u);
+                /* ★ M4-13：普攻够不着时不再静默跳过，记一条「弓矢不及」轨迹供战报叙述。 */
+                if (!target) {
+                    const foes = this.enemies(u.side);
+                    this.rangeTrace.push({
+                        round: this.round,
+                        actor: u.unit_id,
+                        kind: 'normal',
+                        range: u.attack_range ?? 9,
+                        nearest: Math.min(...foes.map((f) => this.slotDist(u, f))),
+                        reachable: 0,
+                        total: foes.length,
+                        out_of_range: foes.map((f) => f.unit_id),
+                    });
+                }
                 if (target && !hasControl(u, '怯战')) {
                     this.applyEffect(this.normalAttackEffect(u), u, target, '普通攻击', 'action');
                 }
@@ -492,6 +534,7 @@ export class BattleEngine {
             total_troops_by_side: totalTroopsBySide,
             rng_calls: this.rng.calls,
             event_fingerprint: hash16(stableStringify(this.events)),
+            range_trace: this.rangeTrace,
         };
     }
 }

@@ -88,6 +88,14 @@ export function loadConfig(confDir = defaultConfDir()) {
   };
   for (const g of general.list || []) toPercent(g);
 
+  /* ★ M4-13：原版客户端（web/ 逐字节不可改）的战报 UI 只查这份原表。
+     heroes-240 追加的 240xxx+ 与主角 880001 都只存在于服务端 generalByCfg，
+     注入 UI 能显示，但原版 WarReportItemLogic / GeneralItemLogic 按 cfgId
+     查表会拿到 null → 「Cannot read properties of null (reading 'name')」。
+     守将、俘虏等要回填进原版战报的武将必须限定在这个集合里（见 domain/garrison.js）。
+     在 push 主角与 heroes-240 **之前**取快照，才能代表真正的客户端可见集。 */
+  const clientGeneralIds = new Set((general.list || []).map((g) => Number(g.cfgId)).filter(Number.isFinite));
+
   try {
     const protag = JSON.parse(readFileSync(resolve(confDir, 'campaign', 'protagonist.json'), 'utf8'));
     if (protag.general) toPercent(protag.general);
@@ -223,6 +231,7 @@ export function loadConfig(confDir = defaultConfDir()) {
     confs,
     generalByCfg,
     generalOriginal,
+    clientGeneralIds,
     armsByType,
     tileAt,
     width: mapRes?.w ?? 200,

@@ -122,7 +122,7 @@
     };
     mask.innerHTML = '<div style="background:#1d1a12;border:1px solid #ba9a52;border-radius:8px;padding:18px 22px;min-width:420px;color:#e8e0cc;font:13px \'Microsoft YaHei\',sans-serif">'
       + '<h3 style="margin:0 0 6px;color:#ffdf9a">整编队伍#' + army.order + '</h3>'
-      + '<div class="muted" style="margin-bottom:10px">三槽各对应一个兵种：盾步克弓、弓克骑、骑克盾（克制战力 ±15%）；武将适性影响属性发挥。兵力只在该队现有 ' + fmt(army.soldiers.reduce(function (s, v) { return s + v; }, 0)) + ' 内重分。</div>'
+      + '<div class="muted" style="margin-bottom:10px">三槽各对应一个兵种：盾步克弓、弓克骑、骑克盾（战前折算守军兵力 ±15%）。武将适性按五维×兵种折算 100%~115%，同源乘进该将攻防；槽位同时是战位（一=前锋/二=中军/三=大营），决定普攻与战法能打到谁。兵力只在该队现有 ' + fmt(army.soldiers.reduce(function (s, v) { return s + v; }, 0)) + ' 内重分。</div>'
       + [1, 2, 3].map(function (slot) {
         var cur = army.generals[slot - 1];
         return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">'
@@ -291,12 +291,17 @@
         + esc(p.name) + '<small>' + esc(p.zi === '史无明载' ? '' : '字' + p.zi) + ' · ' + esc(p.faction)
         + ' · 史载统率 ' + esc(p.historyStats.统率) + '</small></button>';
     });
-    /* ★ P6 俘虏名册：招降按钮（金 300/次，政治判定，成功率随关押天数上升） */
+    /* ★ M4-13 俘虏名册：招降 + 放归 + 处斩三个出口同屏可达。
+       过去只有招降，且整个区块藏在六府二级页里，玩家占城后根本看不到。 */
     if ((data.captives || []).length) {
-      out += '<h4 style="color:#e07a5f">阵前被俘（可招降）</h4>';
+      out += '<h4 style="color:#e07a5f">阵前被俘（招降 / 放归 / 处斩）</h4>';
       data.captives.forEach(function (c) {
-        out += '<button class="genrow" style="text-align:left" data-act="captive" data-i="' + c.idx + '">'
-          + esc(c.name) + '<small>押 ' + c.days + ' 旬 · 忠 ' + c.loyal + ' · 降率约 ' + c.rate + '%</small></button>';
+        out += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">'
+          + '<button class="genrow" style="flex:1;text-align:left" data-act="captive" data-i="' + c.idx + '">'
+          + esc(c.name) + '<small>押 ' + c.days + ' 旬 · 忠 ' + c.loyal + ' · 降率约 ' + c.rate + '%</small></button>'
+          + '<button class="ghost" data-act="captiveRelease" data-i="' + c.idx + '">放归</button>'
+          + '<button class="ghost" data-act="captiveExecute" data-i="' + c.idx + '">处斩</button>'
+          + '</div>';
       });
     }
     return out + '</div>';
@@ -974,7 +979,7 @@
       /* ★ 出征是独立作战面板（出击/行军队列/战报），不在六府这套 DOM 里渲染 */
       if (id === 'war') {
         close();
-        if (typeof window.__slgWarWindow === 'function') window.__slgWarWindow({ tab: 'go' });
+        if (typeof window.__slgWarWindow === 'function') window.__slgWarWindow();
         else toast('出征面板尚未就绪，请稍候', false);
         return;
       }
@@ -1033,6 +1038,18 @@
       if (amt2) strategyAction({ action: 'reward', generalId: Number(id), amount: Number(amt2) });
       return;
     }
+    if (act === 'captiveRelease' || act === 'captiveExecute') {
+      var cx = (data.captives || []).find(function (x) { return x.idx === Number(id); });
+      if (!cx) return;
+      var kill = act === 'captiveExecute';
+      if (window.confirm((kill ? '处斩「' : '放归「') + cx.name + '」？\n'
+        + (kill ? '此人将不再可用，并记一笔恶名。' : '不消耗金钱，纵其返回故主。'))) {
+        strategyAction({ action: act, idx: cx.idx }, function (r) {
+          if (r.ok) toast((kill ? '已处斩 ' : '已放归 ') + cx.name, true);
+        });
+      }
+      return;
+    }
     if (act === 'captive') {
       var c0 = (data.captives || []).find(function (x) { return x.idx === Number(id); });
       if (!c0) return;
@@ -1043,7 +1060,7 @@
     }
     if (act === 'openwar') {
       close();
-      if (typeof window.__slgWarWindow === 'function') window.__slgWarWindow({ tab: 'go' });
+      if (typeof window.__slgWarWindow === 'function') window.__slgWarWindow();
       else toast('出征面板尚未就绪，请稍候', false);
       return;
     }
