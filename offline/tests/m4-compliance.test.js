@@ -18,12 +18,12 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const OFFLINE = join(HERE, '..');
 const TOOL = join(OFFLINE, 'tools', 'check-compliance.js');
 
-test('M4-1 全量扫描：554 条溯源无缺口，exit 0', () => {
+test('M4-1 全量扫描：555 条溯源无缺口，exit 0', () => {
   const r = spawnSync(process.execPath, [TOOL, '--json'], { cwd: OFFLINE, encoding: 'utf8' });
   assert.equal(r.status, 0, `check-compliance 应 exit 0：${r.stderr}`);
   const j = JSON.parse(r.stdout);
   assert.equal(j.ok, true);
-  assert.equal(j.totals.entries, 554, '52 事件 + 98 补量 + 24 宿命 + 240 武将 + 6 剧本 + 134 术语');
+  assert.equal(j.totals.entries, 555, '52 事件 + 98 补量 + 24 宿命 + 240 武将 + 6 剧本 + 135 术语（2026-11-17 新增「城墙」词条）');
   assert.equal(j.totals.missing, 0);
   assert.equal(j.totals.files, 6);
 });

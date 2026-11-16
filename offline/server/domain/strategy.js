@@ -29,7 +29,7 @@ import { canMarchBetween, marchableNeighbors, marchGraph } from './march.js';
 import { cityLabelRank, labelPolicy } from './map-lod.js';
 /* ★ P11 兵役制：城池视图与战略动作只从 levy.js 取兵源数字，禁止另算一份 */
 import { levyView, checkLevy, commitLevy } from './levy.js';
-import { resolveBattle, battleSeedFor } from '../battle.js';
+import { resolveBattle, battleSeedFor, wallMaxOf, wallDefMul, WALL } from '../battle.js';
 import { planCampaign, commitBrainGoal, noteBattleOutcome, noteCityLost, PERSONA_AXES } from './strategy-brain.js';
 import { loadConfig } from '../config.js';
 import { quoteMarch, openMonth, closeMonth, noteMove, noteCity, booksOf } from './strategy-log.js';
@@ -586,6 +586,9 @@ export function strategyTick(state, cfg, ctx, now = Date.now()) {
   openMonth(state);
   // ★ P2/P3 城市经营：旬灾害（蝗/瘟/丰收）+ 旬忠诚/俸禄/叛逃 + 30日人口增长
   cityEconTick(state, cfg, ctx);
+  /* ★ 2026-11-17 城防：城墙每旬自然修复（被围不修）——否则打过一次就永久残破，
+     城防属性从此失去意义。 */
+  repairCityWalls(state);
   // ★ P6 俘虏：每旬思归/越狱演变
   captivesTick(state, ctx);
   // ★ P7 出仕：在野贤才按名声主动来投
@@ -1379,6 +1382,78 @@ function defenseFor(cfg, cityId, target, tstate, level, state = null) {
   };
 }
 
+/**
+ * 取某城的城墙状态 —— 城防与攻城属性的落地载体（2026-11-17）。
+ * 纯读：旧档没有 wallHp 时按「完整城墙」返回，口径与升级前一致（守军 1.5× 城防）。
+ * 上限由「等级 + 城防属性」派生（battle.js wallMaxOf 是唯一口径）。
+ */
+export function cityWall(state, cityId) {
+  const id = Number(cityId);
+  const row = state.strategy?.cities?.[id];
+  if (!row) return null;
+  const target = strategyMap().cities.find((c) => c.id === id);
+  const max = wallMaxOf(target, target?.level ?? 1);
+  const raw = Number(row.wallHp);
+  const hp = Number.isFinite(raw) ? Math.max(0, Math.min(max, Math.round(raw))) : max;
+  return { hp, max };
+}
+
+/**
+ * 攻城战结束后把城墙损耗写回城池。破城 → 城墙归零、城防属性下滑
+ * （`defense` 是 AI 估算战力与面板展示的口径，破城后该城明显更好打）。
+ */
+export function applySiegeResult(state, cityId, siege) {
+  const id = Number(cityId);
+  const row = state.strategy?.cities?.[id];
+  if (!row || !siege) return null;
+  row.wallMax = Math.max(1, Number(siege.max) || Number(row.wallMax) || 1);
+  row.wallHp = Math.max(0, Math.min(row.wallMax, Math.round(Number(siege.hpAfter) || 0)));
+  /* 城防设施只毁一次：`wallRubble` 记「城墙已成瓦砾」，修复到一半以上才复位。
+     否则每旬修回 2% 立刻再破一次，defense 会无下限往下掉。 */
+  if (siege.breached) {
+    if (!row.wallRubble) {
+      row.defense = Math.max(0.1, Math.round(((Number(row.defense) || 0.4) - 0.12) * 100) / 100);
+      recordEvent(state, `${cityName(id)}城墙崩塌，城防设施残破，守势大损。`);
+    }
+    row.wallRubble = true;
+  }
+  return { hp: row.wallHp, max: row.wallMax, breached: !!siege.breached };
+}
+
+/** 视图用：某城的城墙四件套（上限/当前/百分比/是否已破），纯读不写档。 */
+function wallFieldsOf(state, city) {
+  const row = state.strategy?.cities?.[city.id];
+  const max = wallMaxOf(city, city?.level ?? 1);
+  const raw = Number(row?.wallHp);
+  const hp = Number.isFinite(raw) ? Math.max(0, Math.min(max, Math.round(raw))) : max;
+  return {
+    wallHp: hp,
+    wallMax: max,
+    wallPct: Math.round((hp / max) * 100),
+    wallBreached: hp <= 0,
+  };
+}
+
+/** 每旬城墙自然修复（被围不修）：让「打一半撤走」不白费，也避免城防永久归零。 */
+export function repairCityWalls(state) {
+  const st = state.strategy;
+  if (!st?.cities) return 0;
+  let fixed = 0;
+  for (const c of strategyMap().cities) {
+    const row = st.cities[c.id];
+    if (!row) continue;
+    const wall = cityWall(state, c.id);
+    if (!wall || row.besieged) continue;
+    if (wall.hp >= wall.max) continue;
+    const add = Math.max(1, Math.round(wall.max * WALL.repairPerTurn));
+    row.wallHp = Math.min(wall.max, wall.hp + add);
+    /* 城墙修回一半以上才重新算「有城防」，破城毁设施的判定随之复位。 */
+    if (row.wallRubble && row.wallHp >= wall.max * 0.5) delete row.wallRubble;
+    fixed += 1;
+  }
+  return fixed;
+}
+
 /* ★ M2-5 张力守恒 #2（本作设计）：敌将有「临阵变招」——同一编队，抵达日不同
    敌方应对可能不同。变招由 rngFor(seed, arriveDay, 'counter') 决定，三套预案；
    推演会展示「若敌方变招则…」。注意这是确定性表，不是每旬换：同一抵达日恒同预案。 */
@@ -1398,7 +1473,9 @@ export function counterVariantFor(state, cityId, arriveDay) {
  * 一场战斗的完整落地：扣兵、给经验、写战报、推通道。
  * 战略攻城与本地清剿共用，保证「战报一定进存档」（试玩 P0-2）。
  */
-function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride, seed, defMul = 1, siege = false }) {
+function settleArmyBattle(state, cfg, ctx, {
+  army, frac, x, y, defenseOverride, seed, defMul = 1, siege = false, siegeWall = null,
+}) {
   const before = [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(army.soldiers?.[i]) || 0)));
   const f = Math.min(1, Math.max(0.05, Number(frac) || 1));
   const commit = before.map((v) => Math.max(0, Math.round(v * f)));
@@ -1420,7 +1497,7 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride, 
     : defenseOverride;
   const battleArmy = { ...army, soldiers: commit };
   const result = resolveBattle({
-    cfg, state, army: battleArmy, x, y, defenseOverride: defense2, seed, siege,
+    cfg, state, army: battleArmy, x, y, defenseOverride: defense2, seed, siege, siegeWall,
   });
   const remain = result.endAttackSoldiers;
 
@@ -1458,8 +1535,16 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride, 
     ? `我军${ARMS_NAMES[atkArms]}克制守军${ARMS_NAMES[defArms]}（战力+15%）。`
     : (counter < 0 ? `守军${ARMS_NAMES[defArms]}克制我军${ARMS_NAMES[atkArms]}（战力-15%）。` : '');
   const fateNote = fate.notes.length ? `${fate.notes.join('；')}。` : '';
+  /* ★ 2026-11-17 城防：把攻城值打出的城墙损耗写进战报（否则玩家看不到攻城属性的作用）。 */
+  const sw = result.siege;
+  const wallNote = sw
+    ? (sw.breached
+      ? `城墙已破（${sw.ratioBefore}% → 0%），守军溃散。`
+      : `城墙 ${sw.ratioBefore}% → ${sw.ratioAfter}%（本阵攻城值打掉 ${sw.damage} 点耐久）。`)
+    : '';
   // 额外字段：原客户端忽略，我们自己的战报面板读它做复盘
-  result.report.summary = summary + counterNote + fateNote;
+  result.report.summary = summary + wallNote + counterNote + fateNote;
+  result.report.siege = sw || null;
   const expLine = levelUpSentence(grantBattleExp(state, cfg, result.expByGeneral, { win }));
   const promos = takeBattlePromos();
   const promoLine = promos.length
@@ -1530,7 +1615,7 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride, 
 
   return {
     ok: true, result: result.report.result, report: result.report,
-    summary, aTotal, dTotal, recovered: rec, win, loot,
+    summary, aTotal, dTotal, recovered: rec, win, loot, siege: sw || null,
   };
 }
 
@@ -1844,14 +1929,19 @@ export function strategyResolveMarches(state, cfg, ctx) {
     const variant = counterVariantFor(state, mm.to, mm.arriveDay);
     const defenseOverride = defenseFor(cfg, mm.to, target, tstate, level, state);
     defenseOverride.terrain = target.terrain || '';
+    /* ★ 2026-11-17 城防：把该城当前的城墙耐久带进战斗——攻方攻城值（destroy）
+       在这一战里把它打低；城墙越残，守军防御加成越少，下一波越好打。 */
+    const wall = cityWall(state, mm.to);
     const fought = settleArmyBattle(state, cfg, ctx, {
       army, frac: mm.frac, x: 8000 + mm.to, y: 100 + level, defenseOverride, defMul: variant.defMul,
       siege: true,
+      siegeWall: wall,
       /* ★ 验收 #10：种子按「到达日」算，战前推演能算出一模一样的种子。
          ★ 张力守恒 #3：优先用出征时锁定的 lockedSeed（确认即锁）。 */
       seed: mm.lockedSeed ?? battleSeedFor(army.id, 8000 + mm.to, 100 + level, mm.arriveDay),
     });
     if (!fought.ok) continue;
+    if (fought.siege) applySiegeResult(state, mm.to, fought.siege);
     const win = fought.result === 2;
     if (win) {
       /* ★ M2-4 外交：占城登记（本作设计「你占了他的城×20」+ 开战/停战期毁约判定）。
@@ -2366,10 +2456,14 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
   /* ★ 张力守恒 #3「确认即锁」：正式战斗的种子在 strategyAttack 出征时已写进
      march 行（lockedSeed）；推演用同一 arriveDay 推同一 seed，所以
      「今天出发」的推演与正式结算逐位一致——变招只发生在抵达日变化时。 */
+  /* ★ 2026-11-17 城防：推演必须带同一份城墙状态，否则「城墙加成为 1.5 还是 1.2」
+     会让预演与正式结算差一档（P10 逐位一致契约）。 */
+  const forecastWall = cityWall(state, to);
   const runB = (def2) => resolveBattle({
     cfg, state: structuredClone(state), army: { ...army, soldiers: commit },
     x: 8000 + to, y: 100 + level, defenseOverride: def2, seed,
     siege: true,
+    siegeWall: forecastWall,
     /* 推演不需要回放动作流（战报才有），跳过可省一大半耗时 */
     withAnim: false,
   });
@@ -2466,6 +2560,17 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
       : (intelTier === 1 ? '情报·估算：守军按 ±15% 区间推演' : '未侦察：守军为 ±40% 传闻估算，先侦察可收窄区间'),
     variant: { id: variant.id, name: variant.name, note: variant.note },
     spreadLines, variantLines,
+    /* ★ 2026-11-17 城防：推演必须告诉玩家「城墙还剩多少、这一波能打掉多少」，
+       否则攻城属性与城防属性在界面上依然是两个看不见的数字。 */
+    wall: forecastWall ? {
+      hp: forecastWall.hp,
+      max: forecastWall.max,
+      pct: Math.round((forecastWall.hp / Math.max(1, forecastWall.max)) * 100),
+      defMul: Math.round(wallDefMul(state, forecastWall) * 100) / 100,
+      forecast: result.siege
+        ? { hpAfter: result.siege.hpAfter, damage: result.siege.damage, breached: result.siege.breached }
+        : null,
+    } : null,
     lockNote: '确认出征即锁定战局（种子已锁）；推演不限次数，确认后要重来只能撤军（有代价）。',
     summary: win
       ? `预计攻陷${target.name}：我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}，歼敌 ${dLoss}。`
@@ -2884,6 +2989,9 @@ export function strategyViewState(state, cfg = null) {
       ownerName: nameOf(st.cities[c.id]?.owner || 'han'),
       color: colorOf(st.cities[c.id]?.owner || 'han'),
       troops: st.cities[c.id]?.troops || 0,
+      /* ★ 2026-11-17 城防：城墙耐久（玩家能看到敌军城墙打残了多少，据此决定再攻一波）。
+         上限由「等级 + 城防属性」派生，当前值取存档；旧档无 wallHp → 完整城墙。 */
+      ...wallFieldsOf(state, c),
       /* ★ M2 侦察：敌方城情报档位（0 传闻 / 1 估算 / 2 精确），随视图下发供界面标注 */
       intelTier: st.cities[c.id]?.owner === 'player'
         ? undefined

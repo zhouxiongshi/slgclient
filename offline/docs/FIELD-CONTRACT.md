@@ -40,6 +40,12 @@
 | 战斗伤害/回合事件 | `battle-core`（TS 内核，`offline/kernel/` 同步产物） | 点 | 整数 | ❌ | 回放、战报、推演 |
 | 追击目标/损失 | 内核 `nearestFoe`（并列：普攻按 id、追击按阵列序） | — | — | ❌ | 回放 |
 | 归因 | `settleArmyBattle` 的 `attribution/summary` | — | — | ❌ | 战报三句 |
+| 城墙耐久上限 | `domain/city-wall.js wallMaxOf()` = `300 + 等级×450 + 城防属性×6`（★ 2026-11-17；1 级城约 1100、3 级约 2100，随城防属性单调） | 点 | 整数 | ❌ | 城池内页「城墙 x/y」、出征推演「城墙」行 |
+| 城墙当前耐久 | `state.strategy.cities[id].wallHp`（视图 `cities[].wallHp/wallPct/wallBreached`；旧档缺字段按**完整城墙**，即升级前口径） | 点 | 整数 | ❌ | 城池内页、城池窗副标题、大地图城卡 |
+| 攻城伤害（破墙） | `battle.js siegeDamageOf()` = Σ(武将攻城值 × `troopStrikeMul(投入兵力)` × `WALL.siegeK=6`)（★ 2026-11-17；零攻城值/零兵 → 0） | 点/波 | 整数 | ❌ | 战报 summary「城墙 a% → b%」、推演「本波攻城打掉 N」 |
+| 守军据城加成 | `city-wall.js wallDefMul()` = `1 + (siegeWallMul−1) × 城墙完好比例`（★ 2026-11-17；满墙 = 旧口径 1.5，破城 = 1.0） | 倍 | 0.01 | ❌ | 战报 siege.defMul、推演「守军据城 ×N」 |
+| 破城 | `wallHp` 归零即破：当阵守军再折损 `WALL.breachRout=12%`，城池 `defense`（AI 战力估算口径）−0.12 且**只扣一次**（修回一半以上才复位）；**不改变 judgeBattle 的占城判定** | — | — | ❌ | 战报「城墙已破」、天下日志「城墙崩塌」 |
+| 城墙修复 | `strategy.js repairCityWalls()`：未被围的城每旬回 `WALL.repairPerTurn=2%` 上限，被围不修 | %/旬 | 整数点 | ❌ | 城池内页城墙条（旬结算后变化） |
 
 ## D. 人事
 
@@ -63,6 +69,8 @@
 | 官职能力加成 | `domain/official-rank.js`：功勋 `state.generals[].merit` 与 AI 名册 `generals[].merit` 同源累积，官阶 0~9 由功勋唯一决定；武将官阶越高统帅（defense，即统兵能力）越高，谋臣/政治家官阶越高政治越高；经 `general-stat.js effectiveStatOf` 叠加、封顶 100（不改史载原表） | 级/点 | 整数 | ❌ | 武将卡官阶、统帅/政治有效值、AI 名册 |
 | 单槽带兵上限 | `official-rank.js slotCapForRank(rank) = SLOT_CAP(5000) + rank×300`（★ 2026-11-16；0 阶 5000 → 9 阶 7700，官阶封顶 9）；`strategyFormup` 与出征裁剪各按该槽武将 `slotCapOf` 取上限，空槽按基础 5000，超出退回驻城 | 兵/槽 | 整数 | ❌ | 编队弹窗逐槽上限、over_cap 动态提示 |
 | 主公战法发动率 | `conf/campaign/protagonist-skill.json`：指挥战法**发动率恒 100%**（kernel `probability_init = probability_max = 1`，`ui.levels[].probability = 100`）；叙述文案 `开战即发动（发动率 100%）` | % | 整数 | ❌ | 战法面板发动率、推演触发说明 |
+| 战法发动率区间 | `tools/skill-balance.mjs planProb()`（★ 2026-11-17 唯一平衡口径）：指挥/被动恒 **100%**；主动/追击按「伤害率越高、发动率越低」反推，Lv1 **30~45%**、Lv10 **32~50%**，且末级 > 首级。旧实现 27 条战法清一色 70% | % | 整数 | ❌ | 战法面板「发动率」、`tests/skill-balance.test.js` |
+| 战法期望输出指数 | `tools/skill-balance.mjs`：`发动次数 × 发动率(Lv10) × 伤害率(Lv10) × 目标数`。主动/追击收敛在 **300~2000**（每目标 200~950）；指挥为功能型不强求下界，但 ≤2000 | 点 | 整数 | ❌ | 战法平衡验收、`tests/skill-balance.test.js` |
 | 主公战法回击率 | 自身受击时的回击概率：Lv1=35%，每升 1 级 +5%（`ui.levels[].effect_value[1]` = 35+5×(lv−1)，kernel counter.chance 同源）；回击伤害率恒 87% | % | 整数 | ❌ | 战法面板效果是、战报「受击回击」 |
 | 主公初始属性 | `conf/campaign/protagonist.json`：武力 99／谋略 96／统帅(原 defense 键)91／速度 87／政治 93；玩家可见标签「防御」统一改为「统帅」，内部键 `defense` 不变 | 点 | 整数 | ❌ | 武将卡、编辑器（GM）、战报 |
 | 招募拒绝台词 | `domain/recruit-refusal.js`：拒绝理由拟人化，按武将性格（莽夫/名将/名士等）与谋略高低选台词，汉末语境；不显示「成功率/概率」数字 | — | — | ❌ 只展示 | 酒馆招募 toast |
@@ -94,6 +102,12 @@
 6. **借鉴来源只留在合规台账，不进界面也不进注释**：玩家可见文案与源码注释都不得写
    外部游戏名、外部名录或内部规格编号；`source`／`descSource`／`LICENSE` 与史书回目
    属于必要溯源，保留。两侧都由 `tests/ui-presentation-hygiene.test.js` 锁定。
+7. **城墙修复速度必须低于一波攻城能打掉的比**：`repairPerTurn` 曾设 5%/旬，而单波
+   攻城只打掉 12%~15%，一旬修一半、城墙永远打不穿，城防与攻城属性又变回摆设
+   （2026-11-17 实测：4 波后城墙回到 86%）。改这个参数前先跑
+   `tests/p17-city-wall.test.js` 的「每旬修复」用例。
+8. **占城判定不因城墙而变**：破城只影响「下一波更好打」与战报文案，`judgeBattle`
+   的 2/1/0 语义与 `ROUT_RATIO` 溃败线不动——否则「首战可胜」等既有验收全部作废。
 
 ## 变更流程
 

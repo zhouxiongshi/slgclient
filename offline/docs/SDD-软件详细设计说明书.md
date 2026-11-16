@@ -2092,6 +2092,22 @@ build/SLG-Offline-win32-x64/
 
 **回归锁**：`tests/ui-player-experience.test.js`（15 条）锁政治覆盖/官阶闭环/AI 成长/拟人拒绝/学习反馈/带兵上限（含真链路出征截断对照：白身 7600→退 2600、三公 7600→退 0）；`tests/loop-balance.test.js` 锁白身 5000 基准与官阶浮动上限；`tests/m4-protagonist-skill.test.js` 锁 100% 发动与 35%→80% 回击；`tests/p10-interior-task.test.js` 测试夹具把主公谋略钳回中值（96 跨过 85 阈值会让 2 旬工期塌成 1 旬，测的是任务状机制非主公数值）；`tests/ui-presentation-hygiene.test.js` 锁文案不泄来源。全量 `npm test` 546/546。
 
+### 17.13 调防 / 招募文案 / 战法平衡 / 城防攻城（2026-11-17 用户四项反馈）
+
+| 编号 | 现象 | 根因 | 处置与现状 |
+|---|---|---|---|
+| `DEV-40` | 新招募的武将全是「闲置」，无法派到其他城 | `g.cityId`（武将所在城）与 `army.cityId`（队伍驻地）是两份真相：招募写死 `mainCity(state)`（恒 =1 = 长安），出征/撤退/到达结算只搬 `army`，从不回写队内武将的 `cityId`；也没有「调防」这条动作 | 新增 `strategy.js dispatchGeneral()`（唯一调城口，校验 `no_general/no_city/same_city/not_own_city/marching`），HTTP `POST /__slg/strategy/action {action:'dispatchGeneral'}` 接入；`syncGeneralsCity()` 在出征/到达结算/临阵撤军/撤回四处随 `army.cityId` 同步队内武将；招募落城改为「招募所在城」；`panels.js` 武将视图与 `allGenerals` 带 `cityId/cityName`，`panels-ui.js` 加「所在城 + 目标城下拉 + 调防」 |
+| `DEV-41` | 酒馆招募失败仍提示「已离开酒馆」这类机械文案，探索已改招募没改 | `domain/recruit-refusal.js` 只覆盖「拒绝」一类场面话；`drawGeneral` 的 `guest_left/not_arrived/absent/not_enough_gold/no_guest` 五个分支仍回英文 `reason`，界面把 `reason` 直接拼进 toast | 新增 `failLine(kind, opt)` 五类场面台词（离席/未到/不在本城/座上无人/盘缠不够），`drawGeneral` 四类分支补 `name/line/short`；两处酒馆 toast 优先消费 `m2.line`，不再暴露英文 reason；`p13-recruit-select` 静态闸改为锁「必须消费 line、不得出现旧文案」 |
+| `DEV-42` | 所有战法发动率清一色 70%，输出相差悬殊 | `conf/*skills*.json` 的 177 条战法概率是分批手写的历史残留（27 条都是 35→70）；伤害率与发动率无关联，期望输出指数实测 18~4050（200 倍）；控制槽还有 200% 命中率 | 新增 `tools/skill-balance.mjs`（唯一平衡口径，幂等，保留原文件排版）：指挥/被动恒 100%，主动/追击按「伤害率越高、发动率越低」反推 Lv10 32~50 / Lv1 30~45，控制槽 ≤100% 且保持 Lv10=Lv1×2；输出指数收敛到 25~1997（主动/追击 300~2000）。新增 `tests/skill-balance.test.js` 6 条闸，**重新生成战法表后不重跑该工具就会红** |
+| `DEV-43` | 武将「攻城」属性没有任何用处；城防在攻占中没有实际意义 | 城墙只有一处 `wall = knob(siegeWallMul)` 恒 1.5，全服每城同值，与城防属性、与玩家 `destroy` 都无关；`st.cities[].defense` 只被 AI 战力估算和面板读取 | 新增零依赖叶子 `domain/city-wall.js`：`wallMax = 300 + 等级×450 + 城防×6`、`wallDefMul = 1+(倍率−1)×完好比例`；`battle.js siegeDamageOf()` 把「攻城值 × 投入兵力」换成破墙伤害，`resolveBattle` 逐场读写 `wallHp`、破城当阵守军再折 12%；`strategy.js` 新增 `cityWall/applySiegeResult/repairCityWalls`（每旬 2%，被围不修）；战报/推演/城池页/城池窗四处显示城墙耐久与「本波攻城打掉 N」。**`judgeBattle` 的占城语义不动**（否则「首战可胜」契约整体作废） |
+
+**边界（诚实登记）**：
+
+- 破城**不改变占城判定**：`result === 2` 仍直接占城。这是刻意取舍——把占城改成必须破城，会让 `loop-balance`／`p7`／`p8` 等既有验收的「未决不占城」「首战可胜」全部作废，收益不抵风险。城防的实际作用落在「守军据城加成 1.5→1.0」与「下一波更好打」。
+- `wallHp` 是新增存档字段，旧档缺失时**一律按完整城墙**处理（与升级前逐位相同），不写迁移脚本。
+- `conf/library-skills.json` 由 `tools/build-library-skills.js` 从 battle-kit 原文生成，**重新生成会冲掉平衡后的概率**——所以把闸做在测试里（`skill-balance.test.js`），而不是靠口头约定。
+- 本轮未改 `offline/web/` 磁盘产物（1582 文件逐字节不动），未改协议消息计数（`contract-matrix` 72 条不受影响：`dispatchGeneral` 走 HTTP 动作口）。
+
 ---
 
 ## 18. 需求 → 设计 → 实现 → 验证 全链路追溯

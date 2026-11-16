@@ -3244,6 +3244,14 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
   }
   function kv(k, v) { return '<div class="kv"><span>' + k + '</span><span>' + v + '</span></div>'; }
 
+  /* ★ 2026-11-17 城防：城墙耐久是「攻城属性打、城防属性撑」的那条真实数值，
+     面板必须把它显出来，否则玩家还是看不出攻城/城防有什么用。 */
+  function wallText(c) {
+    if (!c || c.wallPct == null) return '—';
+    if (c.wallBreached) return '已破（0/' + fmt(c.wallMax) + '）';
+    return fmt(c.wallHp) + '/' + fmt(c.wallMax) + ' · ' + c.wallPct + '%';
+  }
+
   /* ★ P7 普攻攻击距离：武将自己填了 attack_distance 就用，否则按兵种（盾3/弓4/骑3）。
      与 server/skills.js 的 attackDistanceOf 同口径，前端只做展示不做结算。 */
   function atkDistOf(g) {
@@ -3908,6 +3916,13 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     detail.push('战斗种子 0x' + ((Number(r.seed) >>> 0).toString(16).toUpperCase()) + '（同种子必得同战报）');
     if (r.intelNote) detail.push('情报：' + r.intelNote);
     if (r.variant) detail.push('敌方预案：' + r.variant.name + '　' + (r.variant.note || ''));
+    /* ★ 2026-11-17 城防：城墙耐久与「这一波能打掉多少」——攻城属性的唯一可见出口 */
+    if (r.wall) {
+      var wf = r.wall.forecast;
+      detail.push('城墙 ' + (r.wall.pct <= 0 ? '已破' : r.wall.pct + '%') + '（' + fmt(r.wall.hp) + '/' + fmt(r.wall.max) + '）'
+        + '　守军据城加成 ×' + r.wall.defMul
+        + (wf ? '　本波攻城值打掉 ' + fmt(wf.damage) + '，战后 ' + (wf.breached ? '破城' : Math.round(wf.hpAfter / Math.max(1, r.wall.max) * 100) + '%') : ''));
+    }
     if (r.spreadLines && r.spreadLines.length === 2) {
       var w0 = r.spreadLines[0], b0 = r.spreadLines[1];
       detail.push('守军区间：最坏折 ' + fmt(w0.aLoss) + '（' + (w0.win ? '可下' : '难下') + '）'
@@ -4285,7 +4300,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       '<div class="sub">' + c.province + ' · <span style="color:' + c.color + '">' + c.ownerName
       + '</span>' + (c.owner === 'player'
         ? ' · 驻城 ' + fmt(c.troopSum || 0) + ' 兵 · 城防 ' + fmt(c.troops)
-        : ' · 守军约 ' + fmt(c.troops)) + '</div>',
+        : ' · 守军约 ' + fmt(c.troops))
+      + (c.wallPct != null ? ' · 城墙 ' + (c.wallBreached ? '已破' : c.wallPct + '%') : '') + '</div>',
       tabs,
       tab,
       function (t) { tab = t; refreshCityView(s); },
@@ -4707,6 +4723,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       + kv('人口', fmt(c.population))
       + kv('农业', c.agri) + kv('商业', c.commerce)
       + kv('城防', c.cityDef) + kv('特产', c.specialty || '—')
+      + kv('城墙', wallText(c))
       + kv('地形', c.terrain || '—')
       + '</div><div class="cost" style="margin-top:8px">非我军城池无法在此办理内政；攻占后即可开垦经营。</div>'));
   }
@@ -4833,6 +4850,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       + kv('人口', fmt(c.population))
       + kv('农业', c.agri) + kv('商业', c.commerce)
       + kv('城防', c.cityDef) + kv('特产', c.specialty || '—')
+      + kv('城墙', wallText(c))
       + kv('主要兵种', c.arms || '—') + kv('地形', c.terrain || '—')
       + '</div>';
     if (c.history) card.appendChild(el('div', '', '<h4>史略</h4><div style="opacity:.85;line-height:1.9">' + c.history + '</div>'));

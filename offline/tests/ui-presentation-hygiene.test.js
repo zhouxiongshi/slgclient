@@ -97,7 +97,8 @@ test('源码注释与开发者字符串不含借鉴对象或内部规格编号',
 
 test('术语表玩家可见字段不再写借鉴来源，但工程溯源字段仍保留', () => {
   const terms = JSON.parse(read('conf/interaction/terms.json')).terms;
-  assert.equal(terms.length, 134);
+  /* ★ 2026-11-17：新增「城墙」词条（城防与攻城属性落地，玩家需要能查到）→ 135 条 */
+  assert.equal(terms.length, 135);
   for (const t of terms) {
     for (const field of ['名称', '简述', '证据级别']) {
       for (const token of [...SOURCE_LEAKS, ...TRACE_FIELDS]) {

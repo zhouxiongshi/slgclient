@@ -5,6 +5,12 @@
  * 稳定性最长 73 旬脚本模拟、单测仅 8 旬，无长局名册演化。本用例补：
  *  1. 对战强度分布：真实内核批量对战，验证「强弱有序、非一面倒、非随机」；
  *  2. 长局名册演化：100+ 旬模拟，名册规模/等级/忠诚有界、无 NaN、确定性。
+ *
+ * ★ 2026-11-17 修正：本用例原先自己用 `min(100, force + force_grow×9)` 算属性，
+ * 而原表的 `*_grow` 是 0~100 的成长率（吕布 force 100/grow 100、山贼 10/10），
+ * 两式都撞上 100 上限 → 顶级武将与末流被算成**同一份属性**，对战胜率退化为抛硬币，
+ * 只是恰好在旧的战法概率下过了闸。现改为直接复用 server/battle.js 的 makeHero，
+ * 与真实战斗同一条派生链（高属性者成长慢、低属性者才练得动）。
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -17,25 +23,19 @@ import {
 } from '../server/domain/ai-roster.js';
 import { PERSONA_AXES } from '../server/domain/strategy-brain.js';
 import { kernelSkillAt } from '../server/skills.js';
+import { makeHero } from '../server/battle.js';
 import { runBattle, DEFAULT_BATTLE_CONFIG } from '../kernel/index.js';
 
 const cfg = loadConfig();
 const FACTIONS = factionConf().factions;
 const rosterConf = { personas: PERSONA_AXES, factions: FACTIONS };
 
-function mkUnit(id, side, g, seedN = 0) {
-  const lv = 10;
-  const grow = (base, gk) => Math.min(100, (base || 50) + (g[gk] || 3) * (lv - 1));
+function mkUnit(id, side, g) {
+  /* 属性派生走生产的 makeHero；战法固定 10001，避免双方战法不同掩盖属性差。 */
+  const hero = makeHero({ ...g, cfgId: Number(g.cfgId), level: 10 }, cfg);
+  hero.skills = [kernelSkillAt(10001, 10)];
   return {
-    unit_id: id, side, pos: 0,
-    hero: {
-      heroid: id, name: g.name || `武${g.cfgId}`, level: lv, hero_type: 'normal', hit_range: 1, country: '', quality: 5,
-      attack_base: grow(g.force, 'force_grow'), defence_base: grow(g.defense, 'defense_grow'),
-      intel_base: grow(g.intel, 'intel_grow'), speed_base: grow(g.speed, 'speed_grow'),
-      destroy_base: grow(g.destroy, 'destroy_grow'),
-      attack_grow: 3, defence_grow: 3, intel_grow: 3, speed_grow: 3, destroy_grow: 3,
-      skills: [kernelSkillAt(10001, 10)],
-    },
+    unit_id: id, side, pos: 0, hero,
     troops: 2000, max_troops: 2000, speed: 100, attack_range: 5,
   };
 }
@@ -54,24 +54,40 @@ function duel(strongId, weakId, seed) {
   return { winner: r.winner, remain: [a, b] };
 }
 
-test('对战平衡：顶级武将对末流胜率 > 50% 且非全胜（强度有区分度但不绝对）', () => {
-  const all = [...cfg.generalByCfg.values()].filter((g) => Number(g.cfgId) >= 100001 && Number(g.cfgId) < 200000);
-  const byForce = all.slice().sort((a, b) => (b.force + (b.force_grow || 0) * 9) - (a.force + (a.force_grow || 0) * 9));
-  const strong = byForce[0];
-  const weak = byForce[byForce.length - 1];
-  assert.ok(strong && weak && strong.cfgId !== weak.cfgId, '应有强弱样本');
-  let strongWins = 0;
+test('对战平衡：差距悬殊时强者碾压，同档对手互有胜负（有区分度但不绝对）', () => {
+  /* 只取「真实武将」，剔掉 force/grow 都只有 10 的杂兵/山贼档——那些是战场填充单位，
+     跟顶级武将打本来就该 20:0，用它当「末流」样本测不出任何东西。 */
+  const all = [...cfg.generalByCfg.values()]
+    .filter((g) => Number(g.cfgId) >= 100001 && Number(g.cfgId) < 200000)
+    .filter((g) => Number(g.force) > 20 && Number(g.force_grow) > 20);
+  const score = (g) => Number(g.force) + Number(g.defense) * 0.4 + Number(g.strategy) * 0.4;
+  const ranked = all.slice().sort((a, b) => score(b) - score(a));
+  assert.ok(ranked.length >= 100, `真实武将样本过少（实测 ${ranked.length}）`);
+  const top = ranked[0];
+  const peer = ranked[1];
+  const bottom = ranked[ranked.length - 1];
+  assert.ok(top && peer && bottom && new Set([top.cfgId, peer.cfgId, bottom.cfgId]).size === 3, '应有三个不同样本');
+
   const N = 20;
-  for (let i = 0; i < N; i += 1) {
-    const d = duel(Number(strong.cfgId), Number(weak.cfgId), 20260001 + i);
-    if (!d) continue;
-    const won = d.winner === 1 || (d.winner == null && d.remain[0] > d.remain[1]);
-    if (won) strongWins += 1;
-  }
-  assert.ok(strongWins > N / 2,
-    `顶级武将(${strong.name})对末流(${weak.name})胜场仅 ${strongWins}/${N}，强度无区分度`);
-  assert.ok(strongWins < N,
-    `顶级武将(${strong.name})对末流(${weak.name})竟 ${strongWins}/${N} 全胜，战斗失去随机性`);
+  const wins = (a, b) => {
+    let w = 0;
+    for (let i = 0; i < N; i += 1) {
+      const d = duel(Number(a.cfgId), Number(b.cfgId), 20260001 + i);
+      if (!d) continue;
+      const won = d.winner === 1 || (d.winner == null && d.remain[0] > d.remain[1]);
+      if (won) w += 1;
+    }
+    return w;
+  };
+
+  const vsBottom = wins(top, bottom);
+  assert.ok(vsBottom >= 18,
+    `顶级武将(${top.name})对末位真实武将(${bottom.name})仅 ${vsBottom}/${N}，强度无区分度`);
+
+  /* 同档对手：既不能必胜（战斗失去随机性），也不能全败（强弱读数反了）。 */
+  const vsPeer = wins(top, peer);
+  assert.ok(vsPeer > 2 && vsPeer < 18,
+    `顶级武将(${top.name})对同档(${peer.name}) ${vsPeer}/${N}，战斗随机性/强弱读数异常`);
 });
 
 test('长局稳定性：120 旬名册演化后规模有界、数值合法、无 NaN', () => {

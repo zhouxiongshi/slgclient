@@ -205,14 +205,15 @@ const legacySkillFiles = [
   'zhudong/tuji.json', 'beidong/baizhanjingbing.json',
   'zuiji/zhongzhan.json', 'zhihui/fengshi.json',
 ].map((f) => join(ROOT, 'conf', 'json', 'skill', f));
-// 固定值战法（原文无 {0} 成长标记）不要求成长；被动概率恒 100%
+// 固定值战法（原文无 {0} 成长标记）不要求成长；被动/指挥概率恒 100%
+//（2026-11-17 设计变更：指挥战法同主公战法口径＝必发动，详见 SDD §17.12）
 const fixedCount = (skillTable?.skills ?? []).filter((s) => s.kernel.rate_pct_lv1 === s.kernel.rate_pct_lv10).length;
 const skillGrowthOK = (skillTable?.skills ?? []).every((s) => {
   const fixed = s.kernel.rate_pct_lv1 === s.kernel.rate_pct_lv10;
   const lv = s.ui.levels;
   if (lv.length !== skillTable.levelCount) return false;
   if (!fixed && lv.at(-1).effect_value[0] <= lv[0].effect_value[0]) return false;
-  if (s.ui.trigger !== 2 && lv.at(-1).probability <= lv[0].probability) return false;
+  if (s.ui.trigger !== 2 && s.kernel.skill_class !== '指挥' && lv.at(-1).probability <= lv[0].probability) return false;
   return true;
 });
 check('完整战法表：31 个战法 / 4 类 / 10 级真实数值成长 / 数值来自 本作配置',

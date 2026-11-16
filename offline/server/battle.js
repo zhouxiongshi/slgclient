@@ -66,6 +66,33 @@ export function judgeBattle({ winner, aStart, dStart, aLeft, dLeft }) {
  *  时一场战斗平均 2.2 回合 / 59 事件 / 约 22 条战报 hit，四类战法能完整展开。 */
 export const TROOP_SCALE = 1;
 
+/* ======================= 城防与攻城（2026-11-17）=======================
+ * 城墙数值口径在 domain/city-wall.js（零依赖叶子，面板与战略层共用同一份）。
+ * 这里只负责「战斗内怎么用」：
+ *   · 守军防御加成按城墙完好比例取 wallDefMul（完整=旧口径 1.5，破城=无加成）；
+ *   · 攻方按参战武将的攻城值（destroy）× 投入兵力打出破墙伤害；
+ *   · 破城当阵守军再折损 breachRout（城墙崩塌），但**不参与 judgeBattle**——
+ *     占城语义保持原样，不推翻既有验收契约。
+ * 详见 domain/city-wall.js 顶部说明。
+ */
+import { WALL, wallMaxOf, wallRatioOf, wallDefMul } from './domain/city-wall.js';
+export { WALL, wallMaxOf, wallRatioOf, wallDefMul };
+/**
+ * 攻方一波攻城能打掉多少城墙耐久。
+ * 逐将取攻城值 × 该将投入兵力 → 破墙效率，再乘统一系数。
+ * units 为 [{ destroy, soldiers }]（由 resolveBattle 从参战阵容现算，避免二次派生）。
+ */
+export function siegeDamageOf(units) {
+  let sum = 0;
+  for (const u of units || []) {
+    const d = Math.max(0, Number(u.destroy) || 0);
+    const s = Math.max(0, Number(u.soldiers) || 0);
+    if (d <= 0 || s <= 0) continue;
+    sum += d * troopStrikeMul(s);
+  }
+  return Math.round(sum * WALL.siegeK);
+}
+
 /** 内核配置快照：本作配置 原数值 + corrected 减伤方向修正。 */
 let _cfg = null;
 export function battleConfig() {
@@ -94,8 +121,10 @@ function loadoutFor(g) {
   });
 }
 
-/** 把原 general.json 的武将属性映射成内核 Hero（属性数值直接来源于原配置）。 */
-function makeHero(g, cfg) {
+/** 把原 general.json 的武将属性映射成内核 Hero（属性数值直接来源于原配置）。
+ *  ★ 2026-11-17：导出给平衡/攻城用例复用同一条派生链——测试自己再算一遍属性
+ *  就会出现「双方都顶到 100、强度无区分度」的假平衡（见 ai-career-balance 用例）。 */
+export function makeHero(g, cfg) {
   /* ★ M2-3 代将（本作设计）：五维 50、无战法、不可培养——防止连环阵亡后无法出征的兜底 */
   if (g.isStandIn) {
     return {
@@ -500,7 +529,9 @@ export function battleSeedFor(armyId, x, y, day) {
   return crc32Utf8(`${armyId}:${x}:${y}:${Math.max(1, Math.floor(Number(day) || 1))}`);
 }
 
-export function resolveBattle({ cfg, state, army, x, y, seed, defenseOverride = null, withAnim = true, siege = false }) {
+export function resolveBattle({
+  cfg, state, army, x, y, seed, defenseOverride = null, withAnim = true, siege = false, siegeWall = null,
+}) {
   const siegeBattle = siege;
   /* withAnim=false：推演用。推演只要数值与叙事，不需要回放动作流；
      而 buildBattleAnim 要为每个动作生成一句人话（战法档案 + 措辞），
@@ -534,7 +565,9 @@ export function resolveBattle({ cfg, state, army, x, y, seed, defenseOverride = 
     buildLookup(uid, unit);
     units.push(unit);
   });
-  const wall = siegeBattle ? (Number(knobGet(state, 'siegeWallMul')) || 1) : 1;
+  /* ★ 2026-11-17 城防：城墙完好比例决定守军防御加成（完整=旧口径 sieveWallMul）。
+     旧实现恒 1.5、与城防属性无关；现在城墙被打残后守军立刻变软。 */
+  const wall = siegeBattle ? wallDefMul(state, siegeWall) : 1;
   const terrain = String(defenseOverride?.terrain || '');
   const terrainMul = /山|险|隘/.test(terrain) ? 1.12 : 1;
   defenders.forEach((g, i) => {
@@ -550,6 +583,19 @@ export function resolveBattle({ cfg, state, army, x, y, seed, defenseOverride = 
     units.push(unit);
   });
   idMap.system = 0;
+  /* 攻方攻城值（destroy）在这一战里换成的破墙伤害：按参战武将 × 投入兵力现算。
+     没传 siegeWall 的老调用方（本地清剿 / 旧测试）按「城墙完整」处理，口径与升级前一致。 */
+  const siegeWallMax = Math.max(1, Number(siegeWall?.max) || 0);
+  const siegeWallHp = Number.isFinite(Number(siegeWall?.hp)) && siegeWallMax > 0
+    ? Math.max(0, Math.min(siegeWallMax, Number(siegeWall.hp)))
+    : siegeWallMax;
+  const siegeDmg = siegeBattle && siegeWallMax > 0
+    ? siegeDamageOf(units.filter((u) => u.side === 1).map((u) => ({
+      destroy: (Number(u.hero.destroy_base) || 0)
+        + (Number(u.hero.destroy_grow) || 0) * ((Number(u.hero.level) || 1) - 1),
+      soldiers: Number(u.troops) || 0,
+    })))
+    : 0;
 
   /* ★ 验收 #10：战斗种子只依赖 (队伍, 坐标, 到达日)，与 battleLog 长度解耦。
      这样「战前推演」可以算出与正式结算**逐位相同**的种子，预演结果才有意义。
@@ -589,6 +635,30 @@ export function resolveBattle({ cfg, state, army, x, y, seed, defenseOverride = 
       const side = resultCode === 2 ? defenseRemain : attackRemain;
       for (let i = 0; i < side.length; i += 1) side[i] = Math.max(0, Math.round(side[i] * (1 - cut)));
     }
+  }
+
+  /* ★ 2026-11-17 城防：攻城值换来的破墙伤害在这里结算。
+     破城（wallHp 归零）当阵守军再折损 breachRout——城墙塌了守军溃散，
+     但**不参与 judgeBattle**（占城语义保持原样，避免推翻既有契约）。 */
+  let siegeInfo = null;
+  if (siegeBattle && siegeWallMax > 0) {
+    const hpAfter = Math.max(0, siegeWallHp - siegeDmg);
+    const breached = hpAfter <= 0 && siegeWallHp > 0;
+    if (breached) {
+      for (let i = 0; i < defenseRemain.length; i += 1) {
+        defenseRemain[i] = Math.max(0, Math.round(defenseRemain[i] * (1 - WALL.breachRout)));
+      }
+    }
+    siegeInfo = {
+      max: siegeWallMax,
+      hpBefore: siegeWallHp,
+      hpAfter,
+      damage: Math.min(siegeDmg, siegeWallHp),
+      breached,
+      ratioBefore: Math.round((siegeWallHp / siegeWallMax) * 100),
+      ratioAfter: Math.round((hpAfter / siegeWallMax) * 100),
+      defMul: Math.round(wall * 100) / 100,
+    };
   }
 
   const begAttackArmy = armySnapshot(army, beginSoldiers);
@@ -663,5 +733,7 @@ export function resolveBattle({ cfg, state, army, x, y, seed, defenseOverride = 
   });
   if (state.battleLog.length > 200) state.battleLog.shift();
 
-  return { report, kernel, endAttackSoldiers: attackRemain, endDefenseSoldiers: defenseRemain, expByGeneral };
+  return {
+    report, kernel, endAttackSoldiers: attackRemain, endDefenseSoldiers: defenseRemain, expByGeneral, siege: siegeInfo,
+  };
 }

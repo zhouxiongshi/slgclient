@@ -2239,18 +2239,39 @@
       "id": "gongcheng",
       "名称": "攻城",
       "分类": "战斗",
-      "简述": "攻方规则：守方城防 ×1.5、攻方每回合士气 −2；第 4 回合起可选「蚁附」（伤亡 ×1.5，破城加速）。拖太久粮尽。",
+      "简述": "攻打城池：守军据城加成最高 1.5×（城墙越残加成越低，破城则为 1×）；攻方按「武将攻城值 × 投入兵力」逐波打低城墙耐久，破城后当阵守军再折一成余。城墙每旬自行修复，被围不修。",
       "数值来源": [
-        "battle-core",
+        "server/domain/city-wall.js",
+        "server/battle.js siegeDamageOf",
         "docs/GDD §6.9"
       ],
       "关联词条": [
         "shoucheng",
+        "chengqiang",
         "shiqi",
         "liangdao"
       ],
       "证据级别": "本作设定",
       "source_id": "gdd:攻城",
+      "confidence": "高"
+    },
+    {
+      "id": "chengqiang",
+      "名称": "城墙",
+      "分类": "战斗",
+      "简述": "城池的耐久条：上限由等级与城防属性决定，被攻方的攻城值逐波打薄。城墙越残，守军据城加成越低；耐久归零即破城，城防设施随之残破。每旬自行修复 2%，被围的城不修。",
+      "数值来源": [
+        "server/domain/city-wall.js wallMaxOf/wallDefMul",
+        "state.strategy.cities[id].wallHp",
+        "docs/FIELD-CONTRACT §C"
+      ],
+      "关联词条": [
+        "gongcheng",
+        "shoucheng",
+        "kaifadu"
+      ],
+      "证据级别": "本作设定",
+      "source_id": "gdd:城墙",
       "confidence": "高"
     },
     {

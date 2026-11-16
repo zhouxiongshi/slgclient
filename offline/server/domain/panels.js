@@ -24,6 +24,8 @@ import { oathOf, oathFactionOf, strategyCity, factionTraitOf } from './oath.js';
 import { ensureCityEcon, cityYield, armsApt, ARMS_NAMES } from './city-econ.js';
 /* ★ M4-12：六府·内政的设施区段与 city.facilities 协议共用同一份生效清单。 */
 import { facilityView } from './facility-catalog.js';
+/* ★ 2026-11-17 城防：城墙耐久与战斗内用的是同一份公式（零依赖叶子，不成环） */
+import { wallMaxOf, wallView } from './city-wall.js';
 /* 战略台以并行会话的战略层为唯一口径：行军可达/关隘取 march.js，出征账取 strategy-log.js。
    刻意不 import strategy.js —— 它反向 import world.js，而 world.js 又 import 本文件，会成环。 */
 import { marchableNeighbors, marchGraph } from './march.js';
@@ -556,12 +558,19 @@ export function panelState(state, cfg) {
   const cityBrief = mapCities.map((c) => {
     const row = cityRows[c.id] || {};
     const troops = Math.max(0, Math.round(Number(row.troops) || 0));
+    /* ★ 2026-11-17 城防：城墙耐久上限由「等级 + 城防属性」派生，当前值取存档；
+       旧档没有 wallHp → 视为完整城墙（与战斗内 wallDefMul 同一兜底）。 */
+    const wMax = wallMaxOf(c, c.level || 1);
+    const wRaw = Number(row.wallHp);
+    const wall = wallView({ hp: Number.isFinite(wRaw) ? wRaw : wMax, max: wMax });
     return {
       id: c.id, name: c.name, province: c.province, level: c.level,
       owner: row.owner || 'han', ownerName: nameOfFaction(row.owner || 'han'), troops,
       garrison: troops, // 兼容旧 UI 字段：已改为实时驻军，不再是拍脑袋估算
       agriculture: c.attrs?.农业 ?? null, commerce: c.attrs?.商业 ?? null,
       cityDef: c.attrs?.城防 ?? null,
+      /* ★ 2026-11-17：城墙耐久（玩家可见）——攻城属性打的、城防属性撑的就是它 */
+      wallHp: wall.hp, wallMax: wall.max, wallPct: wall.pct, wallBreached: wall.breached,
       // 修 U06：特产/主要兵种在 map.json 顶层，attrs 里没有这两个键（旧写法恒空）。
       terrain: c.terrain || '', specialty: c.specialty || c.attrs?.特产 || '',
       arms: c.arms || c.attrs?.主要兵种 || '',

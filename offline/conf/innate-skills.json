@@ -29,7 +29,7 @@
     ],
     "levels": [
      {
-      "probability": 35,
+      "probability": 30,
       "effect_value": [
        70
       ],
@@ -38,7 +38,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 30,
       "effect_value": [
        77.78
       ],
@@ -47,7 +47,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 30,
       "effect_value": [
        85.56
       ],
@@ -56,7 +56,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 31,
       "effect_value": [
        93.33
       ],
@@ -65,7 +65,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 31,
       "effect_value": [
        101.11
       ],
@@ -74,7 +74,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 31,
       "effect_value": [
        108.89
       ],
@@ -83,7 +83,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 31,
       "effect_value": [
        116.67
       ],
@@ -92,7 +92,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 32,
       "effect_value": [
        124.44
       ],
@@ -101,7 +101,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 32,
       "effect_value": [
        132.22
       ],
@@ -110,7 +110,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 32,
       "effect_value": [
        140
       ],
@@ -127,8 +127,8 @@
     "name": "辕门射戟",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.35,
-    "probability_max": 0.35,
+    "probability_init": 0.3,
+    "probability_max": 0.32,
     "detail_id": 9200001,
     "effects": [
      {
@@ -393,7 +393,7 @@
     ],
     "levels": [
      {
-      "probability": 35,
+      "probability": 30,
       "effect_value": [
        71.5,
        40
@@ -404,7 +404,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 30,
       "effect_value": [
        79.44,
        44.44
@@ -415,7 +415,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 30,
       "effect_value": [
        87.39,
        48.89
@@ -426,7 +426,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 31,
       "effect_value": [
        95.33,
        53.33
@@ -437,7 +437,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 31,
       "effect_value": [
        103.28,
        57.78
@@ -448,7 +448,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 31,
       "effect_value": [
        111.22,
        62.22
@@ -459,7 +459,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 31,
       "effect_value": [
        119.17,
        66.67
@@ -470,7 +470,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 32,
       "effect_value": [
        127.11,
        71.11
@@ -481,7 +481,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 32,
       "effect_value": [
        135.06,
        75.56
@@ -492,7 +492,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 32,
       "effect_value": [
        143,
        80
@@ -511,8 +511,8 @@
     "name": "密谋定蜀",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.35,
-    "probability_max": 0.35,
+    "probability_init": 0.3,
+    "probability_max": 0.32,
     "detail_id": 9200021,
     "effects": [
      {
@@ -591,7 +591,7 @@
     ],
     "levels": [
      {
-      "probability": 35,
+      "probability": 32,
       "effect_value": [
        40
       ],
@@ -600,7 +600,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 33,
       "effect_value": [
        44.44
       ],
@@ -609,7 +609,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 34,
       "effect_value": [
        48.89
       ],
@@ -627,7 +627,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 36,
       "effect_value": [
        57.78
       ],
@@ -636,7 +636,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 36,
       "effect_value": [
        62.22
       ],
@@ -645,7 +645,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 37,
       "effect_value": [
        66.67
       ],
@@ -654,7 +654,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 38,
       "effect_value": [
        71.11
       ],
@@ -663,7 +663,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 39,
       "effect_value": [
        75.56
       ],
@@ -672,7 +672,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 40,
       "effect_value": [
        80
       ],
@@ -689,8 +689,8 @@
     "name": "奇佐鬼谋",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.35,
-    "probability_max": 0.35,
+    "probability_init": 0.32,
+    "probability_max": 0.4,
     "detail_id": 9200031,
     "effects": [
      {
@@ -759,7 +759,7 @@
     ],
     "levels": [
      {
-      "probability": 40,
+      "probability": 42,
       "effect_value": [
        55.5,
        40
@@ -770,7 +770,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 43,
       "effect_value": [
        61.67,
        44.44
@@ -781,7 +781,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 44,
       "effect_value": [
        67.83,
        48.89
@@ -792,7 +792,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 45,
       "effect_value": [
        74,
        53.33
@@ -803,7 +803,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 46,
       "effect_value": [
        80.17,
        57.78
@@ -814,7 +814,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 46,
       "effect_value": [
        86.33,
        62.22
@@ -825,7 +825,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 47,
       "effect_value": [
        92.5,
        66.67
@@ -836,7 +836,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 48,
       "effect_value": [
        98.67,
        71.11
@@ -847,7 +847,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 49,
       "effect_value": [
        104.83,
        75.56
@@ -858,7 +858,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 50,
       "effect_value": [
        111,
        80
@@ -877,8 +877,8 @@
     "name": "火势风威",
     "skill_class": "主动",
     "prepare": 1,
-    "probability_init": 0.4,
-    "probability_max": 0.4,
+    "probability_init": 0.42,
+    "probability_max": 0.5,
     "detail_id": 9200041,
     "effects": [
      {
@@ -1126,7 +1126,7 @@
     ],
     "levels": [
      {
-      "probability": 100,
+      "probability": 32,
       "effect_value": [
        40
       ],
@@ -1135,7 +1135,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 33,
       "effect_value": [
        44.44
       ],
@@ -1144,7 +1144,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 34,
       "effect_value": [
        48.89
       ],
@@ -1153,7 +1153,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 35,
       "effect_value": [
        53.33
       ],
@@ -1162,7 +1162,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 36,
       "effect_value": [
        57.78
       ],
@@ -1171,7 +1171,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 36,
       "effect_value": [
        62.22
       ],
@@ -1180,7 +1180,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 37,
       "effect_value": [
        66.67
       ],
@@ -1189,7 +1189,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 38,
       "effect_value": [
        71.11
       ],
@@ -1198,7 +1198,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 39,
       "effect_value": [
        75.56
       ],
@@ -1207,7 +1207,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 40,
       "effect_value": [
        80
       ],
@@ -1224,8 +1224,8 @@
     "name": "乱政",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 1,
-    "probability_max": 1,
+    "probability_init": 0.32,
+    "probability_max": 0.4,
     "detail_id": 9200061,
     "effects": [
      {
@@ -2016,7 +2016,7 @@
     ],
     "levels": [
      {
-      "probability": 35,
+      "probability": 38,
       "effect_value": [
        32,
        40
@@ -2027,7 +2027,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 39,
       "effect_value": [
        35.56,
        44.44
@@ -2038,7 +2038,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 40,
       "effect_value": [
        39.11,
        48.89
@@ -2049,7 +2049,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 41,
       "effect_value": [
        42.67,
        53.33
@@ -2060,7 +2060,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 42,
       "effect_value": [
        46.22,
        57.78
@@ -2071,7 +2071,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 42,
       "effect_value": [
        49.78,
        62.22
@@ -2082,7 +2082,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 43,
       "effect_value": [
        53.33,
        66.67
@@ -2093,7 +2093,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 44,
       "effect_value": [
        56.89,
        71.11
@@ -2104,7 +2104,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 45,
       "effect_value": [
        60.44,
        75.56
@@ -2115,7 +2115,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 46,
       "effect_value": [
        64,
        80
@@ -2134,8 +2134,8 @@
     "name": "威震北疆",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.35,
-    "probability_max": 0.35,
+    "probability_init": 0.38,
+    "probability_max": 0.46,
     "detail_id": 9200111,
     "effects": [
      {
@@ -2218,7 +2218,7 @@
     ],
     "levels": [
      {
-      "probability": 35,
+      "probability": 31,
       "effect_value": [
        75,
        40
@@ -2229,7 +2229,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 32,
       "effect_value": [
        83.33,
        44.44
@@ -2240,7 +2240,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 33,
       "effect_value": [
        91.67,
        48.89
@@ -2251,7 +2251,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 34,
       "effect_value": [
        100,
        53.33
@@ -2284,7 +2284,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 36,
       "effect_value": [
        125,
        66.67
@@ -2295,7 +2295,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 37,
       "effect_value": [
        133.33,
        71.11
@@ -2306,7 +2306,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 38,
       "effect_value": [
        141.67,
        75.56
@@ -2317,7 +2317,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 39,
       "effect_value": [
        150,
        80
@@ -2336,8 +2336,8 @@
     "name": "玄武洰流",
     "skill_class": "主动",
     "prepare": 1,
-    "probability_init": 0.35,
-    "probability_max": 0.35,
+    "probability_init": 0.31,
+    "probability_max": 0.39,
     "detail_id": 9200121,
     "effects": [
      {
@@ -2412,7 +2412,7 @@
     ],
     "levels": [
      {
-      "probability": 75,
+      "probability": 30,
       "effect_value": [
        225
       ],
@@ -2421,7 +2421,7 @@
       ]
      },
      {
-      "probability": 75,
+      "probability": 30,
       "effect_value": [
        250
       ],
@@ -2430,7 +2430,7 @@
       ]
      },
      {
-      "probability": 75,
+      "probability": 30,
       "effect_value": [
        275
       ],
@@ -2439,7 +2439,7 @@
       ]
      },
      {
-      "probability": 75,
+      "probability": 31,
       "effect_value": [
        300
       ],
@@ -2448,7 +2448,7 @@
       ]
      },
      {
-      "probability": 75,
+      "probability": 31,
       "effect_value": [
        325
       ],
@@ -2457,7 +2457,7 @@
       ]
      },
      {
-      "probability": 75,
+      "probability": 31,
       "effect_value": [
        350
       ],
@@ -2466,7 +2466,7 @@
       ]
      },
      {
-      "probability": 75,
+      "probability": 31,
       "effect_value": [
        375
       ],
@@ -2475,7 +2475,7 @@
       ]
      },
      {
-      "probability": 75,
+      "probability": 32,
       "effect_value": [
        400
       ],
@@ -2484,7 +2484,7 @@
       ]
      },
      {
-      "probability": 75,
+      "probability": 32,
       "effect_value": [
        425
       ],
@@ -2493,7 +2493,7 @@
       ]
      },
      {
-      "probability": 75,
+      "probability": 32,
       "effect_value": [
        450
       ],
@@ -2510,8 +2510,8 @@
     "name": "长坂之吼",
     "skill_class": "主动",
     "prepare": 1,
-    "probability_init": 0.75,
-    "probability_max": 0.75,
+    "probability_init": 0.3,
+    "probability_max": 0.32,
     "detail_id": 9200131,
     "effects": [
      {
@@ -2596,7 +2596,7 @@
     ],
     "levels": [
      {
-      "probability": 25,
+      "probability": 30,
       "effect_value": [
        67.5
       ],
@@ -2605,7 +2605,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 30,
       "effect_value": [
        75
       ],
@@ -2614,7 +2614,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 30,
       "effect_value": [
        82.5
       ],
@@ -2623,7 +2623,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 31,
       "effect_value": [
        90
       ],
@@ -2632,7 +2632,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 31,
       "effect_value": [
        97.5
       ],
@@ -2641,7 +2641,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 31,
       "effect_value": [
        105
       ],
@@ -2650,7 +2650,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 31,
       "effect_value": [
        112.5
       ],
@@ -2659,7 +2659,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 32,
       "effect_value": [
        120
       ],
@@ -2668,7 +2668,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 32,
       "effect_value": [
        127.5
       ],
@@ -2677,7 +2677,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 32,
       "effect_value": [
        135
       ],
@@ -2694,8 +2694,8 @@
     "name": "小霸王",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.25,
-    "probability_max": 0.25,
+    "probability_init": 0.3,
+    "probability_max": 0.32,
     "detail_id": 9200141,
     "effects": [
      {
@@ -2780,7 +2780,7 @@
     ],
     "levels": [
      {
-      "probability": 35,
+      "probability": 42,
       "effect_value": [
        75
       ],
@@ -2789,7 +2789,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 43,
       "effect_value": [
        83.33
       ],
@@ -2798,7 +2798,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 44,
       "effect_value": [
        91.67
       ],
@@ -2807,7 +2807,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 45,
       "effect_value": [
        100
       ],
@@ -2816,7 +2816,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 46,
       "effect_value": [
        108.33
       ],
@@ -2825,7 +2825,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 46,
       "effect_value": [
        116.67
       ],
@@ -2834,7 +2834,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 47,
       "effect_value": [
        125
       ],
@@ -2843,7 +2843,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 48,
       "effect_value": [
        133.33
       ],
@@ -2852,7 +2852,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 49,
       "effect_value": [
        141.67
       ],
@@ -2861,7 +2861,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 50,
       "effect_value": [
        150
       ],
@@ -2878,8 +2878,8 @@
     "name": "重斩",
     "skill_class": "追击",
     "prepare": 0,
-    "probability_init": 0.35,
-    "probability_max": 0.35,
+    "probability_init": 0.42,
+    "probability_max": 0.5,
     "detail_id": 9200151,
     "effects": [
      {
@@ -2954,7 +2954,7 @@
     ],
     "levels": [
      {
-      "probability": 35,
+      "probability": 30,
       "effect_value": [
        41.5,
        40
@@ -2965,7 +2965,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 31,
       "effect_value": [
        46.11,
        44.44
@@ -2976,7 +2976,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 31,
       "effect_value": [
        50.72,
        48.89
@@ -2987,7 +2987,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 32,
       "effect_value": [
        55.33,
        53.33
@@ -2998,7 +2998,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 32,
       "effect_value": [
        59.94,
        57.78
@@ -3009,7 +3009,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 33,
       "effect_value": [
        64.56,
        62.22
@@ -3020,7 +3020,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 33,
       "effect_value": [
        69.17,
        66.67
@@ -3031,7 +3031,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 34,
       "effect_value": [
        73.78,
        71.11
@@ -3042,7 +3042,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 34,
       "effect_value": [
        78.39,
        75.56
@@ -3072,7 +3072,7 @@
     "name": "逆反毒杀",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.35,
+    "probability_init": 0.3,
     "probability_max": 0.35,
     "detail_id": 9200161,
     "effects": [
@@ -3164,7 +3164,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 31,
       "effect_value": [
        127.78
       ],
@@ -3173,7 +3173,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 32,
       "effect_value": [
        140.56
       ],
@@ -3182,7 +3182,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 33,
       "effect_value": [
        153.33
       ],
@@ -3191,7 +3191,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 34,
       "effect_value": [
        166.11
       ],
@@ -3200,7 +3200,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 34,
       "effect_value": [
        178.89
       ],
@@ -3209,7 +3209,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 35,
       "effect_value": [
        191.67
       ],
@@ -3218,7 +3218,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 36,
       "effect_value": [
        204.44
       ],
@@ -3227,7 +3227,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 37,
       "effect_value": [
        217.22
       ],
@@ -3236,7 +3236,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 38,
       "effect_value": [
        230
       ],
@@ -3254,7 +3254,7 @@
     "skill_class": "追击",
     "prepare": 0,
     "probability_init": 0.3,
-    "probability_max": 0.3,
+    "probability_max": 0.38,
     "detail_id": 9200171,
     "effects": [
      {
@@ -3329,7 +3329,7 @@
     ],
     "levels": [
      {
-      "probability": 40,
+      "probability": 30,
       "effect_value": [
        75,
        7
@@ -3340,7 +3340,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 30,
       "effect_value": [
        83.33,
        7.78
@@ -3351,7 +3351,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 30,
       "effect_value": [
        91.67,
        8.56
@@ -3362,7 +3362,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 31,
       "effect_value": [
        100,
        9.33
@@ -3373,7 +3373,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 31,
       "effect_value": [
        108.33,
        10.11
@@ -3384,7 +3384,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 31,
       "effect_value": [
        116.67,
        10.89
@@ -3395,7 +3395,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 31,
       "effect_value": [
        125,
        11.67
@@ -3406,7 +3406,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 32,
       "effect_value": [
        133.33,
        12.44
@@ -3417,7 +3417,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 32,
       "effect_value": [
        141.67,
        13.22
@@ -3428,7 +3428,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 32,
       "effect_value": [
        150,
        14
@@ -3447,8 +3447,8 @@
     "name": "诸葛锦囊",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.4,
-    "probability_max": 0.4,
+    "probability_init": 0.3,
+    "probability_max": 0.32,
     "detail_id": 9200181,
     "effects": [
      {
@@ -4278,7 +4278,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 31,
       "effect_value": [
        133.33
       ],
@@ -4287,7 +4287,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 31,
       "effect_value": [
        144.44
       ],
@@ -4296,7 +4296,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 31,
       "effect_value": [
        155.56
       ],
@@ -4305,7 +4305,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 31,
       "effect_value": [
        166.67
       ],
@@ -4314,7 +4314,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 32,
       "effect_value": [
        177.78
       ],
@@ -4323,7 +4323,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 32,
       "effect_value": [
        188.89
       ],
@@ -4332,7 +4332,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 32,
       "effect_value": [
        200
       ],
@@ -4350,7 +4350,7 @@
     "skill_class": "主动",
     "prepare": 0,
     "probability_init": 0.3,
-    "probability_max": 0.3,
+    "probability_max": 0.32,
     "detail_id": 9200231,
     "effects": [
      {
@@ -4413,7 +4413,7 @@
     ],
     "levels": [
      {
-      "probability": 40,
+      "probability": 41,
       "effect_value": [
        88.5
       ],
@@ -4422,7 +4422,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 42,
       "effect_value": [
        98.33
       ],
@@ -4431,7 +4431,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 43,
       "effect_value": [
        108.17
       ],
@@ -4440,7 +4440,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 44,
       "effect_value": [
        118
       ],
@@ -4449,7 +4449,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 45,
       "effect_value": [
        127.83
       ],
@@ -4458,7 +4458,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 45,
       "effect_value": [
        137.67
       ],
@@ -4467,7 +4467,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 46,
       "effect_value": [
        147.5
       ],
@@ -4476,7 +4476,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 47,
       "effect_value": [
        157.33
       ],
@@ -4485,7 +4485,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 48,
       "effect_value": [
        167.17
       ],
@@ -4494,7 +4494,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 49,
       "effect_value": [
        177
       ],
@@ -4511,8 +4511,8 @@
     "name": "饮鸩之怨",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.4,
-    "probability_max": 0.4,
+    "probability_init": 0.41,
+    "probability_max": 0.49,
     "detail_id": 9200241,
     "effects": [
      {
@@ -4582,7 +4582,7 @@
     ],
     "levels": [
      {
-      "probability": 50,
+      "probability": 42,
       "effect_value": [
        75
       ],
@@ -4591,7 +4591,7 @@
       ]
      },
      {
-      "probability": 50,
+      "probability": 43,
       "effect_value": [
        83.33
       ],
@@ -4600,7 +4600,7 @@
       ]
      },
      {
-      "probability": 50,
+      "probability": 44,
       "effect_value": [
        91.67
       ],
@@ -4609,7 +4609,7 @@
       ]
      },
      {
-      "probability": 50,
+      "probability": 45,
       "effect_value": [
        100
       ],
@@ -4618,7 +4618,7 @@
       ]
      },
      {
-      "probability": 50,
+      "probability": 46,
       "effect_value": [
        108.33
       ],
@@ -4627,7 +4627,7 @@
       ]
      },
      {
-      "probability": 50,
+      "probability": 46,
       "effect_value": [
        116.67
       ],
@@ -4636,7 +4636,7 @@
       ]
      },
      {
-      "probability": 50,
+      "probability": 47,
       "effect_value": [
        125
       ],
@@ -4645,7 +4645,7 @@
       ]
      },
      {
-      "probability": 50,
+      "probability": 48,
       "effect_value": [
        133.33
       ],
@@ -4654,7 +4654,7 @@
       ]
      },
      {
-      "probability": 50,
+      "probability": 49,
       "effect_value": [
        141.67
       ],
@@ -4680,7 +4680,7 @@
     "name": "银龙冲阵",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.5,
+    "probability_init": 0.42,
     "probability_max": 0.5,
     "detail_id": 9200251,
     "effects": [
@@ -4778,7 +4778,7 @@
     ],
     "levels": [
      {
-      "probability": 40,
+      "probability": 30,
       "effect_value": [
        95,
        40
@@ -4789,7 +4789,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 30,
       "effect_value": [
        105.56,
        44.44
@@ -4800,7 +4800,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 30,
       "effect_value": [
        116.11,
        48.89
@@ -4811,7 +4811,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 31,
       "effect_value": [
        126.67,
        53.33
@@ -4822,7 +4822,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 31,
       "effect_value": [
        137.22,
        57.78
@@ -4833,7 +4833,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 31,
       "effect_value": [
        147.78,
        62.22
@@ -4844,7 +4844,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 31,
       "effect_value": [
        158.33,
        66.67
@@ -4855,7 +4855,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 32,
       "effect_value": [
        168.89,
        71.11
@@ -4866,7 +4866,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 32,
       "effect_value": [
        179.44,
        75.56
@@ -4877,7 +4877,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 32,
       "effect_value": [
        190,
        80
@@ -4896,8 +4896,8 @@
     "name": "樊渊泅囚",
     "skill_class": "主动",
     "prepare": 1,
-    "probability_init": 0.4,
-    "probability_max": 0.4,
+    "probability_init": 0.3,
+    "probability_max": 0.32,
     "detail_id": 9200261,
     "effects": [
      {
@@ -4974,7 +4974,7 @@
     ],
     "levels": [
      {
-      "probability": 100,
+      "probability": 30,
       "effect_value": [
        60,
        40
@@ -4985,7 +4985,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 30,
       "effect_value": [
        66.67,
        44.44
@@ -4996,7 +4996,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 30,
       "effect_value": [
        73.33,
        48.89
@@ -5007,7 +5007,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 31,
       "effect_value": [
        80,
        53.33
@@ -5018,7 +5018,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 31,
       "effect_value": [
        86.67,
        57.78
@@ -5029,7 +5029,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 31,
       "effect_value": [
        93.33,
        62.22
@@ -5040,7 +5040,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 31,
       "effect_value": [
        100,
        66.67
@@ -5051,7 +5051,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 32,
       "effect_value": [
        106.67,
        71.11
@@ -5062,7 +5062,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 32,
       "effect_value": [
        113.33,
        75.56
@@ -5073,7 +5073,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 32,
       "effect_value": [
        120,
        80
@@ -5092,8 +5092,8 @@
     "name": "定军扬威",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 1,
-    "probability_max": 1,
+    "probability_init": 0.3,
+    "probability_max": 0.32,
     "detail_id": 9200271,
     "effects": [
      {
@@ -5500,7 +5500,7 @@
     ],
     "levels": [
      {
-      "probability": 35,
+      "probability": 42,
       "effect_value": [
        30,
        40
@@ -5511,7 +5511,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 43,
       "effect_value": [
        33.33,
        44.44
@@ -5522,7 +5522,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 44,
       "effect_value": [
        36.67,
        48.89
@@ -5533,7 +5533,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 45,
       "effect_value": [
        40,
        53.33
@@ -5544,7 +5544,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 46,
       "effect_value": [
        43.33,
        57.78
@@ -5555,7 +5555,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 46,
       "effect_value": [
        46.67,
        62.22
@@ -5566,7 +5566,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 47,
       "effect_value": [
        50,
        66.67
@@ -5577,7 +5577,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 48,
       "effect_value": [
        53.33,
        71.11
@@ -5588,7 +5588,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 49,
       "effect_value": [
        56.67,
        75.56
@@ -5599,7 +5599,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 50,
       "effect_value": [
        60,
        80
@@ -5618,8 +5618,8 @@
     "name": "黄天当立",
     "skill_class": "主动",
     "prepare": 1,
-    "probability_init": 0.35,
-    "probability_max": 0.35,
+    "probability_init": 0.42,
+    "probability_max": 0.5,
     "detail_id": 9200301,
     "effects": [
      {
@@ -5693,7 +5693,7 @@
     ],
     "levels": [
      {
-      "probability": 25,
+      "probability": 32,
       "effect_value": [
        40
       ],
@@ -5702,7 +5702,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 33,
       "effect_value": [
        44.44
       ],
@@ -5711,7 +5711,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 34,
       "effect_value": [
        48.89
       ],
@@ -5720,7 +5720,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 35,
       "effect_value": [
        53.33
       ],
@@ -5729,7 +5729,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 36,
       "effect_value": [
        57.78
       ],
@@ -5738,7 +5738,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 36,
       "effect_value": [
        62.22
       ],
@@ -5747,7 +5747,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 37,
       "effect_value": [
        66.67
       ],
@@ -5756,7 +5756,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 38,
       "effect_value": [
        71.11
       ],
@@ -5765,7 +5765,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 39,
       "effect_value": [
        75.56
       ],
@@ -5774,7 +5774,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 40,
       "effect_value": [
        80
       ],
@@ -5791,8 +5791,8 @@
     "name": "苦肉计",
     "skill_class": "追击",
     "prepare": 0,
-    "probability_init": 0.25,
-    "probability_max": 0.25,
+    "probability_init": 0.32,
+    "probability_max": 0.4,
     "detail_id": 9200311,
     "effects": [
      {
@@ -6021,7 +6021,7 @@
     ],
     "levels": [
      {
-      "probability": 30,
+      "probability": 32,
       "effect_value": [
        20
       ],
@@ -6030,7 +6030,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 33,
       "effect_value": [
        22.22
       ],
@@ -6039,7 +6039,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 34,
       "effect_value": [
        24.44
       ],
@@ -6048,7 +6048,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 35,
       "effect_value": [
        26.67
       ],
@@ -6057,7 +6057,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 36,
       "effect_value": [
        28.89
       ],
@@ -6066,7 +6066,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 36,
       "effect_value": [
        31.11
       ],
@@ -6075,7 +6075,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 37,
       "effect_value": [
        33.33
       ],
@@ -6084,7 +6084,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 38,
       "effect_value": [
        35.56
       ],
@@ -6093,7 +6093,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 39,
       "effect_value": [
        37.78
       ],
@@ -6102,7 +6102,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 40,
       "effect_value": [
        40
       ],
@@ -6119,8 +6119,8 @@
     "name": "白毦亲兵",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.3,
-    "probability_max": 0.3,
+    "probability_init": 0.32,
+    "probability_max": 0.4,
     "detail_id": 9200331,
     "effects": [
      {
@@ -6188,7 +6188,7 @@
     ],
     "levels": [
      {
-      "probability": 100,
+      "probability": 32,
       "effect_value": [
        35
       ],
@@ -6197,7 +6197,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 33,
       "effect_value": [
        38.89
       ],
@@ -6206,7 +6206,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 34,
       "effect_value": [
        42.78
       ],
@@ -6215,7 +6215,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 35,
       "effect_value": [
        46.67
       ],
@@ -6224,7 +6224,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 36,
       "effect_value": [
        50.56
       ],
@@ -6233,7 +6233,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 36,
       "effect_value": [
        54.44
       ],
@@ -6242,7 +6242,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 37,
       "effect_value": [
        58.33
       ],
@@ -6251,7 +6251,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 38,
       "effect_value": [
        62.22
       ],
@@ -6260,7 +6260,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 39,
       "effect_value": [
        66.11
       ],
@@ -6269,7 +6269,7 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 40,
       "effect_value": [
        70
       ],
@@ -6286,8 +6286,8 @@
     "name": "虎步关右",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 1,
-    "probability_max": 1,
+    "probability_init": 0.32,
+    "probability_max": 0.4,
     "detail_id": 9200341,
     "effects": [
      {
@@ -6354,7 +6354,7 @@
     ],
     "levels": [
      {
-      "probability": 40,
+      "probability": 42,
       "effect_value": [
        87.5
       ],
@@ -6363,7 +6363,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 43,
       "effect_value": [
        97.22
       ],
@@ -6372,7 +6372,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 44,
       "effect_value": [
        106.94
       ],
@@ -6381,7 +6381,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 45,
       "effect_value": [
        116.67
       ],
@@ -6390,7 +6390,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 46,
       "effect_value": [
        126.39
       ],
@@ -6399,7 +6399,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 46,
       "effect_value": [
        136.11
       ],
@@ -6408,7 +6408,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 47,
       "effect_value": [
        145.83
       ],
@@ -6417,7 +6417,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 48,
       "effect_value": [
        155.56
       ],
@@ -6426,7 +6426,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 49,
       "effect_value": [
        165.28
       ],
@@ -6435,7 +6435,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 50,
       "effect_value": [
        175
       ],
@@ -6452,8 +6452,8 @@
     "name": "先登死士",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.4,
-    "probability_max": 0.4,
+    "probability_init": 0.42,
+    "probability_max": 0.5,
     "detail_id": 9200351,
     "effects": [
      {
@@ -6550,7 +6550,7 @@
     ],
     "levels": [
      {
-      "probability": 80,
+      "probability": 30,
       "effect_value": [
        177.5,
        40
@@ -6561,7 +6561,7 @@
       ]
      },
      {
-      "probability": 80,
+      "probability": 30,
       "effect_value": [
        197.22,
        44.44
@@ -6572,7 +6572,7 @@
       ]
      },
      {
-      "probability": 80,
+      "probability": 30,
       "effect_value": [
        216.94,
        48.89
@@ -6583,7 +6583,7 @@
       ]
      },
      {
-      "probability": 80,
+      "probability": 31,
       "effect_value": [
        236.67,
        53.33
@@ -6594,7 +6594,7 @@
       ]
      },
      {
-      "probability": 80,
+      "probability": 31,
       "effect_value": [
        256.39,
        57.78
@@ -6605,7 +6605,7 @@
       ]
      },
      {
-      "probability": 80,
+      "probability": 31,
       "effect_value": [
        276.11,
        62.22
@@ -6616,7 +6616,7 @@
       ]
      },
      {
-      "probability": 80,
+      "probability": 31,
       "effect_value": [
        295.83,
        66.67
@@ -6627,7 +6627,7 @@
       ]
      },
      {
-      "probability": 80,
+      "probability": 32,
       "effect_value": [
        315.56,
        71.11
@@ -6638,7 +6638,7 @@
       ]
      },
      {
-      "probability": 80,
+      "probability": 32,
       "effect_value": [
        335.28,
        75.56
@@ -6649,7 +6649,7 @@
       ]
      },
      {
-      "probability": 80,
+      "probability": 32,
       "effect_value": [
        355,
        80
@@ -6668,8 +6668,8 @@
     "name": "上将潘凤",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.8,
-    "probability_max": 0.8,
+    "probability_init": 0.3,
+    "probability_max": 0.32,
     "detail_id": 9200361,
     "effects": [
      {
@@ -6913,7 +6913,7 @@
     ],
     "levels": [
      {
-      "probability": 20,
+      "probability": 32,
       "effect_value": [
        40
       ],
@@ -6922,7 +6922,7 @@
       ]
      },
      {
-      "probability": 20,
+      "probability": 33,
       "effect_value": [
        44.44
       ],
@@ -6931,7 +6931,7 @@
       ]
      },
      {
-      "probability": 20,
+      "probability": 34,
       "effect_value": [
        48.89
       ],
@@ -6940,7 +6940,7 @@
       ]
      },
      {
-      "probability": 20,
+      "probability": 35,
       "effect_value": [
        53.33
       ],
@@ -6949,7 +6949,7 @@
       ]
      },
      {
-      "probability": 20,
+      "probability": 36,
       "effect_value": [
        57.78
       ],
@@ -6958,7 +6958,7 @@
       ]
      },
      {
-      "probability": 20,
+      "probability": 36,
       "effect_value": [
        62.22
       ],
@@ -6967,7 +6967,7 @@
       ]
      },
      {
-      "probability": 20,
+      "probability": 37,
       "effect_value": [
        66.67
       ],
@@ -6976,7 +6976,7 @@
       ]
      },
      {
-      "probability": 20,
+      "probability": 38,
       "effect_value": [
        71.11
       ],
@@ -6985,7 +6985,7 @@
       ]
      },
      {
-      "probability": 20,
+      "probability": 39,
       "effect_value": [
        75.56
       ],
@@ -6994,7 +6994,7 @@
       ]
      },
      {
-      "probability": 20,
+      "probability": 40,
       "effect_value": [
        80
       ],
@@ -7011,8 +7011,8 @@
     "name": "连环计",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.2,
-    "probability_max": 0.2,
+    "probability_init": 0.32,
+    "probability_max": 0.4,
     "detail_id": 9200381,
     "effects": [
      {
@@ -7079,7 +7079,7 @@
     ],
     "levels": [
      {
-      "probability": 40,
+      "probability": 32,
       "effect_value": [
        40
       ],
@@ -7088,7 +7088,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 33,
       "effect_value": [
        44.44
       ],
@@ -7097,7 +7097,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 34,
       "effect_value": [
        48.89
       ],
@@ -7106,7 +7106,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 35,
       "effect_value": [
        53.33
       ],
@@ -7115,7 +7115,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 36,
       "effect_value": [
        57.78
       ],
@@ -7124,7 +7124,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 36,
       "effect_value": [
        62.22
       ],
@@ -7133,7 +7133,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 37,
       "effect_value": [
        66.67
       ],
@@ -7142,7 +7142,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 38,
       "effect_value": [
        71.11
       ],
@@ -7151,7 +7151,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 39,
       "effect_value": [
        75.56
       ],
@@ -7177,7 +7177,7 @@
     "name": "闭月",
     "skill_class": "主动",
     "prepare": 1,
-    "probability_init": 0.4,
+    "probability_init": 0.32,
     "probability_max": 0.4,
     "detail_id": 9200391,
     "effects": [
@@ -7582,9 +7582,9 @@
     ],
     "levels": [
      {
-      "probability": 100,
+      "probability": 42,
       "effect_value": [
-       30,
+       37.5,
        30
       ],
       "effect_round": [
@@ -7593,9 +7593,9 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 43,
       "effect_value": [
-       33.33,
+       41.66,
        33.33
       ],
       "effect_round": [
@@ -7604,9 +7604,9 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 44,
       "effect_value": [
-       36.67,
+       45.84,
        36.67
       ],
       "effect_round": [
@@ -7615,9 +7615,9 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 45,
       "effect_value": [
-       40,
+       50,
        40
       ],
       "effect_round": [
@@ -7626,9 +7626,9 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 46,
       "effect_value": [
-       43.33,
+       54.16,
        43.33
       ],
       "effect_round": [
@@ -7637,9 +7637,9 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 46,
       "effect_value": [
-       46.67,
+       58.34,
        46.67
       ],
       "effect_round": [
@@ -7648,9 +7648,9 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 47,
       "effect_value": [
-       50,
+       62.5,
        50
       ],
       "effect_round": [
@@ -7659,9 +7659,9 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 48,
       "effect_value": [
-       53.33,
+       66.66,
        53.33
       ],
       "effect_round": [
@@ -7670,9 +7670,9 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 49,
       "effect_value": [
-       56.67,
+       70.84,
        56.67
       ],
       "effect_round": [
@@ -7681,9 +7681,9 @@
       ]
      },
      {
-      "probability": 100,
+      "probability": 50,
       "effect_value": [
-       60,
+       75,
        60
       ],
       "effect_round": [
@@ -7700,14 +7700,14 @@
     "name": "北地枪王",
     "skill_class": "追击",
     "prepare": 0,
-    "probability_init": 1,
-    "probability_max": 1,
+    "probability_init": 0.42,
+    "probability_max": 0.5,
     "detail_id": 9200421,
     "effects": [
      {
       "detail_id": 9200421,
       "effect_type": "PHYSICAL_DAMAGE",
-      "rate_pct": 30,
+      "rate_pct": 37.5,
       "target_type": "enemy_single",
       "attack_type": "normal",
       "available_round": 0,
@@ -7780,7 +7780,7 @@
     ],
     "levels": [
      {
-      "probability": 30,
+      "probability": 42,
       "effect_value": [
        67.5,
        40
@@ -7791,7 +7791,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 43,
       "effect_value": [
        75,
        44.44
@@ -7802,7 +7802,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 44,
       "effect_value": [
        82.5,
        48.89
@@ -7813,7 +7813,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 45,
       "effect_value": [
        90,
        53.33
@@ -7824,7 +7824,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 46,
       "effect_value": [
        97.5,
        57.78
@@ -7835,7 +7835,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 46,
       "effect_value": [
        105,
        62.22
@@ -7846,7 +7846,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 47,
       "effect_value": [
        112.5,
        66.67
@@ -7857,7 +7857,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 48,
       "effect_value": [
        120,
        71.11
@@ -7868,7 +7868,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 49,
       "effect_value": [
        127.5,
        75.56
@@ -7879,7 +7879,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 50,
       "effect_value": [
        135,
        80
@@ -7898,8 +7898,8 @@
     "name": "南中平蛮",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.3,
-    "probability_max": 0.3,
+    "probability_init": 0.42,
+    "probability_max": 0.5,
     "detail_id": 9200431,
     "effects": [
      {
@@ -7978,7 +7978,7 @@
     ],
     "levels": [
      {
-      "probability": 35,
+      "probability": 30,
       "effect_value": [
        127.5
       ],
@@ -7987,7 +7987,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 30,
       "effect_value": [
        141.67
       ],
@@ -7996,7 +7996,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 31,
       "effect_value": [
        155.83
       ],
@@ -8005,7 +8005,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 31,
       "effect_value": [
        170
       ],
@@ -8014,7 +8014,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 32,
       "effect_value": [
        184.17
       ],
@@ -8023,7 +8023,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 32,
       "effect_value": [
        198.33
       ],
@@ -8032,7 +8032,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 33,
       "effect_value": [
        212.5
       ],
@@ -8041,7 +8041,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 33,
       "effect_value": [
        226.67
       ],
@@ -8050,7 +8050,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 34,
       "effect_value": [
        240.83
       ],
@@ -8059,7 +8059,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 34,
       "effect_value": [
        255
       ],
@@ -8076,8 +8076,8 @@
     "name": "花中秀",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.35,
-    "probability_max": 0.35,
+    "probability_init": 0.3,
+    "probability_max": 0.34,
     "detail_id": 9200441,
     "effects": [
      {
@@ -8520,7 +8520,7 @@
     ],
     "levels": [
      {
-      "probability": 25,
+      "probability": 32,
       "effect_value": [
        50
       ],
@@ -8529,7 +8529,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 33,
       "effect_value": [
        55.56
       ],
@@ -8538,7 +8538,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 34,
       "effect_value": [
        61.11
       ],
@@ -8547,7 +8547,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 35,
       "effect_value": [
        66.67
       ],
@@ -8556,7 +8556,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 36,
       "effect_value": [
        72.22
       ],
@@ -8565,7 +8565,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 36,
       "effect_value": [
        77.78
       ],
@@ -8574,7 +8574,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 37,
       "effect_value": [
        83.33
       ],
@@ -8583,7 +8583,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 38,
       "effect_value": [
        88.89
       ],
@@ -8592,7 +8592,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 39,
       "effect_value": [
        94.44
       ],
@@ -8601,7 +8601,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 40,
       "effect_value": [
        100
       ],
@@ -8618,8 +8618,8 @@
     "name": "双艳",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.25,
-    "probability_max": 0.25,
+    "probability_init": 0.32,
+    "probability_max": 0.4,
     "detail_id": 9200471,
     "effects": [
      {
@@ -10393,7 +10393,7 @@
     ],
     "levels": [
      {
-      "probability": 20,
+      "probability": 32,
       "effect_value": [
        40
       ],
@@ -10402,7 +10402,7 @@
       ]
      },
      {
-      "probability": 20,
+      "probability": 33,
       "effect_value": [
        44.44
       ],
@@ -10411,7 +10411,7 @@
       ]
      },
      {
-      "probability": 20,
+      "probability": 34,
       "effect_value": [
        48.89
       ],
@@ -10420,7 +10420,7 @@
       ]
      },
      {
-      "probability": 20,
+      "probability": 35,
       "effect_value": [
        53.33
       ],
@@ -10429,7 +10429,7 @@
       ]
      },
      {
-      "probability": 20,
+      "probability": 36,
       "effect_value": [
        57.78
       ],
@@ -10438,7 +10438,7 @@
       ]
      },
      {
-      "probability": 20,
+      "probability": 36,
       "effect_value": [
        62.22
       ],
@@ -10447,7 +10447,7 @@
       ]
      },
      {
-      "probability": 20,
+      "probability": 37,
       "effect_value": [
        66.67
       ],
@@ -10456,7 +10456,7 @@
       ]
      },
      {
-      "probability": 20,
+      "probability": 38,
       "effect_value": [
        71.11
       ],
@@ -10465,7 +10465,7 @@
       ]
      },
      {
-      "probability": 20,
+      "probability": 39,
       "effect_value": [
        75.56
       ],
@@ -10474,7 +10474,7 @@
       ]
      },
      {
-      "probability": 20,
+      "probability": 40,
       "effect_value": [
        80
       ],
@@ -10491,8 +10491,8 @@
     "name": "叫阵",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.2,
-    "probability_max": 0.2,
+    "probability_init": 0.32,
+    "probability_max": 0.4,
     "detail_id": 9200581,
     "effects": [
      {
@@ -10906,7 +10906,7 @@
     ],
     "levels": [
      {
-      "probability": 25,
+      "probability": 32,
       "effect_value": [
        40
       ],
@@ -10915,7 +10915,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 33,
       "effect_value": [
        44.44
       ],
@@ -10924,7 +10924,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 34,
       "effect_value": [
        48.89
       ],
@@ -10933,7 +10933,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 35,
       "effect_value": [
        53.33
       ],
@@ -10942,7 +10942,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 36,
       "effect_value": [
        57.78
       ],
@@ -10951,7 +10951,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 36,
       "effect_value": [
        62.22
       ],
@@ -10960,7 +10960,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 37,
       "effect_value": [
        66.67
       ],
@@ -10969,7 +10969,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 38,
       "effect_value": [
        71.11
       ],
@@ -10978,7 +10978,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 39,
       "effect_value": [
        75.56
       ],
@@ -10987,7 +10987,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 40,
       "effect_value": [
        80
       ],
@@ -11004,8 +11004,8 @@
     "name": "反计",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.25,
-    "probability_max": 0.25,
+    "probability_init": 0.32,
+    "probability_max": 0.4,
     "detail_id": 9200611,
     "effects": [
      {
@@ -11244,7 +11244,7 @@
     ],
     "levels": [
      {
-      "probability": 25,
+      "probability": 32,
       "effect_value": [
        40
       ],
@@ -11253,7 +11253,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 33,
       "effect_value": [
        44.44
       ],
@@ -11262,7 +11262,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 34,
       "effect_value": [
        48.89
       ],
@@ -11271,7 +11271,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 35,
       "effect_value": [
        53.33
       ],
@@ -11280,7 +11280,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 36,
       "effect_value": [
        57.78
       ],
@@ -11289,7 +11289,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 36,
       "effect_value": [
        62.22
       ],
@@ -11298,7 +11298,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 37,
       "effect_value": [
        66.67
       ],
@@ -11307,7 +11307,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 38,
       "effect_value": [
        71.11
       ],
@@ -11316,7 +11316,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 39,
       "effect_value": [
        75.56
       ],
@@ -11325,7 +11325,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 40,
       "effect_value": [
        80
       ],
@@ -11342,8 +11342,8 @@
     "name": "佯攻",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.25,
-    "probability_max": 0.25,
+    "probability_init": 0.32,
+    "probability_max": 0.4,
     "detail_id": 9200631,
     "effects": [
      {
@@ -12089,7 +12089,7 @@
     ],
     "levels": [
      {
-      "probability": 40,
+      "probability": 30,
       "effect_value": [
        42.5
       ],
@@ -12098,7 +12098,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 30,
       "effect_value": [
        47.22
       ],
@@ -12107,7 +12107,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 31,
       "effect_value": [
        51.94
       ],
@@ -12116,7 +12116,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 31,
       "effect_value": [
        56.67
       ],
@@ -12125,7 +12125,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 32,
       "effect_value": [
        61.39
       ],
@@ -12134,7 +12134,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 32,
       "effect_value": [
        66.11
       ],
@@ -12143,7 +12143,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 33,
       "effect_value": [
        70.83
       ],
@@ -12152,7 +12152,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 33,
       "effect_value": [
        75.56
       ],
@@ -12161,7 +12161,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 34,
       "effect_value": [
        80.28
       ],
@@ -12170,7 +12170,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 34,
       "effect_value": [
        85
       ],
@@ -12187,8 +12187,8 @@
     "name": "敛众定气",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.4,
-    "probability_max": 0.4,
+    "probability_init": 0.3,
+    "probability_max": 0.34,
     "detail_id": 9200681,
     "effects": [
      {
@@ -13234,7 +13234,7 @@
     ],
     "levels": [
      {
-      "probability": 25,
+      "probability": 36,
       "effect_value": [
        100,
        40
@@ -13245,7 +13245,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 37,
       "effect_value": [
        111.11,
        44.44
@@ -13256,7 +13256,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 38,
       "effect_value": [
        122.22,
        48.89
@@ -13267,7 +13267,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 39,
       "effect_value": [
        133.33,
        53.33
@@ -13278,7 +13278,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 40,
       "effect_value": [
        144.44,
        57.78
@@ -13289,7 +13289,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 40,
       "effect_value": [
        155.56,
        62.22
@@ -13300,7 +13300,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 41,
       "effect_value": [
        166.67,
        66.67
@@ -13311,7 +13311,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 42,
       "effect_value": [
        177.78,
        71.11
@@ -13322,7 +13322,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 43,
       "effect_value": [
        188.89,
        75.56
@@ -13333,7 +13333,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 44,
       "effect_value": [
        200,
        80
@@ -13352,8 +13352,8 @@
     "name": "钝兵挫锐",
     "skill_class": "追击",
     "prepare": 0,
-    "probability_init": 0.25,
-    "probability_max": 0.25,
+    "probability_init": 0.36,
+    "probability_max": 0.44,
     "detail_id": 9200741,
     "effects": [
      {
@@ -13435,7 +13435,7 @@
     ],
     "levels": [
      {
-      "probability": 25,
+      "probability": 36,
       "effect_value": [
        100,
        40
@@ -13446,7 +13446,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 37,
       "effect_value": [
        111.11,
        44.44
@@ -13457,7 +13457,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 38,
       "effect_value": [
        122.22,
        48.89
@@ -13468,7 +13468,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 39,
       "effect_value": [
        133.33,
        53.33
@@ -13479,7 +13479,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 40,
       "effect_value": [
        144.44,
        57.78
@@ -13490,7 +13490,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 40,
       "effect_value": [
        155.56,
        62.22
@@ -13501,7 +13501,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 41,
       "effect_value": [
        166.67,
        66.67
@@ -13512,7 +13512,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 42,
       "effect_value": [
        177.78,
        71.11
@@ -13523,7 +13523,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 43,
       "effect_value": [
        188.89,
        75.56
@@ -13534,7 +13534,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 44,
       "effect_value": [
        200,
        80
@@ -13553,8 +13553,8 @@
     "name": "怯心夺志",
     "skill_class": "追击",
     "prepare": 0,
-    "probability_init": 0.25,
-    "probability_max": 0.25,
+    "probability_init": 0.36,
+    "probability_max": 0.44,
     "detail_id": 9200751,
     "effects": [
      {
@@ -13636,7 +13636,7 @@
     ],
     "levels": [
      {
-      "probability": 40,
+      "probability": 42,
       "effect_value": [
        58,
        40
@@ -13647,7 +13647,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 43,
       "effect_value": [
        64.44,
        44.44
@@ -13658,7 +13658,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 44,
       "effect_value": [
        70.89,
        48.89
@@ -13669,7 +13669,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 45,
       "effect_value": [
        77.33,
        53.33
@@ -13680,7 +13680,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 46,
       "effect_value": [
        83.78,
        57.78
@@ -13691,7 +13691,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 46,
       "effect_value": [
        90.22,
        62.22
@@ -13702,7 +13702,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 47,
       "effect_value": [
        96.67,
        66.67
@@ -13713,7 +13713,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 48,
       "effect_value": [
        103.11,
        71.11
@@ -13724,7 +13724,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 49,
       "effect_value": [
        109.56,
        75.56
@@ -13735,7 +13735,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 50,
       "effect_value": [
        116,
        80
@@ -13754,8 +13754,8 @@
     "name": "奇术折冲",
     "skill_class": "主动",
     "prepare": 1,
-    "probability_init": 0.4,
-    "probability_max": 0.4,
+    "probability_init": 0.42,
+    "probability_max": 0.5,
     "detail_id": 9200761,
     "effects": [
      {
@@ -13837,7 +13837,7 @@
     ],
     "levels": [
      {
-      "probability": 25,
+      "probability": 41,
       "effect_value": [
        90,
        40
@@ -13848,7 +13848,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 42,
       "effect_value": [
        100,
        44.44
@@ -13859,7 +13859,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 43,
       "effect_value": [
        110,
        48.89
@@ -13870,7 +13870,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 44,
       "effect_value": [
        120,
        53.33
@@ -13881,7 +13881,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 45,
       "effect_value": [
        130,
        57.78
@@ -13892,7 +13892,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 45,
       "effect_value": [
        140,
        62.22
@@ -13903,7 +13903,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 46,
       "effect_value": [
        150,
        66.67
@@ -13914,7 +13914,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 47,
       "effect_value": [
        160,
        71.11
@@ -13925,7 +13925,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 48,
       "effect_value": [
        170,
        75.56
@@ -13936,7 +13936,7 @@
       ]
      },
      {
-      "probability": 25,
+      "probability": 49,
       "effect_value": [
        180,
        80
@@ -13955,8 +13955,8 @@
     "name": "破魂",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.25,
-    "probability_max": 0.25,
+    "probability_init": 0.41,
+    "probability_max": 0.49,
     "detail_id": 9200771,
     "effects": [
      {
@@ -14032,9 +14032,9 @@
     ],
     "levels": [
      {
-      "probability": 40,
+      "probability": 42,
       "effect_value": [
-       27.5,
+       37.5,
        20
       ],
       "effect_round": [
@@ -14043,9 +14043,9 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 43,
       "effect_value": [
-       30.56,
+       41.67,
        22.22
       ],
       "effect_round": [
@@ -14054,9 +14054,9 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 44,
       "effect_value": [
-       33.61,
+       45.83,
        24.44
       ],
       "effect_round": [
@@ -14065,9 +14065,9 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 45,
       "effect_value": [
-       36.67,
+       50,
        26.67
       ],
       "effect_round": [
@@ -14076,9 +14076,9 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 46,
       "effect_value": [
-       39.72,
+       54.16,
        28.89
       ],
       "effect_round": [
@@ -14087,9 +14087,9 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 46,
       "effect_value": [
-       42.78,
+       58.34,
        31.11
       ],
       "effect_round": [
@@ -14098,9 +14098,9 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 47,
       "effect_value": [
-       45.83,
+       62.5,
        33.33
       ],
       "effect_round": [
@@ -14109,9 +14109,9 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 48,
       "effect_value": [
-       48.89,
+       66.67,
        35.56
       ],
       "effect_round": [
@@ -14120,9 +14120,9 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 49,
       "effect_value": [
-       51.94,
+       70.83,
        37.78
       ],
       "effect_round": [
@@ -14131,9 +14131,9 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 50,
       "effect_value": [
-       55,
+       75,
        40
       ],
       "effect_round": [
@@ -14150,14 +14150,14 @@
     "name": "飒沓如星",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.4,
-    "probability_max": 0.4,
+    "probability_init": 0.42,
+    "probability_max": 0.5,
     "detail_id": 9200781,
     "effects": [
      {
       "detail_id": 9200781,
       "effect_type": "PHYSICAL_DAMAGE",
-      "rate_pct": 27.5,
+      "rate_pct": 37.5,
       "target_type": "enemy_single",
       "attack_type": "normal",
       "available_round": 0,
@@ -14233,7 +14233,7 @@
     ],
     "levels": [
      {
-      "probability": 35,
+      "probability": 42,
       "effect_value": [
        80,
        20
@@ -14244,7 +14244,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 43,
       "effect_value": [
        88.89,
        22.22
@@ -14255,7 +14255,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 44,
       "effect_value": [
        97.78,
        24.44
@@ -14266,7 +14266,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 45,
       "effect_value": [
        106.67,
        26.67
@@ -14277,7 +14277,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 46,
       "effect_value": [
        115.56,
        28.89
@@ -14288,7 +14288,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 46,
       "effect_value": [
        124.44,
        31.11
@@ -14299,7 +14299,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 47,
       "effect_value": [
        133.33,
        33.33
@@ -14310,7 +14310,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 48,
       "effect_value": [
        142.22,
        35.56
@@ -14321,7 +14321,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 49,
       "effect_value": [
        151.11,
        37.78
@@ -14332,7 +14332,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 50,
       "effect_value": [
        160,
        40
@@ -14351,8 +14351,8 @@
     "name": "扬威",
     "skill_class": "追击",
     "prepare": 0,
-    "probability_init": 0.35,
-    "probability_max": 0.35,
+    "probability_init": 0.42,
+    "probability_max": 0.5,
     "detail_id": 9200791,
     "effects": [
      {
@@ -14434,7 +14434,7 @@
     ],
     "levels": [
      {
-      "probability": 35,
+      "probability": 36,
       "effect_value": [
        100,
        20
@@ -14445,7 +14445,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 37,
       "effect_value": [
        111.11,
        22.22
@@ -14456,7 +14456,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 38,
       "effect_value": [
        122.22,
        24.44
@@ -14467,7 +14467,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 39,
       "effect_value": [
        133.33,
        26.67
@@ -14478,7 +14478,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 40,
       "effect_value": [
        144.44,
        28.89
@@ -14489,7 +14489,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 40,
       "effect_value": [
        155.56,
        31.11
@@ -14500,7 +14500,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 41,
       "effect_value": [
        166.67,
        33.33
@@ -14511,7 +14511,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 42,
       "effect_value": [
        177.78,
        35.56
@@ -14522,7 +14522,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 43,
       "effect_value": [
        188.89,
        37.78
@@ -14533,7 +14533,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 44,
       "effect_value": [
        200,
        40
@@ -14552,8 +14552,8 @@
     "name": "蓄盈待竭",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.35,
-    "probability_max": 0.35,
+    "probability_init": 0.36,
+    "probability_max": 0.44,
     "detail_id": 9200801,
     "effects": [
      {
@@ -14670,7 +14670,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 31,
       "effect_value": [
        90,
        26.67
@@ -14681,7 +14681,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 31,
       "effect_value": [
        97.5,
        28.89
@@ -14692,7 +14692,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 31,
       "effect_value": [
        105,
        31.11
@@ -14703,7 +14703,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 31,
       "effect_value": [
        112.5,
        33.33
@@ -14714,7 +14714,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 32,
       "effect_value": [
        120,
        35.56
@@ -14725,7 +14725,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 32,
       "effect_value": [
        127.5,
        37.78
@@ -14736,7 +14736,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 32,
       "effect_value": [
        135,
        40
@@ -14756,7 +14756,7 @@
     "skill_class": "主动",
     "prepare": 0,
     "probability_init": 0.3,
-    "probability_max": 0.3,
+    "probability_max": 0.32,
     "detail_id": 9200811,
     "effects": [
      {
@@ -14839,7 +14839,7 @@
     ],
     "levels": [
      {
-      "probability": 40,
+      "probability": 37,
       "effect_value": [
        65
       ],
@@ -14848,7 +14848,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 38,
       "effect_value": [
        72.22
       ],
@@ -14857,7 +14857,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 39,
       "effect_value": [
        79.44
       ],
@@ -14875,7 +14875,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 41,
       "effect_value": [
        93.89
       ],
@@ -14884,7 +14884,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 41,
       "effect_value": [
        101.11
       ],
@@ -14893,7 +14893,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 42,
       "effect_value": [
        108.33
       ],
@@ -14902,7 +14902,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 43,
       "effect_value": [
        115.56
       ],
@@ -14911,7 +14911,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 44,
       "effect_value": [
        122.78
       ],
@@ -14920,7 +14920,7 @@
       ]
      },
      {
-      "probability": 40,
+      "probability": 45,
       "effect_value": [
        130
       ],
@@ -14937,8 +14937,8 @@
     "name": "十面埋伏",
     "skill_class": "主动",
     "prepare": 1,
-    "probability_init": 0.4,
-    "probability_max": 0.4,
+    "probability_init": 0.37,
+    "probability_max": 0.45,
     "detail_id": 9200821,
     "effects": [
      {
@@ -15225,7 +15225,7 @@
     ],
     "levels": [
      {
-      "probability": 35,
+      "probability": 42,
       "effect_value": [
        74,
        40
@@ -15236,7 +15236,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 43,
       "effect_value": [
        82.22,
        44.44
@@ -15247,7 +15247,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 44,
       "effect_value": [
        90.44,
        48.89
@@ -15258,7 +15258,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 45,
       "effect_value": [
        98.67,
        53.33
@@ -15269,7 +15269,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 46,
       "effect_value": [
        106.89,
        57.78
@@ -15280,7 +15280,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 46,
       "effect_value": [
        115.11,
        62.22
@@ -15291,7 +15291,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 47,
       "effect_value": [
        123.33,
        66.67
@@ -15302,7 +15302,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 48,
       "effect_value": [
        131.56,
        71.11
@@ -15313,7 +15313,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 49,
       "effect_value": [
        139.78,
        75.56
@@ -15324,7 +15324,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 50,
       "effect_value": [
        148,
        80
@@ -15343,8 +15343,8 @@
     "name": "落雷",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.35,
-    "probability_max": 0.35,
+    "probability_init": 0.42,
+    "probability_max": 0.5,
     "detail_id": 9200841,
     "effects": [
      {
@@ -15426,7 +15426,7 @@
     ],
     "levels": [
      {
-      "probability": 35,
+      "probability": 42,
       "effect_value": [
        77.5,
        40
@@ -15437,7 +15437,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 43,
       "effect_value": [
        86.11,
        44.44
@@ -15448,7 +15448,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 44,
       "effect_value": [
        94.72,
        48.89
@@ -15459,7 +15459,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 45,
       "effect_value": [
        103.33,
        53.33
@@ -15470,7 +15470,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 46,
       "effect_value": [
        111.94,
        57.78
@@ -15481,7 +15481,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 46,
       "effect_value": [
        120.56,
        62.22
@@ -15492,7 +15492,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 47,
       "effect_value": [
        129.17,
        66.67
@@ -15503,7 +15503,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 48,
       "effect_value": [
        137.78,
        71.11
@@ -15514,7 +15514,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 49,
       "effect_value": [
        146.39,
        75.56
@@ -15525,7 +15525,7 @@
       ]
      },
      {
-      "probability": 35,
+      "probability": 50,
       "effect_value": [
        155,
        80
@@ -15544,8 +15544,8 @@
     "name": "迷阵",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.35,
-    "probability_max": 0.35,
+    "probability_init": 0.42,
+    "probability_max": 0.5,
     "detail_id": 9200851,
     "effects": [
      {
@@ -16469,7 +16469,7 @@
     ],
     "levels": [
      {
-      "probability": 30,
+      "probability": 32,
       "effect_value": [
        20
       ],
@@ -16478,7 +16478,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 33,
       "effect_value": [
        22.22
       ],
@@ -16487,7 +16487,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 34,
       "effect_value": [
        24.44
       ],
@@ -16496,7 +16496,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 35,
       "effect_value": [
        26.67
       ],
@@ -16505,7 +16505,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 36,
       "effect_value": [
        28.89
       ],
@@ -16514,7 +16514,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 36,
       "effect_value": [
        31.11
       ],
@@ -16523,7 +16523,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 37,
       "effect_value": [
        33.33
       ],
@@ -16532,7 +16532,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 38,
       "effect_value": [
        35.56
       ],
@@ -16541,7 +16541,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 39,
       "effect_value": [
        37.78
       ],
@@ -16550,7 +16550,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 40,
       "effect_value": [
        40
       ],
@@ -16567,8 +16567,8 @@
     "name": "移花接木",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.3,
-    "probability_max": 0.3,
+    "probability_init": 0.32,
+    "probability_max": 0.4,
     "detail_id": 9200911,
     "effects": [
      {
@@ -16807,7 +16807,7 @@
     ],
     "levels": [
      {
-      "probability": 30,
+      "probability": 32,
       "effect_value": [
        20
       ],
@@ -16816,7 +16816,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 33,
       "effect_value": [
        22.22
       ],
@@ -16825,7 +16825,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 34,
       "effect_value": [
        24.44
       ],
@@ -16834,7 +16834,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 35,
       "effect_value": [
        26.67
       ],
@@ -16843,7 +16843,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 36,
       "effect_value": [
        28.89
       ],
@@ -16852,7 +16852,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 36,
       "effect_value": [
        31.11
       ],
@@ -16861,7 +16861,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 37,
       "effect_value": [
        33.33
       ],
@@ -16870,7 +16870,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 38,
       "effect_value": [
        35.56
       ],
@@ -16879,7 +16879,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 39,
       "effect_value": [
        37.78
       ],
@@ -16888,7 +16888,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 40,
       "effect_value": [
        40
       ],
@@ -16905,8 +16905,8 @@
     "name": "固阵",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.3,
-    "probability_max": 0.3,
+    "probability_init": 0.32,
+    "probability_max": 0.4,
     "detail_id": 9200931,
     "effects": [
      {
@@ -16975,7 +16975,7 @@
     ],
     "levels": [
      {
-      "probability": 30,
+      "probability": 32,
       "effect_value": [
        17.5
       ],
@@ -16984,7 +16984,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 33,
       "effect_value": [
        19.44
       ],
@@ -16993,7 +16993,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 34,
       "effect_value": [
        21.39
       ],
@@ -17002,7 +17002,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 35,
       "effect_value": [
        23.33
       ],
@@ -17011,7 +17011,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 36,
       "effect_value": [
        25.28
       ],
@@ -17020,7 +17020,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 36,
       "effect_value": [
        27.22
       ],
@@ -17029,7 +17029,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 37,
       "effect_value": [
        29.17
       ],
@@ -17038,7 +17038,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 38,
       "effect_value": [
        31.11
       ],
@@ -17047,7 +17047,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 39,
       "effect_value": [
        33.06
       ],
@@ -17056,7 +17056,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 40,
       "effect_value": [
        35
       ],
@@ -17073,8 +17073,8 @@
     "name": "犒劳",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.3,
-    "probability_max": 0.3,
+    "probability_init": 0.32,
+    "probability_max": 0.4,
     "detail_id": 9200941,
     "effects": [
      {
@@ -17143,7 +17143,7 @@
     ],
     "levels": [
      {
-      "probability": 30,
+      "probability": 32,
       "effect_value": [
        20
       ],
@@ -17152,7 +17152,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 33,
       "effect_value": [
        22.22
       ],
@@ -17161,7 +17161,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 34,
       "effect_value": [
        24.44
       ],
@@ -17170,7 +17170,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 35,
       "effect_value": [
        26.67
       ],
@@ -17179,7 +17179,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 36,
       "effect_value": [
        28.89
       ],
@@ -17188,7 +17188,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 36,
       "effect_value": [
        31.11
       ],
@@ -17197,7 +17197,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 37,
       "effect_value": [
        33.33
       ],
@@ -17206,7 +17206,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 38,
       "effect_value": [
        35.56
       ],
@@ -17215,7 +17215,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 39,
       "effect_value": [
        37.78
       ],
@@ -17224,7 +17224,7 @@
       ]
      },
      {
-      "probability": 30,
+      "probability": 40,
       "effect_value": [
        40
       ],
@@ -17241,8 +17241,8 @@
     "name": "谨言",
     "skill_class": "主动",
     "prepare": 0,
-    "probability_init": 0.3,
-    "probability_max": 0.3,
+    "probability_init": 0.32,
+    "probability_max": 0.4,
     "detail_id": 9200951,
     "effects": [
      {

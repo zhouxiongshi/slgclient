@@ -289,6 +289,13 @@ export function previewNarrative(p) {
     { k: '守军估算', v: `${fmt(dTotal)} 兵${p.intelTier >= 2 ? '（已侦察·精确）' : (p.intelTier === 1 ? '（估算 ±15%）' : '（未侦察 ±40%，实际可能更多）')}` },
     { k: '预计折损', v: `我军 −${fmt(p.aLoss)}（${Math.round(p.aLoss / aTotal * 100)}%）　歼敌 ${fmt(p.dLoss)}` },
     { k: '战后残余', v: `我军 ${fmt(sum(p.remain))} 兵` },
+    /* ★ 2026-11-17 城防：城墙耐久与守军据城加成——攻城属性打的就是这一格 */
+    ...(p.wall ? [{
+      k: '城墙',
+      v: `${p.wall.pct <= 0 ? '已破' : `${p.wall.pct}%`}（${fmt(p.wall.hp)}/${fmt(p.wall.max)}）`
+        + ` · 守军据城 ×${p.wall.defMul}`
+        + (p.wall.forecast ? ` · 本波攻城打掉 ${fmt(p.wall.forecast.damage)}` : ''),
+    }] : []),
     { k: '行军', v: `程 ${fmt(p.km)} 里 · ${p.days} 日抵达（第 ${p.arriveDay} 日）` },
     { k: '兵种', v: p.counterNote || '双方兵种无克制' },
   ];
