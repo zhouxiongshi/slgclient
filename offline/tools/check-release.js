@@ -125,6 +125,39 @@ const customUI = filesIn(APP, /\.(js|html)$/).filter((p) => {
 });
 check('包内不含自绘 Canvas 界面或 standalone/app 新 UI', customUI.length === 0, customUI.slice(0, 3));
 
+/* ---------------- 1.5 内核派生物一致（收口 SDD DEV-26） ----------------
+ * offline/kernel/ 是 battle-core/build/src 的派生物，禁止手改。
+ * 这里只做**比对**（build 已存在时），不跑 tsc——构建由 tools/kernel-sync.js 负责；
+ * build 缺失或过期给出明确指引，不算发行红项（源码仓库可能没装 devDependencies）。 */
+{
+  const srcBuild = resolve(ROOT, '../battle-core/build/src');
+  const dest = join(ROOT, 'kernel');
+  if (!existsSync(srcBuild)) {
+    check('内核派生物：battle-core/build/src 存在（可比对）', false,
+      'build 不存在——在 battle-core/ 跑 npm run build，或 node tools/kernel-sync.js');
+  } else {
+    let newestBuild = 0;
+    for (const f of filesIn(srcBuild, /\.js$/)) {
+      newestBuild = Math.max(newestBuild, statSync(f).mtimeMs);
+    }
+    let stale = false;
+    for (const f of filesIn(resolve(ROOT, '../battle-core/src'), /\.ts$/)) {
+      if (statSync(f).mtimeMs > newestBuild) stale = true;
+    }
+    const kDiff = [];
+    const srcFiles = filesIn(srcBuild, /\.js$/);
+    for (const f of srcFiles) {
+      const rel = relative(srcBuild, f);
+      const to = join(dest, rel);
+      if (!existsSync(to) || !readFileSync(f).equals(readFileSync(to))) kDiff.push(rel);
+    }
+    check('内核派生物：offline/kernel 与 battle-core/build/src 逐字节一致',
+      !stale && kDiff.length === 0,
+      stale ? 'battle-core/src 比 build 新：先 npm run build（或 node tools/kernel-sync.js）'
+        : `${srcFiles.length} 个文件 / ${kDiff.length} 处差异`);
+  }
+}
+
 const indexHtml = readFileSync(join(APP, 'web', 'index.html'), 'utf8');
 check('原 index.html 未被注入自定义脚本/悬浮按钮',
   !/SLG_UI_START|slgBackBtn|slgBackHint|<script[^>]+app\//i.test(indexHtml) && /Cocos Creator/.test(indexHtml),

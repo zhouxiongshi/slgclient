@@ -1961,7 +1961,7 @@ build/SLG-Offline-win32-x64/
 | `DEV-23` | `strategy-map.js` 在 `server/` 目录内未发现任何 import | 静态 import 扫描 | 疑为构建期工具专用模块；保留，不删 |
 | `DEV-24` | **无鉴权**：HTTP/WS 均无 token/session 校验，CORS `*` | `index.js:415-426,883-915`、`wsserver.js:150-155` | 单机回环威胁模型可接受；开放局域网前必须补鉴权（PRD `OP-07`） |
 | `DEV-25` | **设施两张表键空间不同**：`EFFECTIVE_ADDITIONS` 键是加成类型 aType，`GATE_FACILITIES` 键是设施 type | `facility-catalog.js`、§7.15 | 本文已在 §7.15 显式警告；误读会导致「仓库 25 无效果」的错误结论 |
-| `DEV-26` | **内核同步无自动化脚本**：TS 源 `battle-core/src/` → `build/src/` → `offline/kernel/` 靠人工拷贝 | `battle-core/package.json`、`pack.js` | 靠文档约定 + `check-release` 出厂源码清单 + 10 份产物逐字节比对兜底；核查时 10/10 一致 |
+| `DEV-26` | **内核同步无自动化脚本**：TS 源 `battle-core/src/` → `build/src/` → `offline/kernel/` 靠人工拷贝 | `battle-core/package.json`、`pack.js` | **已收口（2026-11-16，P12）**：`offline/tools/kernel-sync.js`（构建+逐字节校验，`--write` 同步、`--json` 供机读），并接入 `check-release` 发行闸（build 缺失/过期给指引，比对逐字节）。当前 20/20 一致 |
 | `DEV-27` | **battle-core 双副本**：`slgclient/battle-core/`（当前，engine.ts 25346B）与外层 `slg/battle-core/`（历史副本，12631B）内容 DIFF | 文件比对 | 一律以**仓库根 `slgclient/battle-core/`** 为准；外层副本不维护 |
 | `DEV-28` | **原版客户端吞掉操作结果**：`GeneralCommand.onUpSkill/onLvSkill/onDownSkill` 只 `console.log`，`SkillInfoLogic.onClickLearn` 发完即关弹窗 —— 服务端拒绝（学习槽未开/未解锁/名额满）玩家零反馈 | 客户端源码（`web/assets/main/index.js`，只读） | **已修（2026-11-16，`P12`）**：服务端 `notice-bus.js` 回执总线 → `/__slg/session?since=N` → 外壳 `slg:notice` → 交互层 toast；`web/` 不动、协议不动。另补 `not_unlocked` 校验（协议层与六府装配同口径）与装配上限读原表 `ui.limit`（1~6 人，旧代码写死 2）。见 ARCHITECTURE §9.28、`tests/p12-skill-learn-feedback.test.js` |
 
