@@ -2004,6 +2004,24 @@ build/SLG-Offline-win32-x64/
 | 「优化操作体验」 | ①「推演三月」按钮（连推三旬，遇待决自动停）；②「自动推旬 ▶」挂机开关（2.4s/旬；`pendingEvents>0` 或前锋抵城 `pendingBattle` 自动暂停并 toast）。`marches` 视图补 `pendingBattle` 字段。回归：`tests/p14-ai-smarts.test.js` 6 用例 |
 | 灭国闭环回归（发行闸 7.9d） | 制衡首版会让讨伐玩家的出征无限重选（玩家城在战略层永不易主、fails 不记账）→ 加 `mem.lastPlayerAtk` **6 旬冷却**（`strategyTick` commit 时记账）；另 `system-audit.mjs` 灭国 runner 的「目标守军=1」GM 构造改为**每旬维持**（AI 威胁感知征兵起守军会被残方逐旬补回，固定 1500 兵的 runner 永远打不穿）。灭国 T63 达成、灭后 10 旬正常、零异常零不变量、确定性通过。`SLG_AUDIT_DEBUG=1` 可采样征服者目标/残城/同盟定位灭国停滞 |
 
+### 17.8 P16 诸侯 AI 人事层 / 测试覆盖补强（2026-11-16 用户指示）
+
+**核对结论（先登记事实，不动手前先说清）**：审计 `strategy-brain.js` `compile()` 只产出征兵/屯田/出征/固守/结盟五类指令（`strategy.js:901` 其余忽略）；诸侯守将由 `defenseFor` 按城池 hash **临时生成**（`id=950000+cityId*10+k`、`exp:0`、战法按 `level*7+k*11` 取模），**无持久实体**。故「AI 学战法 / 武将升级 / 招募武将 / 俘虏 / 挖墙脚 / 求援」在审计前**均未实现**（玩家侧六项全有）。测试侧：80 战法仅 6 个跑过真实战斗、稳定性最长 73 旬脚本模拟（单测仅 8 旬）、平衡性只查数值合法性无对战胜率。
+
+| 编号 | 诉求 | 落地方案（本轮） |
+|---|---|---|
+| `P16-1` | 诸侯武将持久名册 | 新增 `domain/ai-roster.js`：`state.strategy.rosters[fid] = { generals:[{cfgId,level,exp,skills,cityId,loyal}], captives:[] }`，开局按 `startGenerals` + 确定性池播种；`defenseFor` 优先取名册武将（保留 hash 兜底与确定性和 cfgId 白名单） |
+| `P16-2` | AI 学战法 / 升级 | 每旬 `aiRosterTick` 按人格 economy/tempo 给 ≥5 级武将学战法（花势力金、复用 `skillById` 白名单）、战斗胜利给参战名册武将发经验（`applyGeneralExp` 同源，≤10 级） |
+| `P16-3` | AI 自动招募 | `aiRecruitTick` 用 `tavern.people` 未出仕池按势力魅力/金确定性登庸入名册（玩家与 AI 共用同一在野池，`recruited` 标记防重复） |
+| `P16-4` | AI 俘虏流程 | AI 攻占城池时按歼敌比确定性俘守城名册武将，入势力 `captives`；每旬按政治判定招降（入名册）/ 满 N 旬释放，全程记天下日志 |
+| `P16-5` | AI 挖墙脚 | `aiPoachTick`：政治/魅力高的势力对**他势力或玩家**低忠诚（<阈值）武将发起挖角，掷骰成功则忠诚下降 / 转籍，记日志；玩家武将用现有 `loyal` 字段，AI 用名册 `loyal` |
+| `P16-6` | AI 打不过求援 | 区分于被动驰援：新增**主动求援**——势力城池 ≤2 且兵力 <阈值时，向盟友/亲近势力发 `求援` 记录，`factionReliefTick` 之外由 `aiAidTick` 从盟友富余城派援军（复用 `dispatchRelief` 同款 march），弱方人格 defense 高才肯求、盟友 economy 高才肯救 |
+| `P16-7` | 测试覆盖补强 | ①`all-skills-live.test.js`：80 战法逐个 `runBattle` 实跑 + 效果事件断言；②`ai-career-balance.test.js`：名册成长/招降/挖角/求援行为断言 + 中规模对战强度分布；③长时稳定性：system-audit 报告新增 100+ 旬标注 |
+
+**落地结果（本轮完成）**：`domain/ai-roster.js` 已建（名册播种/守将顶替/学战法/升级/登庸/俘虏/挖角/求援，全部 `rngFor(seed,turn,tag)` 确定性）；`strategy.js` 在 `ensureStrategy` 播种、`strategyTick` 每旬每势力跑名册人事、`applyOrders` 攻城胜利发经验+俘将、`defenseFor` level≥2 城用名册真武将（**1 级城保留 hash 守将**——张飞/夏侯惇这类开国名将顶替 3 级弱将会破坏 P0-3「首战可胜」，实测复跑确认）。新增 `tests/p16-ai-officers.test.js`（9 例）、`tests/all-skills-live.test.js`（177 战法逐个真战斗，此前仅 6 个）、`tests/ai-career-balance.test.js`（对战强度分布 + 120 旬名册有界/确定性）；全量 525/525、system-audit 灭国 T63+10 旬零异常确定性通过。
+
+**纪律**：新增名册只在 `state.strategy` 内、旧档缺字段走 ensure 兜底（存档兼容）；人格轴决定行为强度但**不改五维数值、不破 0~100 量纲**；求援/挖角均有确定性种子与冷却（可回放、不无限循环）；改完必须重打包双态取证 + check-release 全绿。
+
 ---
 
 ## 18. 需求 → 设计 → 实现 → 验证 全链路追溯

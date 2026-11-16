@@ -29,6 +29,7 @@ import { cityLabelRank, labelPolicy } from './map-lod.js';
 import { levyView, checkLevy, commitLevy } from './levy.js';
 import { resolveBattle, battleSeedFor } from '../battle.js';
 import { planCampaign, commitBrainGoal, noteBattleOutcome, noteCityLost, PERSONA_AXES } from './strategy-brain.js';
+import { loadConfig } from '../config.js';
 import { quoteMarch, openMonth, closeMonth, noteMove, noteCity, booksOf } from './strategy-log.js';
 import { onTileCleared, chapterRules, noticeRecruit } from './campaign.js';
 import { dayFraction, ensureTavern } from './tavern.js';
@@ -41,6 +42,11 @@ import {
 import { SKILLS, LEVEL_COUNT, skillById } from '../skills.js';
 /* ★ M4-13：守将按城池确定性分配，不再复用 npc_army 写死的 6 个 cfgId */
 import { garrisonCfgIds, garrisonLabel } from './garrison.js';
+/* ★ P16：诸侯势力持久武将名册（学战法/升级/招募/俘虏/挖角/求援），零环叶子 */
+import {
+  ensureRosters, rosterDefenders, aiRosterLearnTick, aiRosterGrantExp,
+  aiRecruitTick, aiPoachTick, aiAidRequest, aiCaptureTick, aiCaptiveTick,
+} from './ai-roster.js';
 /* ★ M4-13：俘虏生成 / 释放 / 处斩统一入口，两条占领路径共用 */
 import { captureFromBattle } from './captives.js';
 /* ★ 修「推演返回一串代码」：推演的语义（人话）由这一处统一生成，
@@ -150,6 +156,14 @@ const STRATEGY_VERSION = 2;
 
 let staticMap = null;
 let factionsConf = null;
+let cfgCache = null;
+function cachedLoadConfig() {
+  if (!cfgCache) {
+    // 静态 import 会在模块加载时取到 loadConfig 函数引用，调用才真正读盘（惰性）
+    cfgCache = loadConfig();
+  }
+  return cfgCache;
+}
 
 export function strategyMap() {
   if (!staticMap) staticMap = JSON.parse(readFileSync(MAP_PATH, 'utf8'));
@@ -192,10 +206,15 @@ function migrateGarrisons(state) {
   st.version = STRATEGY_VERSION;
 }
 
-export function ensureStrategy(state) {
+export function ensureStrategy(state, cfgArg = null) {
   const map = strategyMap();
   const conf = factionConf();
+  /* ★ P16：名册在任何路径都 ensure（旧档缺字段补空、开局播种）。
+     cfg 可能没传（多数老调用点），用惰性缓存的 loadConfig 兜底；config.js 只依赖叶子无环。 */
+  const rosterCfg = cfgArg || state.__cfg || cachedLoadConfig();
+  const rosterConf = { ...conf, personas: PERSONA_AXES };
   if (state.strategy?.cities) {
+    ensureRosters(state, rosterConf, rosterCfg);
     const st = state.strategy;
     // 地图换版迁移：删掉新版图中不存在的城，补上新增的城
     const live = new Set(map.cities.map((c) => c.id));
@@ -286,6 +305,8 @@ export function ensureStrategy(state) {
     state.strategy.flags[`opening:${scInit.id}`] = true;
   }
   bindPlayerHome(state);
+  /* ★ P16：新档建好后再播种名册（此时 st.turn=0，ensureRosters 内部据此播种） */
+  ensureRosters(state, rosterConf, rosterCfg);
   return state.strategy;
 }
 
@@ -630,11 +651,14 @@ export function strategyTick(state, cfg, ctx, now = Date.now()) {
       }
     }
     const applied = applyOrders(state, cfg, ctx, f, sheet);
+    /* ★ P16：名册人事层（学战法/招募/俘虏/挖角/求援），每旬每势力一次，
+       与指令单执行同源同种子；战斗经验另由 aiRosterGrantExp 在战果处入账。 */
+    const rosterNotes = aiRosterTurn(state, cfg, ctx, f, conf, st.turn);
     const res = st.resources[f.id];
     const mine = (st.draft?.moves || []).filter((m) => m.faction === f.id);
     const last = mine[mine.length - 1];
     if (last && res) { last.grainEnd = res.grain; last.goldEnd = res.gold; }
-    results.push({ faction: f.id, sheet, orders: sheet.strategy_orders?.length || 0, ...applied });
+    results.push({ faction: f.id, sheet, orders: sheet.strategy_orders?.length || 0, ...applied, rosterNotes });
   }
   closeMonth(state);
   return { turn: st.turn, results };
@@ -647,6 +671,75 @@ export function strategyTick(state, cfg, ctx, now = Date.now()) {
 export function localBrain(faction, snapshot, state) {
   const conf = factionConfFor(state).factions.find((f) => f.id === faction.id) || faction;
   return planCampaign(conf, snapshot, state || {});
+}
+
+/* ---------------------------------------------------------------- P16 名册人事层
+ * 每个有地势力每旬：学战法 → 登庸在野 → 俘虏招降/释放 → 挖角 → 弱方求援。
+ * 全部确定性（rngFor(seed, turn, tag)），记入天下日志/军情，玩家可见可审计。
+ */
+function aiRosterTurn(state, cfg, ctx, faction, conf, turn) {
+  const rosterConf = { ...conf, personas: PERSONA_AXES };
+  const notes = [];
+  for (const n of aiRosterLearnTick(state, rosterConf, cfg, faction, turn)) {
+    recordEvent(state, `${faction.name}麾下${nameOfCfg(state, cfg, n.cfgId)}习得新战法（${skillById(n.skillId)?.name || n.skillId}）。`);
+    notes.push(n);
+  }
+  const rec = aiRecruitTick(state, rosterConf, cfg, faction, turn);
+  if (rec) {
+    if (rec.kind === '登庸') {
+      recordEvent(state, `${faction.name}遣使登庸在野贤才${rec.name}，礼金入帐，已列入帐下。`);
+      noteMove(state, { kind: '登庸', faction: faction.id, who: faction.name, cfgId: rec.cfgId, name: rec.name });
+    } else {
+      recordEvent(state, `${faction.name}欲招${rec.name}，对方未允。`);
+    }
+    notes.push(rec);
+  }
+  for (const n of aiCaptiveTick(state, rosterConf, cfg, faction, turn)) {
+    if (n.kind === '招降') recordEvent(state, `${faction.name}招降俘虏${n.name}，编入名册。`);
+    else if (n.kind === '释俘') recordEvent(state, `${faction.name}释放俘虏${n.name}归乡。`);
+    notes.push(n);
+  }
+  const poach = aiPoachTick(state, rosterConf, cfg, faction, turn);
+  if (poach) {
+    if (poach.kind === '挖角') {
+      const to = poach.from === 'player' ? '我军' : (nameOfFaction(state, poach.from));
+      recordEvent(state, `【挖角】${faction.name}以厚礼招揽${to}的${poach.name}，已易旗。`);
+      noteMove(state, { kind: '挖角', faction: faction.id, who: faction.name, cfgId: poach.cfgId, name: poach.name, from: poach.from });
+      ctx?.push?.('chat.push', { rid: 0, nickName: '系统', type: 0, msg: `【人事】${faction.name}挖走了${to}的${poach.name}。`, time: Date.now() });
+    } else {
+      recordEvent(state, `${faction.name}欲挖${nameOfCfg(state, cfg, poach.cfgId)}，未果，对方反生戒心。`);
+    }
+    notes.push(poach);
+  }
+  const aid = aiAidRequest(state, rosterConf, faction, turn, state.strategy);
+  if (aid) {
+    recordEvent(state, `【求援】${aid.who}仅余 ${aid.cities} 城 ${aid.troops} 兵，遣使向${aid.friends.map((x) => nameOfFaction(state, x)).join('、')}求援。`);
+    noteMove(state, { kind: '求援', faction: faction.id, who: faction.name, friends: aid.friends, cities: aid.cities, troops: aid.troops });
+    // 盟友派援：用既有驰援行军管线（dispatchRelief），目标=求援方最弱的城
+    const weakest = aid.citiesRows?.length
+      ? aid.citiesRows.slice().sort((a, b) => (state.strategy.cities[a].troops || 0) - (state.strategy.cities[b].troops || 0))[0]
+      : Object.keys(state.strategy.cities).filter((id) => state.strategy.cities[id].owner === faction.id)
+        .sort((a, b) => (state.strategy.cities[a].troops || 0) - (state.strategy.cities[b].troops || 0))[0];
+    for (const fid of aid.friends) {
+      const ally = conf.factions.find((f) => f.id === fid);
+      if (!ally || weakest == null) continue;
+      const fakeIncoming = { troops: 2600, arriveDay: (Math.floor(state.clock?.day) || 1) + 4 };
+      dispatchRelief(state, ctx, ally, Number(weakest), fakeIncoming,
+        strategyMap().cities.find((c) => c.id === Number(weakest)), state.strategy.cities[weakest],
+        Math.max(1, Math.floor(state.clock?.day) || 1));
+    }
+    notes.push(aid);
+  }
+  return notes;
+}
+
+function nameOfCfg(state, cfg, cfgId) {
+  return cfg?.generalByCfg?.get?.(Number(cfgId))?.name || `武将${cfgId}`;
+}
+function nameOfFaction(state, fid) {
+  if (fid === 'player') return '玩家';
+  const f = factionConfFor(state).factions.find((x) => x.id === fid);
+  return f?.name || fid;
 }
 
 /* ---------------------------------------------------------------- 双账本
@@ -866,10 +959,27 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
         noteBattleOutcome(state, faction.id, { cityId: targetId, ok: true });
         noteCityLost(state, prevOwner, targetId, faction.id);
         noteMarch(state, faction, order, target, { troops: prevTroops }, quote, '克', defender.troops, drawn);
+        /* ★ P16：攻城胜方名册武将获得经验（升级走 applyGeneralExp 同源口径） */
+        const atkRoster = state.strategy?.rosters?.[faction.id]?.generals || [];
+        if (atkRoster.length) {
+          const winRatio = prevTroops > 0 ? Math.max(0, Math.min(1, (prevTroops - defender.troops) / prevTroops)) : 0.5;
+          const expEach = 60 + Math.round(winRatio * 90);
+          const expMap = Object.fromEntries(atkRoster.map((g) => [g.cfgId, expEach]));
+          const ups = aiRosterGrantExp(state, cfg, faction.id, expMap);
+          for (const u of ups) recordEvent(state, `${faction.name}麾下${u.name}积功升至 ${u.to} 级。`);
+        }
         const line = order.expect
           ? `${faction.name}${order.expect}，遂克${target.name}。`
           : `${faction.name}自${ownerNameOf(state, prevOwner)}手中攻陷${target.name}（${target.province}）`;
         recordEvent(state, line);
+        /* ★ P16：击破守军后按歼敌比俘虏对方名册武将（玩家不在此列，走既有 b_d_general 路径） */
+        if (prevOwner !== 'player' && prevOwner !== 'han') {
+          const ratio = prevTroops > 0 ? Math.max(0, Math.min(1, (prevTroops - defender.troops) / prevTroops)) : 0.8;
+          const caps = aiCaptureTick(state, cfg, faction.id, prevOwner, targetId, ratio, state.clock?.day || 1);
+          for (const c of caps) {
+            recordEvent(state, `${faction.name}于${target.name}俘获${ownerNameOf(state, prevOwner)}将${c.cfgId}。`);
+          }
+        }
         ctx.push?.('chat.push', { rid: 0, nickName: '系统', type: 0, msg: `【天下】${faction.name}自${ownerNameOf(state, prevOwner)}手中攻陷${target.name}。`, time: Date.now() });
       } else {
         defender.troops = Math.max(200, Math.round(defender.troops * 0.88));
@@ -1212,14 +1322,22 @@ function defenseFor(cfg, cityId, target, tstate, level, state = null) {
     ...(state?.generals || []).map((g) => Number(g.cfgId)),
     ...(state?.captives || []).map((c) => Number(c.cfgId)),
   ];
+  /* ★ P16：名册优先——有持久武将就用他们的真实等级/战法（学战法、升级才有意义）；
+     名册为空（旧档/汉廷）仍走原 hash 生成，保持 M4-13 确定性与战报 UI 白名单。 */
+  /* ★ 平衡契约（P0-3「首战可胜」）：1 级城守军必须维持原 hash 强度——名册里是
+     张飞/夏侯惇这类顶级武将，2 级顶替 3 级 hash 弱将会让新手第一仗打不动。
+     故名册只在 level≥2 的城市顶替，1 级城仍走原 hash（成长后的名册武将在中后期登场）。 */
+  const rosterGens = level >= 2
+    ? rosterDefenders(state, cfg, tstate.owner, cityId, level, exclude) : [];
   const cfgIds = garrisonCfgIds(cfg, {
     cityId, owner: tstate.owner, level, exclude,
     preferNames: faction?.startGenerals || [],
   });
-  const unitCount = cfgIds.length;
+  const useRoster = rosterGens.length > 0 && rosterGens.length === Math.max(1, Math.min(3, level >= 3 ? 3 : (level === 2 ? 2 : 1)));
+  const unitCount = useRoster ? rosterGens.length : cfgIds.length;
   const slotTroops = Math.max(1, Math.ceil(tstate.troops / unitCount));
   return {
-    generals: cfgIds.map((cfgId, k) => ({
+    generals: useRoster ? rosterGens : cfgIds.map((cfgId, k) => ({
       id: 950000 + Number(cityId) * 10 + k,
       cfgId,
       level: Math.max(1, Math.min(LEVEL_COUNT, level + 2)),
