@@ -391,6 +391,10 @@ function balanceOfPower(view) {
 function playerOption(view) {
   const p = balanceOfPower(view);
   if (p.count < 3 && p.share < 0.25) return null;
+  /* ★ 讨伐冷却（P15 灭国闭环回归）：打玩家的出征在战略层永不消耗目标（玩家城
+     不随 NPC 进攻易主），无冷却会让制衡吃掉全部输出、饿死正常扩张——
+     每次讨伐玩家后歇 6 旬，压力保持但不空转。 */
+  if (view.turn - (Number(view.mem?.lastPlayerAtk) || -999) < 6) return null;
   /* 制衡减压：玩家城守军厚，与打千余守军的汉城同一条 need 线会让制衡永远开不
      出兵——占比越高减压越大（0.85 / 0.7），讨伐玩家成为现实选项。 */
   const needMul = p.share >= 0.4 ? 0.7 : 0.85;

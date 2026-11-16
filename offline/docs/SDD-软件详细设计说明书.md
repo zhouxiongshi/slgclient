@@ -2002,6 +2002,7 @@ build/SLG-Offline-win32-x64/
 | 「AI 内政笨」 | `pushRecruit` 威胁感知：兵压境按敌我兵力比上浮征兵（≤1.8×），刚失城 1.25×；安稳期按 economy 人格基线 |
 | 「全程没有挑战性」 | ①制衡：`balanceOfPower`（玩家城数 ≥3 或占比 ≥25% 入选；占比 ≥40% 连稳健派也出手）+ `playerOption`（need 减压 0.85/0.7 + `sendMul 1.35` 倾巢而出）；`attackPlan` 对玩家目标**同门槛复查**（修 chooseGoal 选中却发不出兵的集成缺口）；②`alliancePlan` 玩家势大时优先结盟制衡玩家 |
 | 「优化操作体验」 | ①「推演三月」按钮（连推三旬，遇待决自动停）；②「自动推旬 ▶」挂机开关（2.4s/旬；`pendingEvents>0` 或前锋抵城 `pendingBattle` 自动暂停并 toast）。`marches` 视图补 `pendingBattle` 字段。回归：`tests/p14-ai-smarts.test.js` 6 用例 |
+| 灭国闭环回归（发行闸 7.9d） | 制衡首版会让讨伐玩家的出征无限重选（玩家城在战略层永不易主、fails 不记账）→ 加 `mem.lastPlayerAtk` **6 旬冷却**（`strategyTick` commit 时记账）；另 `system-audit.mjs` 灭国 runner 的「目标守军=1」GM 构造改为**每旬维持**（AI 威胁感知征兵起守军会被残方逐旬补回，固定 1500 兵的 runner 永远打不穿）。灭国 T63 达成、灭后 10 旬正常、零异常零不变量、确定性通过。`SLG_AUDIT_DEBUG=1` 可采样征服者目标/残城/同盟定位灭国停滞 |
 
 ---
 

@@ -297,6 +297,20 @@ export function runAudit({ seed = 20261114, turns = 60 } = {}) {
       for (const id of Object.keys(st.cities)) {
         if (st.cities[id].owner === conqueror && st.cities[id].troops < 3000) st.cities[id].troops = 3000;
       }
+      /* ★ P15：目标残城守军维持 1——enableConquest 只在启动时压过一次，
+         AI 威胁感知征兵（P15 起守军会被残方逐旬补回）会让固定 1500 兵的
+         runner 永远打不穿，灭国闭环超时。这里每旬维持 GM 构造语义：
+         验收目标是「灭国后世界继续运转」，不是「AI 攻城必胜」。 */
+      for (const id of foes) st.cities[id].troops = 1;
+      /* ★ P15 调试开关：SLG_AUDIT_DEBUG=1 时采样征服者目标与残城守军，定位灭国停滞 */
+      if (process.env.SLG_AUDIT_DEBUG === '1' && turnNo % 10 === 0) {
+        const mem = st.memory?.[conqueror];
+        const foes2 = foes.map((id) => `${id}(守${st.cities[id].troops},owner后防${st.cities[id].defense})`);
+        const rels = Object.entries(st.relations || {})
+          .filter(([k, v]) => v === 'ally' && (k.includes(conqueror) || k.includes(targetFaction)))
+          .map(([k, v]) => `${k}=${v}`);
+        conquest.events.push({ turn: turnNo, event: `[debug] ${conqueror} goal=${JSON.stringify(mem?.goal)} 残城=${foes2.join(',')} 同盟=${rels.join(',') || '无'} grain=${st.resources?.[conqueror]?.grain} gold=${st.resources?.[conqueror]?.gold}` });
+      }
       const left = counts[targetFaction] || 0;
       if (left === 0) {
         conquest.eliminated = targetFaction;

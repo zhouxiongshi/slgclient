@@ -595,6 +595,11 @@ export function strategyTick(state, cfg, ctx, now = Date.now()) {
         fromName: sheet.goal.fromName || '',
         targetName: sheet.goal.targetName || '',
       });
+      /* ★ P15 讨伐冷却记账：目标确为玩家城 → 记 lastPlayerAtk，playerOption 歇 6 旬 */
+      const gm = st.memory?.[f.id]?.goal;
+      if (gm && gm.type === '削弱' && st.cities[Number(gm.target)]?.owner === 'player') {
+        st.memory[f.id].lastPlayerAtk = st.turn;
+      }
     }
     /* ★ M2-4 外交（GDD §5.8 请求攻击）：玩家付定金后，把一单真实出征塞进该势力
        本旬指令单（走 applyOrders 既有结算口，可审计）。目标=对方邻接的、
