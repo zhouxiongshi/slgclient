@@ -4718,15 +4718,42 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         var row = el('div', 'row', '<span><b style="color:#f0d998">' + esc(g.name) + '</b> <span class="chip">' + g.when
           + '</span> <span class="cost">' + (g.state === 'now' ? '此刻在店' : g.state === 'passed' ? '已过时辰' : '未到时辰') + '</span>' + meta + '</span>');
         row.appendChild(mkBtn('招募', '', function () {
-          send('general.drawGeneral', { drawTimes: 1, cityId: c.id }).then(function (r2) {
-            var got = (r2.msg && r2.msg.generals) || [];
+          /* ★ P13 指名招募：把玩家点中的 cfgId 一起发，服务端只招这一位（旧实现招的是
+             「此刻在店」第一个，玩家点 A 来的却是 B）。 */
+          send('general.drawGeneral', { drawTimes: 1, cityId: c.id, cfgId: g.cfgId }).then(function (r2) {
+            var m2 = r2.msg || {};
+            var got = m2.generals || [];
             if (got.length) {
-              toast('入营：' + got.map(function (x) { return x.name || '武将'; }).join('、'), true);
+              toast('「' + (got[0].name || g.name) + '」入营！'
+                + (m2.rate != null ? '（成功率 ' + m2.rate + '%）' : ''), true);
               send('tavern.guests', { cityId: c.id }, true).then(function (r3) {
                 var m3 = r3.msg || {};
+                void m3;
                 refreshCityView(cache);
               });
-            } else toast('招募失败：' + (r2.msg && r2.msg.reason === 'no_guest' ? '此人已过时辰' : r2.msg && r2.msg.reason === 'not_enough_gold' ? '金不足' : (r2.msg && r2.msg.reason) || '未知'), false);
+              return;
+            }
+            var reason = m2.reason;
+            if (reason === 'refused') {
+              toast('「' + m2.name + '」婉拒了主公的延揽（成功率 ' + m2.rate + '%）'
+                + (m2.favor ? '，已拒 ' + m2.favor + ' 次，三顾茅庐下回更易' : '')
+                + '，金分文未取', false);
+            } else if (reason === 'guest_left') {
+              toast('「' + m2.name + '」已离店，明日请早', false);
+            } else if (reason === 'not_arrived') {
+              toast('「' + m2.name + '」' + (m2.when || '稍后') + '才到店，先办别的事', false);
+            } else if (reason === 'not_today') {
+              toast('「' + g.name + '」今日不在本城酒馆', false);
+            } else if (reason === 'not_enough_gold') {
+              toast('金不足：招募一位需 ' + (m2.cost || m.cost) + ' 金', false);
+            } else if (reason === 'no_guest') {
+              toast('此人已过时辰，明日请早', false);
+            } else {
+              toast('招募未成：' + (reason || '未知'), false);
+            }
+            send('tavern.guests', { cityId: c.id }, true).then(function () {
+              refreshCityView(cache);
+            });
           });
         }));
         list.appendChild(row);
@@ -5445,15 +5472,26 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         row.innerHTML = '<span><b style="color:#f0d998">' + g.name + '</b> <span class="chip">'
           + g.when + '</span></span>';
         row.appendChild(mkBtn('招募', '', function () {
-          send('general.drawGeneral', { drawTimes: 1 }).then(function (r2) {
-            var got = (r2.msg && r2.msg.generals) || [];
-            var reason = (r2.msg && r2.msg.reason) || '';
+          /* ★ P13 指名招募 + 武将可拒绝（与城内酒馆同口径） */
+          send('general.drawGeneral', { drawTimes: 1, cfgId: g.cfgId }).then(function (r2) {
+            var m2 = r2.msg || {};
+            var got = m2.generals || [];
             if (got.length) {
               toast('入营：' + got.map(function (x) { return x.name || '武将'; }).join('、')
                 + '　到「征兵」页把他编入队伍', true);
-            } else if (reason === 'not_enough_gold') {
-              toast('金不足：需 ' + ((r2.msg && r2.msg.cost) || m.cost) + ' 金', false);
-            } else if (reason === 'no_guest') {
+            } else if (m2.reason === 'refused') {
+              toast('「' + m2.name + '」婉拒了主公的延揽（成功率 ' + m2.rate + '%）'
+                + (m2.favor ? '，已拒 ' + m2.favor + ' 次，三顾茅庐下回更易' : '')
+                + '，金分文未取', false);
+            } else if (m2.reason === 'guest_left') {
+              toast('「' + m2.name + '」已离店，明日请早', false);
+            } else if (m2.reason === 'not_arrived') {
+              toast('「' + m2.name + '」' + (m2.when || '稍后') + '才到店，先办别的事', false);
+            } else if (m2.reason === 'not_today') {
+              toast('「' + g.name + '」今日不在主城酒馆', false);
+            } else if (m2.reason === 'not_enough_gold') {
+              toast('金不足：需 ' + ((m2 && m2.cost) || m.cost) + ' 金', false);
+            } else if (m2.reason === 'no_guest') {
               toast('此刻无人来访' + (m.nextAt ? '，' + m.nextAt + '再来' : ''), false);
             } else {
               toast('招募失败：' + errText(r2), false);

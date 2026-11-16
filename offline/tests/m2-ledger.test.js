@@ -15,7 +15,7 @@ import {
   ensureStrategy, oathOptions, chooseOath,
   accrueFactionGrain, spendFactionGrain, creditFactionGrain, refreshGrainSummary,
 } from '../server/domain/strategy.js';
-import { ensureCityEcon } from '../server/domain/city-econ.js';
+import { ensureCityEcon, storeCapOf } from '../server/domain/city-econ.js';
 
 const cfg = loadConfig();
 const CAP = 20000;
@@ -104,10 +104,12 @@ test('双账本·入账：creditFactionGrain 写城库并刷新汇总（满仓�
   const fid = findFactionWithCity(st);
   const cid = ownCityIds(st, fid)[0];
   const e = st.cityEcon[cid];
-  e.store = CAP - 100;
+  /* ★ P13：城库上限随人口缩放（storeCapOf），不再恒 2 万；截断语义本身不变。 */
+  const cap = storeCapOf(e);
+  e.store = cap - 100;
   const beforeSum = sumStores(st, fid);
   const n = creditFactionGrain(state, fid, 500, cid);
   assert.equal(n, 500, '应收照记');
-  assert.equal(e.store, CAP, '满仓截断在城库');
+  assert.equal(e.store, cap, '满仓截断在城库');
   assert.equal(st.resources[fid].grain, beforeSum + 100, '只收进 100，汇总如实跟随');
 });

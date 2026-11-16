@@ -60,7 +60,8 @@ export function ensureCityEcon(state) {
     const attr = c.attrs || {};
     if (!st.cityEcon[id]) {
       st.cityEcon[id] = {
-        pop: Math.min(100000, c.population || 30000),
+        /* ★ P13 人口扩容（用户 2026-11-16）：初始人口阶梯 ×3~7（map.json），上限 10 万 → 100 万。 */
+        pop: Math.min(1000000, c.population || 30000),
         devAgri: attr.农业 ?? 50,
         devTrade: attr.商业 ?? 50,
         devArms: attr.兵源 ?? 50,
@@ -176,7 +177,14 @@ export function cityLayer(state) {
   return out;
 }
 
-/** 每 30 日：人口自然增长（民心驱动）+ 各城自动屯粮入库（3×日产，上限 2 万）。 */
+/** 城库存粮上限随人口缩放（★ P13）：大城屯大粮，行军大军不再被 2 万仓宽卡死。
+ *  2 万起底（小城与旧值一致），人口 ×0.12 线性放大，24 万封顶（对应人口 200 万）。 */
+export function storeCapOf(e) {
+  const pop = Math.max(0, Math.floor(Number(e?.pop) || 0));
+  return Math.max(20000, Math.min(240000, Math.round(pop * 0.12)));
+}
+
+/** 每 30 日：人口自然增长（民心驱动）+ 各城自动屯粮入库（3×日产，上限随人口）。 */
 export function popTick(state, ctx) {
   const econ = ensureCityEcon(state);
   if (!econ) return;
@@ -186,9 +194,9 @@ export function popTick(state, ctx) {
     if (!e) continue;
     // 民心 0~100 → 增长 2%~6%（民心高则流民来附，民心低则逃亡）
     const rate = 0.02 + (Number(e.morale ?? 60) / 100) * 0.04;
-    e.pop = Math.min(100000, Math.round(e.pop * (1 + rate)));
+    e.pop = Math.min(1000000, Math.round(e.pop * (1 + rate)));   // ★ P13 上限 10 万 → 100 万
     const y = cityYield(state, id);
-    e.store = Math.min(20000, e.store + 3 * (y?.grain || 0));
+    e.store = Math.min(storeCapOf(e), e.store + 3 * (y?.grain || 0));
   }
 }
 
@@ -425,7 +433,7 @@ export function deliverGrain(state, cityId, grain) {
   ensureCityEcon(state);
   const e = state.strategy?.cityEcon?.[Number(cityId)];
   if (!e) return false;
-  e.store = Math.min(20000, e.store + Math.max(0, Math.floor(grain)));
+  e.store = Math.min(storeCapOf(e), e.store + Math.max(0, Math.floor(grain)));
   return true;
 }
 

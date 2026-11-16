@@ -186,7 +186,9 @@ function computeProfile(key, lv) {
   /* 触发条件：主动/追击看概率，指挥/被动常驻 */
   let trigger;
   if (cls === '被动') trigger = '常驻生效，无需发动';
-  else if (cls === '指挥') trigger = '开战即生效，不受控制影响';
+  else if (cls === '指挥') trigger = chance != null && chance < 100
+    ? `开战阶段判定（发动率 ${pct(chance)}），不受控制影响`
+    : '开战即生效，不受控制影响';
   else if (cls === '追击') trigger = `普通攻击命中后，${pct(chance)} 概率追加`;
   else trigger = `${pct(chance)} 概率发动` + (Number(k.prepare) > 0 ? `（需准备 ${k.prepare} 回合）` : '');
 
@@ -240,7 +242,7 @@ export function actSentence(a) {
     case 'hit':
       return a.skill && a.skill !== '普通攻击'
         ? `${f} 以「${a.skill}」击 ${to}，折其 ${fmt(a.loss)} 卒`
-        : `${f} 挥军直进 → ${to}，折其 ${fmt(a.loss)} 卒`;
+        : `${f} 普攻 → ${to}，折其 ${fmt(a.loss)} 卒`;
     case 'control':
       return `${f} 施压 ${to}，使其陷入「${a.state || '受制'}」`;
     case 'immune':

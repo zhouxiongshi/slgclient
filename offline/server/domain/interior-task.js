@@ -319,7 +319,8 @@ export function advanceInteriorTasks(state, cfg, ctx) {
       t.doneDay = day;
       const K = KINDS[t.kind];
       const e2 = st?.cityEcon?.[t.cityId];
-      if (K?.popGain && e2) e2.pop = Math.min(100000, Math.round((Number(e2.pop) || 0) * (1 + K.popGain)));
+      /* ★ P13 人口上限随全局扩容 10 万 → 100 万（本模块零依赖，上限值与 city-econ 同步改） */
+      if (K?.popGain && e2) e2.pop = Math.min(1000000, Math.round((Number(e2.pop) || 0) * (1 + K.popGain)));
       completed.push(taskView(state, t));
       ctx?.push?.('chat.push', {
         rid: 0, nickName: '系统', type: 0,

@@ -36,7 +36,7 @@ import { recordRes } from './economy.js';
 import { grantBattleExp, levelUpSentence } from './general-progress.js';
 import {
   ensureCityEcon, consumeMarchGrain, deliverGrain, cityEconTick, cityName,
-  cityYield, armsApt, armsCounter, ARMS_NAMES, devLevel, cityDevTick,
+  cityYield, armsApt, armsCounter, ARMS_NAMES, devLevel, cityDevTick, storeCapOf,
 } from './city-econ.js';
 import { SKILLS, LEVEL_COUNT, skillById } from '../skills.js';
 /* ★ M4-13：守将按城池确定性分配，不再复用 npc_army 写死的 6 个 cfgId */
@@ -698,7 +698,7 @@ export function creditFactionGrain(state, factionId, amount, preferCityId = 0) {
     : (ids.map(Number).sort((a, b) => (Number(st.cityEcon[b]?.store) || 0) - (Number(st.cityEcon[a]?.store) || 0))[0] || 0);
   const n = Math.max(0, Math.floor(Number(amount) || 0));
   if (target && st.cityEcon[target]) {
-    st.cityEcon[target].store = Math.min(20000, st.cityEcon[target].store + n);
+    st.cityEcon[target].store = Math.min(storeCapOf(st.cityEcon[target]), st.cityEcon[target].store + n);
   }
   refreshGrainSummary(state, factionId);
   return n;
@@ -718,7 +718,7 @@ export function accrueFactionGrain(state, factionId) {
     if (st.cities[c.id]?.owner !== factionId) continue;
     const g = 140 + Math.round((c.attrs?.农业 ?? 40) * 3);
     const e = st.cityEcon[c.id];
-    if (e) e.store = Math.min(20000, e.store + g);   // 粮留城库（GDD §5.2）
+    if (e) e.store = Math.min(storeCapOf(e), e.store + g);   // 粮留城库（GDD §5.2；★ P13 上限随人口）
     grain += g;
     gold += 60 + Math.round((c.attrs?.商业 ?? 40) * 1.2);
   }
@@ -1634,7 +1634,7 @@ export function strategyRetreatBattle(state, cfg, ctx, { marchId }) {
   }
   const refund = Math.floor((Number(mm.grainCost) || 0) / 2);
   const e = st.cityEcon?.[mm.from];
-  if (e && refund > 0) e.store = Math.min(20000, (Number(e.store) || 0) + refund);
+  if (e && refund > 0) e.store = Math.min(storeCapOf(e), (Number(e.store) || 0) + refund);
   recordEvent(state, `临阵收兵：攻${cityName(mm.to)}之役作罢，部队退回${cityName(mm.from)}，退还军粮 ${refund}。`);
   return { ok: true, refund, cityId: mm.to };
 }

@@ -10,19 +10,153 @@
     "trigger": 4,
     "target": 5,
     "limit": 2,
-    "arms": [1, 2, 3, 4, 5, 6, 7, 8, 9],
-    "include_effect": [2, 1, 2],
+    "arms": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "include_effect": [
+      2,
+      1,
+      2
+    ],
     "levels": [
-      { "probability": 100, "effect_value": [3, 30, 30], "effect_round": [3, 0, 0] },
-      { "probability": 100, "effect_value": [3, 35, 30], "effect_round": [3, 0, 0] },
-      { "probability": 100, "effect_value": [3, 40, 30], "effect_round": [3, 0, 0] },
-      { "probability": 100, "effect_value": [3, 45, 30], "effect_round": [3, 0, 0] },
-      { "probability": 100, "effect_value": [3, 50, 30], "effect_round": [3, 0, 0] },
-      { "probability": 100, "effect_value": [3, 55, 30], "effect_round": [3, 0, 0] },
-      { "probability": 100, "effect_value": [3, 60, 30], "effect_round": [3, 0, 0] },
-      { "probability": 100, "effect_value": [3, 65, 30], "effect_round": [3, 0, 0] },
-      { "probability": 100, "effect_value": [3, 70, 30], "effect_round": [3, 0, 0] },
-      { "probability": 100, "effect_value": [3, 75, 30], "effect_round": [3, 0, 0] }
+      {
+        "probability": 35,
+        "effect_value": [
+          3,
+          30,
+          30
+        ],
+        "effect_round": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "probability": 35,
+        "effect_value": [
+          3,
+          35,
+          30
+        ],
+        "effect_round": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "probability": 35,
+        "effect_value": [
+          3,
+          40,
+          30
+        ],
+        "effect_round": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "probability": 35,
+        "effect_value": [
+          3,
+          45,
+          30
+        ],
+        "effect_round": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "probability": 35,
+        "effect_value": [
+          3,
+          50,
+          30
+        ],
+        "effect_round": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "probability": 35,
+        "effect_value": [
+          3,
+          55,
+          30
+        ],
+        "effect_round": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "probability": 35,
+        "effect_value": [
+          3,
+          60,
+          30
+        ],
+        "effect_round": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "probability": 35,
+        "effect_value": [
+          3,
+          65,
+          30
+        ],
+        "effect_round": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "probability": 35,
+        "effect_value": [
+          3,
+          70,
+          30
+        ],
+        "effect_round": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "probability": 35,
+        "effect_value": [
+          3,
+          75,
+          30
+        ],
+        "effect_round": [
+          3,
+          0,
+          0
+        ]
+      }
     ]
   },
   "kernel": {
@@ -30,8 +164,8 @@
     "name": "坐镇中军",
     "skill_class": "指挥",
     "prepare": 0,
-    "probability_init": 1,
-    "probability_max": 1,
+    "probability_init": 0.35,
+    "probability_max": 0.35,
     "target_type": "self_and_ally_single",
     "attack_type": "normal",
     "control_state": null,
@@ -49,7 +183,9 @@
         "control_state": null,
         "control_probability": 0,
         "bonus_terms": [],
-        "mechanics": { "insight_rounds": 3 }
+        "mechanics": {
+          "insight_rounds": 3
+        }
       },
       {
         "detail_id": 9001902,
@@ -79,7 +215,9 @@
         "control_state": null,
         "control_probability": 0,
         "bonus_terms": [],
-        "mechanics": { "damage_taken_reduce": 0.3 }
+        "mechanics": {
+          "damage_taken_reduce": 0.3
+        }
       }
     ]
   },

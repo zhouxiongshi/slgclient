@@ -923,9 +923,70 @@ export function handleRequest(ctx, req) {
       const realMsPerDay = chapterRules().realMsPerDay;
       // ★ P6：支持按城招募——各城酒馆来的是本籍在野武将；不带 cityId 时沿用主城口径
       const cityId = Number(m.cityId) || 0;
-      const here = guestsNow(state, realMsPerDay, cityId || null).slice(0, times);
       const costEach = cfg.basic.general?.draw_general_cost ?? 30;
+      const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
       const added = [];
+      const refused = [];
+      // ★ P13 指名招募：玩家在来访名单里点了谁，就只招谁（旧实现取「此刻在店」第一个，
+      //   玩家点 A 来的却是 B）。指名时必须真的在店，过时辰/未到店都给可读原因。
+      if (m.cfgId != null && Number(m.cfgId) > 0) {
+        const targetId = Number(m.cfgId);
+        const row = todaysGuests(state, undefined, cityId || null)
+          .find((g) => Number(g.cfgId) === targetId);
+        if (!row) {
+          rsp.msg = { generals: [], reason: 'not_today', cfgId: targetId, cost: costEach };
+          break;
+        }
+        const frac = dayFraction(state, realMsPerDay);
+        if (frac >= row.to) {
+          rsp.msg = { generals: [], reason: 'guest_left', name: row.name, cost: costEach };
+          break;
+        }
+        if (frac < row.from) {
+          rsp.msg = { generals: [], reason: 'not_arrived', name: row.name, when: row.when, cost: costEach };
+          break;
+        }
+        if ((state.roleRes.gold || 0) < costEach) {
+          rsp.msg = { generals: [], reason: 'not_enough_gold', cost: costEach, gold: state.roleRes.gold || 0 };
+          break;
+        }
+        /* ★ P13 武将可以拒绝：掷骰与「探索登庸」同一条公式（relation.talentRecruitRate），
+           面板展示的「登庸 X%」就是结算概率。失败不收费，三顾好感 +1（再访更易）。 */
+        state.tavern.favor = state.tavern.favor || {};
+        const favorN = Number(state.tavern.favor[targetId] || 0);
+        const calc = talentRecruitRate(state, cfg, row);
+        const rate = calc.rate / 100;
+        const success = rngFor(state.seed ?? 20261110, day,
+          `draw:${cityId || 'all'}:${targetId}:${favorN}`).random() < rate;
+        if (!success) {
+          state.tavern.favor[targetId] = favorN + 1;
+          ctx.push?.('roleRes.push', roleResOf(state));
+          ctx.save();
+          rsp.msg = {
+            generals: [], reason: 'refused', name: row.name,
+            rate: Math.round(rate * 100), favor: favorN + 1, parts: calc.parts,
+            cost: costEach, charged: 0,
+          };
+          break;
+        }
+        delete state.tavern.favor[targetId];
+        state.roleRes.gold -= costEach;
+        recordRes(state, 'gold', -costEach, `招募·${row.name}`, day);
+        const person = state.tavern.people.find((p) => Number(p.cfgId) === targetId);
+        if (person) person.recruited = true;
+        const g = makeGeneral(cfg, nextId(state, 'generalId'), targetId, mainCity(state)?.cityId ?? 1, 1);
+        state.generals.push(g);
+        added.push(g);
+        noticeRecruit(state, ctx, row.name || '');
+        ctx.push('general.push', g);
+        syncOwnedSkills(state);
+        ctx.push('roleRes.push', roleResOf(state));
+        ctx.save();
+        rsp.msg = { generals: withGeneralNames(state, cfg, clone(added)), rate: Math.round(rate * 100), reason: '' };
+        break;
+      }
+      /* 旧口径（不指名）：此刻在店的客人依次尝试——武将同样可能婉拒（P13）。 */
+      const here = guestsNow(state, realMsPerDay, cityId || null).slice(0, times);
       // ★ 试玩 P1-3：旧实现「此刻无人 / 金不足」都返回 code 0 + 空数组，静默失败。
       //   现在把原因和今天剩下的人一并回给界面，玩家知道自己在等什么。
       if (!here.length) {
@@ -941,9 +1002,22 @@ export function handleRequest(ctx, req) {
         rsp.msg = { generals: [], reason: 'not_enough_gold', cost: costEach, gold: state.roleRes.gold || 0 };
         break;
       }
-      const affordable = Math.min(here.length, Math.floor((state.roleRes.gold || 0) / costEach));
-      state.roleRes.gold -= costEach * affordable;
-      for (const person of here.slice(0, affordable)) {
+      state.tavern.favor = state.tavern.favor || {};
+      for (const person of here) {
+        if ((state.roleRes.gold || 0) < costEach) break;
+        const favorN = Number(state.tavern.favor[person.cfgId] || 0);
+        const calc = talentRecruitRate(state, cfg, person);
+        const rate = calc.rate / 100;
+        const success = rngFor(state.seed ?? 20261110, day,
+          `draw:${cityId || 'all'}:${person.cfgId}:${favorN}`).random() < rate;
+        if (!success) {
+          state.tavern.favor[person.cfgId] = favorN + 1;
+          refused.push({ cfgId: person.cfgId, name: person.name, rate: Math.round(rate * 100), favor: favorN + 1 });
+          continue;
+        }
+        delete state.tavern.favor[person.cfgId];
+        state.roleRes.gold -= costEach;
+        recordRes(state, 'gold', -costEach, `招募·${person.name}`, day);
         person.recruited = true;
         const row = state.tavern.people.find((p) => p.cfgId === person.cfgId);
         if (row) row.recruited = true;
@@ -956,7 +1030,10 @@ export function handleRequest(ctx, req) {
       syncOwnedSkills(state);
       ctx.push('roleRes.push', roleResOf(state));
       ctx.save();
-      rsp.msg = { generals: withGeneralNames(state, cfg, clone(added)), reason: added.length ? '' : 'not_enough_gold' };
+      rsp.msg = {
+        generals: withGeneralNames(state, cfg, clone(added)),
+        refused, reason: added.length ? '' : (refused.length ? 'refused' : 'not_enough_gold'),
+      };
       break;
     }
     case 'general.composeGeneral': {

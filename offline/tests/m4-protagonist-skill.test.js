@@ -74,7 +74,7 @@ test('配置：指挥战法三槽，占位数/效果数/图标数/等级数对�
   assert.equal(authored.provenance.pairing, 'authored');
   assert.equal(s.kernel.skill_class, '指挥');
   assert.equal(s.kernel.prepare, 0);
-  assert.equal(s.kernel.probability_init, 1, '指挥开战即生效');
+  assert.equal(s.kernel.probability_init, 0.35, '★ P13 主公技能初始发动率 35%');
   assert.equal(s.kernel.effects.length, 3);
   assert.equal((s.ui.des.match(/%n%/g) || []).length, 3);
   assert.equal(s.ui.include_effect.length, 3);
@@ -98,7 +98,7 @@ test('配置：回击概率 30% 起每级 +5%，洞察/减伤/伤害率固定', 
 
   s.ui.levels.forEach((row, i) => {
     assert.deepEqual(row.effect_value, [3, 30 + i * 5, 30], `Lv${i + 1} 槽值`);
-    assert.equal(row.probability, 100, '指挥战法发动率恒 100%');
+    assert.equal(row.probability, 35, '★ P13 发动率恒 35%（界面=内核同源）');
   });
   assert.equal(s.ui.levels.at(-1).effect_value[1], 75, 'Lv10 回击概率 75%');
   assert.equal(reportSkillFields(CFG_ID, 10).e_v[1], 75, '战报字段同源');
@@ -134,7 +134,7 @@ test('叙述：面板/战报读到的就是指定效果，%n% 按等级填掉', 
   assert.equal(p.cls, '指挥');
   assert.equal(p.target, '自身与一名友军');
   assert.ok(p.effect.includes('洞察') && p.effect.includes('回击') && p.effect.includes('受到伤害降低'));
-  assert.ok(p.trigger.includes('开战即生效'));
+  assert.ok(p.trigger.includes('35%'), '指挥战法 35% 发动率必须写进触发说明');
   assert.match(actSentence({ t: 'skill', fName: '主角', skill: '坐镇中军', loss: 120, counter: true }),
     /受击回击/);
   assert.match(actSentence({ t: 'immune', toName: '主角', state: '犹豫' }), /洞察生效，免疫/);

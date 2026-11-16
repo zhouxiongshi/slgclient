@@ -203,10 +203,11 @@ test('R1 · 协议契约矩阵（73 消息）', async (t) => {
     });
 
     await t.test('上限截断：drawTimes/scale/frac/slot 按字典夹紧', async () => {
-      // drawTimes 夹到 1..10 —— 金不够时给 not_enough_gold，金够时最多发 10 人
+      // drawTimes 夹到 1..10 —— 金不够时给 not_enough_gold，金够时最多发 10 人；
+      // ★ P13 武将可拒绝：失败时 reason='refused'（也是合法业务结果）
       const draw = await client.request('general.drawGeneral', { drawTimes: 999 });
       assert.equal(draw.code, 0);
-      assert.ok(['no_guest', 'not_enough_gold', undefined].includes(draw.msg.reason)
+      assert.ok(['no_guest', 'not_enough_gold', 'refused', undefined].includes(draw.msg.reason)
         || Array.isArray(draw.msg.generals), `draw 返回异常: ${JSON.stringify(draw.msg).slice(0, 120)}`);
 
       // campaign.speed 只认 4 与 1

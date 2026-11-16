@@ -309,7 +309,7 @@ out = { seq: out.seq ?? req.seq ?? 0, name: req.name, code: out.code ?? 0, msg: 
 | name | 主要入参 | 回包 msg | 推送 |
 |---|---|---|---|
 | `general.myGenerals` | — | `{generals}` | — |
-| `general.drawGeneral` | `drawTimes(1..10), cityId` | `{generals, reason, cost, today}` | `general.push`、`roleRes.push` |
+| `general.drawGeneral` | `drawTimes(1..10), cityId, cfgId?`（★ P13 指名招募） | `{generals, reason(no_guest/not_enough_gold/**not_today/guest_left/not_arrived/refused**), cost, today, refused[], rate}` | `general.push`、`roleRes.push` |
 | `general.composeGeneral` | `gIds[], compId` | `{generals}` | — |
 | `general.addPrGeneral` | `compId, forceAdd, strategyAdd, defenseAdd, speedAdd, destroyAdd` | `{general}` | `general.push` |
 | `general.convert` | `gIds[]` | `{gIds, gold, add_gold}` | `roleRes.push` |
@@ -1981,6 +1981,17 @@ build/SLG-Offline-win32-x64/
 2. 偏差被修复 → 不删行，把「处置」改为「已在 `<提交号>` 修复，本文 §x 已同步」。
 3. 下结论前先做「真链路 vs 旧链路」反向对照（`ARCH §9.20` 教训）：历史上「玩家挂机金恒 0」是手写日循环漏 `applyDays` 造成的假阳性。
 4. 本文与 GDD 冲突时：玩法目标听 GDD，当前实现事实听本文；需要改哪一边由产品拍板。
+
+### 17.6 P13 实测反馈修复（2026-11-16 用户实机试玩）
+
+| 编号 | 用户反馈 | 根因 | 处置 |
+|---|---|---|---|
+| `P13-1` | 「每次招募成功都不是我鼠标选中的武将」 | `general.drawGeneral` 只收 `drawTimes/cityId`，服务端取 `guestsNow().slice(0,1)` 的「此刻在店第一个人」，与点选无关 | ✅ 协议加 `cfgId` 指名参数（§3.3 已同步）；`skills.js` 两处酒馆按钮带 `cfgId`；`tests/p13-recruit-select.test.js` 锁「点谁招谁」 |
+| `P13-2` | 「继续招募提示过时、不友好；可以让武将拒绝；每回合第一次几乎 100% 成功」 | 旧实现无掷骰（在店即 100% 入营）；失败文案只有含混的「过时辰」 | ✅ 招募改走 `talentRecruitRate` 同源掷骰（武将可拒绝、失败不扣金、三顾好感 +1/次）；回执细分 `not_today/guest_left/not_arrived/refused` 四种可读原因，toast 全部改友好文案 |
+| `P13-3` | 「挥军直进看着像技能」 | `battle-narrative.js` 普攻动作叙述用词花哨 | ✅ 改为 `普攻 → X`，字面即语义 |
+| `P13-4` | 「主公技能初始概率改 35%」 | 19001 `probability_init/max = 1` | ✅ 按用户指定改 `0.35`，`ui.levels[].probability = 35`；指挥类叙述改为「开战阶段判定（发动率 35%）」；FIELD-CONTRACT §D 已登记 |
+| `P13-5` | 「城市初始人口太低，提升 3-7 倍并联动平衡」 | map.json 人口 0~10.2 万，且运行时硬上限 10 万 | ✅ map.json 72 城阶梯 ×3~7（大城少提、小城多提，边陲 0 人口显式 3 万）；上限 10 万 → 100 万（`city-econ.js`/`interior-task.js`）；城库上限随人口 `storeCapOf(pop×0.12, 2万~24万)`。**平衡口径**：粮/金产量不随人口变（守 OP-01 已校准的金流），人口只放大兵源与城库——征兵仍受木铁粮金成本闸门约束，不会资源过剩；行军大军的城库瓶颈同步放宽，不会匮乏。NPC 守军公式（`garrisonOf`）基于城池属性而非人口，难度不受影响 |
+| `P13-6` | 「检查运行日志，漏洞与报错全部修复」 | `crash.log` 仅 8 条且全部来自 **2026-11-07 旧版应用路径**（`D:\WorkBuddy\slg\offline`，重构前）：①CSP 警告（dev 态才有，打包后消失）②原版 Cocos 客户端 `getComponent/name` 未捕获异常（web/ 资产逐字节冻结，属原版自带时序噪声，非注入层引入） | ✅ 现行 `slgclient` 应用（11-12 运行）零新增报错；`npm test` 全量重跑确认无回归。两条历史噪声登记为已知无害项，不触碰 web/ |
 
 ---
 

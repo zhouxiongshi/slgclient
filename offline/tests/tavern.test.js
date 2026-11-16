@@ -11,6 +11,8 @@ import { handleRequest } from '../server/handlers.js';
 import { createSkillAssets } from '../server/skills.js';
 import { slotBlock, unlockTalent } from '../server/domain/slots.js';
 import { guestsNow } from '../server/domain/tavern.js';
+import { talentRecruitRate } from '../server/domain/relation.js';
+import { rngFor } from '../server/domain/strategy-rng.js';
 
 const cfg = loadConfig();
 const req = (name, msg = {}) => ({ seq: 1, name, msg });
@@ -36,6 +38,17 @@ test('开局只有穿越者，酒馆每天 3 人且开城时分只能遇到其�
 
   const now = guestsNow(state, 60000);
   assert.equal(now.length, 1);
+  /* ★ P13：招募改走 talentRecruitRate 掷骰（武将可拒绝），先扫一颗必中的确定性种子。 */
+  const target = now[0];
+  const rate = talentRecruitRate(state, cfg, target).rate / 100;
+  const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  let okSeed = 0;
+  for (let s = 1; s < 20000 && !okSeed; s += 1) {
+    const seed = s * 7919;
+    if (rngFor(seed, day, `draw:all:${target.cfgId}:0`).random() < rate) okSeed = seed;
+  }
+  assert.ok(okSeed, '应能找到招募成功的确定性种子');
+  state.seed = okSeed;
   const drawn = handleRequest(ctx, req('general.drawGeneral', { drawTimes: 10 }));
   assert.equal(drawn.msg.generals.length, 1);
   assert.equal(drawn.msg.generals[0].level, 1);
