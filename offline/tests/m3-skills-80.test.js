@@ -1,5 +1,5 @@
 /**
- * M3-8 战法补量（GDD §9「战法 80 条」）：主线 31 + 库 20 + 新机制组合 29 = 80
+ * M3-8 战法补量（本作设计「战法 80 条」）：主线 31 + 库 20 + 新机制组合 29 = 80
  * （另有主角专属 1 条不在「战法库」口径内，运行时表共 81）。
  *
  * 覆盖面：
@@ -43,7 +43,7 @@ test('战法总量：主线+库+extra = 80，运行时表含主角专属（可�
   assert.equal(main.count, 31);
   assert.equal(lib.count, 20);
   assert.equal(extra.count, 29);
-  assert.equal(main.count + lib.count + extra.count, 80, 'GDD §16 M3 战法 80 条');
+  assert.equal(main.count + lib.count + extra.count, 80, 'M3 战法 80 条');
   /* 运行时还可能加载 conf/innate-skills.json（全武将初始战法工作线，920000+）。
      本用例只守「80 条主线口径 + 主角专属唯一」，不把可选扩展表钉死成 81。 */
   assert.ok(SKILLS.length >= 81, '至少含 80 条主线 + 主角专属');

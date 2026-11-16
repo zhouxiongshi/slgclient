@@ -1,5 +1,5 @@
 /**
- * M0-4（GDD §14.2-3 / 验收 B1~B4）：撤销栈策略与清栈信号。
+ * M0-4（本作设计-3 / 验收 B1~B4）：撤销栈策略与清栈信号。
  *
  * 锁三件容易回退的事：
  *   1) 撤销策略由服务端权威下发（undo.depth / clearOnBattle / clearOnLoad），
@@ -25,7 +25,7 @@ function world() {
   return state;
 }
 
-test('撤销策略：服务端下发 depth=5 与两个清栈开关（GDD §9.2 undoDepth）', () => {
+test('撤销策略：服务端下发 depth=5 与两个清栈开关（参数表 undoDepth）', () => {
   const d = interactionState(world(), cfg);
   assert.ok(d.undo, '交互态必须包含 undo 策略');
   assert.equal(d.undo.depth, 5, 'undoDepth 默认 5（参数表 §9.2）');

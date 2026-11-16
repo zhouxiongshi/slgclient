@@ -11,11 +11,11 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { makeBuild, makeGeneral, makeFacilityList, nextId, mainCity } from '../world.js';
 import { rngFor } from './strategy-rng.js';
-/* ★ M2-3 全局参数表（GDD §9.2）：零依赖叶子，所有新数值一律从这里读 */
+/* ★ M2-3 全局参数表（本作设计）：零依赖叶子，所有新数值一律从这里读 */
 import { knobGet } from './knobs.js';
 /* ★ M4-8：行军速度与战斗/内政/外交共用同一份武将属性基线 */
 import { gameStatOf } from './general-stat.js';
-/* ★ M2-3 失败态与结局（GDD §3.4/§3.5）：零依赖叶子 */
+/* ★ M2-3 失败态与结局（本作设计）：零依赖叶子 */
 import { failstates, evaluateEnding, makeStandInGeneral } from './failstate.js';
 import { beginInteriorTask, cancelInteriorTask, interiorTaskView } from './interior-task.js';
 /* ★ U20 粮道（supply 只依赖 march，不反向 import 本文件） */
@@ -55,12 +55,12 @@ import { captureFromBattle } from './captives.js';
    前端只排版；战报/回放共用同一批战法说明。 */
 import { skillProfile, previewNarrative } from './battle-narrative.js';
 import { oathOf, oathPending, oathFactionOf, factionTraitOf, protagonistStat } from './oath.js';
-/* ★ M2-4 委任对象化与外交（GDD §5.6/§5.8）：两个模块都自包含，strategy 单向引它们 */
+/* ★ M2-4 委任对象化与外交（本作设计）：两个模块都自包含，strategy 单向引它们 */
 import { appointmentTick, appointmentListView, strategyAppoint, strategyCancelAppointment } from './appointment.js';
 import { diplomacyView, diplomacyAct, noteCityCaptured, truceActive, PLAYER_ID, adjustAttitudeByEvent } from './diplomacy.js';
-/* ★ M3-4 事件系统接线（GDD §8.1-§8.3）：引擎是零依赖叶子，ctx 由本层适配 */
+/* ★ M3-4 事件系统接线（本作设计）：引擎是零依赖叶子，ctx 由本层适配 */
 import { eventCooldownTick, selectEvents, applyEffects } from './event-engine.js';
-/* ★ M3-4 宿命 24 组落战斗（GDD §7.5）：同队 ≥2 人组合生效 */
+/* ★ M3-4 宿命 24 组落战斗（本作设计）：同队 ≥2 人组合生效 */
 import { loadFateGroups, fatesOfHero } from './fate-groups.js';
 /* 委任/外交动作经本模块转发给 index.js（保持 index 只 import strategy 一个入口） */
 export { strategyAppoint, strategyCancelAppointment, diplomacyAct };
@@ -70,7 +70,7 @@ const MAP_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'map.json');
 const FACTIONS_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'factions.json');
 const SCENARIOS_DIR = resolve(ROOT, 'conf', 'campaign', 'strategy', 'scenarios');
 
-/* ★ M3-5 六剧本运行期接入（GDD §12.1）：剧本 = 归属 + 势力集 + 开局决策。
+/* ★ M3-5 六剧本运行期接入（本作设计）：剧本 = 归属 + 势力集 + 开局决策。
  *  剧本 JSON 自包含（tools/build-scenarios.mjs 产出），此处只做加载与降级——
  *  局部势力 id 缺 trait/startGenerals 时按 name 从基础 8 诸侯继承。 */
 let scenarioCache = null;
@@ -252,7 +252,7 @@ export function ensureStrategy(state, cfgArg = null) {
     if (!Array.isArray(st.battleHistory)) st.battleHistory = [];
     return st;
   }
-  /* ★ M3-5：剧本归属（GDD §12.1）——state.scenarioId 在建档前设置时，
+  /* ★ M3-5：剧本归属（本作设计）——state.scenarioId 在建档前设置时，
    * 初始 72 城直接按剧本 cityOwner 落位，年份基准也从剧本起算。 */
   const scConf = factionConfFor(state);
   const scInit = state.scenarioId ? scenarioConf(state.scenarioId) : null;
@@ -291,7 +291,7 @@ export function ensureStrategy(state, cfgArg = null) {
     cityLogs: {},
     resources: Object.fromEntries(scConf.factions.map((f) => [f.id, { gold: 8000, grain: 12000 }])),
   };
-  /* ★ M3-5：剧本开局决策（GDD §12.1 opening）→ 伪事件进 pendingEvents，
+  /* ★ M3-5：剧本开局决策（预设开局）→ 伪事件进 pendingEvents，
    *  与事件弹窗同一管线呈现；效果词全 nothing，只记录玩家选择。 */
   if (scInit?.opening) {
     state.strategy.pendingEvents.push({
@@ -576,7 +576,7 @@ export function strategySnapshot(state, factionId) {
 export function strategyTick(state, cfg, ctx, now = Date.now()) {
   const conf = factionConfFor(state);
   const st = ensureStrategy(state);
-  /* ★ M2-3：旬长走参数表（GDD §9.2 turnDays），存档 knobs 可覆盖 */
+  /* ★ M2-3：旬长走参数表（参数表 turnDays），存档 knobs 可覆盖 */
   const turnDays = knobGet(state, 'turnDays') ?? conf.turnDays ?? 10;
   if (state.clock.day - st.lastTurnDay < turnDays) return null;
   st.lastTurnDay = state.clock.day;
@@ -588,7 +588,7 @@ export function strategyTick(state, cfg, ctx, now = Date.now()) {
   captivesTick(state, ctx);
   // ★ P7 出仕：在野贤才按名声主动来投
   defectTick(state, cfg, ctx);
-  /* ★ M3-4 事件系统（GDD §8.3）：每旬冷却递减 → 条件筛 → pendingEvents 队列（弹窗层消费） */
+  /* ★ M3-4 事件系统（本作设计）：每旬冷却递减 → 条件筛 → pendingEvents 队列（弹窗层消费） */
   const evTick = strategyEventTick(state);
   if (evTick) st.lastEventTick = evTick;
 
@@ -624,7 +624,7 @@ export function strategyTick(state, cfg, ctx, now = Date.now()) {
         st.memory[f.id].lastPlayerAtk = st.turn;
       }
     }
-    /* ★ M2-4 外交（GDD §5.8 请求攻击）：玩家付定金后，把一单真实出征塞进该势力
+    /* ★ M2-4 外交（本作设计 请求攻击）：玩家付定金后，把一单真实出征塞进该势力
        本旬指令单（走 applyOrders 既有结算口，可审计）。目标=对方邻接的、
        目标势力最弱的城；attitude < 70 视为口头答应（betray），不保证出兵质量。 */
     const prompt = st.diploPrompt;
@@ -745,7 +745,7 @@ function nameOfFaction(state, fid) {
 }
 
 /* ---------------------------------------------------------------- 双账本
- * GDD §5.2 M2「切断写入」：田赋粮按城写入 cityEcon.store（粮留城），金全额上缴国库。
+ * M2「切断写入」：田赋粮按城写入 cityEcon.store（粮留城），金全额上缴国库。
  * resources[faction].grain 降级为**只读汇总**（= 己方城库之和），
  * 唯一写入口是 refreshGrainSummary；NPC 支出只准走 spendFactionGrain / creditFactionGrain。
  * 玩家侧 roleRes.grain 有自己的日产体系，属 M3 迁移范围，本批不动。
@@ -818,7 +818,7 @@ export function accrueFactionGrain(state, factionId) {
     if (st.cities[c.id]?.owner !== factionId) continue;
     const g = 140 + Math.round((c.attrs?.农业 ?? 40) * 3);
     const e = st.cityEcon[c.id];
-    if (e) e.store = Math.min(storeCapOf(e), e.store + g);   // 粮留城库（GDD §5.2；★ P13 上限随人口）
+    if (e) e.store = Math.min(storeCapOf(e), e.store + g);   // 粮留城库（本作设计；★ P13 上限随人口）
     grain += g;
     gold += 60 + Math.round((c.attrs?.商业 ?? 40) * 1.2);
   }
@@ -848,13 +848,13 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
   for (const order of [...diploFirst, ...afterDiplo]) {
     if (order.type === '征兵') {
       const count = Math.max(0, Number(order.params?.count) || 0);
-      /* ★ M2-3：征兵成本走参数表（GDD §9.2 conscriptGoldPer） */
+      /* ★ M2-3：征兵成本走参数表（参数表 conscriptGoldPer） */
       const cost = count * knobGet(state, 'conscriptGoldPer');
       if (count > 0) {
         const own = Object.keys(st.cities).filter((id) => st.cities[id].owner === faction.id);
         const want = order.params?.cityId != null ? String(order.params.cityId) : '';
         const home = (want && st.cities[want]?.owner === faction.id) ? want : own.slice().sort((a, b) => st.cities[a].troops - st.cities[b].troops)[0];
-        /* 双账本：征兵粮从城库扣（优先征兵城），全国账只读汇总（GDD §5.2） */
+        /* 双账本：征兵粮从城库扣（优先征兵城），全国账只读汇总（本作设计） */
         const spend = spendFactionGrain(state, faction.id, cost, home);
         if (spend.ok && home) {
           st.cities[home].troops += count;
@@ -909,7 +909,7 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
           recordEvent(state, `${faction.name}欲出兵${target.name}，${quote.reason || '粮饷不足'}，未发兵。`);
           continue;
         }
-        /* 双账本：出征粮饷从城库扣（优先出发城），金从国库扣（GDD §5.2） */
+        /* 双账本：出征粮饷从城库扣（优先出发城），金从国库扣（本作设计） */
         const spendG = spendFactionGrain(state, faction.id, quote.totalGrain, order.params.fromCity);
         if (!spendG.ok) {
           noteMove(state, {
@@ -934,7 +934,7 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
       const troops = drawn ? drawn.sent : Math.max(1, Number(order.params?.troops) || 0);
       if (!troops) continue;
       if (tstate.owner === state.role?.rid || tstate.owner === 'player') {
-        /* ★ M2-4 外交（GDD §5.8）：停战期内 NPC 守约不进犯——履约是态度公式的一部分 */
+        /* ★ M2-4 外交（本作设计）：停战期内 NPC 守约不进犯——履约是态度公式的一部分 */
         if (truceActive(state, faction.id, 'player')) {
           noteMove(state, { kind: '停战', faction: faction.id, who: faction.name, result: '守约', toName: target.name });
           recordEvent(state, `${faction.name}与我有停战之约，按兵不进${target.name}。`);
@@ -1360,7 +1360,7 @@ function defenseFor(cfg, cityId, target, tstate, level, state = null) {
   };
 }
 
-/* ★ M2-5 张力守恒 #2（GDD §6.7.1）：敌将有「临阵变招」——同一编队，抵达日不同
+/* ★ M2-5 张力守恒 #2（本作设计）：敌将有「临阵变招」——同一编队，抵达日不同
    敌方应对可能不同。变招由 rngFor(seed, arriveDay, 'counter') 决定，三套预案；
    推演会展示「若敌方变招则…」。注意这是确定性表，不是每旬换：同一抵达日恒同预案。 */
 export const COUNTER_VARIANTS = [
@@ -1393,7 +1393,7 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride, 
   const defRows = (defenseOverride?.soldiers || [0, 0, 0]).map((v) => Math.max(0, Number(v) || 0));
   const defArms = mainArms(defRows) + 1;
   const counter = armsCounter(atkArms, defArms);
-  /* ★ M3-4 宿命组合加成（GDD §7.5）：队内 ≥2 名同组武将 → 守军兵力折算 ×0.95/组。
+  /* ★ M3-4 宿命组合加成（本作设计）：队内 ≥2 名同组武将 → 守军兵力折算 ×0.95/组。
      与 M2-5 defMul 在同一处相乘，dLoss 基线保持 raw 守军数（推演同调此函数）。 */
   const fate = fateComboDefMul(state, cfg, army);
   const defense2 = defenseOverride
@@ -1512,11 +1512,11 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride, 
 }
 
 /**
- * ★ P7 行军由距离与队伍速度决定（率土之滨口径，而非固定 2 日）。
+ * ★ P7 行军由距离与队伍速度决定（本作口径，而非固定 2 日）。
  *
- *   率土：行军时间 = 距离 × 30 ÷ 队伍速度；队伍速度取队内**最慢**武将。
+ *   本作：行军时间 = 距离 × 30 ÷ 队伍速度；队伍速度取队内**最慢**武将。
  *   本作把「距离」换成路网里的真实里程（conf/.../map.json 每条 route 自带 km），
- *   速度换算为 60~160（M4-10 三国志11 百分制：speed 0→60、100→160），再折算成游戏日：
+ *   速度换算为 60~160（M4-10 百分制：speed 0→60、100→160），再折算成游戏日：
  *
  *       行军日 = ceil( 里程km ÷ (55 × 速度/100) )，夹在 1~12 日
  *
@@ -1527,11 +1527,11 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride, 
 const MARCH_KM_BASE = 55;      // 速度 100 时每日推进的里程（km/日）
 const MARCH_DAYS_MIN = 1;
 /* ★ 修 bug-17：旧上限 12 日把长途抹平（900km 与 2000km 都是 12 日）。
-   率土/三战里跨州远征本来就是十几到几十日，这里放宽到 40 日，
+   本作里跨州远征本来就是十几到几十日，这里放宽到 40 日，
    并由 marchSupplyStops 给出「途中休整」提示，长线不再和邻城一个耗时。 */
 const MARCH_DAYS_MAX = 40;
 /* ★ M2-3：粮耗口径已并入全局参数表（knobs.grainPerSoldierDay，默认 0.1/兵/日） */
-/** GDD §6.1：每一槽 500–5000。超过的兵留在城里，不能编进一队。 */
+/** 本作设计：每一槽 500–5000。超过的兵留在城里，不能编进一队。 */
 export const SLOT_CAP = 5000;
 /** 辎重队速度固定：车马慢，比最慢的步卒还慢一截。 */
 
@@ -1603,14 +1603,14 @@ export function marchKmBetween(fromId, toId) {
 }
 
 /** 武将速度（60~160）：五维 speed（0~100）与装备加成折算，缺配置按 60 兜底。
- *  ★ M4-10 三国志11 百分制：speed 60 即基准 120，100 即 160，与面板同源。 */
+ *  ★ M4-10 百分制：speed 60 即基准 120，100 即 160，与面板同源。 */
 function generalSpeed(cfg, g) {
   if (!g) return 100;
   const base = gameStatOf(cfg, g, 'speed', 60);
   return Math.max(20, Math.min(200, 60 + (base + (Number(g.speed_added) || 0))));
 }
 
-/** 队伍行军速度：取队内最慢武将（率土口径），空队按 100。 */
+/** 队伍行军速度：取队内最慢武将（本作口径），空队按 100。 */
 export function armySpeed(state, cfg, army) {
   let slowest = Infinity;
   for (const gid of army?.generals || []) {
@@ -1668,7 +1668,7 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
   if (!army) return { ok: false, code: 4, reason: 'no_army' };
   if (!army.cityId) army.cityId = home;   // 旧队补驻城，后续驻城逻辑才有依据
   if ((army.generals || []).every((g) => !g)) {
-    /* ★ M2-3 失败态出路（GDD §3.4 无将）：出征前无将不再卡死——自动生成代将
+    /* ★ M2-3 失败态出路（本作设计 无将）：出征前无将不再卡死——自动生成代将
        （五维 50、无战法、不可培养、不触发宿命；在有名将可用的城里会被玩家换掉） */
     const standin = makeStandInGeneral(state, home);
     (state.generals || (state.generals = [])).push(standin);
@@ -1677,7 +1677,7 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
     ctx.push?.('general.push', standin);
   }
   if ((army.soldiers || []).every((n) => !(n > 0))) return { ok: false, code: 4, reason: 'no_troops' };
-  /* GDD §6.1：单槽超过 5000 的兵退回出发城，不能整槽拉出去。 */
+  /* 本作设计：单槽超过 5000 的兵退回出发城，不能整槽拉出去。 */
   let overflow = 0;
   army.soldiers = [0, 1, 2].map((i) => {
     const n = Math.max(0, Math.floor(Number(army.soldiers?.[i]) || 0));
@@ -1687,7 +1687,7 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
   if (overflow > 0 && fromState) {
     fromState.troops = Math.max(0, Math.round(Number(fromState.troops) || 0) + overflow);
   }
-  // 行军粮：实出兵力 × 每日口粮 × 行军日（GDD：1 兵 1 旬吃 1 粮，路程按日计）
+  // 行军粮：实出兵力 × 每日口粮 × 行军日（本作设计：1 兵 1 旬吃 1 粮，路程按日计）
   // 优先从出发城城库扣，城库不足吃全局池并 +25% 损耗
   const troopsTotal = (army.soldiers || []).reduce((s, v) => s + Math.max(0, Number(v) || 0), 0);
   const ratio = Math.max(0.01, Math.min(1, Number(frac) || 1));
@@ -1708,7 +1708,7 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
     departDay, arriveDay: departDay + marchDays,
     armyId: army.id, frac: ratio, grainCost, troops: deploy,
     km: plan.km, speed: plan.speed,
-    /* ★ P11 / GDD §3.2 门 3→4→5「遭遇 → 推演 → 确认 → 结算」：
+    /* ★ P11 / 本作设计 门 3→4→5「遭遇 → 推演 → 确认 → 结算」：
        玩家从出征面板发的兵默认在抵达时先挂在「遭遇」待决，不自动开打。
        协议层老调用方不传此标志，行为保持不变（测试与 NPC 不受影响）。 */
     confirmBattle: !!confirmBattle, pendingBattle: false, confirmed: false,
@@ -1827,7 +1827,7 @@ export function strategyResolveMarches(state, cfg, ctx) {
     if (!fought.ok) continue;
     const win = fought.result === 2;
     if (win) {
-      /* ★ M2-4 外交：占城登记（GDD §5.8「你占了他的城×20」+ 开战/停战期毁约判定）。
+      /* ★ M2-4 外交：占城登记（本作设计「你占了他的城×20」+ 开战/停战期毁约判定）。
          必须在归属变更**前**取旧主。 */
       noteCityCaptured(state, PLAYER_ID, tstate.owner);
       tstate.owner = 'player';
@@ -1845,7 +1845,7 @@ export function strategyResolveMarches(state, cfg, ctx) {
         sackGrain = Math.round(e.store * 0.5);
         e.pop = Math.round(e.pop * 0.85);
         e.store = Math.round(e.store * 0.5);
-        /* ★ P7 战争系数：城破流民四散，民心/治安双降（三国志11/14 口径） */
+        /* ★ P7 战争系数：城破流民四散，民心/治安双降（城破口径） */
         e.morale = Math.max(0, (e.morale ?? 60) - 15);
         e.order = Math.max(0, (e.order ?? 60) - 12);
         const r = state.roleRes;
@@ -1886,7 +1886,7 @@ export function strategyResolveMarches(state, cfg, ctx) {
 }
 
 /* ---------------------------------------------------------------------------
- * ★ P11 / GDD §3.2 门 4→5→6：遭遇待决 / 确认开战 / 临阵撤军 / 新城消化
+ * ★ P11 / 本作设计 门 4→5→6：遭遇待决 / 确认开战 / 临阵撤军 / 新城消化
  * ------------------------------------------------------------------------- */
 
 /** 门 5：玩家在「遭遇」页点确认，才真正走结算（与自动结算同一条 resolveMarches）。 */
@@ -2116,7 +2116,7 @@ export function strategyFormup(state, cfg, ctx, { armyId, generals, soldiers }) 
 }
 
 /** ★ P3 运输队：把粮从府库运往指定己方城城库，走行军队列按时抵达。
- *  蝗灾前把粮运出去是经典避险操作（三国志11）。
+ *  蝗灾前把粮运出去是经典避险操作。
  *  ★ P7：改为按里程与辎重速度算日数（不再固定 2 日），可指定出发城。 */
 export function strategyTransport(state, cfg, ctx, { cityId, grain, fromCityId = 0 }) {
   const st = ensureStrategy(state);
@@ -2151,7 +2151,7 @@ export function strategyTransport(state, cfg, ctx, { cityId, grain, fromCityId =
   return { ok: true, marchId: row.id, arriveDay: row.arriveDay, city: cityName(id), grain: amount, km, days };
 }
 
-/** ★ P1 赏赐：金 +amount/100 忠诚（单次上限 +15，三国志11 口径）。 */
+/** ★ P1 赏赐：金 +amount/100 忠诚（单次上限 +15）。 */
 export function rewardGeneral(state, cfg, ctx, { generalId, amount }) {
   const g = (state.generals || []).find((x) => x.id === Number(generalId));
   if (!g) return { ok: false, reason: 'no_general' };
@@ -2261,7 +2261,7 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
   const atkArms = mainArms(commit) + 1;
   const defArms = mainArms(defense.soldiers.map((v) => Math.max(0, Number(v) || 0))) + 1;
   const counter = armsCounter(atkArms, defArms);
-  /* ★ M2-5 张力守恒 #1/#4（GDD §6.7.1）：推演只对「已知量」精确——
+  /* ★ M2-5 张力守恒 #1/#4（本作设计）：推演只对「已知量」精确——
      情报档位决定守军估算幅度：0 传闻 ±40% / 1 估算 ±15% / 2 精确 ±0%。
      未侦察的守军保持区间，推演不产生情报（禁止反复试错反推真值）。 */
   const intelTier = Math.max(0, Math.min(2, Number(st.intel?.[to]) || 0));
@@ -2374,7 +2374,7 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
     rounds: Number(result.kernel?.rounds) || 0,
     code, win, draw: code === 1,
     forces: { mine: myGenerals, theirs: theirGenerals },
-    /* ★ M2-5 张力守恒四条的下发位（GDD §6.7.1） */
+    /* ★ M2-5 张力守恒四条的下发位（本作设计） */
     intelTier, intelSpread,
     intelNote: intelTier >= 2
       ? '情报·精确：守军按已知量推演'
@@ -2450,7 +2450,7 @@ export function captivesTick(state, ctx) {
 }
 
 /**
- * ★ P7 出仕：在野贤才主动来投（三国志11/14 的「名声」机制）。
+ * ★ P7 出仕：在野贤才主动来投（「名声」机制）。
  *   名声 = 城池数×8 + 帐下武将×2 + 君主魅力/100；每旬掷一次，概率 3%~45%。
  *   优先投奔「籍贯正好在我方城里」的人——版图越大、名声越响，来投者越多，
  *   这条线补上了原先只有「酒馆来访 / 探索 / 招降」三条的缺口。
@@ -2499,7 +2499,7 @@ export function defectTick(state, cfg, ctx) {
 }
 
 /* ================================================================ M3-4 接线
- * 事件系统（GDD §8.1-§8.3）与宿命组合（GDD §7.5）的运行期接线。
+ * 事件系统（本作设计）与宿命组合（本作设计）的运行期接线。
  * 引擎/DSL 是零依赖叶子；本段只做三件事：
  *   1. ctx 适配器：把 strategy 存档翻译成事件条件查询（全注入，引擎不知 state 形状）；
  *   2. 每旬 tick：冷却递减 → 条件筛 → pendingEvents 队列（弹窗层消费，玩家点选后落账）；
@@ -2525,7 +2525,7 @@ export function campaignEvents() {
 
 const SEASONS = ['春', '夏', '秋', '冬'];
 
-/** 事件 ctx 适配器：玩家视角（GDD §8.1 字段白名单 14 项全注入）。 */
+/** 事件 ctx 适配器：玩家视角（字段白名单 14 项全注入）。 */
 export function strategyEventCtx(state) {
   const st = ensureStrategy(state);
   const conf = factionConfFor(state);
@@ -2682,7 +2682,7 @@ export function strategyEventChoice(state, cfg, ctx, { id, choice } = {}) {
 }
 
 /**
- * 宿命组合加成（GDD §7.5）：出征队内 ≥2 名同组宿命武将 → 该组生效，
+ * 宿命组合加成（本作设计）：出征队内 ≥2 名同组宿命武将 → 该组生效，
  * 守军兵力折算 ×0.95/组（上限 2 组 ≈ ×0.9025）。
  * 只看队内成员（不查全局生死——单机战略层尚无武将死亡结算，口径写进注释防后来者加戏）。
  */
@@ -2870,13 +2870,13 @@ export function strategyViewState(state, cfg = null) {
     /* ★ M2-3 失败态四出路与结局判定：判定 + 出路清单一并下发，界面不再自己猜 */
     fail: failstates(state),
     ending: evaluateEnding(state),
-    /* ★ M2-4 委任对象化与外交视图（GDD §5.6/§5.8）：blocked 置顶 + 理由链 */
+    /* ★ M2-4 委任对象化与外交视图（本作设计）：blocked 置顶 + 理由链 */
     appointments: appointmentListView(state),
     diplomacy: diplomacyView(state),
-    /* ★ M3-4 事件弹窗队列与宿命组合视图（GDD §8.3/§7.5） */
+    /* ★ M3-4 事件弹窗队列与宿命组合视图（本作设计） */
     pendingEvents: st.pendingEvents || [],
     fates: strategyFateView(state, cfg),
-    /* ★ M3-5 剧本视图（GDD §12.1）：激活剧本 + 可选清单 + 开局决策 */
+    /* ★ M3-5 剧本视图（本作设计）：激活剧本 + 可选清单 + 开局决策 */
     scenario: scenarioView(state),
     playerCity: st.playerCity || 0,
     // ★ P4-①：举义状态随视图下发，客户端据此决定弹不弹举义页
@@ -2893,7 +2893,7 @@ export function strategyViewState(state, cfg = null) {
       rate: Math.round(captiveRecruitRate(state, c) * 100),
       rateParts: captiveRateParts(state, c),
     })),
-    /* ★ P11 / GDD §3.2 门 4/6：抵达待决的战役、占城后的消化待办 */
+    /* ★ P11 / 本作设计 门 4/6：抵达待决的战役、占城后的消化待办 */
     pendingBattles: (st.marches || [])
       .filter((mm) => mm.side === 'player' && mm.pendingBattle && !mm.resolved)
       .map((mm) => ({

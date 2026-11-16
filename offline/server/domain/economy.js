@@ -90,14 +90,14 @@ export function applyDays(state, cfg, days, rules) {
     salaryPaid += sal;
     r.decree = Math.min(limit, (r.decree || 0) + decreePerDay);
   }
-  /* GDD §5.10 固定支出闸：有城之后，城防与俸饷约占金产的 35%（落在 30%–45%）。 */
+  /* 本作设计 固定支出闸：有城之后，城防与俸饷约占金产的 35%（落在 30%–45%）。 */
   let maintainPaid = 0;
   if (ownsCity && goldYielded > 0) {
     const due = Math.round(goldYielded * 0.35);
     maintainPaid = Math.min(r.gold || 0, due);
     r.gold -= maintainPaid;
   }
-  /* ★ OP-01 国库沉淀税（GDD §5.10 固定支出闸的金侧补充，2026-11-15 产品决策）：
+  /* ★ OP-01 国库沉淀税（本作设计 固定支出闸的金侧补充，2026-11-15 产品决策）：
      真链路挂机 60 旬现金 12,371 → 172,501（≈2,690 金/旬，几乎线性、只进不出），
      扩张后可达 ≈14,600 金/旬，是 NPC 田赋 600~800 的约 20 倍。根因不是产量超标，
      而是金侧缺少随存量增长的支出。对「超出 10 旬周转金」的沉淀部分按旬收税，

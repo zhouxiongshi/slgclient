@@ -1,5 +1,5 @@
 /**
- * 全局参数表（GDD §9.2「30 个可调 knob」）。
+ * 全局参数表（本作设计「30 个可调 knob」）。
  *
  * 用法三条（写死）：
  *  1. 所有数值必须从这张表读，禁止散落魔法数字——旧代码在改到时切换，新代码一律走 `knobGet`。
@@ -10,7 +10,7 @@
  * 零依赖叶子：不 import 任何 domain 模块（strategy/city-econ 都会引它，不能反向）。
  */
 
-/** 30 个 knob：value 默认 / min~max 允许区间 / note 影响。与 GDD §9.2 表逐行对应。 */
+/** 30 个 knob：value 默认 / min~max 允许区间 / note 影响。与 本作设计 表逐行对应。 */
 export const KNOBS = {
   turnDays: { value: 10, min: 7, max: 15, note: '全局节奏（改它等于重做平衡）' },
   grainPerSoldierDay: { value: 0.1, min: 0.08, max: 0.15, note: '粮耗（每兵每日）' },
@@ -25,7 +25,7 @@ export const KNOBS = {
   supplyLossPer100: { value: 2, min: 1, max: 4, note: '调运损耗（%/百里）' },
   interceptPerEdge: { value: 8, min: 5, max: 12, note: '被截概率（%/敌方边）' },
   /* ★ OP-01 / OP-02（2026-11-15 产品决策）：
-     删掉 moraleRout —— 定义以来全仓零消费点，GDD §6.6 的军队士气本版不实装，
+     删掉 moraleRout —— 定义以来全仓零消费点，本作设计 的军队士气本版不实装，
      留着只会让玩家误以为存在士气机制。腾出的槽位给真正生效的金侧支出阀门。
      免税额 = 10 旬金毛产（自动随规模缩放），超出部分每旬按此比例回收；0 = 关闭阀门。 */
   goldHoardTaxPct: { value: 4, min: 0, max: 10, note: '国库沉淀税（%/旬，超出 10 旬周转金部分）' },

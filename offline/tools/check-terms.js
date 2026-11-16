@@ -1,5 +1,5 @@
 /**
- * 术语覆盖率核查（GDD §14.2-5 / §10.5）。
+ * 术语覆盖率核查。
  *
  * 三向检查：
  *   1. 词表自体：schema 字段齐全、id 唯一、关联词条不悬挂、简述非空。
@@ -52,7 +52,7 @@ try {
   process.exit(1);
 }
 const terms = Array.isArray(doc.terms) ? doc.terms : [];
-if (terms.length < 120) problems.push(`词条数 ${terms.length} < 120（GDD §10.5 目标）`);
+if (terms.length < 120) problems.push(`词条数 ${terms.length} < 120（术语基线目标）`);
 
 const ids = new Set();
 for (const t of terms) {

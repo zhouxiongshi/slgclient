@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * M4-1 数据溯源合规扫描（GDD §10.8 / 验收 G5、G6）。
+ * M4-1 数据溯源合规扫描（验收 G5、G6）。
  *
  * 与 compliance-report.js（素材台账 + 禁入物）互补：本工具管「数据条目级溯源」——
  *   1) conf/ 内每条史实/设计数据必须带 source + confidence（口径：高/中/低）；
- *   2) 术语表每条必须带数值来源；
+ *   2) 术语表每条必须带溯源字段；
  *   3) 地图必须登记「示意图、非标准行政地图」声明，且 UI 真实渲染（skills.js 注入源）；
  *   4) 汇总未授权第三方资产数（读 provenance 台账）供发行决策。
  *
@@ -102,7 +102,7 @@ if (existsSync(scDir)) {
   files.push({ file: 'campaign/strategy/scenarios/*.json', exists: false, count: 0, missing: [{ id: '-', problem: '目录缺失' }] });
 }
 
-/* ---------------- 5) 术语表：每条带数值来源 ---------------- */
+/* ---------------- 5) 术语表：每条带溯源字段 ---------------- */
 scanFile('interaction/terms.json', (j) => j.terms, (j, entries) => {
   const out = [];
   for (const t of entries) {

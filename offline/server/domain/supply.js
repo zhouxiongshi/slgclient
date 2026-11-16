@@ -153,14 +153,14 @@ export function marchSupplyEstimate(state, fromCityId, soldiers, days = 1) {
 }
 
 /**
- * ★ M2 粮道 L2：军级补给线（GDD §5.3，玩家与 NPC 共用同一函数——§9.4 同函数判据）。
+ * ★ M2 粮道 L2：军级补给线（本作设计，玩家与 NPC 共用同一函数——§9.4 同函数判据）。
  *
  * 口径（写死，与城级 L1 一致的确定性判定）：
  *  - 补给节点 = 己方城（cityEcon.store > 0）。本沙盘关隘不可占领（gateStatus 只有
  *    通行/封锁，无归属字段），「路径未被敌方控制」由己方图 BFS 天然保证：
  *    ownedAdjacency 只在己方城之间连边，敌城/封锁关隘根本进不了图。
  *  - 部队锚点 = 行军行的出发城（march.from）。锚点失守 → 补给断。
- *  - 需求 = 每兵每日口粮 × 一旬天数（默认 0.1×10 = 1 粮/兵/旬，GDD §5.10）。
+ *  - 需求 = 每兵每日口粮 × 一旬天数（默认 0.1×10 = 1 粮/兵/旬，本作设计）。
  */
 export function supplyLineForArmy(state, factionId, march) {
   const st = state?.strategy;
@@ -196,7 +196,7 @@ export function supplyLineForArmy(state, factionId, march) {
 }
 
 /**
- * ★ M2 每旬军粮结算（由 cityEconTick 在旬界调用；GDD §5.3 断粮惩罚链的军级部分）：
+ * ★ M2 每旬军粮结算（由 cityEconTick 在旬界调用；本作设计 断粮惩罚链的军级部分）：
  *  - 通畅：就地取粮，0.1 粮/兵 扣补给节点城库；
  *  - 断绝：第 1 旬警告（附带两个可执行应对——运输队 / 撤军），第 3 旬起逃兵 2%/旬；
  *  - 玩家与 NPC 同一入口（march.side/factionId 区分归属，同一判定、同一惩罚）。

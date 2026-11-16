@@ -1,7 +1,7 @@
 /**
  * 城市经营层（P2/P3）：逐城产量、人口、城库存粮、灾害、忠诚与俸禄。
  * 零依赖（不 import strategy/panels），只读 map/detail 与 state，避免任何环。
- * 借鉴：三国志14（逐城开发/人口）、三国志11（俸禄-忠诚-灾害/运输队避险）。
+ * （逐城开发/人口）、（俸禄-忠诚-灾害/运输队避险）。
  */
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -16,7 +16,7 @@ import { advanceInteriorTasks } from './interior-task.js';
 /* ★ U20 粮道连通与断粮：单向依赖 march（supply 不 import city-econ，无环）
  *   ★ M2 L2：军级补给线（supplyLineForArmy / armySupplyTick）与城级同模块同入口 */
 import { supplyTick, armySupplyTick } from './supply.js';
-/* ★ M2-4 委任对象化（GDD §5.6）：旬界自动派单，走 interior-task 同源（无环） */
+/* ★ M2-4 委任对象化（本作设计）：旬界自动派单，走 interior-task 同源（无环） */
 import { appointmentTick } from './appointment.js';
 import { knobGet } from './knobs.js';
 
@@ -87,7 +87,7 @@ export function ensureCityEcon(state) {
   return st.cityEcon;
 }
 
-/** 开发度 → 等级 1~5（三国志14 分档：0-23 / 24-47 / 48-71 / 72-95 / 96+）。 */
+/** 开发度 → 等级 1~5（分档：0-23 / 24-47 / 48-71 / 72-95 / 96+）。 */
 export function devLevel(dev) {
   return Math.max(1, Math.min(5, Math.floor((Number(dev) || 0) / 24) + 1));
 }
@@ -243,7 +243,7 @@ export function disasterTick(state, cfg, ctx) {
   return fired;
 }
 
-/** 岗位 → 逐城开发度（三国志14 口径：委任官员按属性逐旬推动对应开发）。
+/** 岗位 → 逐城开发度（口径：委任官员按属性逐旬推动对应开发）。
  *  官员驻在哪座城，就推动哪座城——所以「派谁去边城」本身是内政决策。 */
 const POST_DEV = {
   agri: { field: 'devAgri', stat: 'strategy', label: '农田', gain: 1.3 },
@@ -253,7 +253,7 @@ const POST_DEV = {
   personnel: { field: 'morale', stat: 'strategy', label: '民心', gain: 0.8 },
 };
 
-/** 官员属性（英文五维 + 装备加成），0~100（M4-10 三国志11 百分制）。
+/** 官员属性（英文五维 + 装备加成），0~100（M4-10 百分制）。
  *  ★ M4-8：主公不再恒取 7400，改为读 protagonist.json 的对应维度，与战斗同源。 */
 function postStat(cfg, g, key) {
   return gameStatOf(cfg, g, key, 60) + (Number(g[`${key}_added`]) || 0);
@@ -327,7 +327,7 @@ export function cityDevTick(state, cfg, ctx) {
   return { gains, upsets };
 }
 
-/** 每 10 日（旬）：忠诚自然变化 + 旬俸 + 叛逃判定。三国志11 口径。 */
+/** 每 10 日（旬）：忠诚自然变化 + 旬俸 + 叛逃判定。口径。 */
 export function loyaltyTick(state, cfg, ctx) {
   const day = Math.floor(Number(state.clock?.day) || 1);
   const posts = state.interior?.posts || {};
@@ -387,7 +387,7 @@ export function cityEconTick(state, cfg, ctx) {
   const supply = day % 10 === 0 ? supplyTick(state, cfg, ctx) : { isolated: [], recovered: [], hits: [] };
   /* ★ M2 粮道 L2：军级补给结算（通畅扣节点粮 / 断绝警告与逃兵），NPC 与玩家同入口 */
   const armySupply = day % 10 === 0 ? armySupplyTick(state, ctx) : { fed: [], cut: [] };
-  /* ★ M2-4 委任对象化（GDD §5.6）：旬界自动派单（blocked 置顶报告），产出与手动同源 */
+  /* ★ M2-4 委任对象化（本作设计）：旬界自动派单（blocked 置顶报告），产出与手动同源 */
   const appts = day % 10 === 0 ? appointmentTick(state, cfg, ctx) : { started: [], blocked: [], resumed: [], ended: [] };
   const dev = day % 10 === 0 ? cityDevTick(state, cfg, ctx) : { gains: [], upsets: [] };
   const fired = day % 10 === 0 ? disasterTick(state, cfg, ctx) : [];

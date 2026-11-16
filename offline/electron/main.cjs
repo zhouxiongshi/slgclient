@@ -144,7 +144,7 @@ function createWindow() {
     logError(new Error(`load failed (${code} ${desc}), retrying ${reloads}/3`));
     setTimeout(() => win && win.webContents.loadURL('http://127.0.0.1:8088/index.html'), 1500);
   });
-  /* 性能探针的「首屏」从 loadURL 这一刻算起（GDD §11.5 预算 <3s）：
+  /* 性能探针的「首屏」从 loadURL 这一刻算起（本作设计 预算 <3s）：
      必须含主进程起服务 + 页面加载 + Cocos 场景创建 + 注入层首帧。 */
   global.__slgBootT0 = Date.now();
   win.loadURL('http://127.0.0.1:8088/index.html');

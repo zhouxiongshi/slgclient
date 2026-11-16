@@ -118,7 +118,7 @@ export function skillByName(name) {
 export function skillProfile(key, lv) {
   /* ★ 性能：推演一次要跑 4~5 场内核（主局 + 区间两条 + 变招对照），
      每场 buildBattleAnim 都会为每个动作查一次战法档案；缓存后
-     单次推演从 89ms 回落到预算内（GDD §6.7 约束 3：≤50ms）。
+     单次推演从 89ms 回落到预算内（本作设计 约束 3：≤50ms）。
      战法表在进程内是静态的（conf/skills.json 只读），缓存不会读到过期值。 */
   const ck = String(key) + '|' + Number(lv || 1);
   const hit = PROFILE_CACHE.get(ck);
@@ -265,7 +265,7 @@ function fmt(n) {
  * 战前推演的人话版。
  * 入参就是 previewAssault 的返回对象（含 forces / spreadLines / variantLines）。
  * @returns {{verdict, tone, headline, rows, tips, myNotes, defenderNotes, ratio} | null}
- *   注：不返回 odds 胜率定值——情报不足时只给区间不给定值（GDD §6.7 / PRD R-16.3），
+ *   注：不返回 odds 胜率定值——情报不足时只给区间不给定值（本作设计 / PRD R-16.3），
  *   守军区间在 rows 的「守军估算」与 tips 的兵力散布两条里表达。`p.ok` 为假时返回 null。
  */
 export function previewNarrative(p) {

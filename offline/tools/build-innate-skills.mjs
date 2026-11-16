@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 全武将初始战法构建器（确定性；只在开发侧跑，运行时不依赖 battle-kit）。
+ * 全武将初始战法构建器（确定性；只在开发侧跑，运行时不依赖外部构建库）。
  *
  * 背景：改之前 conf/campaign/hero-skills.json 只有 61 个武将，且都是塞进
  * 910000 系列「演示战法」——赵云/张辽/黄忠共用同一条，其余 360+ 武将
@@ -8,7 +8,7 @@
  * 「大部分武将没有自带战法，有的一堆人共用一条」。
  *
  * 本脚本做的事：
- *   1) 以 battle-kit/skill-library 的率土之滨官网 W0 战法表为唯一效果源
+ *   1) 以 battle-kit/skill-library 的官网 W0 战法表为唯一效果源
  *      （source/raw/stzb_skill_extra.json，648 条；stable 去重 642 条），
  *      用 adapted/full_mapping_stzb.json 的「效果 → 内核字段」映射把每条战法
  *      翻译成游戏内核真正能结算的 6 类 effect（伤害/谋略/治疗/控制/增益/减益）。
@@ -18,7 +18,7 @@
  *   3) 给游戏里**每一个**武将（general.json + heroes-240.json + 主角）指定一条
  *      初始战法：官网表里有「拆解/传承出处」关联的优先按该关联的效果签名走；
  *      没有关联的按五维定位（武力/谋略/防御/速度）派生，派生项在审计表里
- *      显式标 evidence=derived，绝不冒充「该武将在率土之滨的自带战法」。
+ *      显式标 evidence=derived，绝不冒充「该武将的自带战法」。
  *   4) 输出三份文件（都落在 conf/，运行时只读这里）：
  *        conf/innate-skills.json            新增战法定义（ui + kernel + provenance）
  *        conf/campaign/hero-skills.json    全量「武将名 → 战法 cfgId」
@@ -46,7 +46,7 @@ const readJson = (p) => JSON.parse(readFileSync(p, 'utf8'));
    两条「击势」会让玩家分不清自己带的是哪一条。 */
 const EXISTING_NAMES = new Set();
 /* 同名已有战法的 cfgId：原版 skills.json 里本就有「中宫追玺」「侵掠如火」这类
-   率土同名战法，覆盖表命中时直接复用，绝不新建第二条同名战法。 */
+   同名战法，覆盖表命中时直接复用，绝不新建第二条同名战法。 */
 const EXISTING_CFG = new Map();
 for (const f of ['conf/skills.json', 'conf/library-skills.json', 'conf/library-skills-extra.json']) {
   try {
@@ -287,7 +287,7 @@ const OV = existsSync(OV_PATH) ? readJson(OV_PATH) : { heroes: {} };
 const bySkillName = new Map();
 for (const s of allSkills) if (!bySkillName.has(s.row.name)) bySkillName.set(s.row.name, s);
 /* 专属战法判据：无拆解出处（dismantling 空）且 disassembleHero 全空 —— 即「不可
-   拆解获得」，在率土之滨里就是武将自带。 */
+   拆解获得」，就是武将自带。 */
 const isOwnSkill = (s) => !s.links.length && !String(s.row.dismantling || '').trim();
 const overrideOf = new Map();
 const ovProblems = [];
@@ -522,7 +522,7 @@ const skillBySourceId = new Map(skills.map((s) => [s.provenance.sourceId, s]));
 for (const name of heroNames) {
   const meta = heroes.get(name);
 
-  /* ① 已核实的本人专属战法（率土之滨「自带战法」），证据 = W0 表 + 官网出处 */
+  /* ① 已核实的本人专属战法（自带战法），证据 = W0 表 + 官网出处 */
   const ov = overrideOf.get(name);
   if (ov) {
     if (ov.reuse) {
@@ -533,7 +533,7 @@ for (const name of heroNames) {
         innateCfgId: ov.reuse, innateName: ov.src.row.name,
         match: 'stzb-innate-reuse', evidence: 'W0+A2',
         sourceIds: [ov.src.id], sourceName: ov.src.row.name,
-        note: `率土之滨自带战法；包内已有同名战法 cfgId ${ov.reuse}，直接复用不新建。来源：${OV.heroes[name].source}`,
+        note: `自带战法；包内已有同名战法 cfgId ${ov.reuse}，直接复用不新建。来源：${OV.heroes[name].source}`,
       });
       continue;
     }
@@ -544,7 +544,7 @@ for (const name of heroNames) {
       innateCfgId: skill.cfgId, innateName: skill.name,
       match: 'stzb-innate', evidence: 'W0+A2',
       sourceIds: [ov.src.id], sourceName: skill.name,
-      note: `率土之滨自带战法（W0 表中不可拆解），对应来源：${OV.heroes[name].source}`,
+      note: `自带战法（W0 表中不可拆解），对应来源：${OV.heroes[name].source}`,
     });
     continue;
   }
@@ -584,8 +584,8 @@ for (const name of heroNames) {
     innateCfgId: skill.cfgId, innateName: skill.name,
     match, evidence, sourceIds, sourceName,
     note: match === 'derived-by-role'
-      ? '官网表无该武将的战法出处，按五维定位匹配率土之滨「通用战法」；不是该武将的自带战法'
-      : (hit ? '该武将在率土之滨官网战法表有拆解/传承出处，选取的是可拆解的通用战法，效果类型与五维定位一致'
+      ? '官网表无该武将的战法出处，按五维定位匹配「通用战法」；不是该武将的自带战法'
+      : (hit ? '该武将在官网战法表有拆解/传承出处，选取的是可拆解的通用战法，效果类型与五维定位一致'
         : '该武将官网有战法出处，但效果范式与定位不符，按定位选同族通用战法'),
   });
 }
@@ -594,7 +594,7 @@ heroSkills[protagonist.general.name] = 19001;
 audit.push({
   name: protagonist.general.name, cfgIds: [protagonist.general.cfgId], role: 'BUFF', star: 4,
   innateCfgId: 19001, innateName: '坐镇中军', match: 'authored-protagonist', evidence: 'A2/原创',
-  sourceIds: [], sourceName: 'M4-7 原创，不属率土之滨名录',
+  sourceIds: [], sourceName: 'M4-7 原创，不属官网名录',
   note: '主角是穿越者原创角色，createSkillAssets 与 world.js 都硬编码 19001，保持同源',
 });
 

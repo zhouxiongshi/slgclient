@@ -1,12 +1,12 @@
 /**
- * 外交系统（GDD §5.8）：只对 NPC，**全部可解释**。
+ * 外交系统（本作设计）：只对 NPC，**全部可解释**。
  *
  * 态度值模型（每对势力一个 attitude ∈ [-100, 100]，描述=计算同源）：
  *   attitude = 基础(史实关系·占位哈希) + 履约×5 − 背约×10
  *            + 联姻×15 + 赠礼(按价值/200，封顶 30) − 边境摩擦×3
  *            + 共同敌人×10 − 你占了他的城×20 − 离间失手×15
  *
- * 硬规则（GDD 原文）：**没有理由链的外交回复一律视为 bug**。
+ * 硬规则（本作设计）：**没有理由链的外交回复一律视为 bug**。
  * 任何动作（无论成败）都返回 factors[]，拒绝文案把「差在哪」逐条说清。
  *
  * 硬约束：自包含叶子——自读 conf/campaign/strategy/{factions,map}.json，
@@ -29,7 +29,7 @@ const MAP_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'map.json');
 
 export const PLAYER_ID = 'player';
 
-/** 动作定义表（GDD §5.8 门槛表——门槛/代价/失败后果唯一口径）。 */
+/** 动作定义表（本作设计 门槛表——门槛/代价/失败后果唯一口径）。 */
 export const ACTIONS = {
   truce: {
     label: '停战', gate: -30, cost: 1500,
@@ -302,7 +302,7 @@ function pay(state, cost, note) {
 }
 
 /**
- * 外交动作入口。无论成败都带 factors（理由链强制，GDD §5.8）。
+ * 外交动作入口。无论成败都带 factors（理由链强制，本作设计）。
  * 返回 { ok, text, ... } 或 { ok:false, code:'rejected'|..., text, factors }。
  */
 export function diplomacyAct(state, cfg, ctx, { action, faction, target, gold }) {
@@ -343,7 +343,7 @@ export function diplomacyAct(state, cfg, ctx, { action, faction, target, gold })
     }
     // 智力判定：我方最强谋士 vs 固定阈值，rngFor 确定性
     const bestIntellect = bestStatOf(state, cfg);
-    /* M4-10 三国志11 百分制：智力 60 为基准，每 +10 智力 +10% 成功率（上限 80%）。 */
+    /* M4-10 百分制：智力 60 为基准，每 +10 智力 +10% 成功率（上限 80%）。 */
     const chance = Math.max(0.2, Math.min(0.8, 0.3 + (bestIntellect - 60) / 100));
     const rolled = rngFor(state.seed ?? 20261110, day, `diploSow:${fid}`).random();
     if (rolled >= chance) {
@@ -369,7 +369,7 @@ export function diplomacyAct(state, cfg, ctx, { action, faction, target, gold })
     if (att.value < 0 || myTroops < hisTroops * 3) {
       const r = reject(state, fid, action, '兵力比 3:1 且态度 0', att);
       r.text = `${factionNameOf(fid)}拒绝归附：我军兵力 ${myTroops} 对其 ${hisTroops}（需 3:1）；${att.value < 0 ? `态度 ${att.value}，未达 0。` : '兵威不足，其主尚有底气。'}`;
-      p.war = true;   // 拒绝则开战（GDD 门槛表）
+      p.war = true;   // 拒绝则开战（本作设计门槛表）
       const after = attitudeOf(state, PLAYER_ID, fid);
       recordEvent(state, `劝降${factionNameOf(fid)}被拒，两方自此交恶。`);
       r.factors = after.factors;
@@ -450,7 +450,7 @@ export function diplomacyAct(state, cfg, ctx, { action, faction, target, gold })
   return { ok: true, action, faction: fid, text: `${A.label}已成：态度 ${att.value} → ${after.value}。`, factors: after.factors, attitude: after.value };
 }
 
-/** 我方在城武将中谋略最强值（0~100，与面板「谋略」同源；M4-10 三国志11 百分制）。 */
+/** 我方在城武将中谋略最强值（0~100，与面板「谋略」同源；M4-10 百分制）。 */
 function bestStatOf(state, cfg) {
   const marching = new Set();
   for (const a of state.armys || []) if (a.marchId) for (const gid of a.generals || []) if (gid) marching.add(Number(gid));

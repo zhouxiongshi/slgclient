@@ -1,5 +1,5 @@
 /**
- * M2-4b 外交系统（GDD §5.8）。
+ * M2-4b 外交系统（本作设计）。
  *
  * 锁五件事：
  *  1. 态度公式确定性 + factors 理由链逐条展开（拒绝必须带 {code,text,factors[]}）；
@@ -130,7 +130,7 @@ test('M2-4·外交：劝降兵力比不足则拒绝并开战', () => {
   const r = diplomacyAct(state, cfg, { push() {} }, { action: 'surrender', faction: fid });
   assert.equal(r.ok, false, '开局兵力比不可能达 3:1');
   const p = st.diplomacy.pairs[['player', fid].sort().join('|')];
-  assert.equal(p.war, true, '拒绝则开战（GDD 门槛表）');
+  assert.equal(p.war, true, '拒绝则开战（本作设计门槛表）');
   assert.ok(r.text.length > 0, '拒绝必须可解释');
 });
 

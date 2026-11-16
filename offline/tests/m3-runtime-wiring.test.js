@@ -3,7 +3,7 @@
  *  1. heroes-240 入包（config.js）：505 条武将、240 名全在、新武将可 makeGeneral；
  *  2. 事件 tick（strategy.js）：strategyEventTick 出队 ≤2 条、once 落 fired、pending 不堆叠；
  *  3. 事件点选：eventChoice 效果词落账（gold/fame）、pending 消费、抉择进 chronicle；
- *  4. 宿命组合落战斗（GDD §7.5）：桃园三人同队守军折算 <1，单人无效，推演/结算同源；
+ *  4. 宿命组合落战斗（本作设计）：桃园三人同队守军折算 <1，单人无效，推演/结算同源；
  *  5. 视图下发：pendingEvents / fates 随 strategyViewState 出去；
  *  6. 态度事件因子：adjustAttitudeByEvent → attitudeOf 理由链可见；
  *  7. cityLost 口径：everOwned 记账 → 条件层 cityLost 可用。
@@ -58,7 +58,7 @@ test('M3-4·事件 tick：出队 ≤2、once 落 fired、pending 不堆叠', () 
   const state = baseWorld();
   const t1 = strategyEventTick(state);
   assert.ok(t1 && t1.pending >= 1, '第 30 日应有事件出队');
-  assert.ok(t1.pending <= 2, '每旬最多 2 条（GDD §8.3）');
+  assert.ok(t1.pending <= 2, '每旬最多 2 条（本作设计）');
   const st = state.strategy;
   assert.equal(st.pendingEvents.length, t1.pending);
   const onceIds = st.pendingEvents.filter((e) => e.id === 'evt.184.zhangjiao');

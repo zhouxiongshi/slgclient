@@ -1,5 +1,5 @@
 /**
- * fate-groups.js — 宿命 24 组域模块（GDD §7.5）
+ * fate-groups.js — 宿命 24 组域模块（本作设计）
  *
  * 零依赖叶子：只读 conf/campaign/fate-groups.json，回答三件事——
  *   1. 某武将身上挂着哪些宿命（fatesOfHero）
@@ -58,7 +58,7 @@ export function fatesOfHero(name) {
 }
 
 /**
- * 相性环形距离：1..149 环，距离越小越契合（GDD §7.3 登庸成功率构成条）。
+ * 相性环形距离：1..149 环，距离越小越契合（本作设计 登庸成功率构成条）。
  * 返回 0..74（环的一半）。
  */
 export function xiangxingGap(a, b) {
@@ -92,7 +92,7 @@ export function evaluateFates(heroAlive, opts = {}) {
   return { active, dormant, broken };
 }
 
-/** 登庸成功率构成条用的相性分项（GDD §7.3：gap 越小越高，最高 +25%）。 */
+/** 登庸成功率构成条用的相性分项（本作设计：gap 越小越高，最高 +25%）。 */
 export function xiangxingBonus(myXx, targetXx) {
   const gap = xiangxingGap(myXx, targetXx);
   if (gap <= 10) return 25;

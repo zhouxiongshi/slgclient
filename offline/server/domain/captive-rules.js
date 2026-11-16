@@ -1,5 +1,5 @@
 /**
- * 招降规则：唯一权威公式（U08 / 设计规格 2.3「描述 = 计算 = 战报同源」）。
+ * 招降规则：唯一权威公式（U08 / 本作约定「描述 = 计算 = 战报同源」）。
  *
  * 纪律：
  *  - 零环叶子：只读 oath.js 的 protagonistStat 这一个纯函数，不引 strategy.js /
@@ -20,7 +20,7 @@ export function captiveRecruitRate(state, cap) {
 }
 
 /**
- * 成功率构成条（设计规格 6.2 / 6.8：逐项拆解，玩家点之前就该看到）。
+ * 成功率构成条（本作约定：逐项拆解，玩家点之前就该看到）。
  * 返回 { parts: [{label, value}], final }，单位百分点；parts 各项相加 === final。
  */
 export function captiveRateParts(state, cap) {

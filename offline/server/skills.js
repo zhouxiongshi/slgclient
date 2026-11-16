@@ -39,7 +39,7 @@ if (existsSync(LIBRARY)) {
     if (!TABLE.skills.some((x) => x.cfgId === s.cfgId || x.name === s.name)) TABLE.skills.push(s);
   }
 }
-/* ★ M3-8 战法补量（GDD §9）：29 条新机制组合（内核生效面逐条核对，见 generator 头注） */
+/* ★ M3-8 战法补量（本作设计）：29 条新机制组合（内核生效面逐条核对，见 generator 头注） */
 const LIBRARY_EXTRA = join(ROOT, 'conf', 'library-skills-extra.json');
 if (existsSync(LIBRARY_EXTRA)) {
   const more = JSON.parse(readFileSync(LIBRARY_EXTRA, 'utf8'));
@@ -3467,7 +3467,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     var queue = (s.marches || []).filter(function (m) { return m.side === 'player' && !m.resolved; });
     var pending = s.pendingBattles || [];
     var digest = s.digest || [];
-    /* ★ P11 / GDD §2.2 六道门：动机 → 集结 → 行军 → 遭遇 → 结算 → 消化，
+    /* ★ P11 / 本作设计 六道门：动机 → 集结 → 行军 → 遭遇 → 结算 → 消化，
        每一道门在面板里都有对应页签，不再「打完就没有下文」。 */
     var tabs = [
       ['go', '① 集结 · 出击'],
@@ -3502,7 +3502,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     saveWar();
   }
 
-  /* ★ P11 / GDD §2.2 门 4：抵城不自动开打，先挂「遭遇」，推演过才让确认。 */
+  /* ★ P11 / 本作设计 门 4：抵城不自动开打，先挂「遭遇」，推演过才让确认。 */
   function warEncounterPanel(s, pending, body) {
     if (!pending.length) {
       body.appendChild(el('div', 'empty',
@@ -3568,7 +3568,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     });
   }
 
-  /* ★ P11 / GDD §2.2 门 6：占城之后给「这座城怎么用」的落点，不让流程断在战报。 */
+  /* ★ P11 / 本作设计 门 6：占城之后给「这座城怎么用」的落点，不让流程断在战报。 */
   function warDigestPanel(s, digest, body) {
     if (!digest.length) {
       body.appendChild(el('div', 'empty', '暂无新占城池。攻下一城后，这里会列出待安置的城。'));
@@ -3685,7 +3685,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     idle.forEach(function (a, ai) {
       var on = a.id === war.armyId;
       var row = el('div', 'row');
-      /* GDD §10.4「1–3 切换我方槽位」：槽位就是这条可派队伍列表，
+      /* 本作设计「1–3 切换我方槽位」：槽位就是这条可派队伍列表，
          data-army-index 从 1 起，交互层按键时按它取行。 */
       row.setAttribute('data-army-index', String(ai + 1));
       row.setAttribute('data-army-id', String(a.id));
@@ -3943,7 +3943,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       postJSON('/__slg/strategy/action', {
         action: 'attack', cityId: target.id, armyId: army.id,
         frac: war.frac, fromCityId: fromCity.id,
-        /* ★ P11：抵达先进「遭遇」页，不自动开打（GDD §3.2 门 4→5） */
+        /* ★ P11：抵达先进「遭遇」页，不自动开打（本作设计 门 4→5） */
         confirmBattle: true,
       }).then(function (rs) {
         if (rs && rs.ok) {
@@ -3958,7 +3958,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     });
   }
 
-  /* ★ M2-4 外交（GDD §5.8）：只对 NPC，全部可解释——态度是公式（理由链逐条展开），
+  /* ★ M2-4 外交（本作设计）：只对 NPC，全部可解释——态度是公式（理由链逐条展开），
      拒绝必须带 {code,text,factors[]}；停战期内诸侯守约不进犯。 */
   function warDiploPanel(s, body) {
     var dip = (cache && cache.diplomacy) || s.diplomacy || { factions: [], day: s.day };
@@ -4638,7 +4638,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       if (c.disaster || c.modUntil) mkInv('开仓赈灾', 'relief', 500, '解除减产，民心 +6、治安 +3');
       body.appendChild(invCard);
 
-      /* ★ M2-4 委任对象化（GDD §5.6）：「我不用管，但我知道它在干什么」——
+      /* ★ M2-4 委任对象化（本作设计）：「我不用管，但我知道它在干什么」——
          每旬自动派一条真实内政任务（与手动同源同价同工期）；缺金置顶暂停、金到位续办、失城中止。 */
       var apptCard = el('div', 'card', '<h4 style="margin-top:0">长驻委任</h4>'
         + '<div class="cost">委任后每旬自动办一条真实内政任务（产出与手动完全同源，报告写清谁涨了什么）；'

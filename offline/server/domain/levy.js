@@ -1,11 +1,11 @@
 /**
- * 兵役制（P11 / GDD §5.5 修订版）——「人口 → 户 → 适龄壮丁 → 已征户 → 本旬可征」
+ * 兵役制（P11 / 本作设计 修订版）——「人口 → 户 → 适龄壮丁 → 已征户 → 本旬可征」
  *
  * 为什么要单独一个模块：征兵的四条硬规则以前散在 handlers.js 的一段脚本里，
  *   面板显示、预览、服务端结算各算一份，结果就是「可以反复征兵、总能征满」。
  *   这里是唯一权威源：handlers 结算、strategy 视图、六府面板、交互层建言全部读它。
  *
- * 四条规则（用户 2026-11-13 明确要求，GDD §5.5 已同步修订）：
+ * 四条规则（用户 2026-11-13 明确要求，本作设计 已同步修订）：
  *   1. 妇孺老少不征：户均 5 口，只有 62% 的户有适龄壮丁（其余为老弱/妇孺/幼户）。
  *   2. 一户征兵一位：已征户数 `levied` 永久累计，人口增长产生的新户才补进来。
  *   3. 不允许反复征兵：每城每旬（turn）只允许一次征兵，`lastLevyTurn` 卡住。
@@ -16,7 +16,7 @@
  */
 export const HOUSEHOLD_SIZE = 5;        // 户均人口
 export const ADULT_MALE_RATE = 0.62;    // 有适龄壮丁的户占比（其余为妇孺老弱户）
-export const POP_PER_SOLDIER = 4;       // GDD：征 1 兵，人口基数 -4（抽丁 + 眷属随军 + 田荒）
+export const POP_PER_SOLDIER = 4;       // 本作设计：征 1 兵，人口基数 -4（抽丁 + 眷属随军 + 田荒）
 export const TURN_CAP_RATE = 0.05;      // 单旬最多征总人口的 5%，防止一次抽空
 export const SEASON_FACTOR = { 春: 0.8, 夏: 1.0, 秋: 1.1, 冬: 0.7 };
 const SEASONS = ['春', '夏', '秋', '冬'];
@@ -123,7 +123,7 @@ export function checkLevy(state, cityId, count, opts = {}) {
 
 /**
  * 征兵成功后写台账 + 扣人口基数。必须由 handlers 在资源扣除成功之后调用一次。
- * 人口按 GDD 的 ×4 扣，但不低于 1 户（留 5 口），避免城市被一次征空。
+ * 人口按 本作设计的 ×4 扣，但不低于 1 户（留 5 口），避免城市被一次征空。
  */
 export function commitLevy(state, cityId, count) {
   const id = Number(cityId);
@@ -144,7 +144,7 @@ export function commitLevy(state, cityId, count) {
   return { popBefore, popAfter, popCost: popBefore - popAfter, levy: levyView(state, id) };
 }
 
-/** 春征超过上限 50% → 秋收田赋 −15%（GDD §5.5 农时冲突，提前显示在预览里）。
+/** 春征超过上限 50% → 秋收田赋 −15%（本作设计 农时冲突，提前显示在预览里）。
  *  ★ 必须在 commitLevy **之前**调用：抽丁会扣人口，人口一少 seasonalCap 就缩水，
  *    用扣完的人口算比例会虚高（实测出现过「本次 125%」这种不可能的数）。 */
 export function farmConflictOf(state, cityId, count, opts = {}) {

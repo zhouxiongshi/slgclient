@@ -1,5 +1,5 @@
 /**
- * M3-2 事件系统（GDD §8.1 / §8.2 / §8.3）。
+ * M3-2 事件系统（本作设计）。
  *
  * 锁四件事：
  *  1. event-dsl：字段/算子白名单（未知字段即拒绝）、六比较、数组语义、flag has/not；
@@ -164,7 +164,7 @@ test('M3-2·events.json：52 条 / 三层计数 / check-events 全绿', () => {
   assert.match(out, /check-events ok/, '构建期校验应通过');
 });
 
-test('M3-7·事件补量：两批合计 150 条（GDD §8 上限）/ campaignEvents 合并加载', () => {
+test('M3-7·事件补量：两批合计 150 条（本作设计 上限）/ campaignEvents 合并加载', () => {
   const extra = JSON.parse(readFileSync(resolve(ROOT, 'conf/campaign/events-extra.json'), 'utf8'));
   assert.equal(extra.events.length, 98);
   assert.equal(EVENTS.events.length + extra.events.length, 150);

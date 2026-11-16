@@ -1,12 +1,12 @@
 /**
- * event-engine.js — 事件引擎（GDD §8.1 / §8.3）
+ * event-engine.js — 事件引擎（本作设计）
  *
  * 每旬 tick 由 strategy 层调一次：
  *   const { selected, deferred } = selectEvents(events, ctx, state);
  *   for (const ev of selected) → 弹窗呈现（面板层消费 selected 的 text/choices）
  *   玩家选择后 → applyEffects(state, event, choiceId, api)
  *
- * 硬规则（GDD §8.3）：
+ * 硬规则（本作设计）：
  *  - 每旬按 priority 降序，最多触发 2 条（防止弹窗淹没）
  *  - exclusive 组内只出一条；同组未出的事件进入 1 旬冷却，下回合再判
  *  - once 事件触发过即永久排除

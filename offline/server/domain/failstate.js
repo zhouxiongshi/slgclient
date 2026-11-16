@@ -1,5 +1,5 @@
 /**
- * 失败态与结局判定（GDD §3.4 / §3.5 第二轮补丁）。
+ * 失败态与结局判定（本作设计 第二轮补丁）。
  *
  * 恢复感原则（写死）：任何失败态都必须给「至少一条能活下来的路」，哪怕很贵。
  * 玩家可以输，但不能「卡住」。所以本模块一半是判定，另一半是出路动作。
@@ -9,10 +9,10 @@
  */
 
 const CAP = 20000;
-const GRAIN_GOLD_RATE = 0.5;      // 卖粮市价：1 粮 = 0.5 金（GDD §9.1 资源锚的中位换算）
+const GRAIN_GOLD_RATE = 0.5;      // 卖粮市价：1 粮 = 0.5 金（本作设计 资源锚的中位换算）
 const SELL_CAP_PER_TURN = 2000;   // 每旬卖粮上限（防止套利刷钱）
-const DISARM_REFUND = 0.3;        // 裁军返还：兵值金 ×30%（GDD §3.4）
-const MERC_COST_MUL = 3;          // 雇佣兵：紧急征兵成本 ×3（GDD §3.4「贵 3 倍」）
+const DISARM_REFUND = 0.3;        // 裁军返还：兵值金 ×30%（本作设计）
+const MERC_COST_MUL = 3;          // 雇佣兵：紧急征兵成本 ×3（本作设计「贵 3 倍」）
 
 function recordRes(state, res, delta, reason, day) {
   const d = Math.round(Number(delta) || 0);
@@ -46,11 +46,11 @@ export function failstates(state) {
   if (!st) return { bankrupt: false, troopsStarved: [], noGeneral: false, capitalLost: false, actions: [] };
   const r = state.roleRes || {};
   const owned = ownedCities(st);
-  // 破产：金 ≤ 0 且粮 < 500（GDD §3.4；本作金被钳在 ≥0，所以 0 即破产线）
+  // 破产：金 ≤ 0 且粮 < 500（本作设计；本作金被钳在 ≥0，所以 0 即破产线）
   const bankrupt = (Number(r.gold) || 0) <= 0 && (Number(r.grain) || 0) < 500;
-  // 兵尽：城守军 < 200 且无在途增援（GDD §3.4，逐城列出，返回数字 id）
+  // 兵尽：城守军 < 200 且无在途增援（本作设计，逐城列出，返回数字 id）
   const troopsStarved = owned.filter((id) => (Number(st.cities[id].troops) || 0) < 200).map(Number);
-  // 无将：全部队伍都没有可用武将（出征前 GDD 判定；这里给全局视图）
+  // 无将：全部队伍都没有可用武将（出征前 本作设计判定；这里给全局视图）
   const noGeneral = (state.armys || []).length > 0
     && (state.armys || []).every((a) => (a.generals || []).every((g) => !g));
   // 都城失陷：都城已不是玩家的（supply.js 的 exempt 语义与此一致：亡国流程不再叠加断粮罚）
@@ -106,7 +106,7 @@ export function sellGrain(state, ctx, { grain }) {
   return { ok: true, grain: n, gold, roomLeft: Math.max(0, SELL_CAP_PER_TURN - state.market.sold) };
 }
 
-/** 紧急征兵 / 雇雇佣兵（GDD §3.4 兵尽出路）：不计兵源上限，民心 −10；雇佣兵再贵 3 倍。 */
+/** 紧急征兵 / 雇雇佣兵（本作设计 兵尽出路）：不计兵源上限，民心 −10；雇佣兵再贵 3 倍。 */
 export function emergencyConscript(state, ctx, { cityId, count, mercenary = false }) {
   const st = state?.strategy;
   const id = Number(cityId);
@@ -128,7 +128,7 @@ export function emergencyConscript(state, ctx, { cityId, count, mercenary = fals
   return { ok: true, count: n, cost, troops: row.troops, mercenary: !!mercenary };
 }
 
-/** 代将（GDD §3.4 兜底，不是玩法）：五维 50、无战法、不可培养、不触发宿命。
+/** 代将（本作设计 兜底，不是玩法）：五维 50、无战法、不可培养、不触发宿命。
  *  返回的武将直接塞进队伍空槽；在有名将可用的城里玩家会主动换掉它。 */
 export function makeStandInGeneral(state, cityId) {
   const st = state?.strategy;
@@ -147,7 +147,7 @@ export function makeStandInGeneral(state, cityId) {
   return g;
 }
 
-/** 迁都（GDD §3.4 都城失陷出路）：迁往任一己方城，保留 50% 资源。 */
+/** 迁都（本作设计 都城失陷出路）：迁往任一己方城，保留 50% 资源。 */
 export function relocateCapital(state, ctx, { cityId }) {
   const st = state?.strategy;
   const id = Number(cityId);
@@ -173,7 +173,7 @@ export function relocateCapital(state, ctx, { cityId }) {
 const KEY_DECISION_KINDS = ['举义', '攻陷', '迁都', '背盟', '结盟', '裁军', '招抚'];
 
 /**
- * 结局判定（GDD §3.5）。返回 null 表示游戏继续；
+ * 结局判定（本作设计）。返回 null 表示游戏继续；
  * 统一 / 败亡 / 偏安（脚手架：剧本阶段目标未定义时恒 null）。
  * 共同要求：结局必须回放「你做过的 5 个关键决定」——从大事记里取关键类。
  */

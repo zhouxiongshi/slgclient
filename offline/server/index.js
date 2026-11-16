@@ -37,7 +37,7 @@ import {
   strategyEventChoice,
   /* ★ M3-5 剧本切换 */
   strategySetScenario,
-  /* ★ P11 / GDD §3.2 门 4→6：遭遇待决 / 确认开战 / 临阵撤军 / 新城消化 */
+  /* ★ P11 / 本作设计 门 4→6：遭遇待决 / 确认开战 / 临阵撤军 / 新城消化 */
   strategyConfirmBattle, strategyRetreatBattle, strategyDigestDone,
 } from './domain/strategy.js';
 import { panelState, panelAction, panelSelfCheck } from './domain/panels.js';
@@ -47,7 +47,7 @@ import { adjustAttitudeByEvent, factionList } from './domain/diplomacy.js';
 import { drain as drainNotices, lastId as noticeLastId } from './notice-bus.js';
 /* 交互增强层：只读聚合（纯函数），不改 WS 协议与消息结构 */
 import { interactionState } from './domain/interaction.js';
-/* ★ M2-3 失败态四出路（GDD §3.4）：破产裁军/卖粮、兵尽紧急征兵·雇佣、无将代将、迁都 */
+/* ★ M2-3 失败态四出路（本作设计）：破产裁军/卖粮、兵尽紧急征兵·雇佣、无将代将、迁都 */
 import { disarmForGold, sellGrain, emergencyConscript, relocateCapital } from './domain/failstate.js';
 import { craftJungong, smeltStone, investDev } from './domain/armory.js';
 
@@ -60,7 +60,7 @@ const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 export const PANELS_UI_SOURCE = readFileSync(resolve(ROOT, 'server/panels-ui.js'), 'utf8');
 
 /**
- * 交互增强层（设计规格 6.1~6.11）：独立浏览器 IIFE，唯一一份源码。
+ * 交互增强层（本作约定~6.11）：独立浏览器 IIFE，唯一一份源码。
  * 术语表在启动期读一次并内联进脚本前缀 —— 运行时内存查表，零网络请求、零外部依赖，
  * 且与 conf/interaction/terms.json 是同一份数据（描述 = 计算 = 战报同源）。
  */
@@ -633,7 +633,7 @@ export async function startOfflineServer(options = {}) {
         else if (act === 'captiveRelease' || act === 'captiveExecute') {
           /* ★ 2026-11-16：名望 / 恶名 + 外交态度同源落账。
              态度影响对所有 NPC 势力生效（战报不带原属势力字段，无法定向到单一势力），
-             董卓在处斩时豁免——GDD §7.3 / §5.9 明示例外。 */
+             董卓在处斩时豁免——本作设计 明示例外。 */
           const exempt = act === 'captiveExecute' ? 'sili' : null;
           const diplomacyApi = {
             adjustAttitude(delta, exemptFaction) {
@@ -666,7 +666,7 @@ export async function startOfflineServer(options = {}) {
             armyId: Number(body.armyId) || 0,
             frac: Number.isFinite(fracRaw) && fracRaw > 0 && fracRaw <= 1 ? fracRaw : 1,
             fromCityId: Number(body.fromCityId) || 0,
-            /* ★ P11：玩家从出征面板发的兵，抵达先进「遭遇」待决（GDD §3.2 门 4） */
+            /* ★ P11：玩家从出征面板发的兵，抵达先进「遭遇」待决（本作设计 门 4） */
             confirmBattle: body.confirmBattle !== false,
           });
         } else if (act === 'recall') result = strategyRecallMarch(state, cfg, ctx, { marchId: Number(body.marchId) });
@@ -674,7 +674,7 @@ export async function startOfflineServer(options = {}) {
         else if (act === 'battleConfirm') result = strategyConfirmBattle(state, cfg, ctx, { marchId: Number(body.marchId) });
         else if (act === 'battleRetreat') result = strategyRetreatBattle(state, cfg, ctx, { marchId: Number(body.marchId) });
         else if (act === 'digest') result = strategyDigestDone(state, { cityId: Number(body.cityId) });
-        /* ★ M2-3 失败态四出路（GDD §3.4）：裁军 / 卖粮 / 紧急征兵·雇佣兵 / 迁都 */
+        /* ★ M2-3 失败态四出路（本作设计）：裁军 / 卖粮 / 紧急征兵·雇佣兵 / 迁都 */
         else if (act === 'disarm') result = disarmForGold(state, ctx, { armyId: Number(body.armyId), count: Number(body.count) });
         else if (act === 'sellGrain') result = sellGrain(state, ctx, { grain: Number(body.grain) });
         else if (act === 'craft') result = craftJungong(state, ctx, { count: Number(body.count) || 0, drain: !!body.drain });
@@ -687,7 +687,7 @@ export async function startOfflineServer(options = {}) {
           cityId: Number(body.cityId), count: Number(body.count), mercenary: !!body.mercenary,
         });
         else if (act === 'relocateCapital') result = relocateCapital(state, ctx, { cityId: Number(body.cityId) });
-        /* ★ M2-4 委任对象化与外交（GDD §5.6/§5.8）：委任目标 / 取消委任 / 外交动作 */
+        /* ★ M2-4 委任对象化与外交（本作设计）：委任目标 / 取消委任 / 外交动作 */
         else if (act === 'appoint') result = strategyAppoint(state, cfg, ctx, { cityId: Number(body.cityId), goal: String(body.goal || '') });
         else if (act === 'cancelAppoint') result = strategyCancelAppointment(state, ctx, { apptId: String(body.apptId || '') });
         else if (act === 'diplo') result = diplomacyAct(state, cfg, ctx, {
@@ -696,7 +696,7 @@ export async function startOfflineServer(options = {}) {
         });
         /* ★ M3-5 剧本切换（新游戏语义）：重建归属 + 势力集 + 开局决策伪事件 */
         else if (act === 'scenario') result = strategySetScenario(state, String(body.scenario || body.id || ''));
-        /* ★ M3-4 事件点选（GDD §8.3）：效果词白名单落账，选择写存档供结局回放 */
+        /* ★ M3-4 事件点选（本作设计）：效果词白名单落账，选择写存档供结局回放 */
         else if (act === 'eventChoice') result = strategyEventChoice(state, cfg, ctx, {
           id: String(body.id || ''), choice: String(body.choice || ''),
         });

@@ -1238,6 +1238,7 @@
 | NFR-23 | 体积 | 发行包 | locales 只保留 4 个 `.pak`（瘦身约 45MB）；`build/` 不入库 | `pack.js:73-85`、`.gitignore` |
 | NFR-24 | 可观测 | 日志上限 | `requestLog` 80 / `logs` 40 / `chat` 200 / `battleLog` 200 / `resLedger` 240 / `strategy.events` 200 / `warReports` 100 / `__slgErrors` 60 | `index.js`、`world.js` |
 | NFR-25 | 产品呈现 | 不泄露借鉴来源 | 玩家界面不得出现外部游戏／名录名称、外部地址、内部规格编号、源码路径与工程溯源字段（`数值来源`／`source_id`／`confidence`／`证据级别`／`可信度`）；这些数据只用于工程合规审阅 | `tests/ui-presentation-hygiene.test.js`、`conf/interaction/terms.json` |
+| NFR-26 | 源码卫生 | 注释不标注借鉴来源 | 服务端／工具／测试／外壳的源码注释与开发者字符串不得写外部游戏名、外部名录、外部地址或内部规格编号（如「设计规格 6.2」「章节 K」）；合规台账的 `source`／`descSource`／`LICENSE` 字段、运行时协议字段值与史书引用不属于来源提示，保留 | `tests/ui-presentation-hygiene.test.js` 源码扫描用例 |
 
 ---
 
@@ -1569,7 +1570,7 @@ npm test             # 内核单测 + 黄金向量
 | 📐 规划中 | 0 | 路线图见 GDD §14，未冒充现行需求 |
 | ⛔ 不做 | — | 联网 / 内购 / 云存档 / 18 棋子棋盘 / 手柄 / 移动端（§1.5） |
 
-**非功能需求** 25 条（NFR-01~NFR-25）；**用例** 30 个（UC-01~UC-30）；**业务规则** 200+ 条（R-xx.y）；**验收标准** 120+ 条（AC-xx.y）；**未决问题** 10 项（OP-01~OP-10）。
+**非功能需求** 26 条（NFR-01~NFR-26）；**用例** 30 个（UC-01~UC-30）；**业务规则** 200+ 条（R-xx.y）；**验收标准** 120+ 条（AC-xx.y）；**未决问题** 10 项（OP-01~OP-10）。
 
 ### 13.4 本文与既有文档的关系图
 

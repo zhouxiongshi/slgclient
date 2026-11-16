@@ -28,7 +28,7 @@ const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const cfg = loadConfig();
 const fresh = () => normalizeWorld(createWorld(cfg), cfg);
 
-test('战法库：80 条、每条 ≥2 条公开获取途径、研习兜底、文本与 battle-kit 原文一致', () => {
+test('战法库：80 条、每条 ≥2 条公开获取途径、研习兜底、文本与 本作配置 原文一致', () => {
   const chk = panelSelfCheck();
   assert.equal(chk.ok, true, JSON.stringify(chk));
   assert.equal(chk.skillCount, 80);

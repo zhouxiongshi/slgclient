@@ -4,7 +4,7 @@
  * 关键红线：
  *   - 原表（general.json / heroes-240.json / protagonist.json）逐字不动，
  *     编辑只写 GM 覆盖层 overrides.json 的 generals 段；
- *   - 属性量纲是 M4-10 三国志11 百分制（1~100），越界钳位；
+ *   - 属性量纲是 M4-10 百分制（1~100），越界钳位；
  *   - 战法 cfgId 必须在运行时战法表内（skills.js SKILL_BY_ID）；
  *   - 保存对 generalByCfg 即时生效（唯一权威），reset 从 generalOriginal 恢复；
  *   - 当前存档 state.generals 的自带战法槽立即同步。

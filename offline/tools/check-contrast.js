@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * M4-3 WCAG 对比度检测（GDD §10.7：正文 ≥4.5:1，大字号 ≥3:1）。
+ * M4-3 WCAG 对比度检测（本作设计：正文 ≥4.5:1，大字号 ≥3:1）。
  *
  * 色彩对登记在 PAIRS（token 名 / 前景 / 背景 / 用途档位）。前景支持 #hex 与 rgba()——
  * 半透明前景先按 alpha 合成到底色再算。输出 reports/contrast.json；不达标 exit 1。

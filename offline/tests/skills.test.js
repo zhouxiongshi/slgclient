@@ -54,7 +54,7 @@ const skillDamage = (r, skillName) => r.events.find(
   (e) => e.kind === 'damage' && e.payload.skill === skillName,
 )?.payload.calc?.final ?? 0;
 
-test('战法表：31 个 / 4 类 / 10 级真实数值成长 / 名称与伤害率来自 battle-kit', () => {
+test('战法表：31 个 / 4 类 / 10 级真实数值成长 / 名称与伤害率来自 本作配置', () => {
   assert.ok(SKILLS.length >= 24, `战法数 ${SKILLS.length}`);
   assert.equal(CFG.oldSystemRemoved, true);
   assert.equal(CFG.levelCount, 10);
@@ -65,7 +65,7 @@ test('战法表：31 个 / 4 类 / 10 级真实数值成长 / 名称与伤害率
     if (s.kernel.effect_type) effects.add(s.kernel.effect_type);
     for (const e of s.kernel.effects || []) if (e.effect_type) effects.add(e.effect_type);
   }
-  // 真实片段只覆盖伤害/控制/增益——治疗类在 battle-kit 数据里没有原文，不做虚构
+  // 真实片段只覆盖伤害/控制/增益——治疗类在 本作配置 数据里没有原文，不做虚构
   for (const e of ['PHYSICAL_DAMAGE', 'STRATEGY_DAMAGE', 'CONTROL', 'BUFF']) {
     assert.ok(effects.has(e), `缺少效果类型 ${e}`);
   }
@@ -79,13 +79,13 @@ test('战法表：31 个 / 4 类 / 10 级真实数值成长 / 名称与伤害率
     assert.ok(!names.has(s.name), `重复战法名 ${s.name}`);
     names.add(s.name);
     /* 920000+ 是可选的全武将初始战法表：数值为工程近似值、名称沿用官网名录，
-       不适用「伤害率必须来自 battle-kit 样本」这条主线忠实性断言。 */
+       不适用「伤害率必须来自 本作配置 样本」这条主线忠实性断言。 */
     if (Number(s.cfgId) >= 920000) continue;
     assert.ok(
       BATTLE_KIT.skill_names.includes(s.name) || FRAGMENT_NAMES.has(s.name)
       || s.provenance?.pairing === 'authored' || s.provenance?.pairing === 'skill-library'
       || s.provenance?.pairing === 'skill-library-extra',
-      `${s.name} 不在 battle-kit 名录`,
+      `${s.name} 不在 本作配置 名录`,
     );
     if (s.provenance?.pairing === 'authored' || s.provenance?.pairing === 'skill-library'
       || s.provenance?.pairing === 'skill-library-extra') continue;

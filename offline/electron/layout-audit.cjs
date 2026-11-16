@@ -27,7 +27,7 @@ const VIEWPORTS = [
   [1280, 720], [1366, 768], [1920, 1080], [2560, 1440], [3440, 1440],
 ];
 const FONT_TIERS = [85, 100, 120];
-/* GDD §10.1 表：按视口宽度给出期望的抽屉宽 */
+/* 本作设计 表：按视口宽度给出期望的抽屉宽 */
 const DRAWER_BY_WIDTH = [[1280, 360], [1365, 380], [1920, 420], [2560, 460], [3440, 480]];
 
 const AUTO_LOGIN = `(function(){
@@ -140,7 +140,7 @@ const MEASURE = `(function(){
     });
   out.smallTargets = out.smallTargets.slice(0, 12);
 
-  /* 5) 抽屉实际宽度（GDD §10.1 五档） */
+  /* 5) 抽屉实际宽度（本作设计 五档） */
   var drawer = document.querySelector('.slgIx-drawer');
   if (drawer && visible(drawer)) {
     out.drawer = { w: r0(drawer.getBoundingClientRect().width), label: label(drawer) };

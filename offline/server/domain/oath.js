@@ -29,7 +29,7 @@ export function factionById(id) {
   return factionsConf().factions.find((f) => f.id === id) || null;
 }
 
-/* ★ M3-5 剧本降级（GDD §12.1）：剧本势力 id 不在基础 8 诸侯里，
+/* ★ M3-5 剧本降级（本作设计）：剧本势力 id 不在基础 8 诸侯里，
  *  按 name 从基础诸侯继承 trait/startGenerals。只读文件，不引 strategy.js（防循环）。 */
 function scenarioFactionById(state, id) {
   const sid = state?.strategy?.scenarioId || state?.scenarioId;

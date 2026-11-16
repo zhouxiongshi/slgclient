@@ -1,7 +1,7 @@
 /**
- * PF · 性能探针（对标 GDD §11.5 六项预算）
+ * PF · 性能探针（对标 本作设计 六项预算）
  *
- * 为什么单独一件：性能不能靠「感觉不卡」。GDD 给了硬预算，
+ * 为什么单独一件：性能不能靠「感觉不卡」。本作设计给了硬预算，
  * 但此前没有任何工具量过 —— 面板打开 <100ms、推演 <50ms、回合结算 <2.5s
  * 这些数字从来没有被实测过，等于没有约束。
  *
@@ -20,7 +20,7 @@ const { consoleSeverity, consolePayload } = require('./console-level.cjs');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** GDD §11.5 预算表，硬阈值。 */
+/** 本作设计 预算表，硬阈值。 */
 const BUDGETS = {
   /* 首屏（PF-01）重订为 7000ms，并在报告里强制分解三段：
    *   登录页（HTML+注入层门禁）/ Cocos 首场景（原版 web/ 固有成本，登录按钮在里面）
@@ -115,7 +115,7 @@ const PROBE = `(async function(){
     await sleep(140);
   }
 
-  /* ---------- PF-05 DOM 增量（取各面板最大值，口径见 GDD「节点/视角」） ---------- */
+  /* ---------- PF-05 DOM 增量（取各面板最大值，口径见 本作设计「节点/视角」） ---------- */
   var deltas = out.panels.map(function(p){ return p.domDelta || 0; });
   out.dom.maxDelta = deltas.length ? Math.max.apply(null, deltas) : 0;
   out.dom.medianDelta = deltas.length ? deltas.slice().sort(function(a,b){return a-b;})[Math.floor(deltas.length/2)] : 0;

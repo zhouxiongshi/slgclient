@@ -71,7 +71,7 @@ function takeCaptive(state, idx) {
   return { ok: true, cap };
 }
 
-/** 放归：不花钱，记名望 +2，并对所有 NPC 势力落 attitude −5（GDD §7.3）。
+/** 放归：不花钱，记名望 +2，并对所有 NPC 势力落 attitude −5（本作设计）。
  *  态度落账走 diplomacy 的唯一权威口，理由链里显示为「事件」档，可追溯。 */
 export function releaseCaptive(state, { idx, diplomacyApi = null } = {}) {
   const r = takeCaptive(state, idx);
@@ -86,7 +86,7 @@ export function releaseCaptive(state, { idx, diplomacyApi = null } = {}) {
   };
 }
 
-/** 处斩：记恶名 +1、名望 −1，对所有 NPC 势力 attitude −15，董卓除外（GDD §7.3 / §5.9）。 */
+/** 处斩：记恶名 +1、名望 −1，对所有 NPC 势力 attitude −15，董卓除外（本作设计）。 */
 export function executeCaptive(state, { idx, diplomacyApi = null } = {}) {
   const r = takeCaptive(state, idx);
   if (!r.ok) return r;

@@ -4,13 +4,13 @@
  * 为什么单独一层：
  *  - `panels.js` 刻意不 import `strategy.js`（避免环），而武将详情要显示相性与关系网；
  *  - `handlers.js`（登庸掷骰）与 UI（成功率构成条）必须走**同一个**函数，
- *    否则又回到「描述一套、计算一套」的老毛病（设计规格 2.3）。
+ *    否则又回到「描述一套、计算一套」的老毛病（本作约定）。
  *
  * 数据口径（必须诚实标注）：
  *  - 相性：本作设定。势力锚点 + cfgId 确定性散列，落在 1–149 环形上。
  *    **不是史实**，界面上要写「本作设定」，[terms.json](conf/interaction/terms.json) 的 xiangxing 词条同步。
  *  - 义理：由史载五维（政治×0.6 + 魅力×0.4）折算，属派生值，标 E2。
- *  - 关系网：只收《三国演义》可考的成对关系，逐条带 source 与 confidence。
+ *  - 关系网：只收《三国演义》可考的成对关系，逐条注明演义回目。
  *
  * 零内部依赖：只 import oath.js（叶子模块，只读 lore json）。
  */
@@ -71,7 +71,7 @@ export function xiangxingBonus(gap) {
   return Math.round((0.5 - (Number(gap) || 0) / 74) * 24 * 10) / 10;
 }
 
-/** 某武将的成对关系（按名字查，返回 [{other,type,note,source,confidence,tone}]）。 */
+/** 某武将的成对关系（按名字查，返回带对象、类型、说明与演义回目的关系数组）。 */
 export function bondsOf(name) {
   if (!name) return [];
   const conf = relationConf();

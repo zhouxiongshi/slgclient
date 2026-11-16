@@ -1,5 +1,5 @@
 /**
- * M3-5 六剧本运行期接入测试（GDD §12.1）：
+ * M3-5 六剧本运行期接入测试（本作设计）：
  *  1. strategySetScenario：归属按剧本 cityOwner 落位、scenarioId/年份入库、非法 id 拒绝；
  *  2. factionConfFor：剧本势力集整体替换 8 诸侯、局部 id 按 name 继承 trait/startGenerals；
  *  3. 举义流：剧本模式 oathOptions 只出剧本势力、chooseOath 走通、玩家特技继承；

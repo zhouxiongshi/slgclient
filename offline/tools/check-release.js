@@ -215,7 +215,7 @@ const skillGrowthOK = (skillTable?.skills ?? []).every((s) => {
   if (s.ui.trigger !== 2 && lv.at(-1).probability <= lv[0].probability) return false;
   return true;
 });
-check('完整战法表：31 个战法 / 4 类 / 10 级真实数值成长 / 数值来自 battle-kit',
+check('完整战法表：31 个战法 / 4 类 / 10 级真实数值成长 / 数值来自 本作配置',
   skillTable?.count >= 24 && skillTable?.oldSystemRemoved === true && skillGrowthOK,
   `${skillTable?.count} 个 / ${skillTable?.levelCount} 级（固定值 ${fixedCount} 个）`);
 check('原 4 个占位技能配置已从交付包移除',
@@ -490,7 +490,7 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
   }
 }
 
-/* ---------------- 7.9b 数据溯源合规（GDD §10.8，M4-1） ---------------- */
+/* ---------------- 7.9b 数据溯源合规（本作设计，M4-1） ---------------- */
 {
   const provPath = join(REPORTS, 'data-provenance.json');
   let provenance = readJson(provPath, null);
@@ -502,12 +502,12 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
   check('数据条目溯源全覆盖：source+confidence 无缺口（events/fates/heroes/scenarios/terms）',
     provenance?.ok === true && provenance?.totals?.missing === 0 && provenance?.totals?.entries >= 500,
     JSON.stringify(provenance?.totals));
-  check('地图示意图声明已登记且 UI 真实渲染（GDD §10.8）',
+  check('地图示意图声明已登记且 UI 真实渲染（本作设计）',
     provenance?.totals?.mapProblems === 0 && !!provenance?.map?.declaration,
     JSON.stringify(provenance?.map));
 }
 
-/* ---------------- 7.9c 对比度（GDD §10.7，M4-3） ---------------- */
+/* ---------------- 7.9c 对比度（本作设计，M4-3） ---------------- */
 {
   const ctPath = join(REPORTS, 'contrast.json');
   let ct = readJson(ctPath, null);
@@ -516,7 +516,7 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
     ct = readJson(ctPath, null);
     if (!ct && r.status !== 0) ct = { ok: false, checked: 0, failed: 1 };
   }
-  check('注入 UI 色彩对比度全部达标（正文 ≥4.5:1 / 大字 ≥3:1，GDD §10.7）',
+  check('注入 UI 色彩对比度全部达标（正文 ≥4.5:1 / 大字 ≥3:1，本作设计）',
     ct?.ok === true && ct?.checked >= 9 && ct?.failed === 0,
     JSON.stringify(ct?.results?.filter((x) => !x.ok) || `${ct?.checked} 对`));
 }
@@ -563,7 +563,7 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
     JSON.stringify({ issues: t.issues, designNotes: t.designNotes,
       listed: bal?.designNotes?.length }));
   /* M4-8 曾把史载五维 ×100 当战斗数值（极差百倍）；M4-8 先改 2500+65v 压缩映射，
-     M4-10 用户拍板全面改三国志11 百分制（0~100 直通）。百分制下极差 10 倍是设计
+     M4-10 用户拍板全面改百分制（0~100 直通）。百分制下极差 10 倍是设计
      本身，判据改为「不越界（1~100）+ 中位不塌（45~80）」，攻城/统御不得按 layer
      分档（粒度天然粗，10/15 档以上即可）。 */
   const sb = bal?.statBalance;
@@ -628,7 +628,7 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
     stale.length === 0, stale.length ? '请重跑：' + stale.join(' | ') : '报告与工具同版本');
 }
 
-/* ---------------- 7.10 术语覆盖率（GDD §14.2-5，M0） ---------------- */
+/* ---------------- 7.10 术语覆盖率（本作设计-5，M0） ---------------- */
 {
   let termsReport = readJson(join(REPORTS, 'terms.json'), null);
   if (reportStale(join(REPORTS, 'terms.json'), 'check-terms.js')) {
@@ -641,7 +641,7 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
       problems: termsReport?.problems?.length }));
 }
 
-/* ---------------- 7.11 推演→确认→战报 真实点击 E2E（GDD §14.2-7，M2） ---------------- */
+/* ---------------- 7.11 推演→确认→战报 真实点击 E2E（本作设计-7，M2） ---------------- */
 {
   /* 项目教训：曾有 4 个 P0 因为「冒烟全部绕开真实点击」留到很晚。
      本项锁死 ui-audit 里那条「切城→推演→确认→队列→推进→战报」链必须跑过且零异常。
@@ -674,7 +674,7 @@ requiresUser.push(
   { name: 'Steamworks 账号与 Steam Direct 上架费', detail: '每款应用 US$100，需本人注册与付款；我无法代办。' },
   { name: '商店页素材与文案', detail: '胶囊图/库图/截图/预告片/简介/标签/语言；用户已说明素材后续统一替换。' },
   { name: '内容调查与年龄分级', detail: 'Steam 内容问卷、地区评级；买断制无内购仍需填写。' },
-  { name: '第三方素材与名录合规', detail: '当前画面/武将名/战法名/数值均来自学习项目与 battle-kit 导出表；上线前须整体换皮或取得授权。battle-kit/export/完整原始版 的 IL 反汇编与 610 类结构不得随包分发。' },
+  { name: '第三方素材与名录合规', detail: '当前画面/武将名/战法名/数值均来自学习项目与 本作配置 导出表；上线前须整体换皮或取得授权。本作配置/export/完整原始版 的 IL 反汇编与 610 类结构不得随包分发。' },
   { name: '法务与发行', detail: '版权声明 / EULA / 隐私政策（本作不联网不收集数据，可简化）、中国发行所需版号（如在大陆商业化发行）。' },
   { name: '代码签名与多机实测', detail: '建议购买 EV/OV 代码签名证书减少 SmartScreen 误报；在多台 Windows 机器、不同分辨率下实测。' },
   { name: 'Steamworks SDK 集成（可选增强）', detail: '成就、云存档、Steam 覆盖层、DRM；非上架必需，当前版本未集成。' },
@@ -691,7 +691,7 @@ const report = {
   failed,
   requires_user: requiresUser,
   known_followups: [
-    'battle-kit 原版 E2 减伤式方向反了（防御越高伤害越高）；内核已提供 defense_model=corrected 开关，默认保持与参考实现逐位一致，后续数值微调时建议切换。',
+    '本作配置 原版 E2 减伤式方向反了（防御越高伤害越高）；内核已提供 defense_model=corrected 开关，默认保持与参考实现逐位一致，后续数值微调时建议切换。',
     '31 个战法通过运行时资源重写送进原客户端（磁盘 web-desktop 逐字节未改），技能列表/详情/战报全部由原 UI 渲染；内核完整事件流与指纹保存在 state.battleLog，后续可继续扩展战法数量与效果。',
     '原 web-desktop 构建产物自带 Cocos 调试 stats（FPS/Frame time 等），正式发布前可在 Cocos 构建配置中关闭；本次为保持画面 100% 一致未改。',
     '战报详情里富文本标签重叠是原工程既有排版表现，本次为保持原 UI 未改。',

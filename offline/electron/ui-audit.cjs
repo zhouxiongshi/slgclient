@@ -331,7 +331,7 @@ const WALK = `(async function(){
     rec('war.go.content', [], { visible: false, note: '__slgWarWindow missing' });
   }
 
-  /* ---------- 5b. 推演→确认→战报（GDD §14：必须进真实点击 E2E，零未捕获异常） ---------- */
+  /* ---------- 5b. 推演→确认→战报（本作设计：必须进真实点击 E2E，零未捕获异常） ---------- */
   /* 本项目曾有 4 个 P0 因为「冒烟全部绕开真实点击」而留到很晚——这条链就是防复发的。 */
   if (typeof window.__slgWarWindow === 'function') {
     window.__slgWarWindow({ tab: 'go' });
@@ -359,7 +359,7 @@ const WALK = `(async function(){
         var t = txt(document.getElementById('slgWarWin'));
         return t.indexOf('战斗种子') >= 0 || t.indexOf('推演失败') >= 0;
       }, 15000);
-      /* 推演成功才解锁出征（GDD §3.2 门 4）；不等这一下，后面会判定「找不到出征按钮」 */
+      /* 推演成功才解锁出征（本作设计 门 4）；不等这一下，后面会判定「找不到出征按钮」 */
       await wait(function(){
         var b = document.getElementById('slgWarAttackBtn');
         return !!b && !b.disabled;
@@ -684,7 +684,7 @@ async function runAudit(win, server, app) {
     report.paths = res.paths || [];
     report.pageErrors = res.pageErrors || [];
 
-    /* ---------- 快捷键真按（GDD §10.4 / P2-03） ----------
+    /* ---------- 快捷键真按（本作设计 / P2-03） ----------
        静态扫描只能证明「代码里有这个分支」，按下去有没有反应必须真发键事件。
        这一段跑在 WALK 之后（此时已收掉所有覆盖层、回到沙盘），不会干扰上面的路径。 */
     const sleepMs = (ms) => new Promise((r) => setTimeout(r, ms));

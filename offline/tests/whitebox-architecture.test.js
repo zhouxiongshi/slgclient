@@ -181,7 +181,7 @@ test('WB-08b 时间/边界字段双写法等价（裸数字与单算子对象都
   assert.equal(evaluateEvent({ yearMax: { '<': 200 } }, ctx), true);
   assert.equal(evaluateEvent({ turnMin: { '>': 1 } }, ctx), false);
 
-  /* GDD §8.2 的字段名 turn / year 也受支持：裸数字=精确匹配，对象走算子 */
+  /* 本作设计 的字段名 turn / year 也受支持：裸数字=精确匹配，对象走算子 */
   assert.equal(evaluateEvent({ year: 190 }, ctx), true);
   assert.equal(evaluateEvent({ year: 184 }, ctx), false);
   assert.equal(evaluateEvent({ turn: { '>=': 1 } }, ctx), true);

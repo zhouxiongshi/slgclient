@@ -1,5 +1,5 @@
 /**
- * 平衡验证脚本（GDD §9.5「把调参变成可重复实验」）。
+ * 平衡验证脚本（本作设计「把调参变成可重复实验」）。
  *
  *   node tools/sim-60turns.mjs [--seed N] [--turns 60] [--json out.json] [--quiet]
  *
@@ -79,7 +79,7 @@ export function runSim({ seed = 20261113, turns = 60, pushes = false } = {}) {
   return { seed, turns, series, chat, chatLen: chat.length };
 }
 
-/** 确定性断言：同一输入两次运行逐旬一致 + NPC 决策聊天逐字一致（GDD §9.5）。 */
+/** 确定性断言：同一输入两次运行逐旬一致 + NPC 决策聊天逐字一致（本作设计）。 */
 export function simHash(result) {
   return createHash('md5').update(JSON.stringify({ s: result.series, c: result.chat })).digest('hex');
 }

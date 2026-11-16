@@ -54,7 +54,7 @@
        dismissedEvents 记住玩家主动收起的事件，避免 20s 轮询把同一张卡无限弹回。 */
     alwaysOnTop: false, dismissedEvents: {}, eventPending: 0,
   };
-  /* M4-2（GDD §10.7）：字号三档 小/中/大——连续缩放不可验收（5 分辨率 × 3 档全测），
+  /* M4-2（本作设计）：字号三档 小/中/大——连续缩放不可验收（5 分辨率 × 3 档全测），
      档位封顶 120%，超过的旧值归档到最大档。定义在顶部：初始化（下方 try 块）就要用。 */
   var FONT_TIERS = [85, 100, 120];
   function fontTierOf(v) {
@@ -280,7 +280,7 @@
       + '.slgIx input[type=text]{background:#20221c;border:1px solid #5c6b4e;color:#e8e0cc;padding:4px 7px;font:inherit;min-height:26px}'
       + '#slgIxRoot.reduce *{transition:none!important;animation:none!important}'
       + '@media (max-width:1100px){#slgIxAgenda,#slgIxLens{display:none}}'
-      /* M4-3（GDD §10.1 五档断点）：抽屉宽 360/380/420/460/480 随分辨率分档（fallback 380）。 */
+      /* M4-3（本作设计 五档断点）：抽屉宽 360/380/420/460/480 随分辨率分档（fallback 380）。 */
       + '@media (max-width:1365px){#slgIxDrawer{width:380px}}'
       + '@media (max-width:1279px){#slgIxDrawer{width:360px}}'
       + '@media (min-width:1920px){#slgIxDrawer{width:420px}}'
@@ -557,7 +557,7 @@
     on(mask, 'click', function (e) { if (e.target === mask) { mask.remove(); S.layers.splice(S.layers.indexOf(mask), 1); } });
   }
 
-  /* ---------------- 4.5 M3-6 事件弹窗卡（GDD §8.3） ----------------
+  /* ---------------- 4.5 M3-6 事件弹窗卡（本作设计） ----------------
    *  数据来自 /__slg/interaction/state 的 pendingEvents（只读投影）；
    *  点选 POST /__slg/strategy/action eventChoice（落账在 strategy 层）。
    *  按钮带 data-ix-allow，避免被 interceptCosts 成本词预览二次拦截。
@@ -716,7 +716,7 @@
       parts.push({ k: '失败后果', v: '不扣费；俘虏忠诚 -10，低于 0 越狱' });
     }
     if (!d.ok) parts.push({ k: '服务端数据', v: '聚合端点未就绪，以下为按公开规则推算，不视为权威值' });
-    /* ★ M0-3（GDD §14.2-2 / §2.1 判据「预览含如果钱不够会怎样」）：
+    /* ★ M0-3（本作设计-2 / §2.1 判据「预览含如果钱不够会怎样」）：
        决策预览不只给收益，还必须给三种失败态——做不成会怎样。 */
     (function failStates() {
       var tw = (d.treasury && d.treasury.gold) || 0;
@@ -1131,7 +1131,7 @@
         return '<tr><th>' + esc({ pin: '锁定术语框', lens: '透镜 1–6', agenda: '当前事务', ency: '内置百科', help: '本页', undo: '撤销 Ctrl+', guide: '重看教学', drawer: '就地抽屉', war: '打开出征面板', find: '搜索城池/武将' }[a])
           + '</th><td><input type="text" data-key="' + esc(a) + '" value="' + esc(key(a)) + '" style="width:70px"></td></tr>';
       }).join('') + '</table>'
-      /* GDD §10.4 的固定键（不可重映射：它们是操作系统级习惯键） */
+      /* 本作设计 的固定键（不可重映射：它们是操作系统级习惯键） */
       + '<div class="muted" style="font-size:11px;margin-top:9px;line-height:1.8">'
       + '固定键：<b>Space</b> 下一旬（焦点不在按钮上时）　<b>Tab</b> 下一透镜（Shift+Tab 走焦点）　'
       + '<b>Esc</b> 逐级关闭　<b>←/→</b> 出征窗内切我方队伍　<b>1–3</b> 出征窗内选第 1/2/3 支队伍'
@@ -1200,13 +1200,13 @@
   }
   function openKeysAgain(mask) { mask.remove(); openKeys(); }
 
-  /* ---------------- 11.5 GDD §10.4 键位补齐（P2-03） ----------------
-   * 补的是 GDD 表里原先缺的五项：Space / Tab / F / ←→ / 1–3。
+  /* ---------------- 11.5 本作设计 键位补齐（P2-03） ----------------
+   * 补的是 本作设计表里原先缺的五项：Space / Tab / F / ←→ / 1–3。
    * 两处冲突的处理方式：
-   *   1. 数字键原来 1–6 直选透镜，GDD 的 1–3 是「推演台我方槽位」。
+   *   1. 数字键原来 1–6 直选透镜，本作设计的 1–3 是「推演台我方槽位」。
    *      现在做成上下文敏感：出征窗开着 → 1–3 选我方第 N 支队伍（槽位）；
    *      否则维持 1–6 直选透镜（更快的原路径不删）。
-   *   2. Tab 被 GDD 占用为「透镜循环」，会与浏览器默认的焦点遍历冲突。
+   *   2. Tab 被 本作设计占用为「透镜循环」，会与浏览器默认的焦点遍历冲突。
    *      折中：Tab 切透镜，Shift+Tab 保留原生焦点遍历 —— 键盘用户仍有退路。
    * Space 只在焦点不在可交互控件上时劫持，否则保留「空格按下按钮」的原生行为。 */
   function focusIsInteractive() {
@@ -1310,7 +1310,7 @@
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
         if (cycleArmy(e.key === 'ArrowRight' ? 1 : -1)) { e.preventDefault(); return; }
       }
-      /* 1–3：出征窗开着时选我方第 N 支队伍（GDD 的「我方槽位」） */
+      /* 1–3：出征窗开着时选我方第 N 支队伍（本作设计的「我方槽位」） */
       if (/^[1-3]$/.test(e.key) && pickArmy(Number(e.key))) { e.preventDefault(); return; }
       if (/^[1-6]$/.test(e.key)) { S.lens = LENSES[Number(e.key) - 1].id; persist(); buildLens(); return; }
       var k = e.key.toLowerCase();

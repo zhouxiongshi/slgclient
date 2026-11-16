@@ -1,5 +1,5 @@
 /**
- * M2-3 第二轮补丁（GDD §9.2 / §3.4 / §3.5 / §9.5）。
+ * M2-3 第二轮补丁（本作设计）。
  *
  * 锁四件事：
  *  1. knobs：30 参数、区间钳制、存档覆盖优先于默认值、消费口真实生效；
@@ -191,7 +191,7 @@ test('M2-3·结局：败亡（零城）/ 统一（全州治+诸侯出局）都�
 test('M2-3·sim：确定性（同种子两次运行逐旬一致）+ 经济指标成形', () => {
   const a = runSim({ seed: 42, turns: 6 });
   const b = runSim({ seed: 42, turns: 6 });
-  assert.equal(simHash(a), simHash(b), '同一输入两次运行必须完全一致（GDD §9.5，含 NPC 决策聊天）');
+  assert.equal(simHash(a), simHash(b), '同一输入两次运行必须完全一致（本作设计，含 NPC 决策聊天）');
   assert.equal(a.series.length, 6);
   for (const row of a.series) {
     assert.ok(row.cities >= 1, '玩家至少有 1 城');

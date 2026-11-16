@@ -2,8 +2,8 @@
  * 构建期生成六大面板的静态资料（运行时零外部依赖、不查 MySQL、不联网）。
  *
  * 输入：
- *   conf/skills.json              31 条 battle-kit 主战法原文
- *   conf/library-skills.json      20 条 battle-kit 库战法原文
+ *   conf/skills.json              31 条 本作配置 主战法原文
+ *   conf/library-skills.json      20 条 本作配置 库战法原文
  *   conf/library-skills-extra.json 29 条 M3-8 新机制组合
  *   conf/campaign/strategy/map.json 战略地图 72 城
  *   web/.../general.json          客户端武将名录 368 位（游戏五维）

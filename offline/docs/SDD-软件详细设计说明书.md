@@ -2060,6 +2060,23 @@ build/SLG-Offline-win32-x64/
 
 **验证**：`tests/ui-presentation-hygiene.test.js` 3 条（按钮样式与类名、注入层来源词零命中、术语可见字段零命中且溯源字段完整）；`check-terms` 134 条覆盖 100%，`check-compliance` 554 条零缺口。
 
+### 17.11 源码注释中的来源标注清理（2026-11-16 用户补充要求）
+
+| 编号 | 现象 | 根因 | 处置与现状 |
+|---|---|---|---|
+| `DEV-33` | 上一轮只清了玩家可见文案，源码注释与开发者字符串仍大量写「三国志11/14」「率土之滨口径」「battle-kit 原文」「GDD §x.y」「设计规格 6.2」「章节 K」 | 当时按「工程内部注释可保留」处理，但产品方要求代码里也不出现借鉴来源 | 清理 `server/`、`tools/`、`tests/`、`electron/` 共 77 个文件的 281 行注释与文案，统一改为本作措辞或删去章节号；批量替换后逐项修正 `/14 口径`、`经典避险操作（）`、`本作设计-§8.3` 等断句 |
+
+**保留白名单（不是来源提示，不得删除，否则破坏合规与协议）**：
+
+- 构建脚本的真实路径与合规字段：`battle-kit/skill-library`、`battle-kit/data`、`source`、`descSource`、`nameSource`、`LICENSE`；
+- 运行时协议字段值 `skillSystem: 'battle-kit/original-fragments/v3'` 及其测试断言；
+- 校验脚本的台账字段名 `数值来源`／`source_id`／`confidence`／`证据级别`／`可信度`——只禁止渲染到界面，代码与数据必须保留；
+- 事件剧情里的史书引用（`三国志·武帝纪`、`后汉书`、`三国演义` 回目）与本地地址 `http://127.0.0.1`。
+
+`conf/campaign/innate-skill-audit.json` 等 1214 行 conf 命中属于合规审计台账，未改动。`tools/build-innate-skills.mjs` 的 `note` 会写入审计表，已从批量替换中恢复并逐行精修，避免污染数据。
+
+**回归锁**：`tests/ui-presentation-hygiene.test.js` 第四用例扫描 `server/`/`tools/`/`tests/`/`electron/` 全部 `.js/.cjs/.mjs`，按白名单过滤后断言零来源词；借鉴对象与内部规格编号在界面和源码两侧同时受控。
+
 ---
 
 ## 18. 需求 → 设计 → 实现 → 验证 全链路追溯

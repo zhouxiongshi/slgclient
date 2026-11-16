@@ -1,5 +1,5 @@
 /**
- * M3-1（GDD §7.1 / §7.5）。
+ * M3-1（本作设计）。
  *
  * 锁三件事：
  *  1. heroes-240：240 位三层（60/100/80）、字段完整、宿命成员全覆盖、核心层有 traits；
@@ -72,7 +72,7 @@ test('M3-1·heroes-240：核心层每位有 traits，孙刘曹等高光在核心
     const x = HEROES.heroes.find((h) => h.name === n);
     assert.ok(x && x.layer === 'core', `${n} 应在核心层`);
   }
-  // GDD §12 准入：八王之乱后人物不进核心层
+  // 本作设计 准入：八王之乱后人物不进核心层
   for (const x of HEROES.heroes.filter((h) => h.layer === 'core')) {
     assert.notEqual(x.name, '刘渊', '刘渊（304 年发迹）不进核心层');
     assert.ok(x.died == null || x.died <= 281, `核心层 ${x.name} 卒年 ${x.died} 超出玩法区间`);
@@ -94,7 +94,7 @@ test('M3-1·fate-groups：24 组结构齐备，fullChain 恰 8 组', () => {
   assert.equal(errs.length, 5);
 });
 
-test('M3-1·fate-groups：相性环形距离与登庸分项（GDD §7.3）', () => {
+test('M3-1·fate-groups：相性环形距离与登庸分项（本作设计）', () => {
   assert.equal(xiangxingGap(1, 149), 1, '环形相邻：1 与 149 距离 1');
   assert.equal(xiangxingGap(1, 75), 74, '对径距离 74');
   assert.equal(xiangxingGap(100, 100), 0);

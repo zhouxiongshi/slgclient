@@ -1,5 +1,5 @@
 /**
- * 一键性能探针：真实启动 Electron + 原 web-desktop，量 GDD §11.5 六项预算。
+ * 一键性能探针：真实启动 Electron + 原 web-desktop，量 本作设计 六项预算。
  *
  *   node tools/perf-probe.js              # 源码目录态
  *   node tools/perf-probe.js --packaged   # 打包产物态（需先 pack）
@@ -63,7 +63,7 @@ child.on('exit', (code) => {
   }
   const r = JSON.parse(readFileSync(reportPath, 'utf8'));
   console.log('');
-  console.log('[slg-offline:perf] ── GDD §11.5 预算实测 ──');
+  console.log('[slg-offline:perf] ── 本作设计 预算实测 ──');
   for (const it of r.items) {
     const info = it.budget == null;
     const mark = info ? '·' : it.ok === true ? '✓' : it.ok === false ? '✗' : '?';

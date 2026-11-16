@@ -1,5 +1,5 @@
 /**
- * 酒馆招募、战法格、以及 battle-kit 里实际能复刻的战法目录。
+ * 酒馆招募、战法格、以及 本作配置 里实际能复刻的战法目录。
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';

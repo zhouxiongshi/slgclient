@@ -337,7 +337,7 @@ export function advanceToNextTurn(ctx, now = Date.now()) {
      回合门槛形同虚设，且界面不告诉玩家发生了什么。现在不再假装是「回合到了」：
        - need > 0 明确标记为 fast-forward（自由快进），返回真实推进天数与结算摘要；
        - need === 0 才是正式回合结算 turn-settle；
-       - 摘要供「推进前预览」使用（设计规格 6.10 / P3 / P8：规则 100% 透明）。 */
+       - 摘要供「推进前预览」使用（本作约定 / P3 / P8：规则 100% 透明）。 */
   const fastForward = need > 0;
   const preview = {
     days: need || turnDays,

@@ -130,7 +130,7 @@ const SKILL_PROBE = `(async function(){
     var confs = assets.filter(function(a){ return a && a.json && a.json.cfgId; }).map(function(a){ return a.json; });
     var legacy = ['突击','百战精兵','重斩','锋矢'];
     /* ★ 老占位以 cfgId 口径判定：原工程 4 个占位技能是历史 UUID 映射，cfgId 全部
-       < 10001；率土官网真实战法表里也有叫「重斩」「锋矢」的（cfgId 920015/920065），
+       < 10001；公开战法表里也有叫「重斩」「锋矢」的（cfgId 920015/920065），
        只按名字匹配会把真实战法误判成占位残留（M4-8 假红）。 */
     return {
       ok: true,
@@ -178,7 +178,7 @@ const SKILL_PANEL = `(function(){
   } catch(e){ return {ok:false, why:String(e&&e.stack||e)}; }
 })()`;
 
-/** 战报文本层同样按「是否合法战法名」判定，而不是按名字黑名单：率土真实战法表里
+/** 战报文本层同样按「是否合法战法名」判定，而不是按名字黑名单：本作真实战法表里
  *  有「重斩」「锋矢」同名项（920015/920065），黑名单会把正确渲染判成占位残留。
  *  合法名集合必须**与 server/skills.js 合并进运行时的文件完全一致**——少读一份，
  *  那份表的战法就会被判成「旧占位残留」（实测漏 library-skills 时，「衔枚断后」

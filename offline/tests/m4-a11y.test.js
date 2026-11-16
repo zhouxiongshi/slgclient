@@ -1,5 +1,5 @@
 /**
- * M4-2 无障碍与表现档位测试（GDD §10.7 / 验收 G1-G4）：
+ * M4-2 无障碍与表现档位测试（本作设计 / 验收 G1-G4）：
  *   1) 字号三档制（小 85 / 中 100 / 大 120）：定义在顶部（初始化前）、循环切换、旧连续值归档；
  *   2) G4 无鼠标出征：war 快捷键触发战略层出征按钮；
  *   3) G1 跳过动画不影响结算：战报渲染只读服务端 war.report 结算结果，UI 层不掷骰不复算；
@@ -40,7 +40,7 @@ test('M4-2·G4 无鼠标出征：war 快捷键链完整', () => {
   assert.match(UI_SRC, /getElementById\('slgBtnWar'\)[\s\S]{0,40}wb\.click\(\)/, '触发战略层出征按钮');
   // 出征窗内是 select/button 原生键盘可达元素——断言出征面板存在原生控件
   assert.match(SKILLS_SRC, /createElement\('select'\)/, '出征面板用原生 select（Tab+方向键可达）');
-  // GDD §10.7 键盘行：焦点可见
+  // 本作设计 键盘行：焦点可见
   assert.match(UI_SRC, /button:focus-visible\{outline:2px solid/, '注入 UI 焦点轮廓可见');
 });
 
@@ -64,7 +64,7 @@ test('M4-2·G3 灰度仍可区分：粮道/军标非仅颜色编码', () => {
   assert.match(SKILLS_SRC, /粮道断绝：本城与都城之间没有己方通路/, '断绝后果有文字说明');
   // 军标行军线已走实线 / 未走虚线（setLineDash）——形状双编码
   assert.match(SKILLS_SRC, /setLineDash\(\[6 \* scale, 5 \* scale\]\)/, '行军线未走段虚线编码');
-  // 减少动效开关存在（GDD §10.7 动效行）
+  // 减少动效开关存在（本作设计 动效行）
   assert.match(UI_SRC, /reduceMotion/, '减少动效开关');
   assert.match(UI_SRC, /\.reduce \*\{transition:none/, '减少动效真正关闭过渡/动画');
 });

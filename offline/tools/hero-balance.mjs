@@ -173,7 +173,7 @@ if (existsSync(CSV)) {
 }
 
 /* ---------------- 7) 派生战斗属性审查（M4-8 / M4-10 百分制） ----------------
- * 口径：三国志11 百分制，全表 0~100（上限硬约束）。判据不再是「极差 ≤3.6 倍」——
+ * 口径：百分制，全表 0~100（上限硬约束）。判据不再是「极差 ≤3.6 倍」——
  * 百分制下 10 与 100 本就差 10 倍，真正的底线是「不越界 + 中位不塌」。
  * 这里核对运行时真实配置（loadConfig 之后），不重算公式，避免审查工具自证恒绿。 */
 const runtimeCfg = loadConfig();
@@ -186,7 +186,7 @@ for (const k of ['force', 'strategy', 'defense', 'speed']) {
   const med = v[Math.floor(v.length / 2)] || 0;
   ranges[k] = { min: lo, max: hi, median: med, ratio: lo ? +(hi / lo).toFixed(2) : Infinity };
   if (lo < 1 || hi > 100) {
-    add('high', '属性越界', k, `${lo}~${hi}，三国志11 上限 100`);
+    add('high', '属性越界', k, `${lo}~${hi}，上限 100`);
   } else if (med < 45 || med > 80) {
     add('high', '属性中位异常', k, `中位 ${med}，应落在 45~80（名将与庸才都要有分布）`);
   }
@@ -194,7 +194,7 @@ for (const k of ['force', 'strategy', 'defense', 'speed']) {
 const growVals = derivedRows.map((g) => Number(g.force_grow)).sort((a, b) => a - b);
 const growMedian = growVals[Math.floor(growVals.length / 2)] || 0;
 if (growMedian < 50) add('high', '派生成长偏低', 'force_grow', `中位 ${growMedian}，原表约 63`);
-/* 三国志11 没有独立攻城维度（靠兵器适性），本作保留但粒度天然粗：
+/* 没有独立攻城维度（靠兵器适性），本作保留但粒度天然粗：
    底线是「不能退化成按 layer 的 3 档」，10 种取值以上即可。 */
 const destroyDistinct = new Set(derivedRows.map((g) => Number(g.destroy))).size;
 const costDistinct = new Set(derivedRows.map((g) => Number(g.cost))).size;

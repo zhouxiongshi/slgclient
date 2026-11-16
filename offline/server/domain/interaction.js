@@ -1,11 +1,11 @@
 /**
  * 交互增强层的数据聚合（纯函数，零 IO 副作用，不写存档）。
  *
- * 设计规格对应：
- *  - 5.4 单一事实源：顶栏 / 城池面板 / 战略台 / 建言卡共用这一份聚合，不各算一份。
- *  - 6.4 当前事务 / 军师建言：只列可行动项，按紧急度排序，Top5 由前端截断。
- *  - 6.10 回合推进预览：点「推进」之前就能看到本回合将发生什么。
- *  - 4.4 情报分级：每条信息标 source / confidence，估算值不伪装成精确值。
+ * 字段契约对应：
+ *  - 单一事实源：顶栏 / 城池面板 / 战略台 / 建言卡共用这一份聚合，不各算一份。
+ *  - 当前事务 / 军师建言：只列可行动项，按紧急度排序，Top5 由前端截断。
+ *  - 回合推进预览：点「推进」之前就能看到本回合将发生什么。
+ *  - 情报分级：每条信息标明依据与精度，估算值不伪装成精确值。
  *
  * 纪律：
  *  - 不 import strategy.js / panels.js（它们互相成环），只读 state 与静态 map.json，
@@ -207,10 +207,10 @@ export function interactionState(state, cfg) {
     ],
   };
 
-  /* ---------- 章节 K：服务端未提供 / 需前端降级的字段 ----------
+  /* ---------- 字段缺口：服务端未提供 / 需前端降级的字段 ----------
      ★ 2026-11-15 产品决策（PRD GAP-01）：这三项是**刻意降级的设计特性**，
        不是「待补齐的字段缺口」，不许为了把清单清零而硬造数值：
-         · 敌方侦察精确值 —— R-16.3 / GDD §6.7 要求情报不足时给区间不给定值，
+         · 敌方侦察精确值 —— R-16.3 / 本作设计 要求情报不足时给区间不给定值，
            补精确值会直接废掉「派斥候收窄区间」这条玩法；
          · 逐将战前 delta —— 内核没有逐将输出，给数字就是编造，
            违反 FR-24.5 与合规红线（AI 不得无证据编造游戏属性）；
@@ -230,7 +230,7 @@ export function interactionState(state, cfg) {
 
   return {
     ok: true, day, turn, month,
-    /* ★ M0-4（GDD §14.2-3 / 验收 B1~B4）：撤销栈策略由服务端权威下发，前端不复算。
+    /* ★ M0-4（本作设计-3 / 验收 B1~B4）：撤销栈策略由服务端权威下发，前端不复算。
        depth：本旬可撤销步数（undoDepth，参数表 §9.2）；
        clearOnBattle / clearOnLoad：前端在检测到新战斗结算 / 读档回退时清空撤销栈；
        battleCount / turn：清栈检测的信号（战斗计数增加 / turn 回退）。 */
@@ -269,7 +269,7 @@ export function interactionState(state, cfg) {
       supplyCut: cutCities.map((c) => ({ id: c.id, name: c.name, days: (c.supply && c.supply.days) || 10 })),
     },
     agenda, turnPreview, fieldGaps,
-    /* ★ M3-6 事件弹窗（GDD §8.3）：只读投影——strategyEventTick 已把待决事件排进
+    /* ★ M3-6 事件弹窗（本作设计）：只读投影——strategyEventTick 已把待决事件排进
        st.pendingEvents（未决不堆叠），这里原样下发，点选走 /__slg/strategy/action
        eventChoice（落账在 strategy 层，本模块零 IO）。 */
     pendingEvents: (Array.isArray(st.pendingEvents) ? st.pendingEvents : []).map((e) => ({

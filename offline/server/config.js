@@ -74,8 +74,8 @@ export function loadConfig(confDir = defaultConfDir()) {
     defender: c.defender ?? 0,
   }));
 
-  /* ★ M4-10 三国志11 百分制：原表 general.json 是「百分制 ×100」的设计值
-     （force 8400 = 武力 84，中位 68 正落在三国志11 的常见区间）。
+  /* ★ M4-10 百分制：原表 general.json 是「百分制 ×100」的设计值
+     （force 8400 = 武力 84，中位 68 正落在的常见区间）。
      玩家要求所有人物基础属性上限 100，这里一次性把原表 5 个战斗维度归一到
      0~100；之后再并入主公与史实派生（后者本身就是百分制），全表统一量纲。
      `*_grow` 不动：它是 0~100 的成长率，进内核时按 /100*10 换算成每级点数。 */
@@ -103,7 +103,7 @@ export function loadConfig(confDir = defaultConfDir()) {
       general.list.push(protag.general);
     }
   } catch { /* 没有穿越者模板时仍用原武将表 */ }
-  /* ★ M3-4 武将数据层入包（GDD §7.1）：heroes-240.json 的 240 位并入武将表。
+  /* ★ M3-4 武将数据层入包（本作设计）：heroes-240.json 的 240 位并入武将表。
      包内已有同名/同 cfgId 的沿用原条目；新武将（240001+）从五维确定性派生
      general.json 形状的模板条目。战法按名字走 hero-skills 表（world.js innateOf），
      无需在此登记；build-heroes.mjs 缺文件时退化为原武将表。
@@ -131,7 +131,7 @@ export function loadConfig(confDir = defaultConfDir()) {
       const speedFive = (tong + wu) / 2;
       const fiveSum = ['tong', 'wu', 'zhi', 'zheng', 'mei']
         .reduce((s, k) => s + clampFive(five[k]), 0);
-      /* ★ M4-10 三国志11 口径：交集人物以**史载五维为权威**，覆盖原表主属性。
+      /* ★ M4-10 口径：交集人物以**史载五维为权威**，覆盖原表主属性。
          原表吕布防御 9700（=97）比史载统率 70 高 27，甚至压过诸葛亮 92——
          这正是玩家说的「属性严重影响平衡」。star / arms / cost 保留原设计
          （它们是稀有度与经济参数，不是能力值）。 */

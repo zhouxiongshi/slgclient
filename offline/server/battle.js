@@ -11,7 +11,7 @@
  *   → 翻译成原 proto.WarReport.rounds（c_id/lv/i_e/e_v/e_r/kill 全部来自新技能表）
  *   → 原 WarReportDesItemLogic 照常渲染，UI 一行未改
  *
- * 数值来源：battle-kit battle_config.json（796 战法名 / 83 伤害率 / 58 组等级插值 / 188 效果术语）。
+ * 数据口径：本作配置 battle_config.json（796 战法名 / 83 伤害率 / 58 组等级插值 / 188 效果术语）。
  */
 import { runBattle, DEFAULT_BATTLE_CONFIG, crc32Utf8 } from '../kernel/index.js';
 import { generalToArray, findGeneral, nextId } from './world.js';
@@ -23,11 +23,11 @@ import { armsApt } from './domain/aptitude.js';
 /* ★ M4-13：地图格守军同样按坐标确定性分配，不再复用写死的 6 个 cfgId */
 import { garrisonCfgIds } from './domain/garrison.js';
 
-/** GDD §6.2：一方兵力降到开战时的这个比例及以下，算溃败。 */
+/** 本作设计：一方兵力降到开战时的这个比例及以下，算溃败。 */
 export const ROUT_RATIO = 0.1;
 
 /**
- * 兵力进入伤害（GDD §6.3 的兵力系数）。
+ * 兵力进入伤害（本作设计 的兵力系数）。
  * 内核把兵力当生命、伤害不读兵力，所以 800 兵和 5000 兵打出的伤害曾经一样。
  * 以 800 为 1，指数小于 1：添兵有用，单槽堆到上限也不会按人数线性秒杀。
  */
@@ -64,7 +64,7 @@ export function judgeBattle({ winner, aStart, dStart, aLeft, dLeft }) {
  *  时一场战斗平均 2.2 回合 / 59 事件 / 约 22 条战报 hit，四类战法能完整展开。 */
 export const TROOP_SCALE = 1;
 
-/** 内核配置快照：battle-kit 原数值 + corrected 减伤方向修正。 */
+/** 内核配置快照：本作配置 原数值 + corrected 减伤方向修正。 */
 let _cfg = null;
 export function battleConfig() {
   if (!_cfg) {
@@ -94,7 +94,7 @@ function loadoutFor(g) {
 
 /** 把原 general.json 的武将属性映射成内核 Hero（属性数值直接来源于原配置）。 */
 function makeHero(g, cfg) {
-  /* ★ M2-3 代将（GDD §3.4）：五维 50、无战法、不可培养——防止连环阵亡后无法出征的兜底 */
+  /* ★ M2-3 代将（本作设计）：五维 50、无战法、不可培养——防止连环阵亡后无法出征的兜底 */
   if (g.isStandIn) {
     return {
       heroid: g.id, name: g.name || '代将', level: g.level || 1,
@@ -109,10 +109,10 @@ function makeHero(g, cfg) {
     speed: 60, destroy: 12, force_grow: 30, strategy_grow: 30,
     defense_grow: 30, speed_grow: 30, destroy_grow: 20, arms: [1],
   };
-  /* ★ M4-10：generalByCfg 已统一到三国志11 百分制（0~100），进内核不再 ÷100——
+  /* ★ M4-10：generalByCfg 已统一到百分制（0~100），进内核不再 ÷100——
      内核本来就是百分制（attack_base 60 就是武力 60）。`*_grow` 仍是 0~100 的
      成长率，按 /100*10 换算成每级点数（原表 30 → 每级 +3）。
-     ★ 上限硬约束：三国志11 的能力上限是 100，所以每级点数再按 (100-base)/9 收敛，
+     ★ 上限硬约束：的能力上限是 100，所以每级点数再按 (100-base)/9 收敛，
      Lv10 恰好不超过 100——高属性者成长慢，低属性者才练得动。 */
   const attr = (base, grow) => {
     const b = Math.round(Number(base ?? 60));
@@ -155,7 +155,7 @@ function makeUnit(unitId, side, general, cfg, troops, pos = 0) {
      取该武将五维在当前兵种上的适性系数（1.00~1.15），乘到攻/防基础值；
      界面上的「适性 X%」用的是同一个 armsApt()，描述与计算同源。
      只动攻防、不动速度/智力：速度会改变 actionOrder，进而漂事件指纹。
-     clamp 100 守住三国志11 的能力上限（M4-10 红线）。 */
+     clamp 100 守住的能力上限（M4-10 红线）。 */
   const gc = cfg.generalByCfg.get(Number(general.cfgId));
   const apt = gc
     ? armsApt({ force: gc.force, strategy: gc.strategy, defense: gc.defense }, general.curArms || 1)
@@ -499,7 +499,7 @@ export function resolveBattle({ cfg, state, army, x, y, seed, defenseOverride = 
   const siegeBattle = siege;
   /* withAnim=false：推演用。推演只要数值与叙事，不需要回放动作流；
      而 buildBattleAnim 要为每个动作生成一句人话（战法档案 + 措辞），
-     一次推演要跑 4~5 场内核，累计就顶爆 GDD §6.7 的单次 ≤50ms 预算。 */
+     一次推演要跑 4~5 场内核，累计就顶爆 本作设计 的单次 ≤50ms 预算。 */
   const beginSoldiers = [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(army.soldiers?.[i]) || 0)));
   // 有武将且有余兵的槽位才上阵；slot 保留原槽位号，序号 i 才是内核 unit id
   const attackers = (army.generals || [])
@@ -574,7 +574,7 @@ export function resolveBattle({ cfg, state, army, x, y, seed, defenseOverride = 
   const resultCode = judgeBattle({
     winner: kernel.winner, aStart, dStart, aLeft: aLeft0, dLeft: dLeft0,
   });
-  /* GDD §6.2 追击：溃败之后，败方再损「胜方骑兵占比 × pursuitRate」。未决不追。 */
+  /* 本作设计 追击：溃败之后，败方再损「胜方骑兵占比 × pursuitRate」。未决不追。 */
   if (resultCode === 2 || resultCode === 0) {
     const winnerBegin = resultCode === 2 ? beginSoldiers : defense.soldiers;
     const start = winnerBegin.reduce((s, n) => s + Math.max(0, Number(n) || 0), 0);

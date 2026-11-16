@@ -1,5 +1,5 @@
 /**
- * 委任对象化（GDD §5.6）：「我不用管，但我知道它在干什么」，不是「我不用玩」。
+ * 委任对象化（本作设计）：「我不用管，但我知道它在干什么」，不是「我不用玩」。
  *
  * - appointment = { id, officerId, cityId, goal, startTurn, status, blockedReason, lastTaskId, ... }
  * - 每旬自动生成一条**真实的内政任务**（走 interior-task.beginInteriorTask，不另写逻辑），
@@ -48,7 +48,7 @@ export function appointmentView(state, a) {
   };
 }
 
-/** 全部委任（blocked 置顶——GDD §5.6「缺资源置顶报告，不静默跳过」）。 */
+/** 全部委任（blocked 置顶——本作设计「缺资源置顶报告，不静默跳过」）。 */
 export function appointmentListView(state) {
   const day = Math.floor(Number(state?.clock?.day) || 1);
   const all = appointments(state).filter((a) => a.status !== 'cancelled');
@@ -144,7 +144,7 @@ export function appointmentTick(state, cfg, ctx) {
       continue;
     }
     const row = st.cities?.[a.cityId];
-    // 城丢失 → 委任自动结束（GDD §5.6 硬规则）
+    // 城丢失 → 委任自动结束（本作设计 硬规则）
     if (!row || row.owner !== 'player') {
       a.status = 'done';
       a.blockedReason = '城失';

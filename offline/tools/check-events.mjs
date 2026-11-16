@@ -1,5 +1,5 @@
 /**
- * check-events.mjs — 事件系统构建期冲突检测（GDD §8.3 / §13.1 事件 DSL 风险）
+ * check-events.mjs — 事件系统构建期冲突检测（本作设计 事件 DSL 风险）
  *
  * 校验失败即构建失败（退出码 1）。规则：
  *  1. schema：每条事件过 validateEventSchema（字段白名单、choices、source）

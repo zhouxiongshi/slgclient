@@ -100,7 +100,7 @@ test('DEV-14：粮道断文案与 supply.js 同源，不得再出现「士气 �
 
 test('GAP-01 旁证：注入层不编造士气数值，fieldGaps 保持显式降级', () => {
   const ix = read('server/domain/interaction.js');
-  assert.match(ix, /刻意降级的设计特性/, '章节 K 必须写明三项为何不补');
+  assert.match(ix, /刻意降级的设计特性/, '字段缺口 必须写明三项为何不补');
   assert.match(ix, /have:\s*false/);
   assert.doesNotMatch(ix, /have:\s*true\s*}/, '不许把降级项标成「已提供」');
 });

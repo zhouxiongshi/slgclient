@@ -1,5 +1,5 @@
 /**
- * event-dsl.js — 事件条件 DSL（GDD §8.1 / §8.2）
+ * event-dsl.js — 事件条件 DSL（本作设计）
  *
  * 「够用即可，不做通用脚本」：
  *  - 字段白名单：turn / year / season / faction / cityOwned / cityLost /
@@ -56,7 +56,7 @@ function cmpValue(opObj, actual) {
 /* ------------------------------------------------------------------ */
 /* 时间/边界字段：裸数字与单算子对象**都生效**                          */
 /* ------------------------------------------------------------------ */
-/* 历史缺陷（P3-03）：turnMin/yearMin 等只认裸数字，照 GDD §8.2 写成        */
+/* 历史缺陷（P3-03）：turnMin/yearMin 等只认裸数字，照 本作设计 写成        */
 /*   { "turnMin": { ">=": 5 } } 会被静默忽略 —— 条件恒成立、不报错。      */
 /* 静默放宽比抛错危险得多（事件会在不该触发的时候全触发），所以这里两种写法  */
 /* 都支持，且对象写法里的非法算子照旧 throw。                              */
@@ -95,7 +95,7 @@ export function evaluateEvent(when, ctx) {
   if (when.turnMax != null && !boundOk(when.turnMax, ctx.turn, 'max')) return false;
   if (when.yearMin != null && !boundOk(when.yearMin, ctx.year, 'min')) return false;
   if (when.yearMax != null && !boundOk(when.yearMax, ctx.year, 'max')) return false;
-  /* GDD §8.2 的字段名是 turn / year（精确匹配或单算子） */
+  /* 本作设计 的字段名是 turn / year（精确匹配或单算子） */
   if (when.turn != null && !exactOk(when.turn, ctx.turn)) return false;
   if (when.year != null && !exactOk(when.year, ctx.year)) return false;
   if (when.season != null) {

@@ -1,5 +1,5 @@
 /**
- * M3-3：六剧本生成器测试（GDD §12.1 四条开局校验）。
+ * M3-3：六剧本生成器测试（本作设计 四条开局校验）。
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
