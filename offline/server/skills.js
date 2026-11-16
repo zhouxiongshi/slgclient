@@ -1234,6 +1234,8 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     dock.innerHTML = ''
       + '<span class="gp">沙盘</span>'
       + '<button id="slgStratTick" class="pri">推演一月</button>'
+      + '<button id="slgStratTick3" title="连推三旬；遇待决事件或前锋抵城自动停">推演三月</button>'
+      + '<button id="slgStratAuto" title="自动推旬：有事待决自动暂停（再点关闭）">自动推旬 ▶</button>'
       + '<button id="slgBtnWar" class="pri" data-ix-allow="1">出征</button>'
       + '<button id="slgBtnHome">本城</button>'
       + '<i class="sep"></i>'
@@ -1327,6 +1329,53 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     /* ★ 用户 ⑩：武将 / 战报在左侧坞与右侧六府各有一份，属重复入口。
        六府是它们的家（点开就是完整面板），左侧坞只保留沙盘动作，故此处移除。 */
     document.getElementById('slgStratTick').onclick = function () { window.__slgTick(); };
+    /* ★ P14 UX（降低操作复杂性）：
+       - 推演三月：一次点连推三旬，中期无战事时少点两次；
+       - 自动推旬：挂机推进，有未决事件或前锋抵城待定夺时自动暂停（安全停机）。 */
+    function pendingBlock() {
+      var s = lastState;
+      if (!s) return '';
+      if ((s.pendingEvents || []).length) return '有事件待主公定夺';
+      var pend = (s.marches || []).some(function (mm) { return mm.pendingBattle; });
+      if (pend) return '前锋抵城待定夺（③ 遭遇）';
+      return '';
+    }
+    var tick3 = document.getElementById('slgStratTick3');
+    tick3.onclick = function () {
+      tick3.disabled = true;
+      var run = function (left) {
+        if (left <= 0) { tick3.disabled = false; return; }
+        Promise.resolve(window.__slgTick()).then(function (r) {
+          if (!r || r.skipped) { tick3.disabled = false; return; }
+          var blk = pendingBlock();
+          if (blk) {
+            if (window.__slgToast) window.__slgToast('连推暂停：' + blk, false);
+            tick3.disabled = false;
+            return;
+          }
+          run(left - 1);
+        }).catch(function () { tick3.disabled = false; });
+      };
+      run(3);
+    };
+    var autoTimer = null;
+    var autoBtn = document.getElementById('slgStratAuto');
+    function autoStop(why) {
+      if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+      autoBtn.textContent = '自动推旬 ▶';
+      autoBtn.classList.remove('pri');
+      if (why && window.__slgToast) window.__slgToast('自动推旬暂停：' + why, false);
+    }
+    autoBtn.onclick = function () {
+      if (autoTimer) { autoStop(''); return; }
+      autoBtn.textContent = '自动推旬 ⏸';
+      autoBtn.classList.add('pri');
+      autoTimer = setInterval(function () {
+        var blk = pendingBlock();
+        if (blk) { autoStop(blk); return; }
+        window.__slgTick();
+      }, 2400);
+    };
     // 滚轮缩放（以光标为锚）＋拖拽平移；轻点仍是选城
     canvas.style.cursor = 'grab';
     var drag = null;

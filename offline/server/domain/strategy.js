@@ -28,7 +28,7 @@ import { cityLabelRank, labelPolicy } from './map-lod.js';
 /* ★ P11 兵役制：城池视图与战略动作只从 levy.js 取兵源数字，禁止另算一份 */
 import { levyView, checkLevy, commitLevy } from './levy.js';
 import { resolveBattle, battleSeedFor } from '../battle.js';
-import { planCampaign, commitBrainGoal, noteBattleOutcome, noteCityLost } from './strategy-brain.js';
+import { planCampaign, commitBrainGoal, noteBattleOutcome, noteCityLost, PERSONA_AXES } from './strategy-brain.js';
 import { quoteMarch, openMonth, closeMonth, noteMove, noteCity, booksOf } from './strategy-log.js';
 import { onTileCleared, chapterRules, noticeRecruit } from './campaign.js';
 import { dayFraction, ensureTavern } from './tavern.js';
@@ -1010,6 +1010,162 @@ export function spawnFactionAssault(state, cfg, ctx, faction, targetCity, troops
   return garrison;
 }
 
+/* ---------------------------------------------------------------- 驰援
+ * ★ P14 友军驰援（用户 2026-11-16）：玩家大军压境时，守城势力（及盟友）从邻城
+ * 出援军回防——援军入城并进战略层兵力，会真实抬高 defenseFor 的守军折算；
+ * 行军实体 side:'faction' 玩家可见，可在遭遇/推演里看到援军动向并应对。
+ * 人格轴决定谁肯救：defense 过低（吕布）见死不救。 */
+
+const RELIEF_MIN_SEND = 500;
+
+function reliefResponders(state, st, owner) {
+  if (!owner || owner === 'player' || owner === 'han') return [];
+  const conf = factionConfFor(state);
+  const out = [owner];
+  for (const f of conf.factions) {
+    if (f.id !== owner && isAllied(st, f.id, owner)) out.push(f.id);
+  }
+  return out;
+}
+
+/** 每个结算日扫描来犯军：有玩家大军在途、且目标城是某诸侯（或其盟友）的城，
+ *  就让该势力从邻城派一次援军。每支来犯军每势力至多援一次（mm.reliefBy）。 */
+export function factionReliefTick(state, cfg, ctx) {
+  const st = ensureStrategy(state);
+  if (!Array.isArray(st.marches) || !st.marches.length) return [];
+  const map = strategyMap();
+  const conf = factionConfFor(state);
+  const today = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  const dispatched = [];
+  for (const mm of st.marches) {
+    if (mm.side !== 'player' || mm.resolved) continue;
+    if (mm.kind === 'transport' || mm.kind === 'relief') continue;
+    const targetId = Number(mm.to);
+    const tstate = st.cities[targetId];
+    if (!tstate) continue;
+    const target = map.cities.find((c) => c.id === targetId);
+    if (!target) continue;
+    const daysLeft = mm.arriveDay - today;
+    if (daysLeft < 1) continue;
+    mm.reliefBy = mm.reliefBy || {};
+    for (const fid of reliefResponders(state, st, tstate.owner)) {
+      if (mm.reliefBy[fid]) continue;
+      const faction = conf.factions.find((f) => f.id === fid);
+      if (!faction) continue;
+      const done = dispatchRelief(state, ctx, faction, targetId, mm, target, tstate, today);
+      if (done) {
+        mm.reliefBy[fid] = true;
+        dispatched.push({ faction: fid, to: targetId, troops: done });
+      }
+    }
+  }
+  return dispatched;
+}
+
+function dispatchRelief(state, ctx, faction, targetId, incoming, target, tstate, today) {
+  const st = ensureStrategy(state);
+  const map = strategyMap();
+  const axes = PERSONA_AXES[faction.persona || faction.name] || PERSONA_AXES.曹操;
+  if (axes.defense < 0.25) return 0;   // 好战无谋者见死不救（吕布）
+  // 已有本势力未抵达的援军在途，不重复派
+  if ((st.marches || []).some((x) => x.side === 'faction' && x.kind === 'relief'
+    && x.factionId === faction.id && Number(x.to) === Number(targetId) && !x.resolved)) return 0;
+  // 兵源：本势力所有可达邻城（★ P14 多城合援，单城援军太薄挡不住大军）
+  const adj = marchableNeighbors(targetId, Object.keys(st.cities).map(Number)).map(Number);
+  const sources = [];
+  for (const id of adj) {
+    if (!canMarchBetween(id, targetId).ok) continue;
+    const row = st.cities[id];
+    if (!row || row.owner !== faction.id) continue;
+    const troops = Math.round(Number(row.troops) || 0);
+    if (troops >= RELIEF_MIN_SEND + 320) {
+      sources.push({ id, troops, arms: map.cities.find((c) => c.id === id)?.arms || '' });
+    }
+  }
+  sources.sort((a, b) => b.troops - a.troops || a.id - b.id);
+  if (!sources.length) return 0;
+  // 每城拟发：压得动来犯军，又不把出发城抽空；至多两城合援
+  const wantEach = Math.max(RELIEF_MIN_SEND, Math.round((Number(incoming.troops) || 0) * (0.55 + axes.defense * 0.45) / Math.min(2, sources.length)));
+  let totalSend = 0;
+  for (const src of sources.slice(0, 2)) {
+    const reserve = Math.max(320, Math.round(src.troops * (0.30 + axes.defense * 0.10)));
+    const send = Math.min(Math.max(0, src.troops - reserve), wantEach);
+    if (send < RELIEF_MIN_SEND) continue;
+    const purse = st.resources[faction.id] || {};
+    const quote = quoteMarch(src.id, targetId, send, src.arms, { grain: purse.grain || 0, gold: purse.gold || 0 });
+    if (!quote.ok) continue;
+    const spendG = spendFactionGrain(state, faction.id, quote.totalGrain, String(src.id));
+    if (!spendG.ok) continue;
+    const resG = st.resources[faction.id];
+    resG.gold = Math.max(0, (resG.gold || 0) - quote.totalGold);
+    st.cities[src.id].troops = Math.max(0, src.troops - send);
+    /* 轻骑驰援：比常规行军快三成，且紧急军情下保证不晚于来犯军抵城 */
+    const npcSpeed = 130;
+    const km = marchKmBetween(src.id, targetId);
+    const marchDays = Math.max(1, Math.min(marchDaysBy(km, npcSpeed), Math.max(1, incoming.arriveDay - today)));
+    if (!Array.isArray(st.marches)) st.marches = [];
+    st.marches.push({
+      id: (st.marchSeq = (st.marchSeq || 0) + 1),
+      side: 'faction', kind: 'relief', from: src.id, to: Number(targetId),
+      departDay: today, arriveDay: today + marchDays,
+      troops: send, km, speed: npcSpeed, marchDays,
+      factionId: faction.id, factionName: faction.name || '',
+      intel: 'precise',
+    });
+    totalSend += send;
+    const srcName = map.cities.find((c) => c.id === src.id)?.name || '';
+    recordEvent(state, `${faction.name}见${target.name}被围，自${srcName}发援军 ${send}，约 ${marchDays} 日抵城。`);
+    noteMove(state, {
+      kind: '驰援', faction: faction.id, who: faction.name, result: '在途',
+      fromId: src.id, fromName: srcName, toId: target.id, toName: target.name,
+      troops: send, li: quote.li || 0, days: quote.days || 0,
+      totalGrain: quote.totalGrain || 0, totalGold: quote.totalGold || 0,
+    });
+    noteCity(state, targetId, {
+      kind: '驰援',
+      text: `${faction.name}自${srcName}发援军 ${send} 赴本城，约 ${marchDays} 日抵。`,
+    });
+    ctx.push?.('chat.push', {
+      rid: 0, nickName: '系统', type: 0,
+      msg: `【军情】${faction.name}自${srcName}出援军 ${send} 赴${target.name}，约 ${marchDays} 日抵达。`,
+      time: Date.now(),
+    });
+  }
+  return totalSend;
+}
+
+/** 驰援到达：城还在本方手里就并兵入守（真实抬高守军折算）；城已易主则扑空折返。 */
+function resolveReliefArrival(state, ctx, mm, map) {
+  const st = ensureStrategy(state);
+  const targetId = Number(mm.to);
+  const tstate = st.cities[targetId];
+  const target = map.cities.find((c) => c.id === targetId);
+  if (!tstate || !target) return;
+  const send = Math.max(0, Math.round(Number(mm.troops) || 0));
+  const toName = target.name;
+  const who = mm.factionName || otherName(state, mm.factionId);
+  if (tstate.owner === mm.factionId || isAllied(st, tstate.owner, mm.factionId)) {
+    tstate.troops = Math.max(200, Math.round((Number(tstate.troops) || 0) + send));
+    recordEvent(state, `${who}的援军 ${send} 人入${toName}城，守军增至 ${tstate.troops}。`);
+    noteCity(state, targetId, { kind: '驰援', text: `${who}援军 ${send} 入城，守军增至 ${tstate.troops}。` });
+    ctx.push?.('chat.push', {
+      rid: 0, nickName: '系统', type: 0,
+      msg: `【军情】${who}援军抵达${toName}，守军增至 ${tstate.troops}。`,
+      time: Date.now(),
+    });
+  } else {
+    const back = st.cities[Number(mm.from)];
+    const ret = Math.round(send * 0.7);
+    if (back && back.owner === mm.factionId) {
+      back.troops = Math.max(200, Math.round((Number(back.troops) || 0) + ret));
+      recordEvent(state, `${who}驰援${toName}扑空，残部 ${ret} 退回。`);
+    } else {
+      recordEvent(state, `${who}驰援${toName}扑空，援军溃散。`);
+    }
+    noteCity(state, targetId, { kind: '驰援', text: `${who}驰援扑空（城已易主）。` });
+  }
+}
+
 /** 选出征队伍：优先指定 armyId，否则挑兵力最多的那支（界面只传城时也能打）。
  *  ★ P2：行军中的队伍自动跳过，不能一队两用。
  *  ★ P7：给了 cityId 就只在该城驻军中挑（分城出兵的前提）。 */
@@ -1462,11 +1618,18 @@ export function strategyResolveMarches(state, cfg, ctx) {
   const today = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
   const map = strategyMap();
   const results = [];
-  for (const mm of st.marches) {
+  /* ★ P14 驰援：faction 侧先解析——同日抵达时援军先并兵入守，玩家面对的是
+     援军已入城的守军（否则驰援永远扑空，形同虚设）。 */
+  const ordered = [...st.marches].sort((a, b) => (a.side === 'player' ? 1 : 0) - (b.side === 'player' ? 1 : 0));
+  for (const mm of ordered) {
     /* 修 U12：诸侯行军只做「可见性 + 到达标记」。战斗已在 applyOrders 抽象结算，
        此处不能重复开打；到达后保留 resolved 行，供战报与情报回看。 */
     if (mm.side !== 'player') {
-      if (!mm.resolved && today >= mm.arriveDay) mm.resolved = true;
+      if (!mm.resolved && today >= mm.arriveDay) {
+        mm.resolved = true;
+        /* ★ P14 驰援：援军到达即并兵入守（或扑空折返） */
+        if (mm.kind === 'relief') resolveReliefArrival(state, ctx, mm, map);
+      }
       continue;
     }
     if (mm.resolved) continue;
@@ -2635,6 +2798,8 @@ export function strategyViewState(state, cfg = null) {
           : (Number(mm.troops) || 0),
         factionName: mm.factionName || '',
         intel: mm.intel || '',
+        /* ★ P14 UX：自动推旬需要知道「前锋抵城待主公定夺」 */
+        pendingBattle: !!(mm.pendingBattle && !mm.confirmed && mm.side === 'player'),
         /* ★ M2 粮道 L2：军级补给状态随行军行下发（通畅/断绝/断绝天数），
            客户端只渲染，不再自己猜补给好不好 */
         supplyOk: mm.supplyOk !== false,

@@ -39,7 +39,7 @@ import { ensureTavern, guestsNow, announceTavern, todaysGuests, dayFraction, exp
 import { talentRecruitRate, xiangxingOf, yiliOf, relationSummary, relationGraph } from './domain/relation.js';
 import {
   strategyTick, strategyAttack, strategyTurnDays, ensureStrategy, clearThreat,
-  strategyResolveMarches, strategyRecallMarch, recordEvent,
+  strategyResolveMarches, strategyRecallMarch, recordEvent, factionReliefTick,
 } from './domain/strategy.js';
 import { createHash } from 'node:crypto';
 import { noteIfGeneralDown } from './command.js';
@@ -310,6 +310,8 @@ export function settleWorld(ctx, now = Date.now()) {
   totalYield(state, cfg);
   const settled = settleCampaign(state, cfg, ctx, now);
   // ★ P2：行军到达结算（在诸侯推演之前，保证当天抵达当天开打；战报与播报由内部推）
+  // ★ P14：驰援感知在到达结算**之前**跑——玩家大军在途时守方就有机会派援军
+  factionReliefTick(state, cfg, ctx);
   strategyResolveMarches(state, cfg, ctx);
   strategyTick(state, cfg, ctx, now);
   ensureTavern(state, cfg);

@@ -191,16 +191,19 @@ function buildView(faction, snapshot, state, axes, mem) {
     return { reserve, send: Math.max(0, Math.min(raw, (stage?.troops || 0) - reserve)) };
   }
 
-  function workable(city) {
+  function workable(city, needMul = 1, sendMul = 1) {
     if (!city || allies.has(city.owner)) return null;
     const fails = mem.fails?.[String(city.id)] || 0;
     if (fails >= patience) return null;
     const stage = stageFor(city.id);
     if (!stage) return null;
-    const { reserve, send } = sendOf(stage);
+    const reserve = sendOf(stage).reserve;
+    /* sendMul：制衡讨伐时 1.35（倾巢而出），常规出征 1（sendOf 基准） */
+    const raw = Math.round((stage?.troops || 0) * (0.48 + axes.tempo * 0.22) * sendMul);
+    const send = Math.max(0, Math.min(raw, (stage?.troops || 0) - reserve));
     if (send < 400) return null;
     const ratio = odds(stage, city, send);
-    if (ratio < need) return null;
+    if (ratio < need * needMul) return null;
     const quote = quoteMarch(stage.id, city.id, send, stage.arms, {
       grain: Math.max(0, grain - recruitBudget),
       gold,
@@ -292,6 +295,14 @@ function chooseGoal(view) {
     return lock('削弱', hate.city.id, 3, `削弱${view.lord(hate.city.owner)}，出兵${hate.city.name}以报失城`);
   }
 
+  /* ★ P14 制衡（用户 2026-11-16「全程没有挑战性」）：玩家城数/兵力坐大后，
+     诸侯不再无视玩家——同 other 诸侯一样择可图之城讨伐，让中期起压力上来。 */
+  const power = balanceOfPower(view);
+  const against = playerOption(view);
+  if (against && (view.axes.aggression >= 0.4 || power.share >= 0.4)) {
+    return lock('削弱', against.city.id, 3, `${view.lord('player')}势大，出兵${against.city.name}以制衡`);
+  }
+
   const han = hanOption(view);
   if (han) {
     return lock('吞并', han.city.id, 3, `取${han.city.name}，汉廷守军${han.city.troops}，由${han.stage.name}出兵可胜`);
@@ -369,6 +380,30 @@ function peerOption(view) {
   return best;
 }
 
+/* ★ P14 制衡：玩家城数/兵力占比（按非汉廷城计）。城数 ≥3 或占比 ≥25% 即视为
+   「势大」，可入诸侯讨伐目标；占比 ≥40% 时连低 aggression 的稳健派也会出手。 */
+function balanceOfPower(view) {
+  const mine = view.cities.filter((c) => c.owner === 'player');
+  const others = view.cities.filter((c) => c.owner !== 'han').length || 1;
+  return { count: mine.length, share: mine.length / others };
+}
+
+function playerOption(view) {
+  const p = balanceOfPower(view);
+  if (p.count < 3 && p.share < 0.25) return null;
+  /* 制衡减压：玩家城守军厚，与打千余守军的汉城同一条 need 线会让制衡永远开不
+     出兵——占比越高减压越大（0.85 / 0.7），讨伐玩家成为现实选项。 */
+  const needMul = p.share >= 0.4 ? 0.7 : 0.85;
+  let best = null;
+  for (const c of view.foreign) {
+    if (c.owner !== 'player') continue;
+    const plan = view.workable(c, needMul, 1.35);
+    if (!plan) continue;
+    if (!best || plan.ratio > best.ratio) best = plan;
+  }
+  return best;
+}
+
 function compile(goal, view) {
   const orders = [];
   let seqI = 0;
@@ -429,7 +464,14 @@ function compile(goal, view) {
 function attackPlan(goal, view) {
   if (!goal || goal.type === '固守') return null;
   const city = view.byId.get(Number(goal.target));
-  return city ? view.workable(city) : null;
+  if (!city) return null;
+  /* ★ P14 制衡目标复查同门槛：chooseGoal 对玩家目标用了减压 need / 倾巢 sendMul，
+     这里复查必须同参，否则目标被选中却永远发不出兵。 */
+  if (city.owner === 'player') {
+    const p = balanceOfPower(view);
+    return view.workable(city, p.share >= 0.4 ? 0.7 : 0.85, 1.35);
+  }
+  return view.workable(city);
 }
 
 function capitalThreat(view) {
@@ -480,7 +522,13 @@ function recruitFallback(view) {
 
 function pushRecruit(addI, view, city) {
   if (!city) return;
-  const want = Math.round(180 + view.axes.economy * 720);
+  /* ★ P14 内政感知（用户「内政笨」）：兵压境/刚失城时征兵规模上浮，
+     安稳期按 economy 基线走——不再是无威胁也傻征同一批。 */
+  const threat = capitalThreat(view);
+  const mul = threat
+    ? 1 + Math.min(0.8, (threat.troops / Math.max(1, view.home?.troops || 1)) * 0.35)
+    : (view.recentLoss.length ? 1.25 : 1);
+  const want = Math.round((180 + view.axes.economy * 720) * mul);
   const afford = Math.floor((view.grain - 500) / 2);
   const count = Math.max(0, Math.min(want, afford));
   if (count >= 150) {
@@ -504,6 +552,9 @@ function alliancePlan(view, attack) {
   for (const [id, n] of Object.entries(view.grudges)) {
     if (n > hate && !view.allies.has(id)) { hate = n; rival = id; }
   }
+  /* ★ P14 制衡：玩家势大时优先拉人共同制衡玩家（除非对某诸侯仇更深）。 */
+  const power = balanceOfPower(view);
+  if ((!rival || hate < 3) && power.share >= 0.35 && power.count >= 3) rival = 'player';
   if (!rival) {
     // 还没结仇：找和自己接壤最多的那家，去拉一个不接壤、但挨着这家的人
     const tally = {};
