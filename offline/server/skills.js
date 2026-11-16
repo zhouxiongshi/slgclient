@@ -1406,7 +1406,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
         }
         if (!window.__slgToast) return res;
         if (res.skipped) window.__slgToast('本回合已推演过，还需 ' + Math.max(1, res.need || 0) + ' 个游戏日', false);
-        else window.__slgToast('推演至第 ' + (res.month || (res.turn || 0) + 1) + ' 月 · 游戏日 ' + res.day, true);
+        else window.__slgToast('推演至第 ' + (res.month || Math.max(1, res.turn || 0)) + ' 月 · 游戏日 ' + res.day, true);
         return res;
       })
       .catch(function () { return null; });
@@ -2407,7 +2407,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     var endTxt = camp.ending === 'held' ? ' · 序章已守住'
       : (camp.ending === 'lost' ? ' · 序章失守' : '');
     var turnEl = document.getElementById('slgStratTurn');
-    if (turnEl) turnEl.textContent = '第 ' + (s.month || (s.turn || 0) + 1) + ' 月 · 游戏日 ' + s.day
+    if (turnEl) turnEl.textContent = '第 ' + (s.month || Math.max(1, s.turn || 0)) + ' 月 · 游戏日 ' + s.day
       + '（下一月：第 ' + s.nextTurnDay + ' 日）' + endTxt;
     // ★ P1-6：来犯军必须在天下界面可见，否则本地地图被遮住后威胁等于不存在
     var alertEl = document.getElementById('slgAlert');
@@ -2425,7 +2425,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       } else {
         ev.innerHTML = s.events.length
           ? s.events.map(function (e) {
-            return '<div>· 第' + (e.month || (e.turn || 0) + 1) + '月 ' + esc(e.text) + '</div>';
+            return '<div>· 第' + (e.month || Math.max(1, e.turn || 0)) + '月 ' + esc(e.text) + '</div>';
           }).join('')
           : '<div style="opacity:.6">天下尚无大事。</div>';
       }

@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { loadConfig } from '../server/config.js';
 import { createWorld } from '../server/world.js';
 import {
-  ensureStrategy, strategyTick, strategySnapshot, localBrain, factionConf, strategyMap,
+  ensureStrategy, strategyTick, strategySnapshot, strategyViewState, localBrain, factionConf, strategyMap,
 } from '../server/domain/strategy.js';
 import { canMarchBetween } from '../server/domain/march.js';
 
@@ -81,6 +81,12 @@ test('天下日志写路程、粮饷和城池流水', () => {
   assert.ok(attack.totalGrain > 0 && attack.totalGold > 0, '出征要扣粮和金');
   const city = state.strategy.cityLogs[String(attack.toId)] || [];
   assert.ok(city.some((e) => e.text.includes(attack.toName) || e.text.includes('来攻')), '目标城要有城池日志');
+  /* ★ 口径统一（2026-11-16）：同一旬的事件，城池日志 / 事件流的 month 必须等于
+     天下日志 chronicle 的 month（旧实现城池日志 turn+1，比整体日志快一旬）。 */
+  assert.ok(city.some((e) => e.month === month.month), `城池日志月份(${city.map((e) => e.month)})应与整体日志(${month.month})同旬`);
+  const viewState = strategyViewState(state, cfg);
+  assert.ok(viewState.events.every((e) => e.month === e.turn), '事件流对外 month = turn');
+  assert.equal(viewState.month, month.month, '视图当前月 = 刚结算的整体日志月');
   const view = strategySnapshot(state, conf.factions[0].id);
   assert.ok(Array.isArray(view.movements) && view.movements.length >= 1, '下月军报要能看见各方动向');
 });

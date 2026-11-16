@@ -363,7 +363,8 @@ export function advanceToNextTurn(ctx, now = Date.now()) {
     preview,
     day: state.clock.day,
     turn: st.turn,
-    month: (st.turn || 0) + 1,
+    /* ★ 口径统一：month = turn（与天下日志 chronicle 同源），turn 0 兜底为 1。 */
+    month: Math.max(1, st.turn || 0),
     nextTurnDay: (st.lastTurnDay || 0) + turnDays,
     need: Math.max(0, (st.lastTurnDay || 0) + turnDays - state.clock.day),
   };

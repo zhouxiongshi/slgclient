@@ -2455,8 +2455,9 @@ export function strategyViewState(state, cfg = null) {
     }));
   return {
     turn: st.turn,
-    // ★ 界面上「第 0 月」很别扭：内部 turn 从 0 起算，对外统一给 month = turn + 1
-    month: (st.turn || 0) + 1,
+    // ★ 口径统一（2026-11-16 日志排查）：第 N 月 = turn N，与天下日志 chronicle、
+    //   strategySnapshot 现行口径、测试断言（第 1 月）一致；turn 0 显示为第 1 月。
+    month: Math.max(1, st.turn || 0),
     turnDays: conf.turnDays ?? 10,
     day: state.clock?.day ?? 1,
     nextTurnDay: (st.lastTurnDay || 0) + (conf.turnDays ?? 10),
@@ -2654,7 +2655,7 @@ export function strategyViewState(state, cfg = null) {
     factions: conf.factions.map((f) => ({ id: f.id, name: f.name, color: f.color })),
     neutral: { id: conf.neutral.id, name: conf.neutral.name, color: conf.neutral.color },
     events: [...st.events].slice(-40).reverse()
-      .map((e) => ({ ...e, month: (e.turn || 0) + 1 })),
+      .map((e) => ({ ...e, month: Math.max(1, e.turn || 0) })),
     chronicle: [...(st.chronicle || [])].reverse().slice(0, 36),
     cityLogs: st.cityLogs || {},
     plans: conf.factions.map((f) => {

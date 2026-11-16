@@ -619,7 +619,7 @@
     var books = s.books || [];
     out += '<div class="card"><h3>出征账（粮饷 / 马料）</h3>';
     out += books.length ? books.map(function (b) {
-      return '<h4>第 ' + esc(b.month != null ? Number(b.month) + 1 : '?') + ' 月</h4>'
+      return '<h4>第 ' + esc(b.month != null ? Number(b.month) : '?') + ' 月</h4>'
         + '<table><thead><tr><th>势力</th><th>田赋粮 / 金</th><th>征兵粮</th><th>出征粮 / 金</th><th>战马</th></tr></thead><tbody>'
         + (b.rows || []).map(function (r) {
           return '<tr><td>' + esc(r.name) + '</td><td>' + fmt(r.grainIn) + ' / ' + fmt(r.goldIn)
@@ -639,7 +639,7 @@
     var monthLogs = (s.chronicle || []).length
       ? (s.chronicle || []).map(function (m) { return '<div>· ' + esc(m.text || '') + '</div>'; }).join('')
       : (s.events.length ? s.events.map(function (e) {
-          return '<div>· 第 ' + esc(e.month || (e.turn != null ? e.turn + 1 : '?')) + '月 '
+          return '<div>· 第 ' + esc(e.month || (e.turn != null ? Math.max(1, e.turn) : '?')) + '月 '
             + esc(e.text) + '</div>';
         }).join('') : '<div class="muted">暂无事件</div>');
     out += '<div class="card"><h3>近月天下日志（战略层拟人月志）</h3>' + monthLogs + '</div>';

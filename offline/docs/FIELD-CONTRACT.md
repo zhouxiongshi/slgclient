@@ -20,6 +20,7 @@
 | 城市初始人口 | `conf/campaign/strategy/map.json population`（★ P13 阶梯 ×3~7：≥6 万×3 / ≥3 万×4 / ≥1 万×5 / 其余×7 / 边陲 0 人口显式 3 万）；运行时上限 **100 万**（`city-econ.js` / `interior-task.js`） | 人 | 整数 | ❌ | 城市画像、征兵兵源、城库上限 |
 | 城库存粮上限 | `city-econ.js storeCapOf(e)`：`clamp(pop×0.12, 2万, 24万)`（★ P13 随人口缩放，小城与旧值 2 万一致） | 斛 | 整数 | ❌ | 城卡城库行、粮道、运输队 |
 | 政策/官员加成 | `panels.js postBonusPct / yieldBonusByResource` | % | 整数 | ❌ | 内政页加成拆解 |
+| 月份口径 | **第 N 月 = turn N**（★ 2026-11-16 统一：天下日志 `chronicle[].month`、城池日志 `cityLogs[].month`、事件流 `events[].month`、视图 `strategyViewState().month`、`advanceToNextTurn().month` 同源；turn 0 显示兜底为第 1 月。旧实现城池/事件/财报各处 `turn+1`，比整体日志快一旬） | 月 | 整数 | ❌ | HUD「第 N 月」、天下日志整体/城池/时序/财报、战略台国势 |
 
 ## B. 战略与行军
 

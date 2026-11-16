@@ -136,7 +136,9 @@ export function noteCity(state, cityId, entry) {
   const st = ensureChronicle(state);
   const key = String(cityId);
   const list = st.cityLogs[key] || (st.cityLogs[key] = []);
-  list.push({ turn: st.turn, month: (st.turn || 0) + 1, ...entry });
+  /* ★ 口径统一（2026-11-16）：第 N 月 = turn N，与 chronicle/closeMonth、
+     strategyViewState 顶层 month 一致；旧值 turn+1 让城池日志比整体日志快一旬。 */
+  list.push({ turn: st.turn, month: Math.max(1, st.turn || 0), ...entry });
   while (list.length > 40) list.shift();
 }
 

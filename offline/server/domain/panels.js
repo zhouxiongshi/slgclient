@@ -541,7 +541,7 @@ export function panelState(state, cfg) {
       faction: g.faction || '', patrol: !!g.patrol,
     }));
   const events = (Array.isArray(st.events) ? st.events : []).slice(-8).reverse()
-    .map((e) => ({ ...e, month: (e.turn || 0) + 1 }));
+    .map((e) => ({ ...e, month: Math.max(1, e.turn || 0) }));
   const cityBrief = mapCities.map((c) => {
     const row = cityRows[c.id] || {};
     const troops = Math.max(0, Math.round(Number(row.troops) || 0));
