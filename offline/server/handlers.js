@@ -28,6 +28,10 @@ import {
 } from './domain/campaign.js';
 import { slotBlock, skillUpgradeCost, skillUpgradeBlock, SKILL_LEVEL_CAP, skillActionHint } from './domain/slots.js';
 import { grantBattleExp, levelUpSentence, generalProgress } from './domain/general-progress.js';
+/* ★ P12 操作回执：原版客户端 onUpSkill/onLvSkill/onDownSkill 只 console.log，
+   拒绝时玩家零反馈（「点了学习没反应」）。回执进 notice-bus，
+   由 /__slg/session 轮询带给注入外壳转 toast。 */
+import { notify } from './notice-bus.js';
 import { materialGuide } from './domain/armory.js';
 import { rngFor } from './domain/strategy-rng.js';
 import { ensureTavern, guestsNow, announceTavern, todaysGuests, dayFraction, exploreTalent, cityNameOf } from './domain/tavern.js';
@@ -1000,18 +1004,24 @@ export function handleRequest(ctx, req) {
       let ok = false;
       let reason = '';
       let paid = 0;
+      let limitCap = 0;   // ★ P12：limit_reached 时带回原表上限，回执文案能给准数
       if (g) {
         const slots = ensureSlots(g);
         if (name === 'general.upSkill') {
           const conf = skillById(cfgId);
           if (!conf) {
             reason = 'invalid_skill';           // 旧 101/201/301/401 一律拒绝
+          } else if (!state.skillbook?.unlocked?.[String(cfgId)]) {
+            /* ★ P12：与六府装配（panels learn）同一条校验。原版客户端的学习列表
+               列出全部战法配置，不查解锁等于绕过战法库研习系统。 */
+            reason = 'not_unlocked';
           } else {
             const usedByOthers = state.generals.filter(
               (other) => other.id !== g.id && (other.skills || []).some((s) => s && s.cfgId === cfgId),
             ).length;
             if (usedByOthers >= conf.ui.limit) {
               reason = 'limit_reached';
+              limitCap = Math.max(1, Math.trunc(Number(conf.ui?.limit) || 2));
             } else {
               const blocked = slotBlock(g, pos, 'replace');
               if (blocked) reason = blocked;
@@ -1060,13 +1070,25 @@ export function handleRequest(ctx, req) {
       const need = (reason === 'not_enough_jungong' || reason === 'need_general_level')
         ? skillUpgradeCost(Math.max(1, curLv || 1))
         : paid;
+      let hint = ok ? '' : skillActionHint(reason, need, nextLv);
+      if (!ok && reason === 'limit_reached' && limitCap) hint += `（上限 ${limitCap} 人）`;
+      /* ★ P12：原版客户端对这三个动作的响应只 console.log、弹窗发完即关，
+         拒绝时玩家看到的就是「点了没反应」。回执进 notice-bus，外壳转 toast。
+         成功只给 upSkill 报喜（升级的槽位图标本来就会即时刷新）。 */
+      if (!ok && hint) notify(hint, 'warn');
+      else if (ok && name === 'general.upSkill') {
+        const gName = cfg.generalByCfg?.get?.(g.cfgId)?.name || g.name || `武将${g.cfgId}`;
+        const learnedId = ensureSlots(g)[pos]?.cfgId;
+        const learned = skillById(learnedId);
+        notify(`${gName}学会了「${learned?.ui?.name || learned?.name || '战法'}」`, 'ok');
+      }
       rsp.msg = {
         gId, cfgId, pos, ok, reason,
         lv: curLv,
         cost: need,
         gold: Math.floor(Number(state.roleRes?.gold) || 0),
         jungong: Math.floor(Number(state.roleRes?.jungong) || 0),
-        hint: ok ? '' : skillActionHint(reason, need, nextLv),
+        hint,
       };
       break;
     }

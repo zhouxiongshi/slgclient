@@ -5360,7 +5360,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         '<h4 style="margin-top:0">武将战法</h4>'
         + '<div class="cost">自带槽入营就有，不能换成别的战法，在这页升级。'
         + '学习槽要武将 5 级，觉醒槽要武将 10 级且自带战法 10 级，装配去六府「战法」页。'
-        + '同一条战法同时最多 2 人学会。'
+        + '同一条战法的装配名额有限（1~6 人，以战法档案为准）。'
         + '当前军工 <b style="color:#f0d998">' + fmt(jungong) + '</b>。'
         + esc(guide.rule || '') + '</div>'));
       if (!gens.length) { hostEl.appendChild(el('div', 'empty', '帐下无人。')); return; }

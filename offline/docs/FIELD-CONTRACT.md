@@ -46,6 +46,9 @@
 | 招降率 | `captive-rules.js`（单一公式） | % | 整数 | ❌ | 俘虏面板 |
 | 相性/义理 | `relation.js xiangxingOf/yiliOf` + `conf/relations.json` | 1–149 / 0–100 | 整数 | ❌ | 武将卡、关系 chip |
 | 忠诚 | `state.generals[].loyal`（运行期） | 0–100 | 整数 | ❌ | 武将卡、预警 |
+| 战法槽位规则 | `slots.js slotBlock()`：自带不可替换；**学习槽 Lv5 开**；觉醒槽 Lv10 且自带 10 级 | 级 | 整数 | ❌ | 武将战法页、六府装配 |
+| 战法装配上限 | `conf/skills.json` 原表 `ui.limit`（可研习 80 条分布 **1~6 人**）；协议层 `general.upSkill` 与六府 `learn` 同读此值 | 人 | 整数 | ❌ | 六府装配按钮、limit_reached 回执 |
+| 武将升级经验 | `general-progress.js expToAdvance()`：`40 × 当前等级`，经验只来自出征折损（`battle.js` 每槽损失 × 0.5） | 点 | 整数 | ❌ | 武将卡「经验 x/y」 |
 
 ## E. 交互层（P9/P10 契约延续）
 
@@ -56,6 +59,7 @@
 | 建言/议程 | `interaction/state.agenda` | — | — | ❌ | 当前事务抽屉 |
 | 地图标注分级 | `strategy.js` 视图 `cities[].labelRank` + `labelPolicy` | 1–3 | — | ❌ 客户端只取档过滤 | 大地图 |
 | 服务端缺失字段 | `interaction/state.fieldGaps` | — | — | — | 显式降级（禁编造） |
+| 操作回执（P12） | `notice-bus.js notify()` → `/__slg/session?since=N` → 外壳 `slg:notice` 事件 → 交互层 toast | — | — | ❌ 只展示 | 被原版客户端静默吞掉的操作结果（`general.upSkill/lvSkill/downSkill` 的拒绝与学习成功） |
 
 ## 历史教训（写死，防回归）
 

@@ -559,6 +559,26 @@ P10 新增的领域模块**全部是零环叶子**：只 import 地图/配置/�
 
 **取证**：`npm test` 492/492；`sim-60turns --turns 60` 末旬金 172,501 → 104,130（−42.7%），净增中位 2,690 → 1,366 金/旬且逐旬递减，确定性双跑逐旬一致。对照报告 `reports/goldflow-before.json` / `goldflow-after.json`。
 
+### 9.28 P12 战法学习回执与口径统一（2026-11-16，玩家报告「第二战法无法学习」）
+
+**根因是三层叠加，不是一处**：
+1. **静默拒绝**：原版客户端 `SkillInfoLogic.onClickLearn` 发完 `general.upSkill` 就关弹窗，而 `GeneralCommand.onUpSkill/onLvSkill/onDownSkill` 的响应处理只有 `console.log` —— 服务端拒绝（学习槽未开 / 未解锁 / 名额满）时玩家零反馈。`web/` 逐字节不可改，客户端补不了 UI。
+2. **解锁口径分裂**：协议层 `general.upSkill` 不查 `skillbook.unlocked`，六府装配（`panels.js learn`）查 —— 原版客户端的学习列表列出全部 177 条配置，不查解锁等于绕过战法库研习系统。
+3. **装配上限写死 2**：`panels.js` 与三处 UI 文案硬编码「最多 2 人」，原表 `ui.limit` 实际分布 **1~6 人**（80 条可研习战法）——配置是权威（原表逐字不动红线），代码写死即回归。
+
+**改动**（`server/notice-bus.js` 新增，零依赖叶子）：
+
+| 层 | 改动 |
+|---|---|
+| 服务端 | `handlers.js`：`upSkill` 补 `not_unlocked` 校验（与六府同口径）；三个技能动作的拒绝/成功写进回执总线，`limit_reached` 文案带原表上限 |
+| 下发 | `index.js` `/__slg/session?since=N` 捎带回执；首轮只对齐游标不倒历史账（`notice-bus.js lastId()`） |
+| 前端 | `gateBoot` 轮询派发 `slg:notice`；`interaction-ui.js` 监听转 toast（`warn→fail` 红、`ok` 绿）；`panels-ui.js`/`skills.js` 上限文案改为「1~6 人，以战法档案为准」 |
+| 文档 | `FIELD-CONTRACT.md §D/§E` 登记：槽位规则、装配上限（原表 `ui.limit`）、经验公式、回执通道 |
+
+**不变量**：① 学习槽 Lv5 / 觉醒 Lv10+自带 10 级的玩法判定**不变**（GDD §5.4），修的是「被拒绝时看得见」；② 协议层与六府装配的解锁、上限口径**唯一**，都读 `skillbook.unlocked` 与原表 `ui.limit`；③ 回执总线只放「玩家自己刚做的操作」的回执，不放世界事件，不写存档、不改协议。
+
+**回归**：`tests/p12-skill-learn-feedback.test.js`（回执总线 / 四类拒绝回执 / 成功回执 / session 下发 / 注入静态闸 / 口径唯一）；`tavern.test.js` 补解锁前置。
+
 ---
 
 ## 10. 文档地图（读哪本、信哪本）

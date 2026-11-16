@@ -390,8 +390,7 @@
     var out = '<h3>战法 · ' + esc(g.name) + '</h3>'
       + '<div class="card"><div class="muted">自带槽入营就有，不能换成别的战法，在这里升级。'
       + '学习槽要武将 5 级。觉醒槽要武将 10 级，并且自带战法升到 10 级。'
-      + '同一条战法同时最多 2 人装配。当前军工 <b class="v">' + fmt(guide.jungong || 0) + '</b>。'
-      + esc(guide.rule || '') + '</div></div>';
+      + '每条战法的装配名额有限（1~6 人，以战法档案为准）。当前军工 <b class="v">' + fmt(guide.jungong || 0) + '</b>。'      + esc(guide.rule || '') + '</div></div>';
     g.slots.forEach(function (s) {
       out += '<div class="card"><span class="tag ' + (s.skill ? 'ok' : s.locked ? 'no' : 'mid') + '">'
         + ['自带', '学习', '觉醒'][s.pos] + '</span>';
@@ -418,7 +417,7 @@
     });
     var unlocked = data.library.filter(function (x) { return x.status === 'unlocked'; }).slice(0, 8);
     out += '<div class="card"><h3>装配已解锁战法</h3><div class="muted" style="margin-bottom:8px">'
-      + '槽位规则：自带不可替换、Lv5 开学习槽、Lv10 且自带 10 级开觉醒槽；每条战法同时最多 2 人装配。</div>';
+      + '槽位规则：自带不可替换、Lv5 开学习槽、Lv10 且自带 10 级开觉醒槽；每条战法的装配名额有限（1~6 人，以战法档案为准）。</div>';
     unlocked.forEach(function (s) {
       out += '<div class="card"><b class="v">' + esc(s.name) + '</b>'
         + '<div style="margin-top:6px">' + esc(s.des || '没有效果说明') + '</div>'

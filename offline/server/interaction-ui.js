@@ -1403,6 +1403,15 @@
       closeAll: closeAll,
     };
     phase('交互增强层已就绪 · 按 ? 查看快捷键与字段缺口', 'ok');
+    /* ★ P12 操作回执：原版客户端对 general.upSkill / lvSkill / downSkill 的响应
+       只 console.log，服务端拒绝时玩家零反馈（「点了学习没反应」）。
+       外壳轮询 /__slg/session 捎带回执并派发 slg:notice，这里转成 toast。
+       kind 直接用回执自带的三态（ok 绿 / warn 红 / info 灰）。 */
+    window.addEventListener('slg:notice', function (e) {
+      var n = e && e.detail ? e.detail : {};
+      var kind = n.kind === 'ok' ? 'ok' : (n.kind === 'warn' ? 'fail' : 'info');
+      toast(String(n.text || ''), kind);
+    });
   }
   function bindTipEvents() { /* 节点池在首次 showTip 时按需绑定，这里保留扩展位 */ }
 

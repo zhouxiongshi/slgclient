@@ -41,6 +41,8 @@ import {
   strategyConfirmBattle, strategyRetreatBattle, strategyDigestDone,
 } from './domain/strategy.js';
 import { panelState, panelAction, panelSelfCheck } from './domain/panels.js';
+/* ★ P12 操作回执：general.upSkill 等被原版客户端静默吞掉的拒绝，经此下发。 */
+import { drain as drainNotices, lastId as noticeLastId } from './notice-bus.js';
 /* 交互增强层：只读聚合（纯函数），不改 WS 协议与消息结构 */
 import { interactionState } from './domain/interaction.js';
 /* ★ M2-3 失败态四出路（GDD §3.4）：破产裁军/卖粮、兵尽紧急征兵·雇佣、无将代将、迁都 */
@@ -362,11 +364,18 @@ export async function startOfflineServer(options = {}) {
         + '</style>';
       const gateBoot = '<script>(function(){'
         + 'var h=document.documentElement;h.setAttribute("data-slg-phase","login");'
-        + 'var D=window.__slgGateDebug={polls:0,last:null,errors:[],phase:"login"};'
-        + 'function poll(){D.polls++;fetch("/__slg/session",{cache:"no-store"})'
+        + 'var D=window.__slgGateDebug={polls:0,last:null,errors:[],phase:"login",noticeCursor:0};'
+        /* ★ P12：轮询捎带操作回执。since=0 首轮只对齐游标，之后收增量；
+           每条回执派发 slg:notice 事件，由交互层（interaction-ui）转成 toast。
+           原版客户端 onUpSkill 等只 console.log，这里是玩家唯一能看见的通道。 */
+        + 'function poll(){D.polls++;fetch("/__slg/session?since="+D.noticeCursor,{cache:"no-store"})'
         + '.then(function(r){return r.json()}).then(function(d){'
         + 'D.last=d;var p=d&&d.ready?"game":"login";'
-        + 'h.setAttribute("data-slg-phase",p);D.phase=p;})'
+        + 'h.setAttribute("data-slg-phase",p);D.phase=p;'
+        + 'if(d&&d.noticeLast){D.noticeCursor=d.noticeLast;}'
+        + 'if(d&&d.notices&&d.notices.length){for(var i=0;i<d.notices.length;i++){'
+        + 'try{window.dispatchEvent(new CustomEvent("slg:notice",{detail:d.notices[i]}));}catch(e){}}}'
+        + '})'
         + '.catch(function(e){D.errors.push(String(e));});}'
         + 'window.__slgGatePoll=poll;poll();setInterval(poll,1500);'
         + '})();</script>';
@@ -562,9 +571,14 @@ export async function startOfflineServer(options = {}) {
     }
 
     // 本地调试 / 冒烟用只读端点
-    /* ★ P11 登录门禁：注入层轮询此端点，未登录时整屏隐藏所有游戏面板数据 */
+    /* ★ P11 登录门禁：注入层轮询此端点，未登录时整屏隐藏所有游戏面板数据。
+       ★ P12 操作回执：轮询带 ?since=N，把 notice-bus 里玩家没看见的回执捎回去
+       （general.upSkill / lvSkill / downSkill 被原版客户端只 console.log 的拒绝）。 */
     if (urlPath === '/__slg/session') {
-      sendJson(req, res, sessionState());
+      const since = Number(new URL(req.url, 'http://localhost').searchParams.get('since')) || 0;
+      /* since=0 是首轮：不倒历史账，只把游标推进到「现在」，之后只收增量。 */
+      const notices = since > 0 ? drainNotices(since) : { items: [], last: noticeLastId() };
+      sendJson(req, res, { ...sessionState(), notices: notices.items, noticeLast: notices.last });
       return;
     }
     if (urlPath === '/__slg/status') {

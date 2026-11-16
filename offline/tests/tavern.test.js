@@ -55,8 +55,14 @@ test('学习格 5 级开，觉醒格要 10 级且自带 10 级，天赋默认关
   assert.equal(slotBlock(g, 0, 'remove'), 'innate_locked');
   assert.equal(slotBlock(g, 1, 'replace'), 'slot_locked');
   g.level = 5;
+  /* ★ P12：协议层 upSkill 现在与六府装配同一条校验——战法必须先在战法库解锁。
+     10001 是开局预置解锁（panels.js「开局旧藏」），所以用未解锁的 10003 验证闸门。 */
+  assert.equal(handleRequest(ctx, req('general.upSkill', { gId: g.id, cfgId: 10003, pos: 1 })).msg.reason, 'not_unlocked');
+  state.skillbook.unlocked['10003'] = { level: 1, source: '战功研习' };
   assert.equal(handleRequest(ctx, req('general.upSkill', { gId: g.id, cfgId: learn, pos: 1 })).msg.ok, true);
   assert.equal(g.skills[1].cfgId, learn);
+  /* ★ P12：10002 也要先解锁（开局只预置 10001 / 910000），否则未解锁闸会先挡住觉醒槽判定 */
+  state.skillbook.unlocked['10002'] = { level: 1, source: '战功研习' };
   assert.equal(handleRequest(ctx, req('general.upSkill', { gId: g.id, cfgId: 10002, pos: 2 })).msg.reason, 'slot_locked');
   g.level = 9;
   g.skills[0].lv = 10;

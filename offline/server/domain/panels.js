@@ -498,7 +498,11 @@ export function panelState(state, cfg) {
       target: s.ui?.target ?? null, arms: s.ui?.arms ?? [],
       levels: lv, levelCount: (s.ui?.levels || []).length,
       status, level: unl?.level || (owned.has(id) ? 1 : 0),
-      equippedBy: by, equipLimit: 2,
+      equippedBy: by,
+      /* ★ P12：装配上限读原表 ui.limit（80 条可研习战法分布 1~6 人），不再写死 2。
+         旧值 2 与 conf/skills.json 的 3~4 冲突——玩家在六府学到第 3 人时被
+         「最多 2 人」拒绝，换协议层（读配置）却能成，同一件事两套口径。 */
+      equipLimit: Math.max(1, Math.trunc(Number(s.ui?.limit) || 2)),
       research: res ? { progress: res.progress, need: res.need } : null,
       sources: r.sources || [],
       guarantee: r.guarantee || '',
@@ -815,7 +819,9 @@ export function panelAction(state, cfg, action = {}) {
       if (block) return fail(pos === 0 ? '自带战法不可替换' : pos === 1 ? '需 Lv5 解锁该槽' : '需 Lv10 且自带战法 10 级');
       if (!state.skillbook.unlocked[String(cfgId)]) return fail('该战法尚未解锁，请先到战法库查看获取途径');
       const by = equippedBy(state, cfgId).filter((id) => id !== gId);
-      if (by.length >= 2) return fail('每条战法同时最多 2 人装配');
+      /* ★ P12：上限读原表 ui.limit，与协议层 general.upSkill 同一条口径 */
+      const cap = Math.max(1, Math.trunc(Number(s.ui?.limit) || 2));
+      if (by.length >= cap) return fail(`每条战法同时最多 ${cap} 人装配`);
       g.skills[pos] = { id: cfgId, cfgId, lv: 1 };
       return done(`${generalName(state, cfg, g)}学会了「${s.ui?.name ?? s.name}」`);
     }

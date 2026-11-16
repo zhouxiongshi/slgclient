@@ -29,13 +29,17 @@ export function skillUpgradeBlock(g, skill) {
 export function skillActionHint(reason, cost = 0, nextLv = 0) {
   const map = {
     invalid_skill: '战法不存在',
-    limit_reached: '这条战法同时最多 2 人学会',
+    limit_reached: '这条战法的装配名额已满（上限以战法档案为准）',
     innate_locked: '自带战法不能换成别的，只能在本页升级',
     slot_locked: '这个槽还没开：学习槽要武将 5 级，觉醒槽要 10 级且自带战法 10 级',
     empty_slot: '这个槽还没有战法',
     max_level: '已满 10 级',
     need_general_level: `武将要到 ${nextLv || '下一级'} 级，才能把战法升到这一级。经验来自出征折损`,
     not_enough_jungong: `军工不够，这一级要 ${cost}。内政页用木和铁督造`,
+    /* ★ P12：协议层 general.upSkill 与六府装配（panels learn）补齐同一条校验。
+       原版客户端的学习列表会列出全部战法配置，不查解锁就放行等于绕过
+       战法库研习系统；拒绝理由必须给玩家能行动的下一步。 */
+    not_unlocked: '这条战法还没在战法库解锁：打胜仗、守城、斩将攒兵书残卷，去六府「战法库」研习',
   };
   return map[reason] || reason || '无法操作';
 }
