@@ -7,7 +7,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadOverrides } from './gm/overrides.js';
 import {
-  clampFive, toGameStat, toGameGrow, toDestroyStat, toCostStat, toPercentFromRaw,
+  clampFive, toGameStat, toGameGrow, toDestroyStat, toCostStat, toPercentFromRaw, politicsOf,
 } from './domain/general-stat.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -79,7 +79,9 @@ export function loadConfig(confDir = defaultConfDir()) {
      玩家要求所有人物基础属性上限 100，这里一次性把原表 5 个战斗维度归一到
      0~100；之后再并入主公与史实派生（后者本身就是百分制），全表统一量纲。
      `*_grow` 不动：它是 0~100 的成长率，进内核时按 /100*10 换算成每级点数。 */
-  const PCT_KEYS = ['force', 'strategy', 'defense', 'speed', 'destroy'];
+  const PCT_KEYS = ['force', 'strategy', 'defense', 'speed', 'destroy', 'politics'];
+  /* ★ 政治（第六维）：所有武将一律带 politics（0~100）。原表没有这一维，
+     在下方归一化 pass 里从史载五维 zheng / 谋略派生，史载原表文件不动。 */
   const toPercent = (row) => {
     for (const key of PCT_KEYS) {
       if (Number(row?.[key]) > 100) row[key] = toPercentFromRaw(row[key]);
@@ -128,6 +130,7 @@ export function loadConfig(confDir = defaultConfDir()) {
       const wu = clampFive(five.wu);
       const zhi = clampFive(five.zhi);
       const tong = clampFive(five.tong);
+      const zheng = clampFive(five.zheng);   // ★ 政治第六维：史载 five.zheng
       const speedFive = (tong + wu) / 2;
       const fiveSum = ['tong', 'wu', 'zhi', 'zheng', 'mei']
         .reduce((s, k) => s + clampFive(five[k]), 0);
@@ -144,6 +147,10 @@ export function loadConfig(confDir = defaultConfDir()) {
         exist.defense = toGameStat(tong);
         exist.speed = toGameStat(speedFive);
         exist.destroy = toDestroyStat(tong, wu);
+        exist.politics = politicsOf(zheng);
+        /* ★ 2026-11-16：带出性格类型与史载五维，供招募拒绝台词按人设选词（不进战斗数值） */
+        exist.type = h.type || '';
+        exist.five = { tong, wu, zhi, zheng, mei: clampFive(five.mei) };
         exist.force_grow = toGameGrow(wu);
         exist.strategy_grow = toGameGrow(zhi);
         exist.defense_grow = toGameGrow(tong);
@@ -165,6 +172,9 @@ export function loadConfig(confDir = defaultConfDir()) {
         defense: toGameStat(tong),
         speed: toGameStat(speedFive),
         destroy: toDestroyStat(tong, wu),
+        politics: politicsOf(zheng),
+        type: h.type || '',
+        five: { tong, wu, zhi, zheng, mei: clampFive(five.mei) },
         cost: toCostStat(fiveSum),
         force_grow: toGameGrow(wu),
         strategy_grow: toGameGrow(zhi),
@@ -183,6 +193,15 @@ export function loadConfig(confDir = defaultConfDir()) {
       names.add(h.name);
     }
   } catch { /* heroes-240 不在时仍用原武将表（build-heroes.mjs 先行） */ }
+
+  /* ★ 政治第六维兜底：原表武将（未在 heroes-240 中出现的）此前完全没有 politics。
+     由谋略确定性派生（政治与谋略同属文治范畴），保证「所有武将初始化都有政治」，
+     不写回原表文件、不引入随机，百分制量纲与其余五维一致。 */
+  for (const g of general.list || []) {
+    if (Number.isFinite(Number(g.politics)) && Number(g.politics) > 0) continue;
+    g.politics = politicsOf(g.strategy);
+  }
+
   const generalByCfg = new Map((general.list || []).map((g) => [g.cfgId, g]));
   /* ★ M4-11 武将编辑器：应用 overrides.generals 覆盖（面板/战斗/内政/外交/行军
      的唯一权威 generalByCfg 在此收敛，所有消费点自动同源）。应用前原行深拷贝到
@@ -195,7 +214,7 @@ export function loadConfig(confDir = defaultConfDir()) {
       if (!row) continue;
       generalOriginal.set(Number(k), { ...row });
       for (const [field, v] of Object.entries(patchRaw)) {
-        if (['force', 'strategy', 'defense', 'speed', 'destroy',
+        if (['force', 'strategy', 'defense', 'speed', 'destroy', 'politics',
           'force_grow', 'strategy_grow', 'defense_grow', 'speed_grow', 'destroy_grow',
           'cost', 'star'].includes(field)) row[field] = v;
         else if (field === 'skillCfgId') row.skillCfgId = v;

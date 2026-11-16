@@ -36,7 +36,7 @@ import { quoteMarch, openMonth, closeMonth, noteMove, noteCity, booksOf } from '
 import { onTileCleared, chapterRules, noticeRecruit } from './campaign.js';
 import { dayFraction, ensureTavern } from './tavern.js';
 import { recordRes } from './economy.js';
-import { grantBattleExp, levelUpSentence } from './general-progress.js';
+import { grantBattleExp, levelUpSentence, takeBattlePromos } from './general-progress.js';
 import {
   ensureCityEcon, consumeMarchGrain, deliverGrain, cityEconTick, cityName,
   cityYield, armsApt, armsCounter, ARMS_NAMES, devLevel, cityDevTick, storeCapOf,
@@ -46,9 +46,11 @@ import { SKILLS, LEVEL_COUNT, skillById } from '../skills.js';
 import { garrisonCfgIds, garrisonLabel } from './garrison.js';
 /* ★ P16：诸侯势力持久武将名册（学战法/升级/招募/俘虏/挖角/求援），零环叶子 */
 import {
-  ensureRosters, rosterDefenders, aiRosterLearnTick, aiRosterGrantExp,
+  ensureRosters, rosterDefenders, aiRosterLearnTick, aiRosterGrantExp, aiRosterCultivateTick,
   aiRecruitTick, aiPoachTick, aiAidRequest, aiCaptureTick, aiCaptiveTick,
 } from './ai-roster.js';
+/* ★ 2026-11-16：功勋晋官的单一口径（零依赖叶子） */
+import { grantMerit } from './official-rank.js';
 /* ★ M4-13：俘虏生成 / 释放 / 处斩统一入口，两条占领路径共用 */
 import { captureFromBattle } from './captives.js';
 /* ★ 修「推演返回一串代码」：推演的语义（人话）由这一处统一生成，
@@ -682,6 +684,13 @@ export function localBrain(faction, snapshot, state) {
 function aiRosterTurn(state, cfg, ctx, faction, conf, turn) {
   const rosterConf = { ...conf, personas: PERSONA_AXES };
   const notes = [];
+  /* ★ 2026-11-16：先按旬练兵治政累积功勋、晋官、长经验——诸侯不再原地踏步。 */
+  for (const n of aiRosterCultivateTick(state, rosterConf, cfg, faction, turn)) {
+    if (n.kind === '升官') {
+      recordEvent(state, `${faction.name}麾下${n.name}治政有功，晋为${n.rankName}（功勋官阶 ${n.rank}）。`);
+    }
+    notes.push(n);
+  }
   for (const n of aiRosterLearnTick(state, rosterConf, cfg, faction, turn)) {
     recordEvent(state, `${faction.name}麾下${nameOfCfg(state, cfg, n.cfgId)}习得新战法（${skillById(n.skillId)?.name || n.skillId}）。`);
     notes.push(n);
@@ -969,6 +978,16 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
           const expMap = Object.fromEntries(atkRoster.map((g) => [g.cfgId, expEach]));
           const ups = aiRosterGrantExp(state, cfg, faction.id, expMap);
           for (const u of ups) recordEvent(state, `${faction.name}麾下${u.name}积功升至 ${u.to} 级。`);
+          /* ★ 2026-11-16：攻城算大功，名册武将记功勋并按功晋官（守土/治政见 cultivateTick）。 */
+          const meritEach = 16 + Math.round(winRatio * 20);
+          for (const g of atkRoster) {
+            const before = g.rank || 0;
+            const mr = grantMerit(g, meritEach);
+            if (mr.promoted) {
+              const name = cfg?.generalByCfg?.get?.(Number(g.cfgId))?.name || `武将${g.cfgId}`;
+              recordEvent(state, `${faction.name}麾下${name}积功封为${mr.rank >= 7 ? '将军' : '校尉'}（功勋 ${mr.merit}）。`);
+            }
+          }
         }
         const line = order.expect
           ? `${faction.name}${order.expect}，遂克${target.name}。`
@@ -1441,10 +1460,14 @@ function settleArmyBattle(state, cfg, ctx, { army, frac, x, y, defenseOverride, 
   const fateNote = fate.notes.length ? `${fate.notes.join('；')}。` : '';
   // 额外字段：原客户端忽略，我们自己的战报面板读它做复盘
   result.report.summary = summary + counterNote + fateNote;
-  const expLine = levelUpSentence(grantBattleExp(state, cfg, result.expByGeneral));
-  if (expLine) {
-    summary += expLine;
-    result.report.summary += expLine;
+  const expLine = levelUpSentence(grantBattleExp(state, cfg, result.expByGeneral, { win }));
+  const promos = takeBattlePromos();
+  const promoLine = promos.length
+    ? ` ${promos.map((p) => `${p.name}积功升为${p.rank >= 7 ? '将军' : '校尉'}`).join('，')}。`
+    : '';
+  if (expLine || promoLine) {
+    summary += expLine + promoLine;
+    result.report.summary += expLine + promoLine;
   }
   result.report.analysis = {
     aTotal, dTotal, aLoss, dLoss, recovered: rec, win,

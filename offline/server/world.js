@@ -76,6 +76,9 @@ export function makeGeneral(cfg, id, cfgId, cityId, level = 10) {
     defense_added: 0,
     speed_added: 0,
     destroy_added: 0,
+    politics_added: 0,
+    merit: 0,                                  // ★ 2026-11-16 功勋：立功→升官→能力加成（official-rank.js 单一口径）
+    rank: 0,
     star_lv: 0,
     star: g.star ?? 5,
     loyal: 82 + (Number(g.star) || 3) % 11,   // ★ P1 忠诚 82~92（星级微调），旬结算与赏赐改这里

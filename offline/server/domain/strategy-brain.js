@@ -214,7 +214,19 @@ function buildView(faction, snapshot, state, axes, mem) {
 
   const recentLoss = (mem.losses || []).filter((x) => viewTurn(snapshot) - x.turn <= 3);
 
+  /* ★ 2026-11-16 追赶：玩家兵力/城数远超本势力时，征兵规模温和上浮，
+     避免「玩家滚雪球、诸侯原地踏步」。只放大既有征兵 want，不改粮约束，
+     上限 2.0×，仍受 afford（城库粮）硬闸，确定性、无随机。 */
+  const myTroops = owned.reduce((s, c) => s + c.troops, 0);
+  const playerTroops = cities.filter((c) => c.owner === 'player').reduce((s, c) => s + c.troops, 0);
+  const myCities = owned.length;
+  const playerCities = cities.filter((c) => c.owner === 'player').length;
+  const troopGap = playerTroops / Math.max(1, myTroops);
+  const cityGap = playerCities / Math.max(1, myCities);
+  const catchUp = Math.max(1, Math.min(2.0, 1 + Math.max(troopGap - 1, cityGap - 1) * 0.5));
+
   return {
+    catchUp,
     self: faction.id,
     name: faction.name,
     turn: viewTurn(snapshot),
@@ -532,7 +544,9 @@ function pushRecruit(addI, view, city) {
   const mul = threat
     ? 1 + Math.min(0.8, (threat.troops / Math.max(1, view.home?.troops || 1)) * 0.35)
     : (view.recentLoss.length ? 1.25 : 1);
-  const want = Math.round((180 + view.axes.economy * 720) * mul);
+  /* ★ 2026-11-16：叠加追赶系数（玩家坐大时诸侯征兵上浮，封顶 2×），
+     仍受城库粮 afford 硬闸，粮不够就转屯田，不会出现凭空兵力。 */
+  const want = Math.round((180 + view.axes.economy * 720) * mul * (view.catchUp || 1));
   const afford = Math.floor((view.grain - 500) / 2);
   const count = Math.max(0, Math.min(want, afford));
   if (count >= 150) {

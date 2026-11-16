@@ -28,20 +28,7 @@
     ],
     "levels": [
       {
-        "probability": 35,
-        "effect_value": [
-          3,
-          30,
-          30
-        ],
-        "effect_round": [
-          3,
-          0,
-          0
-        ]
-      },
-      {
-        "probability": 35,
+        "probability": 100,
         "effect_value": [
           3,
           35,
@@ -54,7 +41,7 @@
         ]
       },
       {
-        "probability": 35,
+        "probability": 100,
         "effect_value": [
           3,
           40,
@@ -67,7 +54,7 @@
         ]
       },
       {
-        "probability": 35,
+        "probability": 100,
         "effect_value": [
           3,
           45,
@@ -80,7 +67,7 @@
         ]
       },
       {
-        "probability": 35,
+        "probability": 100,
         "effect_value": [
           3,
           50,
@@ -93,7 +80,7 @@
         ]
       },
       {
-        "probability": 35,
+        "probability": 100,
         "effect_value": [
           3,
           55,
@@ -106,7 +93,7 @@
         ]
       },
       {
-        "probability": 35,
+        "probability": 100,
         "effect_value": [
           3,
           60,
@@ -119,7 +106,7 @@
         ]
       },
       {
-        "probability": 35,
+        "probability": 100,
         "effect_value": [
           3,
           65,
@@ -132,7 +119,7 @@
         ]
       },
       {
-        "probability": 35,
+        "probability": 100,
         "effect_value": [
           3,
           70,
@@ -145,10 +132,23 @@
         ]
       },
       {
-        "probability": 35,
+        "probability": 100,
         "effect_value": [
           3,
           75,
+          30
+        ],
+        "effect_round": [
+          3,
+          0,
+          0
+        ]
+      },
+      {
+        "probability": 100,
+        "effect_value": [
+          3,
+          80,
           30
         ],
         "effect_round": [
@@ -164,8 +164,8 @@
     "name": "坐镇中军",
     "skill_class": "指挥",
     "prepare": 0,
-    "probability_init": 0.35,
-    "probability_max": 0.35,
+    "probability_init": 1,
+    "probability_max": 1,
     "target_type": "self_and_ally_single",
     "attack_type": "normal",
     "control_state": null,
@@ -199,7 +199,7 @@
         "bonus_terms": [],
         "mechanics": {
           "counter": {
-            "chance": 0.3,
+            "chance": 0.35,
             "rate_pct": 87,
             "damage_type": "STRATEGY_DAMAGE"
           }
@@ -226,7 +226,7 @@
     "descSource": "本局为穿越者写的自带战法，不是 battle-kit 原文；M4-7 按玩家指定效果改写",
     "nameSource": "原创",
     "rateSource": "回击伤害率 87% 固定，不取伤害率样本；洞察 3 回合、受伤降低 30% 均为固定值",
-    "probability": "指挥开战即生效（发动率 100%）；回击概率 30%，每升一级 +5%，Lv10 = 75%",
+    "probability": "指挥战法开战即发动（发动率 100%）；回击概率 Lv1=35%，每升一级 +5%，Lv10=80%",
     "kernelNotes": [
       "三个 BUFF 槽分别授予 insight / counter / damage_reduce 三种 reaction，全部由 battle-core/src/engine.ts 真实结算",
       "mechanics 不进 bonus_terms：内核对攻击方 buffs 无差别求和，减伤与回击词混进去会变成攻击加成",

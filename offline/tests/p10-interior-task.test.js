@@ -23,6 +23,12 @@ import {
 const cfg = loadConfig();
 
 function oathWorld() {
+  /* ★ 2026-11-16：主公初始谋略上调到 96（用户指定），跨过一流文官阈值 85，
+     会让本文件「逐步到账/途中撤销」这两条用例假设的 2 旬工期塌成 1 旬。
+     这些用例测的是「任务状机制」而不是主公数值，故在这里把本局执行官
+     钳回中等谋略（75，仍 ≥ OFFICER_TICKS_OK=68 → 2 旬），保持原测试前提；
+     全局 generalByCfg 是节点内单例，本文件测试串行执行，互不影响。 */
+  cfg.generalByCfg.get(880001).strategy = 75;
   const state = normalizeWorld(createWorld(cfg), cfg);
   ensureStrategy(state);
   ensureCityEcon(state);

@@ -89,7 +89,13 @@ test('点名武将属性回落到同星级中位附近，同名多版本按星�
         `${name} 低星版本 ${sorted[i].cfgId} 反超/追平高星版本`);
     }
   }
-  assert.ok(sum(protag.general, DIMS) <= p75[4], '主角超出 4 星 p75');
+  /* ★ 2026-11-16：用户指定主公为顶级统帅型武将，初始属性上调，
+     不再套「回落到 4 星 p75」的旧约束；改为锁定玩家点名的六维数值。 */
+  assert.equal(protag.general.force, 9900, '主公武力 99');
+  assert.equal(protag.general.strategy, 9600, '主公谋略 96');
+  assert.equal(protag.general.defense, 9100, '主公统帅 91');
+  assert.equal(protag.general.speed, 8700, '主公速度 87');
+  assert.equal(protag.general.politics, 9300, '主公政治 93');
   assert.ok(statAudit.monotonic.length >= 5, '属性审计表缺少单调性记录');
   for (const c of statAudit.changes) {
     assert.ok(c.after.base <= c.before.base, `${c.label} 属性回落方向错了`);

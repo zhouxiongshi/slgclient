@@ -27,7 +27,8 @@ import {
   chapterRules, settleCampaign, chooseChapter, onTileCleared, applyChoice, noticeRecruit,
 } from './domain/campaign.js';
 import { slotBlock, skillUpgradeCost, skillUpgradeBlock, SKILL_LEVEL_CAP, skillActionHint } from './domain/slots.js';
-import { grantBattleExp, levelUpSentence, generalProgress } from './domain/general-progress.js';
+import { grantBattleExp, levelUpSentence, generalProgress, takeBattlePromos } from './domain/general-progress.js';
+import { RANK_NAMES } from './domain/official-rank.js';
 /* ★ P12 操作回执：原版客户端 onUpSkill/onLvSkill/onDownSkill 只 console.log，
    拒绝时玩家零反馈（「点了学习没反应」）。回执进 notice-bus，
    由 /__slg/session 轮询带给注入外壳转 toast。 */
@@ -37,6 +38,8 @@ import { rngFor } from './domain/strategy-rng.js';
 import { ensureTavern, guestsNow, announceTavern, todaysGuests, dayFraction, exploreTalent, cityNameOf } from './domain/tavern.js';
 /* ★ U15 相性/义理/关系网：登庸成功率与面板构成条同源 */
 import { talentRecruitRate, xiangxingOf, yiliOf, relationSummary, relationGraph } from './domain/relation.js';
+/* ★ 2026-11-16：招募拒绝台词（零依赖叶子），按人设与三顾次数说人话 */
+import { refusalLine } from './domain/recruit-refusal.js';
 import {
   strategyTick, strategyAttack, strategyTurnDays, ensureStrategy, clearThreat,
   strategyResolveMarches, strategyRecallMarch, recordEvent, factionReliefTick,
@@ -446,9 +449,14 @@ export function processTask(ctx, task) {
     army.state = 1;
     army.to_x = 0; army.to_y = 0; army.end = 0;
     noteIfGeneralDown(state, ctx, army);
-    const ups = grantBattleExp(state, cfg, expByGeneral);
+    const ups = grantBattleExp(state, cfg, expByGeneral, { win: report.result === 2 });
     const expLine = levelUpSentence(ups);
-    if (expLine && report) report.summary = `${report.summary || ''}${expLine}`;
+    /* ★ 2026-11-16：功勋晋升入战报，玩家看得见「立功→升官」。 */
+    const promos = takeBattlePromos();
+    const promoLine = promos.length
+      ? ` ${promos.map((p) => `${p.name}积功升为${RANK_NAMES[p.rank]}`).join('，')}。`
+      : '';
+    if ((expLine || promoLine) && report) report.summary = `${report.summary || ''}${expLine}${promoLine}`;
     state.warReports.unshift(report);
     if (state.warReports.length > 100) state.warReports.length = 100;
 
@@ -965,9 +973,11 @@ export function handleRequest(ctx, req) {
           state.tavern.favor[targetId] = favorN + 1;
           ctx.push?.('roleRes.push', roleResOf(state));
           ctx.save();
+          const line = refusalLine(cfg.generalByCfg.get(targetId) || {}, { cfgId: targetId, favor: favorN + 1 });
           rsp.msg = {
             generals: [], reason: 'refused', name: row.name,
             rate: Math.round(rate * 100), favor: favorN + 1, parts: calc.parts,
+            line: line.text, persona: line.persona,
             cost: costEach, charged: 0,
           };
           break;
@@ -1015,7 +1025,8 @@ export function handleRequest(ctx, req) {
           `draw:${cityId || 'all'}:${person.cfgId}:${favorN}`).random() < rate;
         if (!success) {
           state.tavern.favor[person.cfgId] = favorN + 1;
-          refused.push({ cfgId: person.cfgId, name: person.name, rate: Math.round(rate * 100), favor: favorN + 1 });
+          const line = refusalLine(cfg.generalByCfg.get(Number(person.cfgId)) || {}, { cfgId: person.cfgId, favor: favorN + 1 });
+          refused.push({ cfgId: person.cfgId, name: person.name, rate: Math.round(rate * 100), favor: favorN + 1, line: line.text, persona: line.persona });
           continue;
         }
         delete state.tavern.favor[person.cfgId];
@@ -1449,10 +1460,14 @@ export function handleRequest(ctx, req) {
         ctx.push?.('roleRes.push', roleResOf(state));
         ctx.save();
         rsp.code = 0;
+        const exLine = refusalLine(cfg.generalByCfg.get(Number(exp.target.cfgId)) || {}, {
+          cfgId: exp.target.cfgId, favor: favorN + 1,
+        });
         rsp.msg = {
           reason: 'not_found', rate: Math.round(rate * 100), cityId, name: exp.target.name,
           favor: favorN + 1, charged: 0,
-          /* ★ U15 构成条：逐项拆解（基础/政治/相性/义理/三顾），玩家能看出下次该改什么 */
+          line: exLine.text, persona: exLine.persona,
+          /* 工程字段保留供审计；界面只显示 line，不复算概率 */
           parts: calc.parts, xiangxingGap: calc.gap, yili: calc.yili,
         };
         break;

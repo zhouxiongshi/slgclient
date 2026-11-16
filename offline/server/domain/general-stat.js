@@ -88,3 +88,29 @@ export function gameStatOf(cfg, g, key, fallback = 60) {
 export function charmStatOf(loreCharm) {
   return clampFive(loreCharm);
 }
+
+/**
+ * 政治（第六维）：0~100 百分制，口径与其余五维一致。
+ * 主公、史实武将、原表武将、AI 名册统一在 config.loadConfig 里补 politics，
+ * 这里只负责取数与钳位；史载原表逐字不动，任何派生只在归一化层发生。
+ */
+export function politicsOf(fiveZheng) {
+  return clampFive(fiveZheng);
+}
+
+/**
+ * 官职加成后的有效属性值（0~100 封顶，破红线一律 clamp）。
+ * rank 为官阶 0~9：武将的统帅（defense）与谋臣/政治家的政治（politics）随官阶提升。
+ * 只叠加「官阶加成」，不动史载基线；缺参时退回基线。玩家面板与 AI 结算同源。
+ */
+export function effectiveStatOf(base, rank = 0, key = '', career = '') {
+  const b = clampFive(base);
+  const r = Math.max(0, Math.min(9, Math.trunc(Number(rank) || 0)));
+  if (r === 0) return b;
+  const isPoliticalCareer = career === 'civil' || career === 'strategist' || career === 'scholar';
+  let bonus = 0;
+  if (key === 'defense') bonus = r * 2;                    // 官阶高 → 统兵能力强
+  else if (key === 'politics' && isPoliticalCareer) bonus = r * 3; // 谋臣/政治家治政更强
+  else if (key === 'politics') bonus = r;                   // 其他武将小幅
+  return clamp(b + bonus, 1, 100);
+}

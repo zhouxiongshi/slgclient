@@ -478,9 +478,13 @@
 
   function genStoryHtml(g) {
     var l = g.lore, m = g.merits;
+    var nextRank = g.nextRankMerit != null ? (' · 距下一阶还需功勋 ' + fmt(Math.max(0, g.nextRankMerit - g.merit))) : ' · 已至极品';
     var out = '<h3>经历 · ' + esc(g.name) + '</h3><div class="card"><h3>本局战功簿</h3>'
-      + '参战 ' + esc(m.battles) + ' 次 · 战功 ' + esc(m.merits) + ' · 守城 ' + esc(m.defense)
-      + ' · 以少胜多 ' + esc(m.upset) + '<div class="muted" style="margin-top:6px">战功回流兵书残卷，用于战法研习。</div></div>';
+      + '官阶 <b class="v">' + esc(g.rankName || '白身') + '</b> · 功勋 ' + fmt(g.merit)
+      + nextRank
+      + '<div class="muted" style="margin-top:6px">立功升官：武将统帅随官阶提升，谋臣政治家政治提升。功勋来自出征、攻城、守土与治政。</div>'
+      + '<div style="margin-top:8px">参战 ' + esc(m.battles) + ' 次 · 战功 ' + esc(m.merits) + ' · 守城 ' + esc(m.defense)
+      + ' · 以少胜多 ' + esc(m.upset) + '<div class="muted" style="margin-top:6px">战功回流兵书残卷，用于战法研习。</div></div></div>';
     if (l) {
       out += '<div class="card"><h3>履历</h3>' + esc(l.brief)
         + '<div class="muted" style="margin-top:8px">' + esc(l.deeds) + '</div></div>'

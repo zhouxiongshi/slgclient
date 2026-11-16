@@ -21,9 +21,10 @@ import { SKILL_BY_ID } from '../skills.js';
 export const EDIT_RANGES = {
   force: { min: 1, max: 100, label: '武力' },
   strategy: { min: 1, max: 100, label: '谋略' },
-  defense: { min: 1, max: 100, label: '统御防御' },
+  defense: { min: 1, max: 100, label: '统帅' },
   speed: { min: 1, max: 100, label: '速度' },
   destroy: { min: 1, max: 100, label: '攻城' },
+  politics: { min: 1, max: 100, label: '政治' },
   force_grow: { min: 1, max: 100, label: '武力成长' },
   strategy_grow: { min: 1, max: 100, label: '谋略成长' },
   defense_grow: { min: 1, max: 100, label: '防御成长' },
@@ -65,7 +66,7 @@ export function editorList(cfg) {
       stats: {
         force: Number(g.force) || 0, strategy: Number(g.strategy) || 0,
         defense: Number(g.defense) || 0, speed: Number(g.speed) || 0,
-        destroy: Number(g.destroy) || 0,
+        destroy: Number(g.destroy) || 0, politics: Number(g.politics) || 0,
       },
       grows: {
         force_grow: Number(g.force_grow) || 0, strategy_grow: Number(g.strategy_grow) || 0,

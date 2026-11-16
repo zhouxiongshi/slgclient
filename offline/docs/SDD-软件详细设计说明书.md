@@ -1992,7 +1992,7 @@ build/SLG-Offline-win32-x64/
 | `P13-1` | 「每次招募成功都不是我鼠标选中的武将」 | `general.drawGeneral` 只收 `drawTimes/cityId`，服务端取 `guestsNow().slice(0,1)` 的「此刻在店第一个人」，与点选无关 | ✅ 协议加 `cfgId` 指名参数（§3.3 已同步）；`skills.js` 两处酒馆按钮带 `cfgId`；`tests/p13-recruit-select.test.js` 锁「点谁招谁」 |
 | `P13-2` | 「继续招募提示过时、不友好；可以让武将拒绝；每回合第一次几乎 100% 成功」 | 旧实现无掷骰（在店即 100% 入营）；失败文案只有含混的「过时辰」 | ✅ 招募改走 `talentRecruitRate` 同源掷骰（武将可拒绝、失败不扣金、三顾好感 +1/次）；回执细分 `not_today/guest_left/not_arrived/refused` 四种可读原因，toast 全部改友好文案 |
 | `P13-3` | 「挥军直进看着像技能」 | `battle-narrative.js` 普攻动作叙述用词花哨 | ✅ 改为 `普攻 → X`，字面即语义 |
-| `P13-4` | 「主公技能初始概率改 35%」 | 19001 `probability_init/max = 1` | ✅ 按用户指定改 `0.35`，`ui.levels[].probability = 35`；指挥类叙述改为「开战阶段判定（发动率 35%）」；FIELD-CONTRACT §D 已登记 |
+| `P13-4` | 「主公技能初始概率改 35%」（P13 当时的口径） | 19001 `probability_init/max = 1` | ✅ 当时按用户指定改 `0.35`、`ui.levels[].probability = 35`；指挥叙述「开战阶段判定（发动率 35%）」。**2026-11-16 用户更正为「指挥 100% 发动 + 回击 35% 起」**，本行已被 `DEV-38`（§17.12）取代，以最新口径为准 |
 | `P13-5` | 「城市初始人口太低，提升 3-7 倍并联动平衡」 | map.json 人口 0~10.2 万，且运行时硬上限 10 万 | ✅ map.json 72 城阶梯 ×3~7（大城少提、小城多提，边陲 0 人口显式 3 万）；上限 10 万 → 100 万（`city-econ.js`/`interior-task.js`）；城库上限随人口 `storeCapOf(pop×0.12, 2万~24万)`。**平衡口径**：粮/金产量不随人口变（守 OP-01 已校准的金流），人口只放大兵源与城库——征兵仍受木铁粮金成本闸门约束，不会资源过剩；行军大军的城库瓶颈同步放宽，不会匮乏。NPC 守军公式（`garrisonOf`）基于城池属性而非人口，难度不受影响 |
 | `P13-6` | 「检查运行日志，漏洞与报错全部修复」 | `crash.log` 仅 8 条且全部来自 **2026-11-07 旧版应用路径**（`D:\WorkBuddy\slg\offline`，重构前）：①CSP 警告（dev 态才有，打包后消失）②原版 Cocos 客户端 `getComponent/name` 未捕获异常（web/ 资产逐字节冻结，属原版自带时序噪声，非注入层引入） | ✅ 现行 `slgclient` 应用（11-12 运行）零新增报错；`npm test` 全量重跑确认无回归。两条历史噪声登记为已知无害项，不触碰 web/ |
 
@@ -2076,6 +2076,18 @@ build/SLG-Offline-win32-x64/
 `conf/campaign/innate-skill-audit.json` 等 1214 行 conf 命中属于合规审计台账，未改动。`tools/build-innate-skills.mjs` 的 `note` 会写入审计表，已从批量替换中恢复并逐行精修，避免污染数据。
 
 **回归锁**：`tests/ui-presentation-hygiene.test.js` 第四用例扫描 `server/`/`tools/`/`tests/`/`electron/` 全部 `.js/.cjs/.mjs`，按白名单过滤后断言零来源词；借鉴对象与内部规格编号在界面和源码两侧同时受控。
+
+### 17.12 玩家体验五项修复（2026-11-16 用户实机反馈）
+
+| 编号 | 现象 | 根因 | 处置与现状 |
+|---|---|---|---|
+| `DEV-34` | 给主公学第二战法（学习槽）时鼠标点击没反应 | 注入武将战法页 `renderGensInto` 的空学习/觉醒槽只是一段文字，没有可点控件；原版客户端响应只 console.log | 空槽补可点按钮：锁槽点「为何不能学？」直接给条件提示，开槽点「去学习/装配战法」给引导；协议层拒绝回执（P12 notice-bus）保留。主公 Lv1 点学习→`slot_locked`+「5 级」提示，Lv5 后可真实学到第二战法 |
+| `DEV-35` | 酒馆招募提示「何时到店」、列出未到店武将；拒绝理由像读游戏数值 | UI 渲染 `today` 全三态（含 upcoming/passed）与 `when`/成功率；拒绝是固定「婉拒了延揽（成功率 X%）」，无人物性格 | 酒馆只列 `guestsNow` 此刻在座者，去掉时辰/到店/「今日可见」提示；新增零依赖叶子 `recruit-refusal.js`，按 `type`（莽夫/名将/名士/谋士/诸侯）+ 五维分五种口吻，谋略 ≥78 用更圆融版本、三顾多次换软话；响应带 `line`/`persona`，界面不再显示概率。工程字段 `rate/parts` 保留供审计 |
+| `DEV-36` | 玩家越打越强，诸侯兵力/武将停滞；AI 武将不封官 | AI 经验只在攻城胜利发；`state.panelMerits.merits` 是死字段、无累积；名册无功勋/官阶；官职只影响城池开发度不影响能力；征兵无追赶系数 | 新增零依赖叶子 `official-rank.js`：功勋只增、官阶 0~9 由功勋唯一决定。玩家战斗立功（`grantBattleExp` win 加一笔）与 AI 每旬治政（`aiRosterCultivateTick`）+ 攻城（+功勋）同源晋官；官阶经 `general-stat.effectiveStatOf` 反哺统帅（每阶 +2）、谋臣/政治家政治（每阶 +3），封顶 100。`strategy-brain.pushRecruit` 加 `catchUp`（玩家城/兵远超时征兵上浮，封顶 2×，仍受城库粮硬闸）。面板「经历」显示官阶/功勋进度 |
+| `DEV-37` | 所有武将初始化没有政治属性；GM 编辑器/面板无政治维度 | `config.loadConfig` 只归一化 5 个战斗维度，`five.zheng` 仅用于算 cost，未写入 `politics` | 政治作为第六维：原表武将从谋略确定性派生，`heroes-240` 交集与新增武将取史载 `five.zheng`，主公 93；全表 505 人 0~100 无缺失。`world.makeGeneral` 补 `politics_added`，面板 `STAT_LABEL`/装备加成 `EQUIP_KEYS`/GM 编辑器同步；取数仍走 `gameStatOf(cfg,g,'politics')` |
+| `DEV-38` | 主公属性偏弱；玩家可见「防御」标签；坐镇中军实为「35% 发动 + 30% 回击」双随机，与「指挥必发动 + 35% 回击/级 +5%」设计不符 | 主公六维沿用旧设定；`ui.levels[].probability=35` 驱动内核 `rollTrigger` 二次掷骰；`kernel.probability_init/max=0.35` | 主公六维改为武力 99/谋略 96/统帅 91/速度 87/政治 93（内部键 `defense` 不变，玩家标签统一改「统帅」）；`probability_init=max=1`、`ui.levels[].probability=100`（指挥战法开战必发动），受击回击概率 `effect_value[1]=35+5×(lv−1)`（Lv1=35%/Lv10=80%），内核 `counter.chance` 同源。数值登记先改 FIELD-CONTRACT，测试 `m4-protagonist-skill` 同步迁移 |
+
+**回归锁**：`tests/ui-player-experience.test.js`（11 条）锁政治覆盖/官阶闭环/AI 成长/拟人拒绝/学习反馈；`tests/m4-protagonist-skill.test.js` 锁 100% 发动与 35%→80% 回击；`tests/p10-interior-task.test.js` 测试夹具把主公谋略钳回中值（96 跨过 85 阈值会让 2 旬工期塌成 1 旬，测的是任务状机制非主公数值）；`tests/ui-presentation-hygiene.test.js` 锁文案不泄来源。全量 `npm test` 542/542。
 
 ---
 

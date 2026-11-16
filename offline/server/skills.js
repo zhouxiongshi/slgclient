@@ -4753,18 +4753,19 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       var m = rsp.msg || {};
       card.innerHTML = '<h4 style="margin-top:0">' + c.name + ' · 酒馆</h4>';
       var head = el('div', 'cost', '招募一位 <b style="color:#f0d998">' + m.cost + '</b> 金。'
-        + '各城酒馆来的是本籍在野武将，过了时辰便见不到。');
+        + '此间只列此刻在座的豪杰；座上无人，便改日再来。');
       card.appendChild(head);
-      var list = el('div', 'card', '<h4 style="margin-top:0">今日来访</h4>');
-      var today = m.today || [];
-      if (!today.length) list.appendChild(el('div', 'empty', '今日无人来访。'));
+      var list = el('div', 'card', '<h4 style="margin-top:0">此刻在座</h4>');
+      /* ★ 2026-11-16：不再列出「尚未到店 / 已过时辰」的人，也不提示何时到店——
+         酒馆里看得见的，只有此刻真正在座的武将（服务端 guestsNow 口径）。 */
+      var today = (m.today || []).filter(function (g) { return g.state === 'now'; });
+      if (!today.length) list.appendChild(el('div', 'empty', '此刻座上无人。'));
       today.forEach(function (g) {
-        /* ★ U15 相性差/义理/预计登庸率直接写在名字后面：玩家能提前判断「值不值得等」 */
         var meta = (g.xiangxingGap != null)
-          ? '<span class="cost">　相性差 ' + g.xiangxingGap + ' · 义理 ' + g.yili + ' · 登庸 ' + g.recruitRate + '%</span>'
+          ? '<span class="cost">　相性差 ' + g.xiangxingGap + ' · 义理 ' + g.yili + '</span>'
           : '';
-        var row = el('div', 'row', '<span><b style="color:#f0d998">' + esc(g.name) + '</b> <span class="chip">' + g.when
-          + '</span> <span class="cost">' + (g.state === 'now' ? '此刻在店' : g.state === 'passed' ? '已过时辰' : '未到时辰') + '</span>' + meta + '</span>');
+        var row = el('div', 'row', '<span><b style="color:#f0d998">' + esc(g.name) + '</b>'
+          + ' <span class="cost">此刻在座</span>' + meta + '</span>');
         row.appendChild(mkBtn('招募', '', function () {
           /* ★ P13 指名招募：把玩家点中的 cfgId 一起发，服务端只招这一位（旧实现招的是
              「此刻在店」第一个，玩家点 A 来的却是 B）。 */
@@ -4772,30 +4773,24 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
             var m2 = r2.msg || {};
             var got = m2.generals || [];
             if (got.length) {
-              toast('「' + (got[0].name || g.name) + '」入营！'
-                + (m2.rate != null ? '（成功率 ' + m2.rate + '%）' : ''), true);
-              send('tavern.guests', { cityId: c.id }, true).then(function (r3) {
-                var m3 = r3.msg || {};
-                void m3;
+              toast('「' + (got[0].name || g.name) + '」入营！', true);
+              send('tavern.guests', { cityId: c.id }, true).then(function () {
                 refreshCityView(cache);
               });
               return;
             }
             var reason = m2.reason;
             if (reason === 'refused') {
-              toast('「' + m2.name + '」婉拒了主公的延揽（成功率 ' + m2.rate + '%）'
-                + (m2.favor ? '，已拒 ' + m2.favor + ' 次，三顾茅庐下回更易' : '')
-                + '，金分文未取', false);
+              /* ★ 2026-11-16：拒绝理由改成人话，按人设与谋略选词；不再显示成功率/概率。 */
+              toast('「' + m2.name + '」' + (m2.line || '婉拒了主公的延揽，金分文未取'), false);
             } else if (reason === 'guest_left') {
               toast('「' + m2.name + '」已离店，明日请早', false);
-            } else if (reason === 'not_arrived') {
-              toast('「' + m2.name + '」' + (m2.when || '稍后') + '才到店，先办别的事', false);
-            } else if (reason === 'not_today') {
-              toast('「' + g.name + '」今日不在本城酒馆', false);
+            } else if (reason === 'not_arrived' || reason === 'not_today') {
+              toast('「' + m2.name + '」此刻不在座上', false);
             } else if (reason === 'not_enough_gold') {
               toast('金不足：招募一位需 ' + (m2.cost || m.cost) + ' 金', false);
             } else if (reason === 'no_guest') {
-              toast('此人已过时辰，明日请早', false);
+              toast('此刻座上无人', false);
             } else {
               toast('招募未成：' + (reason || '未知'), false);
             }
@@ -4813,14 +4808,11 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         if (m.exploredToday) { toast('本城今日已探索过，明日再来', false); return; }
         send('general.explore', { cityId: c.id }).then(function (r2) {
           if (r2.code === 0 && r2.msg && r2.msg.general) {
-            toast('登庸成功：' + (r2.msg.general.name || '贤才') + ' 入仕！（成功率 ' + r2.msg.rate + '%）', true);
+            toast('登庸成功：' + (r2.msg.general.name || '贤才') + ' 入仕！', true);
           } else if (r2.msg && r2.msg.reason === 'not_found') {
-            /* ★ P7 三顾：失败会累积好感，下次成功率高 12% */
-            /* ★ U15 失败也要给构成条：玩家得知道下次该改什么（政治/相性/义理/三顾） */
-            var parts = (r2.msg.parts || []).map(function (p) { return p.label + ' ' + (p.value > 0 ? '+' : '') + p.value; }).join('；');
-            toast('探索未遇贤才（成功率 ' + r2.msg.rate + '%）'
-              + (r2.msg.favor ? '，此人已拒 ' + r2.msg.favor + ' 次，再访更易' : '')
-              + (parts ? '。构成：' + parts : '') + '。金已破费', false);
+            /* ★ 2026-11-16：失败给拟人理由，不再暴露成功率与构成条。 */
+            toast('使者回报：' + (r2.msg.line || '那位贤才婉言谢绝了此番探访')
+              + (r2.msg.favor ? '（已访 ' + r2.msg.favor + ' 次，精诚所至或有转机）' : ''), false);
           } else if (r2.msg && r2.msg.reason === 'not_enough_gold') {
             toast('金不足（需 ' + r2.msg.cost + '）', false);
           } else if (r2.msg && r2.msg.reason === 'already_today') {
@@ -5468,6 +5460,21 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
                   ? '觉醒槽已开。到六府「战法」页装配。'
                   : '觉醒槽未开：武将 10 级，并且自带战法升到 10 级。');
             box.innerHTML = '<span class="winTag">' + slotName[pos] + '</span> <span class="cost">' + rule + '</span>';
+            /* ★ 2026-11-16：空的学习/觉醒槽此前只是一段文字，鼠标点上去毫无反应。
+               用户反馈「点学习没反应也不能学」——这里补一个可点按钮：点了必给提示，
+               槽未开直接说清条件；槽已开引导到六府战法页（真正的装配入口）。 */
+            if (pos === 1 || pos === 2) {
+              var open = pos === 1 ? g.level >= 5 : (g.level >= 10 && innateLv >= 10);
+              var lb = mkBtn(open ? '去学习 / 装配战法' : '为何不能学？', open ? '' : 'ghost', function () {
+                if (!open) {
+                  toast(pos === 1 ? '学习槽要武将升到 5 级才会开启，先出征积累经验。' : '觉醒槽要武将 10 级且自带战法升到 10 级。', false);
+                  return;
+                }
+                toast('请到六府「战法」页，在「装配已解锁战法」里点本武将的学习槽装配。', true);
+              });
+              lb.style.marginTop = '6px';
+              box.appendChild(lb);
+            }
           } else {
             var title = sk.name || ('战法' + sk.cfgId);
             box.innerHTML = '<span class="winTag">' + slotName[pos] + '</span> '
@@ -5509,16 +5516,16 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       hostEl.innerHTML = '';
       var m = rsp.msg || {};
       hostEl.appendChild(el('div', 'card', '招募一位 <b style="color:#f0d998">' + m.cost
-        + '</b> 金。豪杰按辰光来访，过了时辰便见不到。'));
-      var list = el('div', 'card', '<h4 style="margin-top:0">此刻在店</h4>');
+        + '</b> 金。此处只列此刻在座的豪杰。'));
+      var list = el('div', 'card', '<h4 style="margin-top:0">此刻在座</h4>');
       var now = m.now || [];
       if (!now.length) {
-        list.appendChild(el('div', 'empty', '此刻无人来访——' + (m.nextAt ? (m.nextAt + '再来看') : '等下个时辰')));
+        list.appendChild(el('div', 'empty', '此刻座上无人，改日再来。'));
       }
       now.forEach(function (g) {
         var row = el('div', 'row');
-        row.innerHTML = '<span><b style="color:#f0d998">' + g.name + '</b> <span class="chip">'
-          + g.when + '</span></span>';
+        row.innerHTML = '<span><b style="color:#f0d998">' + g.name + '</b>'
+          + ' <span class="cost">此刻在座</span></span>';
         row.appendChild(mkBtn('招募', '', function () {
           /* ★ P13 指名招募 + 武将可拒绝（与城内酒馆同口径） */
           send('general.drawGeneral', { drawTimes: 1, cfgId: g.cfgId }).then(function (r2) {
@@ -5528,19 +5535,15 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
               toast('入营：' + got.map(function (x) { return x.name || '武将'; }).join('、')
                 + '　到「征兵」页把他编入队伍', true);
             } else if (m2.reason === 'refused') {
-              toast('「' + m2.name + '」婉拒了主公的延揽（成功率 ' + m2.rate + '%）'
-                + (m2.favor ? '，已拒 ' + m2.favor + ' 次，三顾茅庐下回更易' : '')
-                + '，金分文未取', false);
+              toast('「' + m2.name + '」' + (m2.line || '婉拒了主公的延揽，金分文未取'), false);
             } else if (m2.reason === 'guest_left') {
               toast('「' + m2.name + '」已离店，明日请早', false);
-            } else if (m2.reason === 'not_arrived') {
-              toast('「' + m2.name + '」' + (m2.when || '稍后') + '才到店，先办别的事', false);
-            } else if (m2.reason === 'not_today') {
-              toast('「' + g.name + '」今日不在主城酒馆', false);
+            } else if (m2.reason === 'not_arrived' || m2.reason === 'not_today') {
+              toast('「' + m2.name + '」此刻不在座上', false);
             } else if (m2.reason === 'not_enough_gold') {
               toast('金不足：需 ' + ((m2 && m2.cost) || m.cost) + ' 金', false);
             } else if (m2.reason === 'no_guest') {
-              toast('此刻无人来访' + (m.nextAt ? '，' + m.nextAt + '再来' : ''), false);
+              toast('此刻座上无人', false);
             } else {
               toast('招募失败：' + errText(r2), false);
             }
@@ -5549,14 +5552,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         }));
         list.appendChild(row);
       });
-      var today = m.today || [];
-      if (today.length) {
-        var STATE_TXT = { now: '此刻在店', upcoming: '尚未到店', passed: '已过时辰' };
-        list.appendChild(el('div', 'cost', '今日可见：' + today.map(function (g) {
-          return g.name + '（' + g.when + '·' + (STATE_TXT[g.state] || '') + '）'
-            + (g.recruited ? ' ✓已入营' : '');
-        }).join('、')));
-      }
+      /* ★ 2026-11-16：不再展示「今日可见 / 尚未到店 / 何时到店」——不到店的人不出现在酒馆。 */
       hostEl.appendChild(list);
     });
   }

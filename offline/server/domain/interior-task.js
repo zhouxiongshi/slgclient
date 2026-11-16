@@ -18,7 +18,9 @@ import { recordRes } from './economy.js';
 /* ★ M2 招抚依赖「魅力」：游戏配置无此维，用史载五维折算（oath.js 只依赖 node:fs，无环） */
 import { loreStat } from './oath.js';
 /* ★ M4-8：内政与战斗/外交/行军共用同一份属性基线，魅力也走统一映射 */
-import { gameStatOf, charmStatOf } from './general-stat.js';
+import { gameStatOf, charmStatOf, effectiveStatOf } from './general-stat.js';
+/* ★ 2026-11-16：官阶反哺治政——谋臣/政治家政治随官阶提升（零依赖叶子） */
+import { careerTagOf } from './official-rank.js';
 
 /**
  * 事件簿追加（与 strategy.js 的 recordEvent 同形）。
@@ -93,7 +95,14 @@ export function officerStat(cfg, g, key) {
       : charmStatOf(loreStat(Number(g.cfgId), '魅力'));
     return base + (Number(g.charm_added) || 0);
   }
-  return gameStatOf(cfg, g, key, 60) + (Number(g[`${key}_added`]) || 0);
+  const base = gameStatOf(cfg, g, key, 60);
+  const withGear = base + (Number(g[`${key}_added`]) || 0);
+  if (key !== 'politics') return withGear;
+  /* 政治：谋臣/政治家官阶越高治政越强；其余武将小幅加成。都不破 100 上限。 */
+  const rank = Math.max(0, Math.trunc(Number(g.rank) || 0));
+  if (rank === 0) return withGear;
+  const career = careerTagOf(cfg?.generalByCfg?.get?.(Number(g.cfgId)) || {});
+  return effectiveStatOf(withGear, rank, 'politics', career);
 }
 
 /**

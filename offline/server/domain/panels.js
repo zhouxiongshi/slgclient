@@ -16,6 +16,8 @@ import { generalProgress } from './general-progress.js';
 import { materialGuide } from './armory.js';
 /* ★ M4-10：属性一律走唯一派生层（0~100 百分制），面板不再自己读原表。 */
 import { toPercentFromRaw } from './general-stat.js';
+/* ★ 2026-11-16：官阶名称单一口径（零依赖叶子），功勋晋升由 official-rank 统一 */
+import { rankName as meritRankName, RANK_NAMES, meritForRank } from './official-rank.js';
 /* 刻意只 import oath.js（零依赖小模块）而不 import strategy.js ——
    它反向 import world.js，而 world.js 又 import 本文件，会成环。 */
 import { oathOf, oathFactionOf, strategyCity, factionTraitOf } from './oath.js';
@@ -73,10 +75,13 @@ function skillConfOf(cfgId) {
 const ITEM_BY_ID = new Map(PANEL_CONF.items.items.map((i) => [Number(i.id), i]));
 const RECIPE_BY_ID = new Map(PANEL_CONF.recipes.recipes.map((r) => [Number(r.cfgId), r]));
 const LORE_BY_CFG = new Map(PANEL_CONF.lore.list.map((r) => [Number(r.cfgId), r]));
-const EQUIP_KEYS = ['force', 'strategy', 'defense', 'speed', 'destroy'];
+const EQUIP_KEYS = ['force', 'strategy', 'defense', 'speed', 'destroy', 'politics'];
 const SLOT_IDS = PANEL_CONF.items.slots.map((s) => s.id);
 const RES_LABEL = { wood: '木', iron: '铁', stone: '石', grain: '粮', gold: '金', decree: '政令', jungong: '军工' };
-const STAT_LABEL = { force: '武力', strategy: '谋略', defense: '防御', speed: '速度', destroy: '攻城' };
+/* ★ 2026-11-16：defense 键不变（内核/协议沿用），玩家可见标签统一改「统帅」；
+   补第六维「政治」，所有武将初始化即带（config.js 归一化写入）。 */
+const STAT_LABEL = { force: '武力', strategy: '谋略', defense: '统帅', speed: '速度', destroy: '攻城', politics: '政治' };
+export { STAT_LABEL };
 
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const int = (v, def = 0) => { const n = Number(v); return Number.isFinite(n) ? Math.trunc(n) : def; };
@@ -434,6 +439,9 @@ export function panelState(state, cfg) {
       careerNote: CAREER_FIT[careerOf(g).career].note,
       loyal: Math.round(g.loyal ?? 88),        // ★ P1 忠诚度（旬结算/赏赐）
       salaryPerXun: 20 * (Number(g.star) || 3), // ★ P1 旬俸
+      /* ★ 2026-11-16：功勋与官阶（0~9），玩家可见「立功→升官」进度 */
+      merit: int(g.merit, 0), rank: int(g.rank, 0), rankName: meritRankName(g.merit),
+      nextRankMerit: (() => { const r = int(g.rank, 0); return r < RANK_NAMES.length - 1 ? meritForRank(r + 1) : null; })(),
       appointed: Object.entries(state.interior.posts || {}).filter(([, v]) => Number(v) === g.id).map(([k]) => k),
       base, added: Object.fromEntries(EQUIP_KEYS.map((k) => [k, Number(g[`${k}_added`]) || 0])),
       final: Object.fromEntries(EQUIP_KEYS.map((k) => [k, base[k] + (Number(g[`${k}_added`]) || 0)])),

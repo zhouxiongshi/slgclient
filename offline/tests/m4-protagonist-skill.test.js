@@ -2,8 +2,8 @@
  * M4-7 主角自带战法 19001「坐镇中军」——玩家指定的指挥战法三效果。
  *
  * 覆盖：
- *   1. 配置同源：ui.des 占位 = kernel.effects 槽数 = include_effect；回击概率 30% 起、
- *      每级 +5%、Lv10 = 75%；洞察 3 回合、减伤 30%、回击 87% 策略伤害固定。
+ *   1. 配置同源：ui.des 占位 = kernel.effects 槽数 = include_effect；回击概率 35% 起、
+ *      每级 +5%、Lv10 = 80%；洞察 3 回合、减伤 30%、回击 87% 策略伤害固定。
  *   2. kernelSkillAt 逐槽注入：界面写多少，内核就用多少（杜绝两套数字）。
  *   3. 内核实跑：自身+一名友军获得洞察、前 3 回合免疫控制、第 4 回合可受控；
  *      受击按等级概率回击，回击伤害率固定 87%（不随武将等级二次成长）；
@@ -74,7 +74,8 @@ test('配置：指挥战法三槽，占位数/效果数/图标数/等级数对�
   assert.equal(authored.provenance.pairing, 'authored');
   assert.equal(s.kernel.skill_class, '指挥');
   assert.equal(s.kernel.prepare, 0);
-  assert.equal(s.kernel.probability_init, 0.35, '★ P13 主公技能初始发动率 35%');
+  assert.equal(s.kernel.probability_init, 1, '★ 2026-11-16 指挥战法发动率 100%');
+  assert.equal(s.kernel.probability_max, 1, '★ 2026-11-16 发动率封顶同为 100%');
   assert.equal(s.kernel.effects.length, 3);
   assert.equal((s.ui.des.match(/%n%/g) || []).length, 3);
   assert.equal(s.ui.include_effect.length, 3);
@@ -86,7 +87,7 @@ test('配置：指挥战法三槽，占位数/效果数/图标数/等级数对�
   assert.equal(s.kernel.effects[2].target_type, 'self');
 });
 
-test('配置：回击概率 30% 起每级 +5%，洞察/减伤/伤害率固定', () => {
+test('配置：回击概率 35% 起每级 +5%，洞察/减伤/伤害率固定', () => {
   const s = skillById(CFG_ID);
   const [eInsight, eCounter, eReduce] = s.kernel.effects;
   assert.equal(eInsight.mechanics.insight_rounds, 3);
@@ -97,11 +98,11 @@ test('配置：回击概率 30% 起每级 +5%，洞察/减伤/伤害率固定', 
   assert.ok(s.ui.des.includes('免疫控制') && s.ui.des.includes('受到伤害降低'));
 
   s.ui.levels.forEach((row, i) => {
-    assert.deepEqual(row.effect_value, [3, 30 + i * 5, 30], `Lv${i + 1} 槽值`);
-    assert.equal(row.probability, 35, '★ P13 发动率恒 35%（界面=内核同源）');
+    assert.deepEqual(row.effect_value, [3, 35 + i * 5, 30], `Lv${i + 1} 槽值`);
+    assert.equal(row.probability, 100, '★ 2026-11-16 发动率恒 100%（界面=内核同源）');
   });
-  assert.equal(s.ui.levels.at(-1).effect_value[1], 75, 'Lv10 回击概率 75%');
-  assert.equal(reportSkillFields(CFG_ID, 10).e_v[1], 75, '战报字段同源');
+  assert.equal(s.ui.levels.at(-1).effect_value[1], 80, 'Lv10 回击概率 80%');
+  assert.equal(reportSkillFields(CFG_ID, 10).e_v[1], 80, '战报字段同源');
 });
 
 test('映射：kernelSkillAt 逐等级取 UI 槽值，界面数字即结算数字', () => {
@@ -120,21 +121,21 @@ test('映射：kernelSkillAt 逐等级取 UI 槽值，界面数字即结算数�
       assert.deepEqual(e.bonus_terms, []);
     }
   }
-  assert.equal(kernelSkillAt(CFG_ID, 1).effects[1].mechanics.counter.chance, 0.3);
-  assert.equal(kernelSkillAt(CFG_ID, 10).effects[1].mechanics.counter.chance, 0.75);
+  assert.equal(kernelSkillAt(CFG_ID, 1).effects[1].mechanics.counter.chance, 0.35);
+  assert.equal(kernelSkillAt(CFG_ID, 10).effects[1].mechanics.counter.chance, 0.8);
 });
 
 test('叙述：面板/战报读到的就是指定效果，%n% 按等级填掉', () => {
   const s = skillById(CFG_ID);
   assert.equal(desText(s, 1),
-    '战斗开始时，自身与一名友军获得 3 回合洞察（免疫控制）；自身受到攻击时，有 30% 概率回击一次，造成 87% 策略伤害；自身受到伤害降低 30%。');
-  assert.ok(desText(s, 10).includes('有 75% 概率回击一次'));
+    '战斗开始时，自身与一名友军获得 3 回合洞察（免疫控制）；自身受到攻击时，有 35% 概率回击一次，造成 87% 策略伤害；自身受到伤害降低 30%。');
+  assert.ok(desText(s, 10).includes('有 80% 概率回击一次'));
   assert.ok(!desText(s, 10).includes('%n%'));
   const p = skillProfile(CFG_ID, 10);
   assert.equal(p.cls, '指挥');
   assert.equal(p.target, '自身与一名友军');
   assert.ok(p.effect.includes('洞察') && p.effect.includes('回击') && p.effect.includes('受到伤害降低'));
-  assert.ok(p.trigger.includes('35%'), '指挥战法 35% 发动率必须写进触发说明');
+  assert.ok(p.trigger.includes('100%'), '指挥战法 100% 发动率必须写进触发说明');
   assert.match(actSentence({ t: 'skill', fName: '主角', skill: '坐镇中军', loss: 120, counter: true }),
     /受击回击/);
   assert.match(actSentence({ t: 'immune', toName: '主角', state: '犹豫' }), /洞察生效，免疫/);
@@ -176,13 +177,13 @@ test('内核实跑：回击按等级概率触发、伤害率恒 87%、自身受�
   // 回击打向敌军，敌军没有减伤 reaction
   for (const e of counterHits) assert.equal(e.payload.damage_reduce, undefined);
 
-  // 多 seed 聚合：Lv10 的 75% 必须显著高于 Lv1 的 30%
+  // 多 seed 聚合：Lv10 的 80% 必须显著高于 Lv1 的 35%
   let c1 = 0; let c10 = 0;
   for (let seed = 1; seed <= 20; seed += 1) {
     c1 += fight(1, seed).events.filter((e) => e.kind === 'damage' && e.payload.counter).length;
     c10 += fight(10, seed).events.filter((e) => e.kind === 'damage' && e.payload.counter).length;
   }
-  assert.ok(c10 > c1 * 1.8, `回击概率成长失效：Lv1=${c1} Lv10=${c10}`);
+  assert.ok(c10 > c1 * 1.4, `回击概率成长失效：Lv1=${c1} Lv10=${c10}`);
   assert.equal(fight(1).event_fingerprint, r.event_fingerprint, '同种子必须逐事件可复现');
 });
 

@@ -188,7 +188,7 @@ function computeProfile(key, lv) {
   if (cls === '被动') trigger = '常驻生效，无需发动';
   else if (cls === '指挥') trigger = chance != null && chance < 100
     ? `开战阶段判定（发动率 ${pct(chance)}），不受控制影响`
-    : '开战即生效，不受控制影响';
+    : '开战即发动（发动率 100%），不受控制影响';
   else if (cls === '追击') trigger = `普通攻击命中后，${pct(chance)} 概率追加`;
   else trigger = `${pct(chance)} 概率发动` + (Number(k.prepare) > 0 ? `（需准备 ${k.prepare} 回合）` : '');
 

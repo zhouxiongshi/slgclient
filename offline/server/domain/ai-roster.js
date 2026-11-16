@@ -20,6 +20,7 @@
 
 import { rngFor } from './strategy-rng.js';
 import { applyGeneralExp } from './general-progress.js';
+import { grantMerit, MERIT_GAIN, rankName } from './official-rank.js';
 import { SKILLS } from '../skills.js';
 
 const PROTAGONIST_ID = 880001;
@@ -85,6 +86,8 @@ export function makeOfficer(cfgId, level, cityId, skills = []) {
     cfgId: Number(cfgId),
     level: lv,
     exp: 0,
+    merit: 0,                       // ★ 2026-11-16 功勋：名册武将按战功/守城/内政晋升官阶
+    rank: 0,
     cityId: Number(cityId) || 0,
     loyal: 72 + (Number(cfgId) % 21),
     skills: Array.isArray(skills) ? skills.slice(0, 3).map((s) => ({ id: Number(s.id || s.cfgId), lv: Number(s.lv) || 1 })) : [],
@@ -126,6 +129,8 @@ export function rosterDefenders(state, cfg, owner, cityId, level, exclude = []) 
     cfgId: Number(g.cfgId),
     level: g.level,
     exp: g.exp || 0,
+    merit: g.merit || 0,
+    rank: g.rank || 0,
     cityId: 0,
     curArms: (k % 3) + 1, star: 3, physical_power: 100, order: 0,
     hasPrPoint: 0, usePrPoint: 0, attack_distance: 0,
@@ -176,6 +181,40 @@ export function aiRosterGrantExp(state, cfg, factionId, expMap = {}) {
     }
   }
   return ups;
+}
+
+/**
+ * ★ 2026-11-16 诸侯「自己发展」：每旬给名册武将按功勋发经验并晋升官阶。
+ * 原因：旧版 AI 武将经验只在攻城胜利时发，守城/内政/养兵都不长，玩家越打越强、
+ * 诸侯原地踏步。这里让 AI 每旬按封地规模积累功勋（治政/守土本身即功），
+ * 功勋按 official-rank 口径晋官；官阶再经 general-stat.effectiveStatOf 反哺统帅/政治，
+ * 名册守将走出「立功→升官→更强」的闭环。全部确定性，无随机，不碰史载五维。
+ */
+export function aiRosterCultivateTick(state, conf, cfg, faction, turn) {
+  const roster = state?.strategy?.rosters?.[faction.id];
+  if (!roster?.generals?.length) return [];
+  const st = state.strategy;
+  const ownCities = Object.values(st.cities || {}).filter((c) => c.owner === faction.id);
+  const cityCount = ownCities.length;
+  const axes = conf?.personas?.[faction.persona] || {};
+  const economy = axes.economy ?? 0.5;
+  const notes = [];
+  for (const g of roster.generals) {
+    /* 治土功勋：城数越多、经济人格越高，治政积累越快；上限温和，避免一夜满级。 */
+    const meritAdd = Math.round(2 + cityCount * 1.5 + economy * 3);
+    const mr = grantMerit(g, meritAdd);
+    /* 与功勋同步发经验：治政/练兵也算历练，但速率低于实战攻城（后者 60~150/次）。 */
+    const expAdd = Math.round(4 + economy * 6 + cityCount);
+    const up = applyGeneralExp(g, expAdd);
+    if (mr.promoted || up.to > up.from) {
+      const name = cfg?.generalByCfg?.get?.(Number(g.cfgId))?.name || `武将${g.cfgId}`;
+      notes.push({
+        kind: mr.promoted ? '升官' : '历练', faction: faction.id, cfgId: Number(g.cfgId),
+        name, rank: g.rank, rankName: rankName(g.merit), from: up.from, to: up.to,
+      });
+    }
+  }
+  return notes;
 }
 
 /** 登庸在野武将入名册：玩家与 AI 共用 tavern.people，recruited 标记防重复。 */

@@ -95,7 +95,7 @@
     var pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
     if (page >= pages) page = pages - 1;
     var slice = rows.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
-    var head = '<tr><th>武将</th><th>星</th><th>武</th><th>谋</th><th>御</th><th>速</th><th>攻</th><th>统</th><th>自带战法</th></tr>';
+    var head = '<tr><th>武将</th><th>星</th><th>武</th><th>谋</th><th>统帅</th><th>速</th><th>攻</th><th>政</th><th>统御</th><th>自带战法</th></tr>';
     container.innerHTML = '<table>' + head + '</table><table>'
       + slice.map(function (r) {
         var sk = (SKILL_MAP[r.skillCfgId] || {}).name;
@@ -104,7 +104,8 @@
           + '<td>' + esc(r.name) + (r.isProtagonist ? ' <span class="muted">(主公)</span>' : '') + (r.overridden ? '<span class="ovr-tag">已改</span>' : '') + '</td>'
           + '<td>' + r.star + '</td>'
           + '<td>' + r.stats.force + '</td><td>' + r.stats.strategy + '</td><td>' + r.stats.defense + '</td>'
-          + '<td>' + r.stats.speed + '</td><td>' + r.stats.destroy + '</td><td>' + r.cost + '</td>'
+          + '<td>' + r.stats.speed + '</td><td>' + r.stats.destroy + '</td>'
+          + '<td>' + r.stats.politics + '</td><td>' + r.cost + '</td>'
           + '<td>' + (sk ? esc(sk) : '<span class="muted">—</span>') + '</td></tr>';
       }).join('') + '</table>';
     return { rows: rows.length, pages: pages };
@@ -121,9 +122,9 @@
     var row = DATA.rows.find(function (r) { return r.cfgId === currentCfgId; });
     if (!row) { detail.innerHTML = '<span class="muted">点击上方列表选择武将。</span>'; return; }
     var ranges = DATA.ranges;
-    var statKeys = ['force', 'strategy', 'defense', 'speed', 'destroy'];
+    var statKeys = ['force', 'strategy', 'defense', 'speed', 'destroy', 'politics'];
     var growKeys = ['force_grow', 'strategy_grow', 'defense_grow', 'speed_grow', 'destroy_grow'];
-    var statNames = { force: '武力', strategy: '谋略', defense: '统御防御', speed: '速度', destroy: '攻城' };
+    var statNames = { force: '武力', strategy: '谋略', defense: '统帅', speed: '速度', destroy: '攻城', politics: '政治' };
     var growNames = { force_grow: '武力成长', strategy_grow: '谋略成长', defense_grow: '防御成长', speed_grow: '速度成长', destroy_grow: '攻城成长' };
     function fld(k, v, r) {
       return '<div class="fld"><span class="lb">' + esc(r.label || k) + ' (' + r.min + '~' + r.max + ')</span>'

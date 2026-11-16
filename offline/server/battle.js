@@ -22,6 +22,8 @@ import { knobGet } from './domain/knobs.js';
 import { armsApt } from './domain/aptitude.js';
 /* ★ M4-13：地图格守军同样按坐标确定性分配，不再复用写死的 6 个 cfgId */
 import { garrisonCfgIds } from './domain/garrison.js';
+/* ★ 2026-11-16：官阶反哺统兵能力——统帅(defense)按官阶加成，史载原表不动 */
+import { effectiveStatOf } from './domain/general-stat.js';
 
 /** 本作设计：一方兵力降到开战时的这个比例及以下，算溃败。 */
 export const ROUT_RATIO = 0.1;
@@ -121,8 +123,11 @@ function makeHero(g, cfg) {
     const cap = Math.max(0, (100 - b) / 9);
     return { base: b, grow: Math.min(raw, Math.floor(cap * 100) / 100) };
   };
+  /* ★ 官阶加成（2026-11-16）：武将统帅随官阶提升（每阶 +2，封顶 100）；
+     基线与成长率仍取 generalByCfg 原表，加成只在派生层叠加。rank=0 时不生效。 */
+  const rank = Math.max(0, Math.trunc(Number(g.rank) || 0));
   const a = attr(gc.force, gc.force_grow);
-  const d = attr(gc.defense, gc.defense_grow);
+  const d = attr(effectiveStatOf(gc.defense, rank, 'defense'), gc.defense_grow);
   const i = attr(gc.strategy, gc.strategy_grow);
   const s = attr(gc.speed, gc.speed_grow);
   const de = attr(gc.destroy, gc.destroy_grow);

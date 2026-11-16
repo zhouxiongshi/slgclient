@@ -607,16 +607,20 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
     const k = p?.kernel || {};
     const fx = Array.isArray(k.effects) ? k.effects : [];
     const lv = p?.ui?.levels || [];
+    /* ★ 2026-11-16：指挥战法改为「100% 发动 + 受击回击 35% 起每级 +5%」，
+       内核 probability_init/max=1；回击槽取 effect_value[1]=35+5×(lv−1)。 */
     const stepOk = lv.length === 10 && lv.every((r, i) =>
-      r.effect_value[0] === 3 && r.effect_value[1] === 30 + i * 5 && r.effect_value[2] === 30);
-    check('主角战法：指挥三效果（洞察3回合 / 回击30%+5%每级 / 减伤30%）与 UI 槽位同源',
+      r.effect_value[0] === 3 && r.effect_value[1] === 35 + i * 5 && r.effect_value[2] === 30
+      && r.probability === 100);
+    check('主角战法：指挥三效果（洞察3回合 / 回击35%+5%每级 / 减伤30%）与 UI 槽位同源',
       p?.cfgId === 19001 && k.skill_class === '指挥' && fx.length === 3
+      && k.probability_init === 1 && k.probability_max === 1
       && fx[0]?.mechanics?.insight_rounds === 3
       && fx[1]?.mechanics?.counter?.rate_pct === 87
       && fx[1]?.mechanics?.counter?.damage_type === 'STRATEGY_DAMAGE'
       && fx[2]?.mechanics?.damage_taken_reduce === 0.3
       && (p?.ui?.des?.match(/%n%/g) || []).length === 3 && stepOk,
-      JSON.stringify({ class: k.skill_class, effects: fx.length, stepOk }));
+      JSON.stringify({ class: k.skill_class, effects: fx.length, stepOk, prob: k.probability_init }));
   }
   /* tools/ 不进出厂源码扫描，工具改了报告不重跑也不会被 7.x 新鲜度发现，这里单独兜。 */
   const stale = [];

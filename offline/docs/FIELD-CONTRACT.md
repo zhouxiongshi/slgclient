@@ -58,8 +58,14 @@
 | 忠诚 | `state.generals[].loyal`（运行期） | 0–100 | 整数 | ❌ | 武将卡、预警 |
 | 战法槽位规则 | `slots.js slotBlock()`：自带不可替换；**学习槽 Lv5 开**；觉醒槽 Lv10 且自带 10 级 | 级 | 整数 | ❌ | 武将战法页、六府装配 |
 | 战法装配上限 | `conf/skills.json` 原表 `ui.limit`（可研习 80 条分布 **1~6 人**）；协议层 `general.upSkill` 与六府 `learn` 同读此值 | 人 | 整数 | ❌ | 六府装配按钮、limit_reached 回执 |
-| 武将升级经验 | `general-progress.js expToAdvance()`：`40 × 当前等级`，经验只来自出征折损（`battle.js` 每槽损失 × 0.5） | 点 | 整数 | ❌ | 武将卡「经验 x/y」 |
-| 主公战法发动率 | `conf/campaign/protagonist-skill.json`：kernel `probability_init = probability_max = 0.35`（★ P13 用户指定），`ui.levels[].probability = 35`；叙述文案 `开战阶段判定（发动率 35%）` | % | 整数 | ❌ | 战法面板发动率、推演触发说明 |
+| 武将升级经验 | `general-progress.js expToAdvance()`：`40 × 当前等级`，经验来自出征折损（`battle.js` 每槽损失 × 0.5）与 AI 月度人事（`ai-roster.js` 攻城/守城/内政按功勋发 exp）；玩家与 AI 同口径 | 点 | 整数 | ❌ | 武将卡「经验 x/y」 |
+| 武将政治属性 | 第 6 项基础属性，键 `politics`／史载 `five.zheng`，0~100 百分制；`config.js` 归一化写入 `generalByCfg`，取数走 `gameStatOf(cfg,g,'politics')`；所有武将（含主公、官员、AI 名册）初始化即带 | 点 | 整数 | ❌ | 武将卡「政治」、内政官员政治加成、登庸、官职能力 |
+| 官职能力加成 | `domain/official-rank.js`：功勋 `state.generals[].merit` 与 AI 名册 `generals[].merit` 同源累积，官阶 0~9 由功勋唯一决定；武将官阶越高统帅（defense，即统兵能力）越高，谋臣/政治家官阶越高政治越高；经 `general-stat.js effectiveStatOf` 叠加、封顶 100（不改史载原表） | 级/点 | 整数 | ❌ | 武将卡官阶、统帅/政治有效值、AI 名册 |
+| 主公战法发动率 | `conf/campaign/protagonist-skill.json`：指挥战法**发动率恒 100%**（kernel `probability_init = probability_max = 1`，`ui.levels[].probability = 100`）；叙述文案 `开战即发动（发动率 100%）` | % | 整数 | ❌ | 战法面板发动率、推演触发说明 |
+| 主公战法回击率 | 自身受击时的回击概率：Lv1=35%，每升 1 级 +5%（`ui.levels[].effect_value[1]` = 35+5×(lv−1)，kernel counter.chance 同源）；回击伤害率恒 87% | % | 整数 | ❌ | 战法面板效果是、战报「受击回击」 |
+| 主公初始属性 | `conf/campaign/protagonist.json`：武力 99／谋略 96／统帅(原 defense 键)91／速度 87／政治 93；玩家可见标签「防御」统一改为「统帅」，内部键 `defense` 不变 | 点 | 整数 | ❌ | 武将卡、编辑器（GM）、战报 |
+| 招募拒绝台词 | `domain/recruit-refusal.js`：拒绝理由拟人化，按武将性格（莽夫/名将/名士等）与谋略高低选台词，汉末语境；不显示「成功率/概率」数字 | — | — | ❌ 只展示 | 酒馆招募 toast |
+| 酒馆在店名单 | `tavern.js guestsNow()` 只返回此刻在店者；界面不再展示「何时到店 / 尚未到店」，不在店武将不出现在酒店 | — | — | ❌ | 城内/主城酒馆名单 |
 
 ## E. 交互层（P9/P10 契约延续）
 
