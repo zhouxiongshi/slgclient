@@ -1234,9 +1234,10 @@
 | NFR-19 | 画面保全 | 原版逐字节不变 | 1582 文件 / `ee987ec2…50485` / `byteIdentical=true` / `containsCustomCanvasUI=false`；`index.html` 磁盘文件不含注入脚本 | `pack.js`、`check-release` 第 2 组 |
 | NFR-20 | 可解释性 | 无黑箱 | 每个 delta 有 `source`；外交拒绝有理由链；登庸/招降有构成条；战报三句齐全 | `FIELD-CONTRACT.md`、GDD 附录 B C 组 |
 | NFR-21 | 商业形态 | 无付费 | 无内购、无抽卡、无赛季、无广告；武将只靠玩法获取 | `conf/panels/skill-recipes.json` 双路径保证 |
-| NFR-22 | 本地化 | 简体中文 | 全部 UI 文案、战报、文档为简体中文；术语含 `数值来源/证据级别` | `terms.json`、`docs/` |
+| NFR-22 | 本地化 | 简体中文 | 全部 UI 文案、战报、文档为简体中文；溯源字段只留在工程数据中，不进入玩家界面 | `terms.json`、`docs/` |
 | NFR-23 | 体积 | 发行包 | locales 只保留 4 个 `.pak`（瘦身约 45MB）；`build/` 不入库 | `pack.js:73-85`、`.gitignore` |
 | NFR-24 | 可观测 | 日志上限 | `requestLog` 80 / `logs` 40 / `chat` 200 / `battleLog` 200 / `resLedger` 240 / `strategy.events` 200 / `warReports` 100 / `__slgErrors` 60 | `index.js`、`world.js` |
+| NFR-25 | 产品呈现 | 不泄露借鉴来源 | 玩家界面不得出现外部游戏／名录名称、外部地址、内部规格编号、源码路径与工程溯源字段（`数值来源`／`source_id`／`confidence`／`证据级别`／`可信度`）；这些数据只用于工程合规审阅 | `tests/ui-presentation-hygiene.test.js`、`conf/interaction/terms.json` |
 
 ---
 
@@ -1568,7 +1569,7 @@ npm test             # 内核单测 + 黄金向量
 | 📐 规划中 | 0 | 路线图见 GDD §14，未冒充现行需求 |
 | ⛔ 不做 | — | 联网 / 内购 / 云存档 / 18 棋子棋盘 / 手柄 / 移动端（§1.5） |
 
-**非功能需求** 24 条（NFR-01~NFR-24）；**用例** 30 个（UC-01~UC-30）；**业务规则** 200+ 条（R-xx.y）；**验收标准** 120+ 条（AC-xx.y）；**未决问题** 10 项（OP-01~OP-10）。
+**非功能需求** 25 条（NFR-01~NFR-25）；**用例** 30 个（UC-01~UC-30）；**业务规则** 200+ 条（R-xx.y）；**验收标准** 120+ 条（AC-xx.y）；**未决问题** 10 项（OP-01~OP-10）。
 
 ### 13.4 本文与既有文档的关系图
 

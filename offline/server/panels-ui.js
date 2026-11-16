@@ -238,6 +238,12 @@
     '  padding:4px 11px;cursor:pointer;font:12px "Microsoft YaHei",sans-serif;margin:2px 4px 2px 0;}',
     '#slgPanelsWin .btn:hover{background:#474029;}#slgPanelsWin .btn:disabled{opacity:.4;cursor:not-allowed;}',
     '#slgPanelsWin .btn.warn{border-color:#a8664c;color:#e6a786;}',
+    '#slgPanelsWin .capbtn{flex:0 0 62px;background:#2c2f22;color:#e8d7a8;border:1px solid #7a6a42;',
+    '  border-radius:5px;padding:7px 10px;cursor:pointer;font:13px "Microsoft YaHei",sans-serif;white-space:nowrap;}',
+    '#slgPanelsWin .capbtn:hover{background:#474029;border-color:#ba9a52;color:#ffe6a6;}',
+    '#slgPanelsWin .capbtn.danger{border-color:#a8664c;color:#f0b39b;}',
+    '#slgPanelsWin .capbtn.danger:hover{background:#4a2b24;color:#ffd0bb;}',
+    '#slgPanelsWin .caprow .genrow small{color:#b3a88f;}',
     '#slgPanelsWin table{width:100%;border-collapse:collapse;font-size:13px;}',
     '#slgPanelsWin th,#slgPanelsWin td{border-bottom:1px solid #33302a;padding:7px 9px;text-align:left;}',
     '#slgPanelsWin th{color:#c2ac74;font-weight:600;background:#20221600;}',
@@ -294,13 +300,13 @@
     /* ★ M4-13 俘虏名册：招降 + 放归 + 处斩三个出口同屏可达。
        过去只有招降，且整个区块藏在六府二级页里，玩家占城后根本看不到。 */
     if ((data.captives || []).length) {
-      out += '<h4 style="color:#e07a5f">阵前被俘（招降 / 放归 / 处斩）</h4>';
+      out += '<h4>阵前被俘（招降 / 放归 / 处斩）</h4>';
       data.captives.forEach(function (c) {
-        out += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">'
-          + '<button class="genrow" style="flex:1;text-align:left" data-act="captive" data-i="' + c.idx + '">'
+        out += '<div class="card caprow" style="display:flex;gap:10px;align-items:center;padding:9px 10px;margin-bottom:7px">'
+          + '<button class="genrow" style="flex:1;text-align:left;margin:0" data-act="captive" data-i="' + c.idx + '">'
           + esc(c.name) + '<small>押 ' + c.days + ' 旬 · 忠 ' + c.loyal + ' · 降率约 ' + c.rate + '%</small></button>'
-          + '<button class="ghost" data-act="captiveRelease" data-i="' + c.idx + '">放归</button>'
-          + '<button class="ghost" data-act="captiveExecute" data-i="' + c.idx + '">处斩</button>'
+          + '<button class="capbtn" data-act="captiveRelease" data-i="' + c.idx + '">放归</button>'
+          + '<button class="capbtn danger" data-act="captiveExecute" data-i="' + c.idx + '">处斩</button>'
           + '</div>';
       });
     }
@@ -324,7 +330,7 @@
       + '</div><div style="margin-top:8px" class="muted">字 ' + esc(lore.zi) + ' · 籍贯 ' + esc(lore.hometown)
       + ' · 势力 ' + esc(lore.faction) + ' · 分期 ' + esc(lore.era) + '</div>'
       + '<div style="margin-top:6px">' + esc(lore.brief) + '</div>'
-      + '<div style="margin-top:6px" class="muted">史载五维与本局战斗数值现在是同一口径（0~100，三国志11 规则），'
+      + '<div style="margin-top:6px" class="muted">史载五维与本局战斗数值采用同一口径（0~100），'
       + '武力 72 就是武力 72，可以直接比较。</div></div>'
       : '<div class="card muted">主公为本局穿越者，史无明载；上方五维是本局设定值，'
       + '与史载五维同为 0~100 口径。</div>';
@@ -338,7 +344,7 @@
       + '</tr></thead><tbody>' + rows + '</tbody></table>'
       + '<div class="muted" style="margin-top:8px">装备单件 ≤8%、全套 ≤25%（当前武力增幅 '
       + pct(g.added.force, g.base.force) + '）。不显示单一「战力」数值，保留搭配讨论空间。</div>'
-      + '<div class="muted" style="margin-top:5px">本表为战斗结算用的本局数值（0~100，三国志11 口径，进内核不再缩放）；'
+      + '<div class="muted" style="margin-top:5px">本表为战斗结算用的本局数值（0~100，与史载五维同尺度）；'
       + '下方史料档案的史载五维同为 0~100，可以直接比较。</div></div>'
       + loreHtml
       + '<div class="card"><h3>本局状态</h3>体力 ' + esc(g.physical)
@@ -355,7 +361,7 @@
   }
 
   /* ★ U15 相性与关系网：相性/义理是「本作设定」派生值，关系逐条标演义回目。
-     不用纯列表：亲爱/君臣/敌对分组 + 连线感的色带，悬停看注与出处。 */
+     不用纯列表：亲爱/君臣/敌对分组 + 连线感的色带，悬停看注。 */
   function relationCardHtml(g) {
     var r = g.relations || { sworn: [], lord: [], rival: [], note: '' };
     var chip = function (b, tone) {
@@ -382,7 +388,7 @@
       + group('君臣', r.lord, 'lord')
       + group('敌对 / 宿怨', r.rival, 'rival')
       + '<div class="muted" style="margin-top:8px">' + esc(r.note || '')
-      + '相性影响登庸与忠诚判定，但不是唯一参数；数值来源为「势力锚点 + 编号散列」，不是史实。</div></div>';
+      + '相性影响登庸与忠诚判定，但不是唯一参数；本项为本作设定值，并非史实数据。</div></div>';
   }
 
   function genSkillHtml(g) {
@@ -830,7 +836,7 @@
          ['≥2 条获取途径', sm.sourcesCovered + ' / ' + sm.total]].map(function (p) {
         return '<div class="card"><span class="k">' + p[0] + '</span><div class="v" style="font-size:19px">' + p[1] + '</div></div>';
       }).join('') + '</div>';
-    out += '<div class="card muted">全部配方开局公开：名称／类型／描述／数值逐字取自 battle-kit 原文；'
+    out += '<div class="card muted">全部配方开局公开：名称／类型／描述／数值均已在本作统一登记；'
       + '没有随机、没有不可逆的意外、没有死路（每条至少两条路径，战功研习永久兜底）。</div>';
 
     var fs = [['all', '全部'], ['unlocked', '已解锁'], ['researching', '研习中'], ['locked', '未解锁'],
@@ -865,7 +871,7 @@
       // ★ P3：语义摘要——不展开就能看到「怎么触发、Lv10 发动率、效果值」
       var lv10 = s.levels && s.levels[10];
       /* 修 U09：图鉴必须显示「有效距离」，否则玩家查不到战法射程，
-         描述与内核计算虽然同源，但只有点进战斗才知道 —— 违反设计规格 2.3。 */
+         描述与内核计算虽然同源，但只有点进战斗才知道。 */
       var rangeTxt = (s.range == null || s.range >= 9) ? '无距离限制'
         : ('有效距离 ' + esc(s.range) + '（前锋0/中军1/大营2，跨阵营距离=双方槽位+1）');
       var digest = lv10 ? ('Lv10 发动 ' + esc(lv10.probability) + '%'
@@ -879,11 +885,11 @@
         + '<span style="flex:1"></span><span class="muted">' + (ui.openSkill === s.cfgId ? '收起 ▲' : '展开获取途径 ▼') + '</span></div>';
       if (ui.openSkill === s.cfgId) {
         h += '<div class="dt"><div style="margin:8px 0">' + esc(s.des) + '</div>'
-          + '<div class="muted" style="font-size:11px;margin-top:-5px">描述逐字取自 battle-kit 原文；'
-          + '其中 %n 对应下方各级效果值，未改写。</div>'
+          + '<div class="muted" style="font-size:11px;margin-top:-5px">'
+          + '描述中的 %n 对应下方各级效果值。</div>'
           + '<div class="muted">装配 ' + s.equippedBy.length + ' / ' + s.equipLimit + ' 人 · 目标类型 '
           + esc(s.target) + ' · 适性兵种 ' + esc((s.arms || []).join(',')) + '</div>'
-          + '<h4>10 级数值曲线（原文数值）</h4><table><thead><tr><th>等级</th><th>发动率</th><th>效果值</th></tr></thead><tbody>'
+          + '<h4>10 级数值曲线</h4><table><thead><tr><th>等级</th><th>发动率</th><th>效果值</th></tr></thead><tbody>'
           + Object.keys(s.levels).map(function (lv) {
             return '<tr><td>Lv' + esc(lv) + '</td><td>' + esc(s.levels[lv].probability) + '%</td><td>'
               + esc((s.levels[lv].effect_value || []).join(' / ')) + '</td></tr>';

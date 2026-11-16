@@ -1,8 +1,8 @@
 /* ============================================================================
  * 交互增强层（Interaction Layer / 简称 IX）
  * ----------------------------------------------------------------------------
- * 依据《三国 SLG 交互原型设计提示词 v1.0》实现，覆盖 6.1~6.11 中「纯前端注入层
- * 可实现」的部分。工程红线：
+ * 纯前端注入层，覆盖术语提示、决策预览、军师建言、内置百科、透镜与快捷键。
+ * 工程红线：
  *   - 独立 IIFE，唯一一份浏览器脚本，由 index.js 在 index.html 的 HTTP 响应里
  *     追加 <script src="/__slg/interaction/ui.js"> 下发；磁盘 web/ 逐字节不变。
  *   - 不引用、不修改 skills.js / panels-ui.js 的任何局部变量，只通过 window.__slg*
@@ -11,10 +11,10 @@
  *     聚合端点（服务端 domain/interaction.js 纯函数）。
  *   - 面板层禁用 Math.random；术语表由 conf/interaction/terms.json 构建期内联，
  *     运行时零网络请求、零外部依赖。
- *   - 描述 = 计算 = 战报同源：所有数值都标 source / confidence / 推导口径，
- *     服务端没给的字段一律显示「服务端未提供 + 降级方案」，不伪装成权威值。
+ *   - 描述 = 计算 = 战报同源：界面只展示玩家可用的规则与数值，
+ *     服务端没给的字段一律走简化说明，不伪装成权威值。
  *
- * 章节 K（字段缺口与降级）在 domain/interaction.js:fieldGaps，界面「设置 → 字段缺口」可查。
+ * 字段缺口与降级说明在 domain/interaction.js:fieldGaps，界面「设置 → 当前简化说明」可查。
  * ========================================================================== */
 ;(function () {
   'use strict';
@@ -132,7 +132,7 @@
     }
   }
 
-  /* ---------------- 2. 样式（设计规格第 9 章：字号≥12 / 行高1.5 / 色盲双编码） ---------------- */
+  /* ---------------- 2. 样式（字号≥12 / 行高1.5 / 色盲双编码） ---------------- */
   function injectCss() {
     if (document.getElementById('slgIxCss')) return;
     var css = ''
@@ -336,15 +336,11 @@
     var link = (t.关联词条 || []).filter(function (id) { return BY_ID[id]; }).map(function (id) {
       return '<button data-term="' + esc(id) + '">' + esc(BY_ID[id].名称) + ' ›</button>';
     }).join('');
-    var src = (t.数值来源 || []).map(function (s) { return '<div>· ' + esc(s) + '</div>'; }).join('');
     var crumb = crumbs && crumbs.length
       ? '<div class="crumb">路径：' + crumbs.map(function (c) { return esc(BY_ID[c] ? BY_ID[c].名称 : c); }).join(' › ') + '</div>' : '';
     return crumb
       + '<h4>' + esc(t.名称) + ' <span class="tag">' + esc(t.分类) + '</span></h4>'
-      + '<div class="meta">证据：' + esc(t.证据级别 || '本作设定') + ' · 可信度 '
-      + esc(t.confidence || '中') + (t.source_id ? ' · ' + esc(t.source_id) : '') + '</div>'
       + '<div class="body">' + esc(t.简述 || '') + '</div>'
-      + (src ? '<div class="src"><b>数值来源</b>' + src + '</div>' : '')
       + (link ? '<div class="links">' + link + '<button data-act="ixEncy" data-id="' + esc(t.id) + '">在百科中打开 ↗</button></div>' : '')
       + '<div class="meta" style="margin-top:8px">悬停框内词条可继续展开 · 点此框或按 K 锁定 · Esc 关闭最上层</div>';
   }
@@ -386,7 +382,7 @@
     var node = S.layers[S.layers.length - 1];
     if (!node) return false;
     if (node._pinned && node._crumbs && node._crumbs.length) {
-      /* 面包屑逐级返回：先回上一层术语，而不是直接关框（CK3 套娃迷路优化） */
+      /* 面包屑逐级返回：先回上一层术语，而不是直接关框 */
       var prev = node._crumbs.pop();
       var t = BY_ID[prev];
       if (t) { node.innerHTML = termHtml(t, node._crumbs.slice()); return true; }
@@ -449,7 +445,7 @@
     });
   }
   /* 自动术语标注：只处理文本节点，跳过输入控件 / 脚本 / 已标注节点，限流避免卡顿。
-     对动态渲染的面板用 MutationObserver 增量扫描（设计规格 6.1 性能要求）。 */
+     对动态渲染的面板用 MutationObserver 增量扫描，避免全量重扫。 */
   var SCAN_SKIP = { SCRIPT: 1, STYLE: 1, INPUT: 1, TEXTAREA: 1, SELECT: 1, OPTION: 1, BUTTON: 1 };
   function scanTerms(root) {
     if (!NAME_LIST.length || !root) return;
@@ -527,15 +523,14 @@
       });
       box.innerHTML = '<h3>内置百科 · 离线（' + list.length + ' / ' + TERMS.length + ' 条）</h3>'
         + '<div style="display:flex;gap:7px;margin-bottom:10px"><input type="text" id="slgIxEncyQ" '
-        + 'placeholder="检索术语 / 分类 / 数值来源" style="flex:1" value="' + esc(q || '') + '">'
+        + 'placeholder="检索术语 / 分类 / 说明" style="flex:1" value="' + esc(q || '') + '">'
         + '<button data-act="close">关闭 (Esc)</button></div>'
-        + '<div class="muted" style="font-size:11px;margin-bottom:9px">术语间可点击跳转（这是《文明7》百科无超链接的教训）；'
-        + '每条标注 证据级别 / source_id / confidence，放在详情层不干扰主流程。</div>'
+        + '<div class="muted" style="font-size:11px;margin-bottom:9px">术语间可点击跳转，悬停可查看释义；'
+        + '详情只展示玩家可用的规则与数值。</div>'
         + '<div id="slgIxEncyList" style="max-height:54vh;overflow:auto">'
         + list.map(function (t) {
           return '<div style="border-top:1px solid #33402f;padding:7px 0;cursor:pointer" data-open="' + esc(t.id) + '">'
             + '<b>' + esc(t.名称) + '</b> <span class="tag">' + esc(t.分类) + '</span>'
-            + '<span class="muted">' + esc(t.证据级别) + ' · ' + esc(t.confidence) + '</span>'
             + '<div class="muted" style="font-size:11px">' + esc(String(t.简述 || '').slice(0, 92)) + '…</div></div>';
         }).join('') + '</div>';
       var inp = box.querySelector('#slgIxEncyQ');
@@ -773,7 +768,7 @@
         + '<div class="pv-k">' + esc(p.k) + '</div><div class="pv-v">' + esc(p.v) + '</div></div>';
     };
     box.innerHTML = ''
-      + '<div class="pv-head"><div class="pv-eyebrow">决策前预览 · 设计规格 6.2</div>'
+      + '<div class="pv-head"><div class="pv-eyebrow">决策前预览</div>'
       + '<div class="pv-title">' + esc(m.title) + '</div>'
       + '<div class="pv-sub">点确认之前就知道会发生什么；数值按「基础 → 加成项 → 最终」拆解。</div>'
       + '<span class="pv-badge ' + (m.reversible ? 'ok' : 'warn') + '">'
@@ -781,7 +776,7 @@
       + '<div class="pv-strip">'
       + '<div class="pv-stat"><small>直接消耗</small><b>' + esc(m.cost) + '</b></div>'
       + '<div class="pv-stat"><small>府库现金</small><b>' + fmt((d.treasury && d.treasury.gold) || 0) + ' 金</b></div>'
-      + '<div class="pv-stat"><small>数据可信度</small><b>' + (d.ok ? '服务端实值' : '规则推算') + '</b></div>'
+      + '<div class="pv-stat"><small>数值依据</small><b>' + (d.ok ? '当前存档实值' : '规则推算') + '</b></div>'
       + '</div>'
       + '<div class="pv-cols">'
       + '<section class="pv-col"><h4>会发生什么</h4>' + (normal.length ? normal.map(row).join('') : '<div class="pv-empty">本操作无额外结算项</div>') + '</section>'
@@ -789,7 +784,7 @@
       + (risks.length ? risks.map(row).join('') : '<div class="pv-empty">当前无已知风险：资源充足、粮道通畅。</div>')
       + '</section></div>'
       + (m.term && BY_ID[m.term] ? '<div class="pv-term"><button data-act="term" data-id="' + esc(m.term)
-        + '">查看术语「' + esc(BY_ID[m.term].名称) + '」与数值来源 →</button></div>' : '')
+        + '">查看术语「' + esc(BY_ID[m.term].名称) + '」说明 →</button></div>' : '')
       + '<div class="acts"><button class="foldbtn" data-act="fold">'
       + (pvFolded ? '▣ 展开明细' : '◱ 收起明细') + '</button>'
       + '<button data-act="cancel">取消 (Esc)</button>'
@@ -857,7 +852,7 @@
     var last = S.undo[0];
     if (!last) { toast('没有可撤销的操作', 'fail'); return; }
     toast(last.reversible
-      ? '「' + last.label + '」已提交服务端，前端无法回滚；请通过读档回退（设计规格 6.3：撤销栈应入存档，当前协议无此字段）'
+      ? '「' + last.label + '」已提交服务端，前端无法回滚；请通过读档回退。'
       : '「' + last.label + '」属不可逆操作，需读档回退', 'fail');
   }
   /* 四态反馈：包装 fetch，只对同域 /__slg/ 请求显示状态，不改请求体与协议 */
@@ -898,13 +893,12 @@
           + esc(a.jump ? a.jump.id : '') + '" data-agid="' + esc(a.id) + '">'
           + '<div class="t"><span class="urg tag ' + u[1] + '">' + u[0] + ' ' + esc(a.urgency) + '</span>'
           + esc(a.title) + '</div>'
-          + '<div class="d">' + esc(a.action) + ' · ' + esc(a.deadline) + ' · '
-          + esc(a.source) + '（可信度' + esc(a.confidence) + '）</div>'
+          + '<div class="d">' + esc(a.action) + ' · ' + esc(a.deadline) + '</div>'
           + '<div class="d muted">' + esc(a.detail) + '</div>'
           + '<button data-act="ignore" data-agid="' + esc(a.id) + '" style="font-size:10px;padding:1px 5px;min-height:18px;margin-top:3px">本回合忽略</button>'
           + '</div>';
       }).join('') : '<div class="muted">暂无待办。可展开六府或推进回合。</div>'
-        + '<div class="muted" style="margin-top:7px;font-size:11px">建言免费常驻，可信度分档，不与评分／成就挂钩（6.4）。</div>') : '');
+        + '<div class="muted" style="margin-top:7px;font-size:11px">建言免费常驻，不与评分／成就挂钩。</div>') : '');
   }
   function bindAgenda() {
     var box = document.getElementById('slgIxAgenda'); if (!box) return;
@@ -1025,7 +1019,7 @@
       + (S.lensOpen ? '<div class="muted" style="font-size:11px;margin-bottom:5px">' + esc(cur.desc) + '</div>'
         + '<div class="list">' + lensRows().slice(0, 14).map(function (r) { return '<div>' + esc(r) + '</div>'; }).join('') + '</div>'
         + '<div class="muted" style="font-size:10px;margin-top:5px">切换只替换数据层，空间布局与视口不变；'
-        + '沙盘 token 叠加依赖原容器，找不到时降级为本列表（章节 K）。</div>' : '');
+        + '沙盘 token 叠加依赖原容器，找不到时降级为本列表。</div>' : '');
   }
   function bindLens() {
     var box = document.getElementById('slgIxLens'); if (!box) return;
@@ -1034,7 +1028,6 @@
       if (b.dataset.act === 'fold') { S.lensOpen = !S.lensOpen; buildLens(); return; }
       if (b.dataset.lens) {
         S.lens = b.dataset.lens; persist(); buildLens();
-        /* 只借《文明6》透镜的交互手法，不借 4X 玩法层（设计规格 4.2） */
         try {
           var map = document.querySelector('#slgStrategyWin, #slgStrategyMap, [data-ix-map]');
           if (map) { map.dataset.ixLens = S.lens; map.style.setProperty('--slg-lens', S.lens); }
@@ -1131,7 +1124,7 @@
     var mask = el('div', '', ''); mask.className = 'slgIx-modal';
     var box = el('div', '', ''); box.className = 'box';
     var gaps = (S.data && S.data.fieldGaps) || [];
-    box.innerHTML = '<h3>快捷键 / 设置 / 字段缺口（章节 K）</h3>'
+    box.innerHTML = '<h3>快捷键 / 设置 / 当前简化说明</h3>'
       + '<div class="muted" style="font-size:11px;margin-bottom:9px">键位可重映射：点右侧输入框后按新键；'
       + '字号可缩放、减少动效、色盲双编码（颜色 + 形状/文字标签）。</div>'
       + '<table>' + Object.keys(DEFAULT_KEYS).map(function (a) {
@@ -1158,7 +1151,7 @@
           + '窗口默认不置顶，可自由切换到其他应用、最小化或缩小；'
           + '「置顶」仅本次运行有效，重启游戏自动关闭。</div>'
         : '')
-      + '<h4 style="margin-top:15px;color:#f0e2b8">字段缺口与降级方案（设计规格 2.2 / 章节 K）</h4>'
+      + '<h4 style="margin-top:15px;color:#f0e2b8">当前简化说明</h4>'
       + (gaps.length ? gaps.map(function (g) {
         return '<div class="delta"><b>' + esc(g.field) + '</b>（' + esc(g.use) + '）<br>'
           + '<span class="muted">降级：' + esc(g.fallback) + '</span></div>';

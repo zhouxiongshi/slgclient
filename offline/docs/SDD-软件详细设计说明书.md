@@ -2043,6 +2043,23 @@ build/SLG-Offline-win32-x64/
 
 **验证**：`npm test` **527/527**（新增 2 条：读档备份内容、处置四源同源）；`save-slots`、`m4-13`、`m2-diploma`、`p7-city-depth` 交叉 39/39；全量后重打包双态取证见发布闸。
 
+### 17.10 俘虏按钮呈现与来源提示清理（2026-11-16 用户实机反馈）
+
+**核查缘起**：用户反馈「俘虏处置按钮上的字体看不清，按钮和整体操作界面不协调」以及「界面上有很多区域显示机制借鉴某款游戏或某个地址，产品不应提示玩家功能来源」。
+
+| 编号 | 问题 | 根因 | 修复 |
+|---|---|---|---|
+| `DEV-31` | 六府武将页「放归／处斩」按钮外观与整体界面不协调、文字难辨 | `panels-ui.js` 只用 `class="ghost"`，但六府窗口 `#slgPanelsWin` 的样式表没有 `.ghost` 定义；同名样式只存在于另一作用域 `#slgUIv2 .btn.ghost`，实际落回浏览器默认按钮外观。俘虏行小字沿用低对比度 `#8f8676` | 新增 `#slgPanelsWin .capbtn`（13px `Microsoft YaHei` / 前景 `#e8d7a8` / 底色 `#2c2f22` / 描边 `#7a6a42`），处斩用 `.danger` 危险色 `#f0b39b`；俘虏行改为 `.card.caprow` 并把小字提亮到 `#b3a88f`；标题回归六府统一 `#cbb477` |
+| `DEV-32` | 术语提示、百科、决策预览、军师建言、战法图鉴等处出现外部游戏名、外部名录、内部规格编号与工程溯源字段 | 玩家可见文案直接复用了工程元数据：`terms.json` 的 `证据级别` 写「借鉴三国志11/14」「设计规格 6.4」「借鉴 CK3」，`简述` 写「三国志14 官方口径」；`interaction-ui.js` 把 `数值来源`／`source_id`／`confidence` 整块渲染；`panels-ui.js` 写「逐字取自 battle-kit 原文」 | 界面层停止渲染溯源字段；术语可见字段改为本作措辞（35 条证据级别、6 条简述），工程溯源字段保留以满足 `check-terms.js`／`check-compliance.js`；面板与交互层文案去掉游戏名、规格编号与源码路径；注入层源码注释中的来源标注一并移除 |
+
+**边界（诚实登记）**：
+
+- `conf/interaction/terms.json` 的 `数值来源`／`source_id`／`confidence`、`conf/compliance/provenance.json`、`innate-skills.json` 的 `license` 等**工程合规元数据保留不改**，只是不再进入玩家界面；否则 554 条溯源零缺口的合规闸会破。
+- `conf/campaign/events*.json`、`heroes-240.json` 中「三国志·某某传／演义·第几回」是**游戏内史实 citations**，属于剧情内容而非借鉴来源提示，不在本次清理范围。
+- 本轮只改运行时注入脚本与术语文案，磁盘 `offline/web/` 1582 文件未动，协议层与 `handlers.js` 未动。
+
+**验证**：`tests/ui-presentation-hygiene.test.js` 3 条（按钮样式与类名、注入层来源词零命中、术语可见字段零命中且溯源字段完整）；`check-terms` 134 条覆盖 100%，`check-compliance` 554 条零缺口。
+
 ---
 
 ## 18. 需求 → 设计 → 实现 → 验证 全链路追溯

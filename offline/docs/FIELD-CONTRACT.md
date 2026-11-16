@@ -71,6 +71,7 @@
 | 地图标注分级 | `strategy.js` 视图 `cities[].labelRank` + `labelPolicy` | 1–3 | — | ❌ 客户端只取档过滤 | 大地图 |
 | 服务端缺失字段 | `interaction/state.fieldGaps` | — | — | — | 显式降级（禁编造） |
 | 操作回执（P12） | `notice-bus.js notify()` → `/__slg/session?since=N` → 外壳 `slg:notice` 事件 → 交互层 toast | — | — | ❌ 只展示 | 被原版客户端静默吞掉的操作结果（`general.upSkill/lvSkill/downSkill` 的拒绝与学习成功） |
+| 俘虏处置按钮视觉 | `panels-ui.js` `#slgPanelsWin .capbtn` | px / 色值 | 13px；常规 `#e8d7a8` on `#2c2f22`；危险 `#f0b39b` | ❌ 只展示 | 六府武将页「招降／放归／处斩」；小字说明 `#b3a88f` |
 
 ## 历史教训（写死，防回归）
 
@@ -81,6 +82,8 @@
 3. **内政只改工期不改产出**：好官缩工期（1/2/3 旬），总产出恒定，否则变印钞机。
 4. **撤回/撤销不在前端乐观执行**：批量撤回逐支发请求汇总结果，假批量会让
    退粮数字对不上账。
+5. **注入层样式必须在本作用域内定义**：六府窗口是 `#slgPanelsWin`，战法外壳是
+   `#slgUIv2`；只在后者定义的 `.ghost` 不能跨作用域复用，否则按钮落回浏览器默认外观。
 
 ## 变更流程
 

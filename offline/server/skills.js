@@ -47,9 +47,8 @@ if (existsSync(LIBRARY_EXTRA)) {
     if (!TABLE.skills.some((x) => x.cfgId === s.cfgId || x.name === s.name)) TABLE.skills.push(s);
   }
 }
-/* ★ 全武将初始战法：tools/build-innate-skills.mjs 由率土之滨官网 W0 战法表
-   生成，按效果范式去重后覆盖 conf/campaign/hero-skills.json 的 424 位武将。
-   文件独立落盘，运行时不依赖 battle-kit；缺文件时退化为原有 81 条战法。 */
+/* ★ 全武将初始战法：由构建工具生成本作映射表，按效果范式去重后覆盖
+   conf/campaign/hero-skills.json 的 424 位武将。文件独立落盘，缺文件时退化为内置战法表。 */
 const INNATE_PATH = join(ROOT, 'conf', 'innate-skills.json');
 let INNATE_SKILLS = [];
 if (existsSync(INNATE_PATH)) {
