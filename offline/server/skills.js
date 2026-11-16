@@ -4781,18 +4781,16 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
             }
             var reason = m2.reason;
             if (reason === 'refused') {
-              /* ★ 2026-11-16：拒绝理由改成人话，按人设与谋略选词；不再显示成功率/概率。 */
+              /* ★ 2026-11-17：拒绝理由改成人话，按人设与谋略选词；不再显示成功率/概率。 */
               toast('「' + m2.name + '」' + (m2.line || '婉拒了主公的延揽，金分文未取'), false);
-            } else if (reason === 'guest_left') {
-              toast('「' + m2.name + '」已离店，明日请早', false);
-            } else if (reason === 'not_arrived' || reason === 'not_today') {
-              toast('「' + m2.name + '」此刻不在座上', false);
+            } else if (m2.line) {
+              /* ★ 2026-11-17：离席/未到/不在本城/座上无人/盘缠不够，一律用服务端拟人句，
+                 与「探索登庸」同一口径；不再做机械播报。 */
+              toast(m2.line, false);
             } else if (reason === 'not_enough_gold') {
-              toast('金不足：招募一位需 ' + (m2.cost || m.cost) + ' 金', false);
-            } else if (reason === 'no_guest') {
-              toast('此刻座上无人', false);
+              toast('府库不够体面——招募一位要 ' + (m2.cost || m.cost) + ' 金，先理一理账目。', false);
             } else {
-              toast('招募未成：' + (reason || '未知'), false);
+              toast('酒保摆了摆手：主公且宽坐，改日再来罢。', false);
             }
             send('tavern.guests', { cityId: c.id }, true).then(function () {
               refreshCityView(cache);
@@ -5536,16 +5534,13 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
                 + '　到「征兵」页把他编入队伍', true);
             } else if (m2.reason === 'refused') {
               toast('「' + m2.name + '」' + (m2.line || '婉拒了主公的延揽，金分文未取'), false);
-            } else if (m2.reason === 'guest_left') {
-              toast('「' + m2.name + '」已离店，明日请早', false);
-            } else if (m2.reason === 'not_arrived' || m2.reason === 'not_today') {
-              toast('「' + m2.name + '」此刻不在座上', false);
+            } else if (m2.line) {
+              /* ★ 2026-11-17：与城内酒馆同口径，统一用拟人句，不暴露英文 reason。 */
+              toast(m2.line, false);
             } else if (m2.reason === 'not_enough_gold') {
-              toast('金不足：需 ' + ((m2 && m2.cost) || m.cost) + ' 金', false);
-            } else if (m2.reason === 'no_guest') {
-              toast('此刻座上无人', false);
+              toast('府库不够体面——招募一位要 ' + ((m2 && m2.cost) || m.cost) + ' 金，先理一理账目。', false);
             } else {
-              toast('招募失败：' + errText(r2), false);
+              toast('酒保摆了摆手：主公且宽坐，改日再来罢。', false);
             }
             renderTavernInto(hostEl);
           });

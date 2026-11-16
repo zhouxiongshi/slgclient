@@ -39,7 +39,7 @@ import { ensureTavern, guestsNow, announceTavern, todaysGuests, dayFraction, exp
 /* ★ U15 相性/义理/关系网：登庸成功率与面板构成条同源 */
 import { talentRecruitRate, xiangxingOf, yiliOf, relationSummary, relationGraph } from './domain/relation.js';
 /* ★ 2026-11-16：招募拒绝台词（零依赖叶子），按人设与三顾次数说人话 */
-import { refusalLine } from './domain/recruit-refusal.js';
+import { refusalLine, failLine } from './domain/recruit-refusal.js';
 import {
   strategyTick, strategyAttack, strategyTurnDays, ensureStrategy, clearThreat,
   strategyResolveMarches, strategyRecallMarch, recordEvent, factionReliefTick,
@@ -945,20 +945,35 @@ export function handleRequest(ctx, req) {
         const row = todaysGuests(state, undefined, cityId || null)
           .find((g) => Number(g.cfgId) === targetId);
         if (!row) {
-          rsp.msg = { generals: [], reason: 'not_today', cfgId: targetId, cost: costEach };
+          /* ★ 2026-11-17：旧实现只回 cfgId，前端拼出「undefined 此刻不在座上」。补 name 与拟人句。 */
+          const known = (state.tavern.people || []).find((p) => Number(p.cfgId) === targetId) || {};
+          rsp.msg = {
+            generals: [], reason: 'not_today', cfgId: targetId, name: known.name || '', cost: costEach,
+            line: failLine('absent', { name: known.name || '' }),
+          };
           break;
         }
         const frac = dayFraction(state, realMsPerDay);
         if (frac >= row.to) {
-          rsp.msg = { generals: [], reason: 'guest_left', name: row.name, cost: costEach };
+          rsp.msg = {
+            generals: [], reason: 'guest_left', name: row.name, cost: costEach,
+            line: failLine('left', { name: row.name }),
+          };
           break;
         }
         if (frac < row.from) {
-          rsp.msg = { generals: [], reason: 'not_arrived', name: row.name, when: row.when, cost: costEach };
+          rsp.msg = {
+            generals: [], reason: 'not_arrived', name: row.name, when: row.when, cost: costEach,
+            line: failLine('not_yet', { name: row.name, when: row.when }),
+          };
           break;
         }
         if ((state.roleRes.gold || 0) < costEach) {
-          rsp.msg = { generals: [], reason: 'not_enough_gold', cost: costEach, gold: state.roleRes.gold || 0 };
+          const short = Math.max(0, costEach - (state.roleRes.gold || 0));
+          rsp.msg = {
+            generals: [], reason: 'not_enough_gold', cost: costEach, gold: state.roleRes.gold || 0, short,
+            line: failLine('poor', { cost: costEach, short }),
+          };
           break;
         }
         /* ★ P13 武将可以拒绝：掷骰与「探索登庸」同一条公式（relation.talentRecruitRate），
@@ -987,7 +1002,10 @@ export function handleRequest(ctx, req) {
         recordRes(state, 'gold', -costEach, `招募·${row.name}`, day);
         const person = state.tavern.people.find((p) => Number(p.cfgId) === targetId);
         if (person) person.recruited = true;
-        const g = makeGeneral(cfg, nextId(state, 'generalId'), targetId, mainCity(state)?.cityId ?? 1, 1);
+        /* ★ 2026-11-17：落城改为「招募所在城」，旧实现写死 mainCity（本地城 1），
+           在成都酒馆招到的人也记在长安，导致武将归属与实际驻地不一致、无法派遣。 */
+        const g = makeGeneral(cfg, nextId(state, 'generalId'), targetId,
+          cityId || state.strategy?.playerCity || mainCity(state)?.cityId || 1, 1);
         state.generals.push(g);
         added.push(g);
         noticeRecruit(state, ctx, row.name || '');
@@ -1007,12 +1025,17 @@ export function handleRequest(ctx, req) {
           generals: [],
           reason: 'no_guest',
           cost: costEach,
+          line: failLine('empty', {}),
           today: todaysGuests(state, undefined, cityId || null).map((g) => ({ cfgId: g.cfgId, name: g.name, when: g.when, cityId: g.birthCity })),
         };
         break;
       }
       if ((state.roleRes.gold || 0) < costEach) {
-        rsp.msg = { generals: [], reason: 'not_enough_gold', cost: costEach, gold: state.roleRes.gold || 0 };
+        const short = Math.max(0, costEach - (state.roleRes.gold || 0));
+        rsp.msg = {
+          generals: [], reason: 'not_enough_gold', cost: costEach, gold: state.roleRes.gold || 0, short,
+          line: failLine('poor', { cost: costEach, short }),
+        };
         break;
       }
       state.tavern.favor = state.tavern.favor || {};
@@ -1035,7 +1058,8 @@ export function handleRequest(ctx, req) {
         person.recruited = true;
         const row = state.tavern.people.find((p) => p.cfgId === person.cfgId);
         if (row) row.recruited = true;
-        const g = makeGeneral(cfg, nextId(state, 'generalId'), person.cfgId, mainCity(state)?.cityId ?? 1, 1);
+        const g = makeGeneral(cfg, nextId(state, 'generalId'), person.cfgId,
+          cityId || state.strategy?.playerCity || mainCity(state)?.cityId || 1, 1);
         state.generals.push(g);
         added.push(g);
         noticeRecruit(state, ctx, cfg.generalByCfg.get(g.cfgId)?.name || '');

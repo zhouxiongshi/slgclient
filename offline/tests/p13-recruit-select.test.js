@@ -147,7 +147,11 @@ test('P13 UI 静态闸：招募必须带 cfgId 指名，拒绝文案就位', () 
   assert.match(src, /general\.drawGeneral', \{ drawTimes: 1, cfgId: g\.cfgId \}/,
     '主城酒馆页招募必须指名 cfgId');
   assert.ok(src.includes('婉拒了主公的延揽'), '拒绝文案必须友好');
-  assert.ok(src.includes('已离店，明日请早'), '过时辰文案必须可读');
+  /* ★ 2026-11-17：过时辰等 5 类失败改为服务端拟人 line，前端不得再出现机械播报与英文 reason。 */
+  assert.ok(src.includes('m2.line'), '招募失败必须消费服务端拟人台词');
+  assert.ok(!src.includes('已离店，明日请早'), '不得再出现「已离店，明日请早」机械文案');
+  assert.ok(!src.includes('此刻不在座上'), '不得再把未到/不在本城混为一句');
+  assert.ok(!src.includes("'招募未成：' + (reason"), '不得把英文 reason 直接拼进提示');
 });
 
 test('P13 人口扩容：无 0 人口城、大城 ≥15 万、上限 100 万、城库随人口', () => {

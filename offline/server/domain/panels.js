@@ -434,6 +434,9 @@ export function panelState(state, cfg) {
       isProtagonist: !!g.isProtagonist, level: int(g.level, 1), star: int(g.star, 0),
       exp: int(g.exp, 0), progress: generalProgress(g), physical: int(g.physical_power, 100),
       state: isDeployed(state, g.id) ? '在编' : '闲置',
+      /* ★ 2026-11-17：武将所在城，供「派遣」入口显示与选择目标城 */
+      cityId: int(g.cityId, 0),
+      cityName: strategyCity(int(g.cityId, 0))?.name || '',
       career: careerOf(g).career,
       careerName: CAREER_NAMES[careerOf(g).career],
       careerNote: CAREER_FIT[careerOf(g).career].note,
@@ -685,6 +688,8 @@ export function panelState(state, cfg) {
           id: g.id, name: gc.name || `武将${g.id}`,
           /* ★ 2026-11-16：编队弹窗逐槽显示带兵上限（随官阶浮动） */
           rank: rankOfMerit(g.merit), slotCap: slotCapOf(g),
+          /* ★ 2026-11-17：编队下拉标注所在城，避免把别城武将误拉进本队 */
+          cityId: int(g.cityId, 0), cityName: strategyCity(int(g.cityId, 0))?.name || '',
         };
       }),
       marchable, gates, plans, chronicle, books,

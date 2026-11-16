@@ -14,7 +14,7 @@ import { loadConfig } from '../server/config.js';
 import { createWorld, normalizeWorld } from '../server/world.js';
 import { handleRequest } from '../server/handlers.js';
 import { applyGeneralExp, grantBattleExp, takeBattlePromos } from '../server/domain/general-progress.js';
-import { refusalLine, personaOf } from '../server/domain/recruit-refusal.js';
+import { refusalLine, personaOf, failLine } from '../server/domain/recruit-refusal.js';
 import {
   rankOfMerit, meritForRank, grantMerit, careerTagOf, RANK_NAMES,
   slotCapForRank, slotCapOf,
@@ -26,7 +26,7 @@ import { ensureTavern, todaysGuests } from '../server/domain/tavern.js';
 import { rngFor } from '../server/domain/strategy-rng.js';
 import { aiRosterCultivateTick, ensureRosters } from '../server/domain/ai-roster.js';
 import {
-  factionConf, ensureStrategy, strategyFormup,
+  factionConf, ensureStrategy, strategyFormup, dispatchGeneral,
   oathOptions, chooseOath, strategyAttack, strategyViewState,
 } from '../server/domain/strategy.js';
 import { ensureCityEcon } from '../server/domain/city-econ.js';
@@ -200,6 +200,93 @@ test('注入 UI：空学习槽带可点按钮并给提示；主公 Lv5 真实可
   r = handleRequest(ctx, { seq: 1, name: 'general.upSkill', msg: { gId: hero.id, cfgId: 10001, pos: 1 } });
   assert.equal(r.msg.ok, true, 'Lv5 后主公可学第二战法');
   assert.equal(hero.skills[1].cfgId, 10001);
+});
+
+/* ── 追加：招募失败提示拟人化（2026-11-17）───────────────────────────── */
+test('招募失败五类场面话：具名、汉末口吻、不含英文 token', () => {
+  assert.match(failLine('left', { name: '赵云' }), /赵云/);
+  assert.match(failLine('not_yet', { name: '张飞', when: '午时' }), /午时/);
+  assert.match(failLine('absent', { name: '关羽' }), /关羽/);
+  assert.match(failLine('empty', {}), /在座|改日|酒肆/);
+  assert.match(failLine('poor', { cost: 30, short: 12 }), /30|差 12/);
+  for (const k of ['left', 'not_yet', 'absent', 'empty', 'poor']) {
+    const s = failLine(k, { name: '甲', when: '午后', cost: 30, short: 5 });
+    assert.ok(s && !/[a-z_]{3,}/i.test(s), `${k} 台词不应含英文工程 token`);
+  }
+  assert.equal(failLine('unknown', {}), '');
+});
+
+test('酒馆招募 not_today 回执带 name 与拟人 line，不再出现 undefined', () => {
+  const state = normalizeWorld(createWorld(cfg), cfg);
+  const ctx = noopCtx(state);
+  ensureTavern(state, cfg);
+  const cityId = state.strategy.playerCity;
+  const r = handleRequest(ctx, { seq: 1, name: 'general.drawGeneral', msg: { drawTimes: 1, cityId, cfgId: 999999 } });
+  assert.equal(r.msg.reason, 'not_today');
+  assert.ok(typeof r.msg.name === 'string', '必须回 name，避免界面拼出 undefined');
+  assert.ok(typeof r.msg.line === 'string' && r.msg.line.length > 6, '必须回拟人台词');
+  assert.ok(!r.msg.line.includes('undefined'));
+});
+
+/* ── 追加：武将调防与招募落城（2026-11-17）─────────────────────────── */
+function oathState() {
+  const state = normalizeWorld(createWorld(cfg), cfg);
+  ensureStrategy(state);
+  ensureCityEcon(state);
+  const lords = oathOptions(state).lords.filter((l) => l.cities.length >= 2);
+  chooseOath(state, cfg, noopCtx(state), { lord: lords[0].id, city: lords[0].cities[0].id });
+  return state;
+}
+
+test('武将调防：改所在城、离队，同城/敌城/无将各有中文原因', () => {
+  const state = oathState();
+  const st = state.strategy;
+  const mine = Object.keys(st.cities).filter((id) => st.cities[id].owner === 'player').map(Number);
+  const g = state.generals[0];
+  const from = Number(g.cityId);
+  const army = state.armys.find((a) => Number(a.cityId) === from) || state.armys[0];
+  army.cityId = from;
+  delete army.marchId;
+  army.generals = [g.id, 0, 0];
+  const to = mine.find((id) => id !== from);
+  assert.ok(to, '举义后应有第二座己方城');
+  const ctx = noopCtx(state);
+  const r = dispatchGeneral(state, cfg, ctx, { generalId: g.id, toCityId: to });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(g.cityId, to, '调防后武将所在城应变更');
+  assert.equal(g.order, 0, '调离后队伍序号应清零');
+  assert.ok(!(army.generals || []).includes(g.id), '应从原队伍摘除');
+  assert.equal(dispatchGeneral(state, cfg, ctx, { generalId: g.id, toCityId: to }).reason, 'same_city');
+  const enemy = Object.keys(st.cities).map(Number).find((id) => st.cities[id].owner !== 'player');
+  assert.equal(dispatchGeneral(state, cfg, ctx, { generalId: g.id, toCityId: enemy }).reason, 'not_own_city');
+  assert.equal(dispatchGeneral(state, cfg, ctx, { generalId: 999999, toCityId: to }).reason, 'no_general');
+});
+
+test('酒馆招募落城等于招募所在城，不再写死主城', () => {
+  const state = oathState();
+  ensureTavern(state, cfg);
+  const st = state.strategy;
+  const mine = Object.keys(st.cities).filter((id) => st.cities[id].owner === 'player').map(Number);
+  /* 选一座非都城、非 1 的己方城，才能区分新旧实现（旧实现恒落 1）。 */
+  const target = mine.find((id) => id !== st.playerCity && id !== 1) || mine.find((id) => id !== st.playerCity);
+  assert.ok(target);
+  state.clock.scale = 1;
+  state.clock.accMs = Math.floor(60000 * 0.05);
+  const guest = todaysGuests(state, undefined, target).find((x) => 0.05 >= x.from && 0.05 < x.to);
+  assert.ok(guest, '目标城应有人在店');
+  const rate = talentRecruitRate(state, cfg, { cfgId: guest.cfgId }).rate / 100;
+  const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  let hit = 0;
+  for (let s = 1; s < 40000 && !hit; s += 1) {
+    const seed = s * 7919;
+    if (rngFor(seed, day, `draw:${target}:${guest.cfgId}:0`).random() < rate) hit = seed;
+  }
+  assert.ok(hit, '应能找到必中种子');
+  state.seed = hit;
+  const r = handleRequest(noopCtx(state), { seq: 1, name: 'general.drawGeneral', msg: { drawTimes: 1, cityId: target, cfgId: guest.cfgId } });
+  assert.equal(r.msg.generals.length, 1, JSON.stringify(r.msg));
+  const g = state.generals.find((x) => x.cfgId === guest.cfgId);
+  assert.equal(g.cityId, target, '落城应为招募所在城，不是主城');
 });
 
 /* ── 追加：带兵上限随官阶提升（每槽 5000 + 官阶×300）─────────────────── */

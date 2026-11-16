@@ -86,6 +86,24 @@ const RETURN_LINE = {
   zhuhou: '将军几番来意，某已知晓。各守其土罢了，不必再费口舌。',
 };
 
+/**
+ * 非「拒绝」类失败的场面话：客人已走 / 还没到 / 今日不在本城 / 座上无人 / 盘缠不够。
+ * 与 refusalLine 同属「招募失败也要有人味」的口径，前端只显示这一句，不再拼英文 reason。
+ * kind：left / not_yet / absent / empty / poor。
+ */
+const SCENE_LINE = {
+  left: ({ name }) => `「${name || '此人'}」方才起身离席，说是今日事忙，改日再来叙话。`,
+  not_yet: ({ name, when }) => `「${name || '此人'}」${when || '稍后'}才来，这会儿还没到，先办别的事罢。`,
+  absent: ({ name }) => `城里没寻见「${name || '此人'}」，许是回了乡里，改日再打听。`,
+  empty: () => '酒肆冷清，此刻没人在座，改日再来看看。',
+  poor: ({ cost, short }) => `府库不够体面——招募一位要 ${cost ?? '若干'} 金`
+    + `${Number(short) > 0 ? `，尚差 ${short}` : ''}，先理一理账目。`,
+};
+export function failLine(kind, opt = {}) {
+  const f = SCENE_LINE[kind];
+  return f ? f(opt) : '';
+}
+
 function pickIndex(cfgId, favor) {
   const n = (Math.abs(Number(cfgId) || 0) + Math.max(0, Number(favor) || 0) * 3) % 3;
   return n;

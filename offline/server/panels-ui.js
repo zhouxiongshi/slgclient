@@ -101,7 +101,7 @@
       var overCapMsg = r.reason === 'over_cap'
         ? ('第 ' + (r.slot + 1) + ' 槽带兵上限 ' + fmt(r.cap) + '（该槽武将官阶越高上限越高），现填 ' + fmt(r.have))
         : null;
-      toast(overCapMsg || r.text || r.hint || (r.reason ? ({ no_army: '没有这支队伍', marching: '队伍行军中，不可整编', dup_general: '同一武将不能重复上阵', in_other_army: '该武将已在别的队伍', too_many_troops: '兵力分配超出该队现有兵力', not_own_city: '只能运输到己方城池', bad_amount: '数量不合法', no_grain: '粮草不足', no_gold: '金钱不足', no_general: '找不到该武将' }[r.reason] || ('失败：' + r.reason)) : (r.ok ? '完成' : '失败')), !r.ok);
+      toast(overCapMsg || r.text || r.hint || (r.reason ? ({ no_army: '没有这支队伍', marching: '队伍行军中，不可整编', dup_general: '同一武将不能重复上阵', in_other_army: '该武将已在别的队伍', too_many_troops: '兵力分配超出该队现有兵力', not_own_city: '只能运输到己方城池', bad_amount: '数量不合法', no_grain: '粮草不足', no_gold: '金钱不足', no_general: '找不到该武将', same_city: '该武将已在此城', no_city: '目标城不存在' }[r.reason] || ('失败：' + r.reason)) : (r.ok ? '完成' : '失败')), !r.ok);
       if (r.ok) fetchState();
       if (cb) cb(r);
     }).catch(function (e) { toast('操作失败：' + e.message, true); });
@@ -293,6 +293,17 @@
   ];
 
   /* ---------------- 各面板 ---------------- */
+  /* ★ 2026-11-17 调防：把闲置武将派往另一座己方城（只改所在城，不动兵力与城池归属）。 */
+  function cityPickHtml(g) {
+    var own = ((data.strategy || {}).cities || []).filter(function (c) {
+      return c.owner === 'player' && Number(c.id) !== Number(g.cityId);
+    });
+    if (!own.length) return '<span class="muted">暂无其他己方城可调</span>';
+    return '<select data-act="dispatchpick" data-gid="' + g.id + '" style="background:#2a2617;border:1px solid #ba9a52;color:#e8e0cc;padding:2px 6px;border-radius:4px">'
+      + own.map(function (c) { return '<option value="' + c.id + '">' + esc(c.name) + '</option>'; }).join('')
+      + '</select> <button class="btn" data-act="dispatch" data-gid="' + g.id + '">调防</button>';
+  }
+
   function genListHtml() {
     var out = '<div class="genlist"><h4>帐下武将（' + data.generals.length + '）</h4>';
     data.generals.forEach(function (g) {
@@ -357,7 +368,8 @@
       + '<div class="muted" style="margin-top:5px">本表为战斗结算用的本局数值（0~100，与史载五维同尺度）；'
       + '下方史料档案的史载五维同为 0~100，可以直接比较。</div></div>'
       + loreHtml
-      + '<div class="card"><h3>本局状态</h3>体力 ' + esc(g.physical)
+      + '<div class="card"><h3>本局状态</h3>所在城 <b class="v">' + esc(g.cityName || '—') + '</b>'
+      + '　' + cityPickHtml(g) + '<div style="margin-top:6px">体力 ' + esc(g.physical)
       + ' · Lv' + esc(g.level)
       + (g.progress && g.progress.capped ? ' · 已满 10 级'
         : (' · 经验 ' + fmt(g.progress ? g.progress.exp : g.exp) + '/' + fmt(g.progress ? g.progress.need : 0)))
@@ -366,7 +378,7 @@
       + (g.loyal != null ? ' · 忠诚 <b class="v" style="color:' + (g.loyal >= 80 ? '#9ec97f' : g.loyal >= 70 ? '#d8b45a' : '#e07a5f') + '">' + g.loyal + '</b>（旬俸 ' + fmt(g.salaryPerXun || 20 * (g.star || 3)) + ' 金/旬）'
         + '<button class="btn" data-act="reward" data-id="' + g.id + '">赏赐</button>'
         + '<div class="muted">忠诚每旬 -1（委任岗位不减反微升）；欠饷全军 -5；低于 70 有出走风险。赏赐可快速回稳。</div>' : '')
-      + '<div class="muted" style="margin-top:6px">出征中的武将内政收益减半（明写规则，不做隐藏惩罚）。</div></div>'
+      + '<div class="muted" style="margin-top:6px">出征中的武将内政收益减半（明写规则，不做隐藏惩罚）。</div></div></div>'
       + relationCardHtml(g);
   }
 
@@ -1003,6 +1015,14 @@
         return;
       }
       return open(id);
+    }
+    if (act === 'dispatch') {
+      var dgid = Number(t.getAttribute('data-gid'));
+      var pick = t.parentNode.querySelector('[data-act="dispatchpick"]');
+      var to = pick ? Number(pick.value) : 0;
+      if (!to) return toast('请先选目标城', false);
+      /* 走 /__slg/strategy/action 的 dispatchGeneral；成功自动刷新面板，失败给中文原因。 */
+      return strategyAction({ action: 'dispatchGeneral', generalId: dgid, toCityId: to });
     }
     if (act === 'gen') { ui.genId = Number(t.getAttribute('data-id')); return render(); }
     if (act === 'prospect') { ui.genId = -Number(t.getAttribute('data-i')) - 1; return render(); }

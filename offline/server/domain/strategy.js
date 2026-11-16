@@ -1822,7 +1822,7 @@ export function strategyResolveMarches(state, cfg, ctx) {
     const tstate = st.cities[mm.to];
     if (!target || !tstate) continue;
     if (tstate.owner === 'player') {
-      if (army) army.cityId = mm.to;
+      if (army) { army.cityId = mm.to; syncGeneralsCity(state, army, mm.to); }
       recordEvent(state, `${target.name}已入我军版图，班师。`);
       continue;
     }
@@ -1900,7 +1900,10 @@ export function strategyResolveMarches(state, cfg, ctx) {
     }
     // ★ P7 驻城归位：胜则进驻新占城，败/平则退回出发城。
     //   分城出征后队伍不再永远挂在旧城，玩家能在新城里继续操作。
-    if (army) army.cityId = win ? mm.to : (Number(mm.from) || st.playerCity || 0);
+    if (army) {
+      army.cityId = win ? mm.to : (Number(mm.from) || st.playerCity || 0);
+      syncGeneralsCity(state, army, army.cityId);
+    }
     results.push({
       cityId: mm.to, city: target.name, result: fought.result,
       reportId: fought.report.id, summary: fought.summary,
@@ -1946,6 +1949,7 @@ export function strategyRetreatBattle(state, cfg, ctx, { marchId }) {
     delete army.marchId;
     delete army.drillMorale;
     army.cityId = Number(mm.from) || st.playerCity || 0;
+    syncGeneralsCity(state, army, army.cityId);
   }
   const refund = Math.floor((Number(mm.grainCost) || 0) / 2);
   const e = st.cityEcon?.[mm.from];
@@ -1991,6 +1995,7 @@ export function strategyRecallMarch(state, cfg, ctx, { marchId }) {
       delete army.marchId;
       delete army.drillMorale;
       army.cityId = Number(mm.from) || st.playerCity;
+      syncGeneralsCity(state, army, army.cityId);
     }
     refund = Math.round((Number(mm.grainCost) || 0) * 0.5);
     if (refund > 0) {
@@ -2146,6 +2151,53 @@ export function strategyFormup(state, cfg, ctx, { armyId, generals, soldiers }) 
       return g ? Math.round(armsApt(g, i + 1) * 100) : 0;
     }),
   };
+}
+
+/** 队伍驻地变化时对齐队内武将 cityId（旧实现只搬队伍不搬人，导致归属永久错位）。 */
+function syncGeneralsCity(state, army, cityId) {
+  const cid = Number(cityId) || 0;
+  if (!army || !cid) return;
+  for (const gid of army.generals || []) {
+    const g = (state.generals || []).find((x) => x.id === Number(gid));
+    if (g) g.cityId = cid;
+  }
+}
+
+/**
+ * ★ 2026-11-17 武将调防：把一名武将从一个城调到另一个己方城。
+ * 用户反馈「新招募的武将都是闲置的，没法派遣到其他城池」——旧版有 g.cityId 字段，
+ * 却没有任何调城入口，且出征只搬队伍不搬武将，导致「人在哪座城」停在招募那一刻。
+ * 本函数是唯一调城口：只改 g.cityId（不改城池归属、不改兵力），并从原队伍摘除；
+ * 行军中不可调（与 strategyFormup 同规则）。瞬发，不另算行程。
+ */
+export function dispatchGeneral(state, cfg, ctx, { generalId, toCityId, fromCityId = 0 } = {}) {
+  const st = ensureStrategy(state);
+  const gid = Number(generalId) || 0;
+  const to = Number(toCityId) || 0;
+  const g = (state.generals || []).find((x) => x.id === gid);
+  if (!g) return { ok: false, reason: 'no_general' };
+  const from = Number(g.cityId) || Number(fromCityId) || st.playerCity || 0;
+  if (!to) return { ok: false, reason: 'no_city' };
+  if (to === from) return { ok: false, reason: 'same_city', cityId: to };
+  const tstate = st.cities?.[to];
+  if (!tstate) return { ok: false, reason: 'no_city' };
+  if (tstate.owner !== 'player') return { ok: false, reason: 'not_own_city' };
+  /* 行军中不可调：队伍在途时武将随军，与整编口径一致。 */
+  if ((state.armys || []).some((a) => a.marchId && (a.generals || []).includes(gid))) {
+    return { ok: false, reason: 'marching', generalId: gid };
+  }
+  /* 从原队伍摘除并回填 order（与 army.dispose 同口径），避免「人已走、队伍还挂着」。 */
+  for (const a of state.armys || []) {
+    if ((a.generals || []).includes(gid)) {
+      a.generals = (a.generals || []).map((id) => (Number(id) === gid ? 0 : id));
+    }
+  }
+  g.cityId = to;
+  g.order = 0;
+  const gname = cfg?.generalByCfg?.get?.(Number(g.cfgId))?.name || g.name || `武将${gid}`;
+  recordEvent(state, `${gname}自${cityName(from)}调往${cityName(to)}。`);
+  ctx.push?.('general.push', g);
+  return { ok: true, generalId: gid, from, to, fromName: cityName(from), toName: cityName(to) };
 }
 
 /** ★ P3 运输队：把粮从府库运往指定己方城城库，走行军队列按时抵达。

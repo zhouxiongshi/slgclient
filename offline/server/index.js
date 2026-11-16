@@ -29,7 +29,7 @@ import { dossierFor } from './domain/dossier.js';
 /* ★ M4-13：俘虏处置（放归 / 处斩），与招降共用同一份名册 */
 import { releaseCaptive, executeCaptive } from './domain/captives.js';
 import {
-  strategyViewState, oathOptions, chooseOath, strategyFormup, strategyTransport,
+  strategyViewState, oathOptions, chooseOath, strategyFormup, strategyTransport, dispatchGeneral,
   rewardGeneral, strategyInvest, recruitCaptive, strategyAttack, strategyRecallMarch, cancelInvest,
   previewAssault, strategyReorderMarch,
   strategyAppoint, strategyCancelAppointment, diplomacyAct,
@@ -624,6 +624,12 @@ export async function startOfflineServer(options = {}) {
         const act = String(body?.action || body?.act || '');
         let result;
         if (act === 'formup') result = strategyFormup(state, cfg, ctx, body);
+        /* ★ 2026-11-17 武将调防：把闲置武将派往另一座己方城 */
+        else if (act === 'dispatchGeneral') result = dispatchGeneral(state, cfg, ctx, {
+          generalId: Number(body?.generalId),
+          toCityId: Number(body?.toCityId),
+          fromCityId: Number(body?.fromCityId) || 0,
+        });
         else if (act === 'transport') result = strategyTransport(state, cfg, ctx, body);
         else if (act === 'reward') result = rewardGeneral(state, cfg, ctx, body);
         else if (act === 'invest') result = strategyInvest(state, cfg, ctx, body);
