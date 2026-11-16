@@ -41,6 +41,8 @@ import {
   strategyConfirmBattle, strategyRetreatBattle, strategyDigestDone,
 } from './domain/strategy.js';
 import { panelState, panelAction, panelSelfCheck } from './domain/panels.js';
+/* ★ 2026-11-16 俘虏处置后果：放归 / 处斩的态度落账走 diplomacy 唯一权威口 */
+import { adjustAttitudeByEvent, factionList } from './domain/diplomacy.js';
 /* ★ P12 操作回执：general.upSkill 等被原版客户端静默吞掉的拒绝，经此下发。 */
 import { drain as drainNotices, lastId as noticeLastId } from './notice-bus.js';
 /* 交互增强层：只读聚合（纯函数），不改 WS 协议与消息结构 */
@@ -628,8 +630,35 @@ export async function startOfflineServer(options = {}) {
         /* ★ U14 撤销在施内政任务（已投入不退，界面必须写明） */
         else if (act === 'cancelInvest') result = cancelInvest(state, ctx, { taskId: String(body?.taskId || '') });
         else if (act === 'captive') result = recruitCaptive(state, cfg, ctx, body);
-        else if (act === 'captiveRelease') result = releaseCaptive(state, body);
-        else if (act === 'captiveExecute') result = executeCaptive(state, body);
+        else if (act === 'captiveRelease' || act === 'captiveExecute') {
+          /* ★ 2026-11-16：名望 / 恶名 + 外交态度同源落账。
+             态度影响对所有 NPC 势力生效（战报不带原属势力字段，无法定向到单一势力），
+             董卓在处斩时豁免——GDD §7.3 / §5.9 明示例外。 */
+          const exempt = act === 'captiveExecute' ? 'sili' : null;
+          const diplomacyApi = {
+            adjustAttitude(delta, exemptFaction) {
+              const touched = [];
+              for (const f of factionList()) {
+                if (exemptFaction && f.id === exemptFaction) continue;
+                const r = adjustAttitudeByEvent(state, f.id, delta);
+                if (r.ok) touched.push({ faction: f.id, attitude: r.attitude });
+              }
+              return touched;
+            },
+          };
+          result = act === 'captiveRelease'
+            ? releaseCaptive(state, { ...body, diplomacyApi })
+            : executeCaptive(state, { ...body, diplomacyApi });
+          if (result.ok) {
+            ctx.push?.('chat.push', {
+              rid: 0, nickName: '系统', type: 0,
+              msg: result.action === 'released'
+                ? `【天下】主公义释「${result.name}」，名望 +${result.fameDelta}，诸势力闻之态度 ${result.attitudeDelta}。`
+                : `【天下】「${result.name}」伏诛，恶名 ${result.infamy}，诸势力态度 ${result.attitudeDelta}。`,
+              time: Date.now(),
+            });
+          }
+        }
         else if (act === 'attack') {
           const fracRaw = Number(body.frac);
           result = strategyAttack(state, cfg, ctx, {
@@ -783,7 +812,17 @@ export async function startOfflineServer(options = {}) {
           }
           const data = loadWorld(slotPathOf(slot));
           if (!data) { json(res, 404, { ok: false, reason: 'empty_slot' }); return; }
-          state = normalizeWorld(data, cfg);
+          /* ★ 2026-11-16：读档会覆盖当前档（flush 写 savePath），先把当前档备份。
+             顺序要紧：先归一化成功再备份，normalizeWorld 抛错时当前档原封不动。
+             1 号档就是 savePath 本身，读它等于读当前档，备份无意义，跳过。 */
+          const next = normalizeWorld(data, cfg);
+          if (slot !== 1) {
+            try {
+              const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+              renameSync(savePath, `${savePath}.before-load-${stamp}.json`);
+            } catch { /* 当前档不存在时无需备份 */ }
+          }
+          state = next;
           flush();
           log('info', `load from slot ${slot}`);
           json(res, 200, { ok: true, day: state.clock?.day ?? 1, slots: [1, 2, 3].map(slotInfoOf) });

@@ -423,7 +423,7 @@ out = { seq: out.seq ?? req.seq ?? 0, name: req.name, code: out.code ?? 0, msg: 
 | 36 | POST | `/__slg/gm/overrides` | 原始 JSON ≤100000B | `{ok:true, overrides}` | `:828-847` |
 | 37 | ANY | 其它 | — | `serveStatic()`：200/304/403/404/500 | `:863-869` |
 
-#### 3.4.1 `/__slg/strategy/action` 的 25 个 act【实测】
+#### 3.4.1 `/__slg/strategy/action` 的 27 个 act【实测；2026-11-16 补 captiveRelease/captiveExecute】
 
 | act | 领域函数 | 关键字段 |
 |---|---|---|
@@ -432,7 +432,9 @@ out = { seq: out.seq ?? req.seq ?? 0, name: req.name, code: out.code ?? 0, msg: 
 | `reward` | `rewardGeneral` | body 原样 |
 | `invest` | `strategyInvest` | body 原样 |
 | `cancelInvest` | `cancelInvest` | `{taskId}` |
-| `captive` | `recruitCaptive` | body 原样 |
+| `captive` | `recruitCaptive` | `{idx}`；300 金、率见 §7.11 |
+| `captiveRelease` | `releaseCaptive` | `{idx}`；名望 +2、态度 −5（★ 2026-11-16，经组装层注入 `diplomacyApi`） |
+| `captiveExecute` | `executeCaptive` | `{idx}`；恶名 +1、名望 −2、态度 −15 且董卓豁免（★ 2026-11-16） |
 | `attack` | `strategyAttack` | `{cityId,armyId,frac,fromCityId,confirmBattle}`；`frac` 限 (0,1] 默认 1，`confirmBattle` 默认 true |
 | `recall` | `strategyRecallMarch` | `{marchId}` |
 | `battleConfirm` | `strategyConfirmBattle` | `{marchId}` |
@@ -590,6 +592,7 @@ heroes-240 与原表交集 → 史载五维覆盖主属性；非交集生成派�
 | `battle-narrative.js` | 337 | 结构化战斗数据 → 中文战报/推演人话（只读） | `skillByName(name)`；`skillProfile(key,lv)`；`desText(s,level)`；`skillExplain(profile)`；`actSentence(a)`；`previewNarrative(p)→{verdict,verdictTone,headline,rows,tips,myNotes,defenderNotes,ratio}`；`reportVerdict(r)` | `battle.js`、`handlers.js`、`panels.js`、`strategy.js` |
 | `campaign.js` | 373 | 序章节拍：推时钟、入账、按日触发剧情/黄巾波次/结局 | `chapterRules()`；`sayDrift`；`applyChoice`；`noticeRecruit`；`pendingPayload`；`settleCampaign(state,cfg,ctx,now)→{days,day}`；`chooseChapter`；`onTileCleared` | `handlers.js`、`strategy.js` |
 | `captive-rules.js` | 43 | 招降成功率唯一权威公式 | `CAPTIVE_COST=300`；`captiveRecruitRate(state,cap)→0~0.95`；`captiveRateParts(state,cap)→{parts,final}` | `interaction.js`、`panels.js`、`strategy.js` |
+| `captive-reputation.js` | 48 | ★ 2026-11-16 俘虏处置后果的零依赖叶子 | `FAME_PER_RELEASE=2`、`INFAMY_PER_EXECUTE=1`、`ATTITUDE_ON_RELEASE=-5`、`ATTITUDE_ON_EXECUTE=-15`、`EXEMPT_FACTION_ON_EXECUTE='sili'`、`FAME_DEFECT_CAP=40`、`defectRateWithFame(base,fame)` | `captives.js`、`strategy.js` |
 | `captives.js` | 85 | 俘虏链路统一入口：战报确定性俘虏 + 释放/处斩 | `captureFromBattle(state,cfg,{report,place,day,seed})→Array`；`releaseCaptive(state,{idx})`；`executeCaptive(state,{idx})` | `handlers.js`、`index.js`、`strategy.js` |
 | `chronicle.js` | 18 | 身故履历，只记录不改数值 | `recordDeath(state,entry)→{generalId,cfgId,name,day,band,official,played}` | `command.js` |
 | `city-econ.js` | 443 | 逐城产量/人口/城库/灾害/忠诚/俸禄/粮道接入的统一旬入口 | `cityName`；`ensureCityEcon`；`devLevel`；`conscriptFactor`；`cityYield(state,cityId)`；`playerStockYield / playerGrainYield / playerGoldYield`；`cityLayer`；`popTick`；`disasterTick`；`cityDevTick`；`loyaltyTick`；`cityEconTick`；`consumeMarchGrain`；`deliverGrain`；`armsCounter`；re-export `armsApt/aptTriple/bestArms` | `armory.js`、`handlers.js`、`interaction.js`、`panels.js`、`strategy.js` |
@@ -1242,7 +1245,7 @@ e.store = min(20000, e.store+g); grain += g; res.gold += gold;
 CAPTIVE_COST = 300;
 captiveRecruitRate(state,cap) = min(0.95, 0.45 + days*0.05 + protagonistStat(state,'政治')*0.002);
 captiveRateParts：base 45 + dayBonus days*5 + polBonus 政治*0.2 → final = min(95, raw)
-// strategy.js:2111 实际掷骰
+// strategy.js:2410 实际掷骰（2026-11-16 校准：旧文档写 2111）
 success = rngFor(seed, st.turn ?? day, `captive:${i}:${cap.cfgId}`).random() < rate;
 失败 cap.loyal -= 10；<0 越狱除名（不扣费）
 成功 扣 300 金；g.loyal = min(100, 70 + round(主角魅力/25))
@@ -2021,6 +2024,24 @@ build/SLG-Offline-win32-x64/
 **落地结果（本轮完成）**：`domain/ai-roster.js` 已建（名册播种/守将顶替/学战法/升级/登庸/俘虏/挖角/求援，全部 `rngFor(seed,turn,tag)` 确定性）；`strategy.js` 在 `ensureStrategy` 播种、`strategyTick` 每旬每势力跑名册人事、`applyOrders` 攻城胜利发经验+俘将、`defenseFor` level≥2 城用名册真武将（**1 级城保留 hash 守将**——张飞/夏侯惇这类开国名将顶替 3 级弱将会破坏 P0-3「首战可胜」，实测复跑确认）。新增 `tests/p16-ai-officers.test.js`（9 例）、`tests/all-skills-live.test.js`（177 战法逐个真战斗，此前仅 6 个）、`tests/ai-career-balance.test.js`（对战强度分布 + 120 旬名册有界/确定性）；全量 525/525、system-audit 灭国 T63+10 旬零异常确定性通过。
 
 **纪律**：新增名册只在 `state.strategy` 内、旧档缺字段走 ensure 兜底（存档兼容）；人格轴决定行为强度但**不改五维数值、不破 0~100 量纲**；求援/挖角均有确定性种子与冷却（可回放、不无限循环）；改完必须重打包双态取证 + check-release 全绿。
+
+### 17.9 读档备份与俘虏处置后果（2026-11-16 用户问答核查）
+
+**核查缘起**：用户问「如何主动存档、如何读取历史存档、武将招降机制是否完整」。代码级核查发现两处「文案/需求承诺与实现不符」，本轮修复并登记。
+
+| 编号 | 问题 | 根因 | 修复 |
+|---|---|---|---|
+| `DEV-29` | 读档确认框写「旧档会自动备份」，实际直接覆盖当前档 | `index.js /save/slot load` 分支旧实现 `state=normalizeWorld(data,cfg); flush()`；`flush()` 写 `savePath`，当前档被就地覆盖；只有 `/save/import` 分支做了 `renameSync` 备份 | 先 `const next=normalizeWorld(data,cfg)` 成功后再 `renameSync(savePath, savePath+'.before-load-<ts>.json')`，再 `state=next; flush()`；1 号档即 `savePath` 自身时跳过备份。归一化失败时当前档原封不动。`tests/save-slots.test.js` 新增备份内容断言 |
+| `DEV-30` | 处斩记 `role.infamy+1` 但外交、来投、结局全不读；放归完全没有后果，与 PRD R-21.5 / GDD §7.3 承诺不符 | 两字段都是「只写不读」的死字段，且无单一权威口径 | 新增零依赖叶子 `captive-reputation.js` 统一常量；放归 `st.fame+=2` / 处斩 `st.fame-=2, infamy+=1`；名望进入 `defectTick` 来投率（封顶 40 点防刷）；处置态度经 `diplomacy.js adjustAttitudeByEvent` 落 `eventAdj`——放归 −5、处斩 −15 且董卓 `sili` 豁免（GDD §7.3 / §5.9 原文）。数值取事件系统既有 `fame:+1~+4` 中位，不自创 |
+
+**接线边界（诚实登记）**：
+
+- 战报 `b_d_general` 只有 `[cfgId, ...]`，不带原属势力；态度后果按「对所有 NPC 势力」统一落账，**不定向到单一势力**。若要定向，需先扩展战报字段——未做，登记为已知简化。
+- `captives.js` 保持零依赖叶子（只依赖 `strategy-rng.js` 与新叶子 `captive-reputation.js`）；态度落账的 `diplomacyApi` 由 `index.js` 组装层注入，领域层不反向 import `diplomacy.js`，不成环。
+- 名望 `FAME_DEFECT_CAP=40` 是防刷闸：反复放归也只贡献 `40/700≈5.7%` 来投率，剩余仍靠城数/武将/魅力，不可线性刷满。
+- **存档入口可发现性仍不足**：存/读档卡只在「本城→府库」页，无全局按钮、无快捷键——本次只修备份数据安全，未改入口（属 UX 决策，不擅动）。
+
+**验证**：`npm test` **527/527**（新增 2 条：读档备份内容、处置四源同源）；`save-slots`、`m4-13`、`m2-diploma`、`p7-city-depth` 交叉 39/39；全量后重打包双态取证见发布闸。
 
 ---
 

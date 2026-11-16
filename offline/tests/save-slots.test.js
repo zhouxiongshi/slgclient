@@ -4,7 +4,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync, existsSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { startOfflineServer } from '../server/index.js';
@@ -69,6 +69,32 @@ test('存档：三档位、导出、导入都可用', async (t) => {
     assert.equal(loaded.status, 200);
     assert.equal(loaded.body.ok, true);
     assert.ok(loaded.body.day >= 1);
+  });
+
+  await t.test('读档前先备份当前档：备份内容等于读档前进度，文案属实', async () => {
+    // 用 2 号档做对照：先存一份当前进度（不带标记）
+    const plain = await postJson('/__slg/save/slot', { slot: 2, action: 'save' });
+    assert.equal(plain.body.ok, true);
+
+    // 再把当前档改成可识别的进度（导入带标记的 state，会 flush 到 save.json）
+    const marked = await getJson('/__slg/save/export');
+    marked.role = { ...(marked.role || {}), rid: 'before-load-marker' };
+    marked.clock = { ...(marked.clock || {}), day: 777 };
+    const imported = await postJson('/__slg/save/import', marked);
+    assert.equal(imported.body.ok, true);
+    const beforeBytes = readFileSync(join(tmp, 'save.json'), 'utf8');
+    assert.equal(beforeBytes.includes('before-load-marker'), true);
+
+    // 读回不带标记的 2 号档：当前档应被备份，再被覆盖
+    const loaded = await postJson('/__slg/save/slot', { slot: 2, action: 'load' });
+    assert.equal(loaded.body.ok, true);
+    assert.notEqual(loaded.body.day, 777, '读档应加载 2 号档的旧进度，不是当前进度');
+
+    const backups = readdirSync(tmp).filter((f) => f.includes('.before-load-'));
+    assert.ok(backups.length >= 1, '读档必须留下 before-load 备份');
+    const restored = JSON.parse(readFileSync(join(tmp, backups[backups.length - 1]), 'utf8'));
+    assert.equal(restored.role?.rid, 'before-load-marker', '备份内容应是读档前的当前进度');
+    assert.equal(restored.clock?.day, 777);
   });
 
   await t.test('非法档位 / 非法动作 / 垃圾存档都被拒绝', async () => {

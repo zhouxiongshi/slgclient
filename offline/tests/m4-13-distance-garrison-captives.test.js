@@ -19,6 +19,10 @@ import { armsApt as aptLeaf, aptTriple, bestArms } from '../server/domain/aptitu
 import { armsApt as aptReexport } from '../server/domain/city-econ.js';
 import { garrisonCfgIds, garrisonPool } from '../server/domain/garrison.js';
 import { captureFromBattle, releaseCaptive, executeCaptive } from '../server/domain/captives.js';
+import {
+  FAME_PER_RELEASE, INFAMY_PER_EXECUTE, ATTITUDE_ON_RELEASE,
+  ATTITUDE_ON_EXECUTE, EXEMPT_FACTION_ON_EXECUTE, defectRateWithFame,
+} from '../server/domain/captive-reputation.js';
 import { ensureStrategy, strategyResolveMarches } from '../server/domain/strategy.js';
 
 const cfg = loadConfig();
@@ -190,6 +194,47 @@ test('俘虏：全歼必俘有名守将，已在押不重复，放归/处斩都�
   assert.equal(kill.ok, true);
   assert.equal(state.captives.length, 0);
   assert.ok((state.role?.infamy || 0) >= 1, '处斩应记一笔恶名');
+});
+
+test('俘虏处置：放归记名望、处斩记恶名与态度后果，四源同源', () => {
+  const state = createWorld(cfg);
+  ensureStrategy(state, cfg);
+  state.captives = [];
+  state.generals = [];
+  state.seed = 12345;
+  const added = captureFromBattle(state, cfg, { report: fakeReport(), place: '测试城', day: 10, seed: 12345 });
+  assert.equal(added.length, 2);
+
+  const touched = [];
+  const api = {
+    adjustAttitude(delta, exempt) {
+      touched.push({ delta, exempt });
+      return [{ faction: 'yanzhou', attitude: -5 }];
+    },
+  };
+  const fame0 = Number(state.strategy?.fame) || 0;
+  const rel = releaseCaptive(state, { idx: 0, diplomacyApi: api });
+  assert.equal(rel.ok, true);
+  assert.equal(rel.fameDelta, FAME_PER_RELEASE);
+  assert.equal((Number(state.strategy?.fame) || 0) - fame0, FAME_PER_RELEASE, '放归应实打实加名望');
+  assert.equal(rel.attitudeDelta, ATTITUDE_ON_RELEASE);
+  assert.equal(touched.length, 1, '放归必须走态度落账口');
+
+  const inf0 = Number(state.role?.infamy) || 0;
+  const fame1 = Number(state.strategy?.fame) || 0;
+  const exe = executeCaptive(state, { idx: 0, diplomacyApi: api });
+  assert.equal(exe.ok, true);
+  assert.equal(exe.infamyDelta, INFAMY_PER_EXECUTE);
+  assert.equal((Number(state.role?.infamy) || 0) - inf0, INFAMY_PER_EXECUTE, '处斩应记恶名');
+  assert.equal((Number(state.strategy?.fame) || 0) - fame1, -FAME_PER_RELEASE, '处斩应扣名望');
+  assert.equal(exe.attitudeDelta, ATTITUDE_ON_EXECUTE);
+  assert.equal(touched[1].exempt, EXEMPT_FACTION_ON_EXECUTE, '处斩必须豁免董卓');
+
+  // 名望必须进入来投率，否则又是死字段
+  assert.ok(defectRateWithFame(0.03, 0) < defectRateWithFame(0.03, 20), '名望越高来投率越高');
+  assert.equal(defectRateWithFame(0.03, 10000), defectRateWithFame(0.03, 40),
+    '名望贡献封顶 FAME_DEFECT_CAP，防止刷放归拉满来投率');
+  assert.ok(defectRateWithFame(0.03, 40) < 0.45, '封顶后仍需叠加城数/武将名望才可能到 45%');
 });
 
 test('俘虏：两条占领路径与三条处置出口都已接线', () => {

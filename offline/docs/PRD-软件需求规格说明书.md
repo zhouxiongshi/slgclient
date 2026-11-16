@@ -890,16 +890,21 @@
 | R-21.2 | 招降率**唯一权威** `captiveRecruitRate = min(0.95, 0.45 + days*0.05 + protagonistStat(政治)*0.002)`；构成条 `base 45 + dayBonus days*5 + polBonus 政治*0.2`，逐项相加 === 最终百分点。 |
 | R-21.3 | 招降消耗 300 金；成功后 `loyal = min(100, 70 + round(魅力/25))`；失败 `loyal -= 10`，<0 越狱除名且不扣费。 |
 | R-21.4 | 每旬 `captivesTick`：`days+1`、`loyal-2`；`loyal<30` 且掷骰 <0.3 则越狱除名。 |
-| R-21.5 | 释放 / 处斩分别影响名望（处斩 +infamy）；守将分配 `garrisonCfgIds` 用 FNV-1a 哈希做到「同城恒定、跨城不重」，且排除已拥有/在押武将。 |
+| R-21.5 | 释放 / 处斩分别影响名望：放归 `st.fame += 2`、处斩 `st.fame -= 2` 且 `role.infamy += 1`（★ 2026-11-16 落地，旧版只写 infamy 无消费）；守将分配 `garrisonCfgIds` 用 FNV-1a 哈希做到「同城恒定、跨城不重」，且排除已拥有/在押武将。 |
+| R-21.6 | ★ 2026-11-16：名望必须有真实消费点——`defectTick` 来投率 `rate = min(0.45, 0.03 + (baseFame + min(40,st.fame))/700)`；名望贡献封顶 40 点，禁止靠反复放归刷满来投率（GDD §7.1「慕名来投」）。 |
+| R-21.7 | ★ 2026-11-16：处置对外态度同源落账——放归对所有 NPC 势力 `attitude -5`，处斩 `attitude -15` 且董卓（`sili`）豁免（GDD §7.3 / §5.9 原文）；经 `diplomacy.js adjustAttitudeByEvent()` 写 `eventAdj`，理由链可见。战报不带原属势力字段，故不定向到单一势力。 |
+| R-21.8 | ★ 2026-11-16：读档覆盖当前档前必须先备份（`.before-load-<ts>.json`）；先 `normalizeWorld` 成功再备份，归一化失败时当前档原封不动；1 号档即当前档本身，跳过备份。确认框「旧档会自动备份」文案自此属实。 |
 
 **验收标准**
 
-- [ ] `AC-21.1` 招降率 UI 构成条与 `captiveRecruitRate` 完全一致（同源断言）。
-- [ ] `AC-21.2` `m4-13-distance-garrison-captives.test.js` 全绿。
-- [ ] `AC-21.3` 同种子同战报产生相同俘虏名单。
-- [ ] `AC-21.4` 两条占领路径（野战 / 攻城）都走同一个 `captureFromBattle`。
+- [x] `AC-21.1` 招降率 UI 构成条与 `captiveRecruitRate` 完全一致（同源断言）。
+- [x] `AC-21.2` `m4-13-distance-garrison-captives.test.js` 全绿。
+- [x] `AC-21.3` 同种子同战报产生相同俘虏名单。
+- [x] `AC-21.4` 两条占领路径（野战 / 攻城）都走同一个 `captureFromBattle`。
+- [x] `AC-21.5` ★ 放归/处斩对名望、恶名、态度的影响与 `captive-reputation.js` 常量一致，名望进入来投率且封顶 40。
+- [x] `AC-21.6` ★ `save-slots.test.js` 验证读档前留下 `.before-load-*` 备份且内容等于读档前进度。
 
-**实现位置**：`server/domain/captives.js`、`captive-rules.js`、`garrison.js`、`server/domain/strategy.js:2111-2170`、`docs/M4-13-距离做实与守将俘虏出征.md`、`docs/FIELD-CONTRACT.md §D`。
+**实现位置**：`server/domain/captives.js`、`captive-rules.js`、`captive-reputation.js`（★ 名望/恶名/态度口径）、`garrison.js`、`server/domain/strategy.js defectTick()`、`server/index.js`（态度组装层 + 读档备份）、`docs/M4-13-距离做实与守将俘虏出征.md`、`docs/FIELD-CONTRACT.md §D`。
 
 ---
 

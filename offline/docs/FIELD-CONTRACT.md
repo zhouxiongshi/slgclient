@@ -50,6 +50,10 @@
 | 酒馆招募成功率 | 与登庸**同一条公式** `talentRecruitRate()`（★ P13：武将可拒绝；失败不扣金、三顾好感 +1；掷骰 `rngFor(seed, day, draw:城:cfgId:好感)`） | % | 整数 | ❌ | 城内酒馆「登庸 X%」标注、招募 toast |
 | 招募指名 | `general.drawGeneral` 带 `cfgId` 时只招该人（★ P13）；不带时沿用「此刻在店」批量口径 | — | — | — | 城内/主城酒馆招募按钮 |
 | 招降率 | `captive-rules.js`（单一公式） | % | 整数 | ❌ | 俘虏面板 |
+| 放归名望 | `captives.js releaseCaptive()`：`state.strategy.fame += FAME_PER_RELEASE(2)`（★ 2026-11-16，取事件系统既有 +1~+4 中位；处斩 −2） | 点 | 整数 | ❌ | 放归 toast、名望显示；消费见下行 |
+| 名望→来投率 | `captive-reputation.js defectRateWithFame()`：`rate = min(0.45, base + min(40,fame)/700)`（★ 2026-11-16，城数/武将名望与放归名望同轴；封顶 40 点防刷） | 小数 | — | ❌ | `strategy.js defectTick()` 在野慕名来投判定 |
+| 处斩恶名 | `state.role.infamy += INFAMY_PER_EXECUTE(1)`（★ 2026-11-16，旧实现只写不读；现同步对外态度，见下行） | 笔 | 整数 | ❌ | 处斩 toast |
+| 处置对外态度 | `captive-reputation.js`：放归 −5、处斩 −15（董卓 `sili` 豁免）；全部经 `diplomacy.js adjustAttitudeByEvent()` 落 `eventAdj`，理由链标签「事件」，界面只显示不重算 | 点 | 整数 | ❌ | 外交面板态度理由链、劝降/停战门槛 |
 | 相性/义理 | `relation.js xiangxingOf/yiliOf` + `conf/relations.json` | 1–149 / 0–100 | 整数 | ❌ | 武将卡、关系 chip |
 | 忠诚 | `state.generals[].loyal`（运行期） | 0–100 | 整数 | ❌ | 武将卡、预警 |
 | 战法槽位规则 | `slots.js slotBlock()`：自带不可替换；**学习槽 Lv5 开**；觉醒槽 Lv10 且自带 10 级 | 级 | 整数 | ❌ | 武将战法页、六府装配 |

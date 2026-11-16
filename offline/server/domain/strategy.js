@@ -22,6 +22,8 @@ import { beginInteriorTask, cancelInteriorTask, interiorTaskView } from './inter
 import { supplyMap, marchSupplyEstimate } from './supply.js';
 /* 修 U08：招降成功率收敛到唯一公式，面板图鉴/预览/实际掷骰同源 */
 import { captiveRecruitRate, captiveRateParts, CAPTIVE_COST } from './captive-rules.js';
+/* ★ 2026-11-16：名望（放归累积）进入在野来投率，让名望字段有真实消费点 */
+import { defectRateWithFame, FAME_DEFECT_CAP } from './captive-reputation.js';
 import { canMarchBetween, marchableNeighbors, marchGraph } from './march.js';
 /* ★ 验收 #22：地图标注分级（哪座城算要城只有这一处口径） */
 import { cityLabelRank, labelPolicy } from './map-lod.js';
@@ -2461,9 +2463,12 @@ export function defectTick(state, cfg, ctx) {
   const own = Object.entries(st.cities || {})
     .filter(([, v]) => v.owner === 'player').map(([id]) => Number(id));
   if (!own.length) return null;
-  const fame = own.length * 8 + (state.generals || []).length * 2
+  const baseFame = own.length * 8 + (state.generals || []).length * 2
     + protagonistStat(state, '魅力') / 100;
-  const rate = Math.min(0.45, 0.03 + fame / 700);
+  /* ★ 2026-11-16：名望进入来投率。放归俘虏累积 st.fame（上限 FAME_DEFECT_CAP），
+     与城数/武将数同走一条公式；无本作名望时数值与旧实现完全一致。 */
+  const fame = baseFame + Math.min(FAME_DEFECT_CAP, Number(st.fame) || 0);
+  const rate = defectRateWithFame(0.03, fame);
   const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
   if (rngFor(state.seed ?? 20261110, st.turn ?? day, 'defect:tavern').random() > rate) return null;
   const local = tavern.people.filter((p) => !p.recruited && own.includes(Number(p.birthCity)));

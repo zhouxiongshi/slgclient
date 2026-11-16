@@ -207,6 +207,7 @@ index.html 响应末尾追加两个 script
   └── GET /__slg/interaction/state
         └── server/domain/interaction.js
               ├── captive-rules.js（招降成功率：描述=计算=预览 同一公式）
+              ├── captive-reputation.js（★ 2026-11-16 放归/处斩的名望·恶名·态度常量与来投率，零依赖叶子）
               ├── city-econ.js（逐城城库/开发度/灾害风险）
               └── strategy 视图（行军、内政冷却、回合预览）
 ```
@@ -216,6 +217,7 @@ index.html 响应末尾追加两个 script
 | `server/interaction-ui.js` | 术语提示（嵌套/锁定/面包屑/Esc 逐级）、离线百科、决策预览、撤销、当前事务·军师建言、就地抽屉、地图六透镜、进度队列、渐进引导、快捷键 | 只读 `window.__slg*` 与 `/__slg/*`，**不 import 任何领域模块**，不写存档 |
 | `server/domain/interaction.js` | 把「玩家现在能做什么」聚合成一个只读快照 | 不 import `strategy.js` / `panels.js`（它们成环）；只 import `captive-rules.js` 与 `city-econ.js` |
 | `server/domain/captive-rules.js` | 招降成功率与费用，零依赖纯函数 | 服务端结算、面板显示、建言预览三处共用，禁止各算一份 |
+| `server/domain/captive-reputation.js` | ★ 2026-11-16 俘虏处置后果（放归名望 +2 / 处斩恶名 +1·名望 −2 / 态度 −5·−15 董卓豁免 / 来投率封顶 40） | 零依赖叶子；态度落账不在本模块，由组装层 `index.js` 注入 `diplomacyApi` 走 `diplomacy.js` 唯一权威口 |
 | `conf/interaction/terms.json` | 67 条术语的唯一定义（名称/分类/简述/关联/证据级别/source_id/confidence） | 提示框与百科同源；新增术语只改这一份 |
 
 三条硬约束：

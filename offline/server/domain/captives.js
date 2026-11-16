@@ -13,6 +13,10 @@
  * 释放 / 处斩 / 招降三个出口共用同一份名册。
  */
 import { rngFor } from './strategy-rng.js';
+import {
+  FAME_PER_RELEASE, INFAMY_PER_EXECUTE,
+  ATTITUDE_ON_RELEASE, ATTITUDE_ON_EXECUTE, EXEMPT_FACTION_ON_EXECUTE,
+} from './captive-reputation.js';
 
 function soldiersOf(report, key) {
   try {
@@ -67,19 +71,35 @@ function takeCaptive(state, idx) {
   return { ok: true, cap };
 }
 
-/** 放归：不消耗资源，也不加恶名。 */
-export function releaseCaptive(state, { idx } = {}) {
+/** 放归：不花钱，记名望 +2，并对所有 NPC 势力落 attitude −5（GDD §7.3）。
+ *  态度落账走 diplomacy 的唯一权威口，理由链里显示为「事件」档，可追溯。 */
+export function releaseCaptive(state, { idx, diplomacyApi = null } = {}) {
   const r = takeCaptive(state, idx);
   if (!r.ok) return r;
-  return { ok: true, action: 'released', name: r.cap.name };
+  const st = state?.strategy;
+  if (st && typeof st === 'object') st.fame = (Number(st.fame) || 0) + FAME_PER_RELEASE;
+  const attitude = diplomacyApi?.adjustAttitude?.(ATTITUDE_ON_RELEASE) ?? null;
+  return {
+    ok: true, action: 'released', name: r.cap.name,
+    fame: st?.fame ?? 0, fameDelta: FAME_PER_RELEASE,
+    attitudeDelta: ATTITUDE_ON_RELEASE, attitude,
+  };
 }
 
-/** 处斩：不留后患，但会记一笔恶名（供外交/结局读取，缺字段时安全跳过）。 */
-export function executeCaptive(state, { idx } = {}) {
+/** 处斩：记恶名 +1、名望 −1，对所有 NPC 势力 attitude −15，董卓除外（GDD §7.3 / §5.9）。 */
+export function executeCaptive(state, { idx, diplomacyApi = null } = {}) {
   const r = takeCaptive(state, idx);
   if (!r.ok) return r;
   if (state.role && typeof state.role === 'object') {
-    state.role.infamy = (Number(state.role.infamy) || 0) + 1;
+    state.role.infamy = (Number(state.role.infamy) || 0) + INFAMY_PER_EXECUTE;
   }
-  return { ok: true, action: 'executed', name: r.cap.name, infamy: state.role?.infamy ?? 0 };
+  const st = state?.strategy;
+  if (st && typeof st === 'object') st.fame = (Number(st.fame) || 0) - FAME_PER_RELEASE;
+  const attitude = diplomacyApi?.adjustAttitude?.(ATTITUDE_ON_EXECUTE, EXEMPT_FACTION_ON_EXECUTE) ?? null;
+  return {
+    ok: true, action: 'executed', name: r.cap.name,
+    infamy: state.role?.infamy ?? 0, infamyDelta: INFAMY_PER_EXECUTE,
+    fame: st?.fame ?? 0, fameDelta: -FAME_PER_RELEASE,
+    attitudeDelta: ATTITUDE_ON_EXECUTE, attitude,
+  };
 }
