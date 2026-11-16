@@ -17,6 +17,7 @@ import { applyGeneralExp, grantBattleExp, takeBattlePromos } from '../server/dom
 import { refusalLine, personaOf } from '../server/domain/recruit-refusal.js';
 import {
   rankOfMerit, meritForRank, grantMerit, careerTagOf, RANK_NAMES,
+  slotCapForRank, slotCapOf,
 } from '../server/domain/official-rank.js';
 import { effectiveStatOf, politicsOf } from '../server/domain/general-stat.js';
 import { STAT_LABEL } from '../server/domain/panels.js';
@@ -24,7 +25,11 @@ import { talentRecruitRate } from '../server/domain/relation.js';
 import { ensureTavern, todaysGuests } from '../server/domain/tavern.js';
 import { rngFor } from '../server/domain/strategy-rng.js';
 import { aiRosterCultivateTick, ensureRosters } from '../server/domain/ai-roster.js';
-import { factionConf, ensureStrategy } from '../server/domain/strategy.js';
+import {
+  factionConf, ensureStrategy, strategyFormup,
+  oathOptions, chooseOath, strategyAttack, strategyViewState,
+} from '../server/domain/strategy.js';
+import { ensureCityEcon } from '../server/domain/city-econ.js';
 import { PERSONA_AXES } from '../server/domain/strategy-brain.js';
 
 const ROOT = resolve(import.meta.dirname, '..');
@@ -195,4 +200,83 @@ test('注入 UI：空学习槽带可点按钮并给提示；主公 Lv5 真实可
   r = handleRequest(ctx, { seq: 1, name: 'general.upSkill', msg: { gId: hero.id, cfgId: 10001, pos: 1 } });
   assert.equal(r.msg.ok, true, 'Lv5 后主公可学第二战法');
   assert.equal(hero.skills[1].cfgId, 10001);
+});
+
+/* ── 追加：带兵上限随官阶提升（每槽 5000 + 官阶×300）─────────────────── */
+test('带兵上限纯函数：白身 5000、每阶 +300、三公 7700，越界钳制且确定性', () => {
+  assert.equal(slotCapForRank(0), 5000);
+  assert.equal(slotCapForRank(1), 5300);
+  assert.equal(slotCapForRank(5), 6500);
+  assert.equal(slotCapForRank(9), 7700);
+  assert.equal(slotCapForRank(99), 7700, '官阶封顶 9');
+  assert.equal(slotCapForRank(-5), 5000, '负官阶回退白身');
+  assert.equal(slotCapOf({}), 5000, '无功勋对象回退基础上限');
+  assert.equal(slotCapOf({ merit: meritForRank(7) }), 7100, '按累计功勋换算');
+  assert.equal(slotCapOf({ merit: 99999 }), 7700);
+});
+
+test('编队按每槽武将官阶校验带兵上限：高官阶可填 6100，降为白身即拒并回传真实 cap', () => {
+  const state = normalizeWorld(createWorld(cfg), cfg);
+  ensureStrategy(state, cfg);
+  const army = state.armys[0];
+  const homeId = state.strategy.playerCity;
+  army.cityId = homeId;
+  army.soldiers = [6200, 0, 0];
+  army.generals = [state.generals[0].id, 0, 0];
+  delete army.marchId;
+  const vet = state.generals[0];
+  vet.merit = meritForRank(4); // 4 阶 → 5000+1200=6200
+  const ok = strategyFormup(state, cfg, noopCtx(state), {
+    armyId: army.id, generals: army.generals, soldiers: [6100, 0, 0],
+  });
+  assert.equal(ok.ok, true, JSON.stringify(ok));
+  vet.merit = 0; // 同将降回白身，同样 6100 应超限
+  const bad = strategyFormup(state, cfg, noopCtx(state), {
+    armyId: army.id, generals: army.generals, soldiers: [6100, 0, 0],
+  });
+  assert.equal(bad.ok, false);
+  assert.equal(bad.reason, 'over_cap');
+  assert.equal(bad.cap, 5000, '回传该槽真实上限（白身 5000）');
+  assert.equal(bad.caps[0], 5000);
+});
+
+test('编队 UI 逐槽展示上限与官阶，over_cap 提示带动态数字', () => {
+  const ui = readFileSync(resolve(ROOT, 'server', 'panels-ui.js'), 'utf8');
+  assert.ok(ui.includes('slotCapOfGen'), '编队弹窗按槽取上限');
+  assert.ok(ui.includes('上限 \' + fmt(cap)'), '逐槽显示该武将带兵上限');
+  assert.ok(ui.includes('官阶越高上限越高'), '超限提示解释官阶关系');
+  const panel = readFileSync(resolve(ROOT, 'server', 'domain', 'panels.js'), 'utf8');
+  assert.ok(panel.includes('slotCap: slotCapOf(g)'), 'allGenerals 带出每槽上限');
+});
+
+test('真链路出征：白身 7600 兵退回 2600（按 5000），三公退回 0（7700 上限内）', () => {
+  const returnedToCity = (merit) => {
+    const state = normalizeWorld(createWorld(cfg), cfg);
+    ensureStrategy(state);
+    ensureCityEcon(state);
+    const lords = oathOptions(state).lords.filter((l) => l.cities.length >= 2);
+    const oath = chooseOath(state, cfg, noopCtx(state), { lord: lords[0].id, city: lords[0].cities[0].id });
+    assert.equal(oath.ok, true);
+    const cid = state.strategy.playerCity;
+    const army = state.armys[0];
+    army.cityId = cid;
+    delete army.marchId;
+    const g = state.generals[0];
+    g.merit = merit;
+    army.generals = [g.id, 0, 0];
+    army.soldiers = [7600, 0, 0];
+    state.roleRes.grain = 200000;
+    const row = strategyViewState(state, cfg).cities.find((c) => Number(c.id) === cid);
+    const target = (row?.marchRoutes || []).map((r) => Number(r.id))
+      .find((id) => state.strategy.cities[id] && state.strategy.cities[id].owner !== 'player');
+    assert.ok(target, '应有相邻敌城');
+    const before = state.strategy.cities[cid].troops;
+    const atk = strategyAttack(state, cfg, noopCtx(state), {
+      cityId: target, armyId: army.id, fromCityId: cid, frac: 1,
+    });
+    assert.equal(atk.ok, true, JSON.stringify(atk));
+    return state.strategy.cities[cid].troops - before;
+  };
+  assert.equal(returnedToCity(0), 2600, '白身按 5000 截断，多 2600 退回驻城');
+  assert.equal(returnedToCity(meritForRank(9)), 0, '三公 7700 上限内，7600 不截断');
 });

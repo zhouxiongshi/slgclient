@@ -42,6 +42,23 @@ export function rankName(merit) {
 }
 
 /**
+ * 带兵上限（2026-11-16）：每槽基础 5000，官阶每升一阶 +300。
+ * 0 阶白身 5000 → 9 阶三公 7700。只按累计功勋换算，功高者自然能多带一营。
+ * 这是「官职高统兵能力强」在兵力层面的落点（统帅值加成走 general-stat.effectiveStatOf）。
+ * 零依赖、确定性；满级仍远低于一城兵源，不破坏城库/粮草硬闸。
+ */
+export const SLOT_CAP_BASE = 5000;
+export const SLOT_CAP_PER_RANK = 300;
+export function slotCapForRank(rank) {
+  const r = Math.max(0, Math.min(RANK_CAP, Math.trunc(Number(rank) || 0)));
+  return SLOT_CAP_BASE + r * SLOT_CAP_PER_RANK;
+}
+/** 由任意带 merit 字段的对象取带兵上限（空对象/空槽回退基础 5000）。 */
+export function slotCapOf(officer) {
+  return slotCapForRank(rankOfMerit(officer?.merit));
+}
+
+/**
  * 由本局属性行判定职业标签（纯数字、零依赖，与面板 careerOf 的史载口径互补）。
  * 取五维最高项：政治/谋略归 civil/strategist（文治），供政治加成判型；
  * 其余归武职。数值来自 config 归一化后的 generalByCfg（0~100）。

@@ -17,7 +17,7 @@ import { materialGuide } from './armory.js';
 /* ★ M4-10：属性一律走唯一派生层（0~100 百分制），面板不再自己读原表。 */
 import { toPercentFromRaw } from './general-stat.js';
 /* ★ 2026-11-16：官阶名称单一口径（零依赖叶子），功勋晋升由 official-rank 统一 */
-import { rankName as meritRankName, RANK_NAMES, meritForRank } from './official-rank.js';
+import { rankName as meritRankName, RANK_NAMES, meritForRank, rankOfMerit, slotCapOf } from './official-rank.js';
 /* 刻意只 import oath.js（零依赖小模块）而不 import strategy.js ——
    它反向 import world.js，而 world.js 又 import 本文件，会成环。 */
 import { oathOf, oathFactionOf, strategyCity, factionTraitOf } from './oath.js';
@@ -681,7 +681,11 @@ export function panelState(state, cfg) {
       })),
       allGenerals: (state.generals || []).map((g) => {
         const gc = cfg.generalByCfg.get(Number(g.cfgId)) || {};
-        return { id: g.id, name: gc.name || `武将${g.id}` };
+        return {
+          id: g.id, name: gc.name || `武将${g.id}`,
+          /* ★ 2026-11-16：编队弹窗逐槽显示带兵上限（随官阶浮动） */
+          rank: rankOfMerit(g.merit), slotCap: slotCapOf(g),
+        };
       }),
       marchable, gates, plans, chronicle, books,
       recentReports: (state.warReports || []).slice(-5).reverse(),

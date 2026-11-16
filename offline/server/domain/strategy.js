@@ -50,7 +50,7 @@ import {
   aiRecruitTick, aiPoachTick, aiAidRequest, aiCaptureTick, aiCaptiveTick,
 } from './ai-roster.js';
 /* ★ 2026-11-16：功勋晋官的单一口径（零依赖叶子） */
-import { grantMerit } from './official-rank.js';
+import { grantMerit, slotCapOf } from './official-rank.js';
 /* ★ M4-13：俘虏生成 / 释放 / 处斩统一入口，两条占领路径共用 */
 import { captureFromBattle } from './captives.js';
 /* ★ 修「推演返回一串代码」：推演的语义（人话）由这一处统一生成，
@@ -1554,7 +1554,8 @@ const MARCH_DAYS_MIN = 1;
    并由 marchSupplyStops 给出「途中休整」提示，长线不再和邻城一个耗时。 */
 const MARCH_DAYS_MAX = 40;
 /* ★ M2-3：粮耗口径已并入全局参数表（knobs.grainPerSoldierDay，默认 0.1/兵/日） */
-/** 本作设计：每一槽 500–5000。超过的兵留在城里，不能编进一队。 */
+/** 单槽带兵上限的基准（白身）。实际每槽上限 = SLOT_CAP + 官阶×300，见 official-rank.slotCapOf；
+ *  超过的兵留在城里，不能编进一队。SLOT_CAP 保留为契约/测试的基准常量。 */
 export const SLOT_CAP = 5000;
 /** 辎重队速度固定：车马慢，比最慢的步卒还慢一截。 */
 
@@ -1700,11 +1701,14 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
     ctx.push?.('general.push', standin);
   }
   if ((army.soldiers || []).every((n) => !(n > 0))) return { ok: false, code: 4, reason: 'no_troops' };
-  /* 本作设计：单槽超过 5000 的兵退回出发城，不能整槽拉出去。 */
+  /* ★ 2026-11-16：单槽超出「该槽武将官阶带兵上限」的兵退回出发城，不能整槽拉出去。 */
   let overflow = 0;
   army.soldiers = [0, 1, 2].map((i) => {
     const n = Math.max(0, Math.floor(Number(army.soldiers?.[i]) || 0));
-    if (n > SLOT_CAP) { overflow += n - SLOT_CAP; return SLOT_CAP; }
+    const gid = (army.generals || [])[i];
+    const g = gid ? (state.generals || []).find((x) => x.id === gid) : null;
+    const cap = g ? slotCapOf(g) : SLOT_CAP;
+    if (n > cap) { overflow += n - cap; return cap; }
     return n;
   });
   if (overflow > 0 && fromState) {
@@ -2095,8 +2099,14 @@ export function strategyFormup(state, cfg, ctx, { armyId, generals, soldiers }) 
     if (other) return { ok: false, reason: 'in_other_army', generalId: gid, armyId: other.id };
   }
   const troops = [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(soldiers?.[i]) || 0)));
-  const over = troops.findIndex((n) => n > SLOT_CAP);
-  if (over >= 0) return { ok: false, reason: 'over_cap', slot: over, cap: SLOT_CAP, have: troops[over] };
+  /* ★ 2026-11-16：每槽带兵上限随该槽武将官阶浮动（白身 5000 → 三公 7700）；
+     空槽无将统辖，仍按基础 5000，不能借空槽超编。 */
+  const caps = slots.map((gid) => {
+    const g = gid ? (state.generals || []).find((x) => x.id === gid) : null;
+    return g ? slotCapOf(g) : SLOT_CAP;
+  });
+  const over = troops.findIndex((n, i) => n > caps[i]);
+  if (over >= 0) return { ok: false, reason: 'over_cap', slot: over, cap: caps[over], caps, have: troops[over] };
   const cur = (army.soldiers || []).map((v) => Math.max(0, Math.floor(Number(v) || 0)));
   const totalCur = cur.reduce((s, v) => s + v, 0);
   const totalNew = troops.reduce((s, v) => s + v, 0);

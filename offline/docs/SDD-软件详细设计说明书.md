@@ -1184,7 +1184,8 @@ ACTIONS 门槛(态度/金)：truce -30/1500、pass 20/800、ally 55/0、marriage
                        requestAttack 60/2000、surrender 0/0、sow 0/800、gift 0/0
 
 // 行军（strategy.js）
-MARCH_KM_BASE=55; MARCH_DAYS_MIN=1; MARCH_DAYS_MAX=40; SLOT_CAP=5000;
+MARCH_KM_BASE=55; MARCH_DAYS_MIN=1; MARCH_DAYS_MAX=40;
+SLOT_CAP=5000（白身基准）；每槽上限 = SLOT_CAP + 官阶×300（0 阶 5000 → 9 阶 7700）;
 generalSpeed = clamp(60 + (gameStatOf(cfg,g,'speed',60) + g.speed_added), 20, 200);
 armySpeed = 队内最慢 generalSpeed（空队 100），round(v*10)/10;
 marchKmBetween = route.km>0 ? route.km : round(hypot(dx,dy)*1.2);
@@ -2087,7 +2088,9 @@ build/SLG-Offline-win32-x64/
 | `DEV-37` | 所有武将初始化没有政治属性；GM 编辑器/面板无政治维度 | `config.loadConfig` 只归一化 5 个战斗维度，`five.zheng` 仅用于算 cost，未写入 `politics` | 政治作为第六维：原表武将从谋略确定性派生，`heroes-240` 交集与新增武将取史载 `five.zheng`，主公 93；全表 505 人 0~100 无缺失。`world.makeGeneral` 补 `politics_added`，面板 `STAT_LABEL`/装备加成 `EQUIP_KEYS`/GM 编辑器同步；取数仍走 `gameStatOf(cfg,g,'politics')` |
 | `DEV-38` | 主公属性偏弱；玩家可见「防御」标签；坐镇中军实为「35% 发动 + 30% 回击」双随机，与「指挥必发动 + 35% 回击/级 +5%」设计不符 | 主公六维沿用旧设定；`ui.levels[].probability=35` 驱动内核 `rollTrigger` 二次掷骰；`kernel.probability_init/max=0.35` | 主公六维改为武力 99/谋略 96/统帅 91/速度 87/政治 93（内部键 `defense` 不变，玩家标签统一改「统帅」）；`probability_init=max=1`、`ui.levels[].probability=100`（指挥战法开战必发动），受击回击概率 `effect_value[1]=35+5×(lv−1)`（Lv1=35%/Lv10=80%），内核 `counter.chance` 同源。数值登记先改 FIELD-CONTRACT，测试 `m4-protagonist-skill` 同步迁移 |
 
-**回归锁**：`tests/ui-player-experience.test.js`（11 条）锁政治覆盖/官阶闭环/AI 成长/拟人拒绝/学习反馈；`tests/m4-protagonist-skill.test.js` 锁 100% 发动与 35%→80% 回击；`tests/p10-interior-task.test.js` 测试夹具把主公谋略钳回中值（96 跨过 85 阈值会让 2 旬工期塌成 1 旬，测的是任务状机制非主公数值）；`tests/ui-presentation-hygiene.test.js` 锁文案不泄来源。全量 `npm test` 542/542。
+| `DEV-39` | 官阶只抬高统帅值，单支部队带兵上限仍写死 5000，「官高统兵多」在兵力上无感 | `SLOT_CAP=5000` 硬上限；`strategyFormup` 与出征裁剪 `army.soldiers` 均按常量截断 | `official-rank.js` 加零依赖纯函数 `slotCapForRank/slotCapOf`：每槽上限 = 5000 + 官阶×300（0 阶 5000 → 9 阶 7700，越界钳制，按累计功勋唯一决定）；编队与出征裁剪改按该槽武将官阶取上限，空槽回退 5000；`over_cap` 回执带该槽真实 `cap/caps`；`panels.js allGenerals` 带出 `rank/slotCap`，编队弹窗逐槽显示上限与官阶。白身武将行为完全不变（`SLOT_CAP` 常量保留为契约基准） |
+
+**回归锁**：`tests/ui-player-experience.test.js`（15 条）锁政治覆盖/官阶闭环/AI 成长/拟人拒绝/学习反馈/带兵上限（含真链路出征截断对照：白身 7600→退 2600、三公 7600→退 0）；`tests/loop-balance.test.js` 锁白身 5000 基准与官阶浮动上限；`tests/m4-protagonist-skill.test.js` 锁 100% 发动与 35%→80% 回击；`tests/p10-interior-task.test.js` 测试夹具把主公谋略钳回中值（96 跨过 85 阈值会让 2 旬工期塌成 1 旬，测的是任务状机制非主公数值）；`tests/ui-presentation-hygiene.test.js` 锁文案不泄来源。全量 `npm test` 546/546。
 
 ---
 

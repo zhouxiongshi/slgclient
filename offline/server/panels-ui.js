@@ -98,7 +98,10 @@
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }).then(function (r) { return r.json(); }).then(function (r) {
-      toast(r.text || r.hint || (r.reason ? ({ no_army: '没有这支队伍', marching: '队伍行军中，不可整编', dup_general: '同一武将不能重复上阵', in_other_army: '该武将已在别的队伍', too_many_troops: '兵力分配超出该队现有兵力', not_own_city: '只能运输到己方城池', bad_amount: '数量不合法', no_grain: '粮草不足', no_gold: '金钱不足', no_general: '找不到该武将' }[r.reason] || ('失败：' + r.reason)) : (r.ok ? '完成' : '失败')), !r.ok);
+      var overCapMsg = r.reason === 'over_cap'
+        ? ('第 ' + (r.slot + 1) + ' 槽带兵上限 ' + fmt(r.cap) + '（该槽武将官阶越高上限越高），现填 ' + fmt(r.have))
+        : null;
+      toast(overCapMsg || r.text || r.hint || (r.reason ? ({ no_army: '没有这支队伍', marching: '队伍行军中，不可整编', dup_general: '同一武将不能重复上阵', in_other_army: '该武将已在别的队伍', too_many_troops: '兵力分配超出该队现有兵力', not_own_city: '只能运输到己方城池', bad_amount: '数量不合法', no_grain: '粮草不足', no_gold: '金钱不足', no_general: '找不到该武将' }[r.reason] || ('失败：' + r.reason)) : (r.ok ? '完成' : '失败')), !r.ok);
       if (r.ok) fetchState();
       if (cb) cb(r);
     }).catch(function (e) { toast('操作失败：' + e.message, true); });
@@ -109,6 +112,10 @@
     mask.id = 'slgFormup';
     mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:100004;display:flex;align-items:center;justify-content:center;';
     var gens = data.strategy.allGenerals || [];
+    var genById = {};
+    gens.forEach(function (g) { genById[g.id] = g; });
+    /* 带兵上限：基础 5000，官阶每阶 +300；空槽无将统辖按基础值。 */
+    var slotCapOfGen = function (g) { return g ? (Number(g.slotCap) || 5000) : 5000; };
     var sel = function (slot, curId) {
       return '<select data-fup="gen' + slot + '"><option value="0">（空）</option>'
         + gens.map(function (g) {
@@ -122,13 +129,16 @@
     };
     mask.innerHTML = '<div style="background:#1d1a12;border:1px solid #ba9a52;border-radius:8px;padding:18px 22px;min-width:420px;color:#e8e0cc;font:13px \'Microsoft YaHei\',sans-serif">'
       + '<h3 style="margin:0 0 6px;color:#ffdf9a">整编队伍#' + army.order + '</h3>'
-      + '<div class="muted" style="margin-bottom:10px">三槽各对应一个兵种：盾步克弓、弓克骑、骑克盾（战前折算守军兵力 ±15%）。武将适性按五维×兵种折算 100%~115%，同源乘进该将攻防；槽位同时是战位（一=前锋/二=中军/三=大营），决定普攻与战法能打到谁。兵力只在该队现有 ' + fmt(army.soldiers.reduce(function (s, v) { return s + v; }, 0)) + ' 内重分。</div>'
+      + '<div class="muted" style="margin-bottom:10px">三槽各对应一个兵种：盾步克弓、弓克骑、骑克盾（战前折算守军兵力 ±15%）。武将适性按五维×兵种折算 100%~115%，同源乘进该将攻防；槽位同时是战位（一=前锋/二=中军/三=大营），决定普攻与战法能打到谁。兵力只在该队现有 ' + fmt(army.soldiers.reduce(function (s, v) { return s + v; }, 0)) + ' 内重分。每槽带兵上限随该槽武将官阶提升（白身 5000，每升一阶 +300，三公 7700）。</div>'
       + [1, 2, 3].map(function (slot) {
         var cur = army.generals[slot - 1];
+        var captain = cur ? genById[cur.id] : null;
+        var cap = slotCapOfGen(captain);
         return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">'
           + '<span style="width:46px;color:#ffdf9a">' + (army.armsNames || ['盾步', '弓兵', '骑兵'])[slot - 1] + '</span>'
           + sel(slot - 1, cur && cur.id)
-          + '<input type="number" min="0" value="' + (army.soldiers[slot - 1] || 0) + '" data-fup="troop' + slot + '" style="width:90px;background:#2a2617;border:1px solid #ba9a52;color:#fff;padding:4px 6px;border-radius:4px">'
+          + '<input type="number" min="0" max="' + cap + '" value="' + (army.soldiers[slot - 1] || 0) + '" data-fup="troop' + slot + '" style="width:90px;background:#2a2617;border:1px solid #ba9a52;color:#fff;padding:4px 6px;border-radius:4px">'
+          + '<span class="muted" style="white-space:nowrap">上限 ' + fmt(cap) + (captain && captain.rank ? '（' + captain.rank + '阶）' : '') + '</span>'
           + (cur ? '<span class="muted">适性 ' + cur.apt + '% · 忠' + cur.loyal + '</span>' : '<span class="muted">空槽</span>')
           + '</div>';
       }).join('')
