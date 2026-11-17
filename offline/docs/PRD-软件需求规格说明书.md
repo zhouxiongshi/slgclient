@@ -1238,6 +1238,34 @@
 
 ---
 
+### FR-34 初始数据编辑器（武将/战法新增与编辑）与招募日志 ✅ P1
+
+**描述**：玩家要能**自己创建和修改**武将与战法的**初始数据**——不是改当前存档，而是
+改「新开局长什么样」的基础数据。编辑器分两页签（武将/战法），全部改动写**覆盖层**文件，
+五张原表逐字不动；同时招募的成功/失败必须落事件日志（此前招募无日志，探索已有）。
+
+**业务规则**
+
+| 规则 | 内容 |
+|---|---|
+| R-34.1 | 招募日志：`drawGeneral` 全部分支（成功/婉拒/离席/未到/不在本城/金不足/座上无人/连抽逐人）必须 `recordEvent`，文案与探索登庸同口径（拟人、无英文 reason）。 |
+| R-34.2 | 武将新增：cfgId 从 **890001** 起自动分配；写 `overrides.json` generals 段（`__custom__` 标记）；`loadConfig` 注入 generalByCfg → 酒馆客池/新开局 `makeGeneral` 自动可见；**不写当前存档 state**。自建武将可删除（原表条目不可删）。 |
+| R-34.3 | 武将编辑（既有）：沿用 M4-11 覆盖层口径，属性/成长/统御/星级/自带战法可改可重置。 |
+| R-34.4 | 战法新增：cfgId 从 **29001** 起自动分配；写 `conf/campaign/custom-skills.json`（skills.js 五表装载**之后**合并，同 cfgId/同名覆盖）；保存后运行时表立即同步（UI JsonAsset 与 kernel 同源）。 |
+| R-34.5 | 战法编辑（既有）：同 cfgId 覆盖式重写；重置即从覆盖层删除并还原原表条目。编辑器只支持单效果战法（多槽/机制战法重写会丢机制，界面提示不鼓励）。 |
+| R-34.6 | **编辑器侧校验 = skill-balance 平衡闸同口径**：指挥/被动发动率恒 100%；主动/追击 32~50 且逐级成长；输出指数 300~2000（群体下限 600）；控制命中率 Lv10=Lv1×2 且 ≤100（Lv1≤50）；不合规输入在保存时就拒绝并给出可读原因，而不是等测试报红。 |
+| R-34.7 | 溯源：自建战法的 `provenance` 标注「初始数据编辑器（用户自建，本作设定）」；原表 `provenance` 逐字不动。 |
+
+**验收标准**
+
+- [ ] `AC-34.1` `p18-base-editor.test.js` 锁：招募各分支落日志且无英文词；战法新增/覆盖/重置全链路三路同源；越界输入被拒；武将新增→loadConfig 注入→酒馆→makeGeneral 全链；收尾覆盖层无残留。
+- [ ] `AC-34.2` `conf/skills.json` 等五张原表与 `general.json` 在编辑器操作前后逐字节不变。
+- [ ] `AC-34.3` skill-balance 平衡闸（`tests/skill-balance.test.js`）对含自定义覆盖层的运行时全表仍然全绿。
+
+**实现位置**：`server/domain/skill-editor.js`（新）、`server/domain/general-editor.js`（`editorCreate`/`editorDeleteCustom`）、`server/skills.js`（custom-skills 装载 + `upsertRuntimeSkill`/`removeRuntimeSkill`）、`server/config.js`（`__custom__` 注入）、`server/index.js`（`/editor/create|delete|skills|skill/save|skill/reset`）、`server/editor-ui.js`（页签化）、`server/handlers.js`（招募日志）。
+
+---
+
 ## 6. 非功能需求
 
 | 编号 | 类别 | 需求 | 指标 / 判据 | 取证 |

@@ -304,12 +304,12 @@
     btnSettings.type = 'button';
     btnSettings.title = '打开设置面板（快捷键 ?）';
     on(btnSettings, 'click', function () { openKeys(); });
-    var btnEditor = el('button', '', '武将编辑器');
+    var btnEditor = el('button', '', '初始数据编辑器');
     btnEditor.type = 'button';
-    btnEditor.title = '编辑全部武将属性与自带战法';
+    btnEditor.title = '武将/战法的新增与编辑（初始口径：覆盖层写法，原表不动，新开局生效）';
     on(btnEditor, 'click', function () {
       if (typeof window.__slgEditorOpen === 'function') window.__slgEditorOpen();
-      else phase('武将编辑器脚本未就绪，请刷新页面后重试', 'fail');
+      else phase('编辑器脚本未就绪，请刷新页面后重试', 'fail');
     });
     quick.appendChild(btnSettings);
     quick.appendChild(btnEditor);

@@ -55,6 +55,9 @@
 | 登庸五分项 | `talentRecruitRate()` 的 `parts` | % | 整数 | ❌ | 构成条（禁前端拆算） |
 | 酒馆招募成功率 | 与登庸**同一条公式** `talentRecruitRate()`（★ P13：武将可拒绝；失败不扣金、三顾好感 +1；掷骰 `rngFor(seed, day, draw:城:cfgId:好感)`） | % | 整数 | ❌ | 城内酒馆「登庸 X%」标注、招募 toast |
 | 招募指名 | `general.drawGeneral` 带 `cfgId` 时只招该人（★ P13）；不带时沿用「此刻在店」批量口径 | — | — | — | 城内/主城酒馆招募按钮 |
+| 招募事件日志 | `drawGeneral` 八类分支（成功/婉拒/离席/未到/不在本城/金不足/座上无人/连抽逐人）全部 `recordEvent`（★ 2026-11-17）；文案与探索登庸同口径，无英文 reason | — | — | ❌ | 事件卡、战略事件流（最近 8 条） |
+| 自建武将 | `editorCreate()`：cfgId 从 **890001** 起，写 `overrides.json` generals 段 `__custom__`；`config.js loadConfig` 注入 generalByCfg → 酒馆客池/新开局 `makeGeneral` 自动可见；**初始口径，不写当前存档 state**（★ 2026-11-17 FR-34） | — | — | ❌ | 初始数据编辑器（武将页签） |
+| 自建/覆盖战法 | `skill-editor.js`：cfgId 从 **29001** 起（detail_id 9200001+），唯一写入口 `conf/campaign/custom-skills.json`，`skills.js` 五表装载之后合并（同 cfgId/同名覆盖）；保存即 `upsertRuntimeSkill`，UI JsonAsset 与 kernel 同源；编辑器校验与 skill-balance 平衡闸同口径 | — | — | ❌ | 初始数据编辑器（战法页签）、战法面板、内核 |
 | 招降率 | `captive-rules.js`（单一公式） | % | 整数 | ❌ | 俘虏面板 |
 | 放归名望 | `captives.js releaseCaptive()`：`state.strategy.fame += FAME_PER_RELEASE(2)`（★ 2026-11-16，取事件系统既有 +1~+4 中位；处斩 −2） | 点 | 整数 | ❌ | 放归 toast、名望显示；消费见下行 |
 | 名望→来投率 | `captive-reputation.js defectRateWithFame()`：`rate = min(0.45, base + min(40,fame)/700)`（★ 2026-11-16，城数/武将名望与放归名望同轴；封顶 40 点防刷） | 小数 | — | ❌ | `strategy.js defectTick()` 在野慕名来投判定 |

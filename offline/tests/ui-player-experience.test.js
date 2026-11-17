@@ -60,8 +60,13 @@ test('政治第六维：全表武将初始化都有 0~100 的 politics，主公 
 test('玩家可见的 defense 标签已改为「统帅」，并新增「政治」', () => {
   assert.equal(STAT_LABEL.defense, '统帅');
   assert.equal(STAT_LABEL.politics, '政治');
+  /* ★ 2026-11-17：编辑器重写为「初始数据编辑器」页签化后，属性标签统一取自
+     服务端 EDIT_RANGES（唯一口径，defense='统帅'、politics='政治'），
+     前端不再内联一份会漂移的标签表。 */
   const ui = readFileSync(resolve(ROOT, 'server', 'editor-ui.js'), 'utf8');
-  assert.ok(ui.includes("defense: '统帅'"), '编辑器标签同步改名');
+  assert.ok(ui.includes('ranges[k].label'), '编辑器属性标签应取自 EDIT_RANGES 下发');
+  assert.ok(ui.includes("'force', 'strategy', 'defense', 'speed', 'destroy', 'politics'"),
+    '编辑器六维应含政治');
 });
 
 /* ── 任务5：主公属性与技能 ──────────────────────────────────────────── */

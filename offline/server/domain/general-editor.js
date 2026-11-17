@@ -75,6 +75,7 @@ export function editorList(cfg) {
       },
       skillCfgId: Number(ov?.skillCfgId ?? g.skillCfgId ?? 0),
       overridden: !!ov,
+      custom: !!ov?.__custom__,
       isProtagonist: Number(g.cfgId) === 880001,
     });
   }
@@ -160,6 +161,66 @@ export function editorReset(cfg, state, input) {
   const row = cfg.generalByCfg.get(cfgId);
   const stateSynced = syncStateSkill(state, cfgId, row?.skillCfgId || 0);
   return { ok: true, cfgId, stateSynced, row: editorRowOf(cfg, cfgId) };
+}
+
+/**
+ * ★ 2026-11-17 新增武将（用户：「技能和属性要提供新增和编辑功能……我要自己来修改
+ *   和创建」）。初始口径：只写 overrides.generals + 注入 generalByCfg（config.js
+ *   loadConfig 同一逻辑注入，新开局/酒馆客池自动出现），**不改当前存档 state**。
+ *   cfgId 从 890001 起自动分配，避开原表 100001~100593、主角 880001、240 段。
+ */
+export const CUSTOM_GENERAL_ID_FROM = 890001;
+
+export function editorCreate(cfg, input) {
+  const name = String(input?.name || '').trim().slice(0, 12);
+  if (!name) return { ok: false, message: '武将名不能为空（1~12 字）' };
+  const patch = sanitizeGeneralEdit(input) || {};
+  const ov = loadOverrides();
+  const generals = { ...(ov.generals || {}) };
+  let cfgId = CUSTOM_GENERAL_ID_FROM;
+  while (cfg.generalByCfg.has(cfgId) || generals[String(cfgId)]) cfgId += 1;
+
+  const armsN = Math.round(Number(input?.arms));
+  const row = {
+    name,
+    country: String(input?.country || '').trim().slice(0, 6) || '',
+    arms: [Number.isFinite(armsN) && armsN >= 1 && armsN <= 9 ? armsN : 1],
+    star: patch.star ?? 3,
+    cost: patch.cost ?? 15,
+    force: patch.force ?? 50,
+    strategy: patch.strategy ?? 50,
+    defense: patch.defense ?? 50,
+    speed: patch.speed ?? 50,
+    destroy: patch.destroy ?? 50,
+    politics: patch.politics ?? patch.strategy ?? 50,
+    force_grow: patch.force_grow ?? 30,
+    strategy_grow: patch.strategy_grow ?? 30,
+    defense_grow: patch.defense_grow ?? 30,
+    speed_grow: patch.speed_grow ?? 30,
+    destroy_grow: patch.destroy_grow ?? 30,
+    skillCfgId: patch.skillCfgId ?? 0,
+    __custom__: true,
+  };
+  generals[String(cfgId)] = row;
+  saveOverrides({ ...ov, generals });
+
+  /* 注入唯一权威 generalByCfg：编辑器列表、酒馆客池、新开局 makeGeneral 立即可见。 */
+  cfg.generalByCfg.set(cfgId, { cfgId, ...row });
+  return { ok: true, cfgId, row: { ...row, cfgId }, message: `已创建武将「${name}」(#${cfgId})，新开局与酒馆客池生效` };
+}
+
+/** 删除一条自定义武将（只能删 __custom__ 的；初始口径，已入存档的武将保留）。 */
+export function editorDeleteCustom(cfg, input) {
+  const cfgId = Number(input?.cfgId);
+  if (!Number.isFinite(cfgId)) return { ok: false, message: '缺少 cfgId' };
+  const ov = loadOverrides();
+  const row = ov.generals?.[String(cfgId)];
+  if (!row || !row.__custom__) return { ok: false, message: '只能删除编辑器新建的自定义武将' };
+  const generals = { ...(ov.generals || {}) };
+  delete generals[String(cfgId)];
+  saveOverrides({ ...ov, generals });
+  cfg.generalByCfg.delete(cfgId);
+  return { ok: true, cfgId, message: `已删除「${row.name}」(#${cfgId})——新开局不再出现；已招募到存档里的该武将保留` };
 }
 
 /** 单条详情（编辑器表单回显）。 */

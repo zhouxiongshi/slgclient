@@ -23,7 +23,9 @@ import { handshakeFrame, encodeFrame, decodeFrame, generateKey } from './codec.j
 import { attachWebSocketServer } from './wsserver.js';
 /* ★ M4-11 武将编辑器：领域逻辑在 domain/general-editor.js，本文件只接 HTTP */
 import { createSkillAssets, SKILLS } from './skills.js';
-import { editorList, editorSave, editorReset } from './domain/general-editor.js';
+import { editorList, editorSave, editorReset, editorCreate, editorDeleteCustom } from './domain/general-editor.js';
+/* ★ 2026-11-17 初始数据编辑器·战法页签（conf/campaign/custom-skills.json 覆盖层） */
+import { skillList, saveSkill, resetSkill, customSkillIds } from './domain/skill-editor.js';
 import { loadOverrides, saveOverrides } from './gm/overrides.js';
 import { dossierFor } from './domain/dossier.js';
 /* ★ M4-13：俘虏处置（放归 / 处斩），与招降共用同一份名册 */
@@ -485,11 +487,74 @@ export async function startOfflineServer(options = {}) {
     if (urlPath === '/__slg/editor/state' && req.method === 'GET') {
       try {
         const list = editorList(cfg);
-        json(res, 200, { ...list, skills: SKILLS.map((s) => ({ cfgId: s.cfgId, name: s.name })) });
+        const custom = customSkillIds();
+        json(res, 200, {
+          ...list,
+          skills: SKILLS.map((s) => ({ cfgId: s.cfgId, name: s.name, cls: s.kernel.skill_class, custom: custom.has(Number(s.cfgId)) })),
+        });
       } catch (err) {
         log('error', `editor state: ${err.stack || err.message}`);
         json(res, 500, { ok: false, message: err.message });
       }
+      return;
+    }
+    /* ★ 2026-11-17 初始数据编辑器：新增/删除武将 + 战法页签。领域逻辑在 domain 层，
+       本文件只接 HTTP（与 editorSave 同范式）。 */
+    if (urlPath === '/__slg/editor/create' && req.method === 'POST') {
+      readJson(req, 16384, (body) => {
+        try {
+          const r = editorCreate(cfg, body || {});
+          json(res, 200, r);
+        } catch (err) {
+          log('error', `editor create: ${err.stack || err.message}`);
+          json(res, 500, { ok: false, message: err.message });
+        }
+      });
+      return;
+    }
+    if (urlPath === '/__slg/editor/delete' && req.method === 'POST') {
+      readJson(req, 8192, (body) => {
+        try {
+          const r = editorDeleteCustom(cfg, body || {});
+          json(res, 200, r);
+        } catch (err) {
+          log('error', `editor delete: ${err.stack || err.message}`);
+          json(res, 500, { ok: false, message: err.message });
+        }
+      });
+      return;
+    }
+    if (urlPath === '/__slg/editor/skills' && req.method === 'GET') {
+      try {
+        json(res, 200, skillList(SKILLS));
+      } catch (err) {
+        log('error', `editor skills: ${err.stack || err.message}`);
+        json(res, 500, { ok: false, message: err.message });
+      }
+      return;
+    }
+    if (urlPath === '/__slg/editor/skill/save' && req.method === 'POST') {
+      readJson(req, 16384, (body) => {
+        try {
+          const r = saveSkill(SKILLS, body || {});
+          json(res, 200, r);
+        } catch (err) {
+          log('error', `editor skill save: ${err.stack || err.message}`);
+          json(res, 500, { ok: false, message: err.message });
+        }
+      });
+      return;
+    }
+    if (urlPath === '/__slg/editor/skill/reset' && req.method === 'POST') {
+      readJson(req, 8192, (body) => {
+        try {
+          const r = resetSkill(SKILLS, body || {});
+          json(res, 200, r);
+        } catch (err) {
+          log('error', `editor skill reset: ${err.stack || err.message}`);
+          json(res, 500, { ok: false, message: err.message });
+        }
+      });
       return;
     }
     if (urlPath === '/__slg/editor/save' && req.method === 'POST') {

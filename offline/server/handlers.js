@@ -936,6 +936,9 @@ export function handleRequest(ctx, req) {
       const cityId = Number(m.cityId) || 0;
       const costEach = cfg.basic.general?.draw_general_cost ?? 30;
       const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+      /* ★ 2026-11-17：招募成功/失败全部落事件日志（用户反馈「招募成功或者失败都没有日志」）。
+         与探索登庸（recordEvent 遣使探索…）同口径，事件卡与战略事件流都可见。 */
+      const recruitCity = cityNameOf(cityId || state.strategy?.playerCity || mainCity(state)?.cityId || 1);
       const added = [];
       const refused = [];
       // ★ P13 指名招募：玩家在来访名单里点了谁，就只招谁（旧实现取「此刻在店」第一个，
@@ -947,6 +950,7 @@ export function handleRequest(ctx, req) {
         if (!row) {
           /* ★ 2026-11-17：旧实现只回 cfgId，前端拼出「undefined 此刻不在座上」。补 name 与拟人句。 */
           const known = (state.tavern.people || []).find((p) => Number(p.cfgId) === targetId) || {};
+          recordEvent(state, `延请「${known.name || `#${targetId}`}」：店里寻不见此人，许是回了乡里。`);
           rsp.msg = {
             generals: [], reason: 'not_today', cfgId: targetId, name: known.name || '', cost: costEach,
             line: failLine('absent', { name: known.name || '' }),
@@ -955,6 +959,7 @@ export function handleRequest(ctx, req) {
         }
         const frac = dayFraction(state, realMsPerDay);
         if (frac >= row.to) {
+          recordEvent(state, `「${row.name}」方才离席归家，今日延请未成。`);
           rsp.msg = {
             generals: [], reason: 'guest_left', name: row.name, cost: costEach,
             line: failLine('left', { name: row.name }),
@@ -962,6 +967,7 @@ export function handleRequest(ctx, req) {
           break;
         }
         if (frac < row.from) {
+          recordEvent(state, `「${row.name}」${row.when || '稍后'}才到，遣人去早了。`);
           rsp.msg = {
             generals: [], reason: 'not_arrived', name: row.name, when: row.when, cost: costEach,
             line: failLine('not_yet', { name: row.name, when: row.when }),
@@ -970,6 +976,7 @@ export function handleRequest(ctx, req) {
         }
         if ((state.roleRes.gold || 0) < costEach) {
           const short = Math.max(0, costEach - (state.roleRes.gold || 0));
+          recordEvent(state, `府库金不足（需 ${costEach}，尚差 ${short}），延请「${row.name}」未成。`);
           rsp.msg = {
             generals: [], reason: 'not_enough_gold', cost: costEach, gold: state.roleRes.gold || 0, short,
             line: failLine('poor', { cost: costEach, short }),
@@ -989,6 +996,7 @@ export function handleRequest(ctx, req) {
           ctx.push?.('roleRes.push', roleResOf(state));
           ctx.save();
           const line = refusalLine(cfg.generalByCfg.get(targetId) || {}, { cfgId: targetId, favor: favorN + 1 });
+          recordEvent(state, `延请「${row.name}」被婉拒——三顾之意又深一分（好感 ${favorN + 1}），改日再访更易。`);
           rsp.msg = {
             generals: [], reason: 'refused', name: row.name,
             rate: Math.round(rate * 100), favor: favorN + 1, parts: calc.parts,
@@ -1008,6 +1016,7 @@ export function handleRequest(ctx, req) {
           cityId || state.strategy?.playerCity || mainCity(state)?.cityId || 1, 1);
         state.generals.push(g);
         added.push(g);
+        recordEvent(state, `以 ${costEach} 金延得「${row.name}」入仕，落籍「${recruitCity}」。`);
         noticeRecruit(state, ctx, row.name || '');
         ctx.push('general.push', g);
         syncOwnedSkills(state);
@@ -1021,6 +1030,7 @@ export function handleRequest(ctx, req) {
       // ★ 试玩 P1-3：旧实现「此刻无人 / 金不足」都返回 code 0 + 空数组，静默失败。
       //   现在把原因和今天剩下的人一并回给界面，玩家知道自己在等什么。
       if (!here.length) {
+        recordEvent(state, '酒肆此刻无人可招，改日再来。');
         rsp.msg = {
           generals: [],
           reason: 'no_guest',
@@ -1032,6 +1042,7 @@ export function handleRequest(ctx, req) {
       }
       if ((state.roleRes.gold || 0) < costEach) {
         const short = Math.max(0, costEach - (state.roleRes.gold || 0));
+        recordEvent(state, `府库金不足（每位需 ${costEach} 金，尚差 ${short}），无人应征。`);
         rsp.msg = {
           generals: [], reason: 'not_enough_gold', cost: costEach, gold: state.roleRes.gold || 0, short,
           line: failLine('poor', { cost: costEach, short }),
@@ -1049,6 +1060,7 @@ export function handleRequest(ctx, req) {
         if (!success) {
           state.tavern.favor[person.cfgId] = favorN + 1;
           const line = refusalLine(cfg.generalByCfg.get(Number(person.cfgId)) || {}, { cfgId: person.cfgId, favor: favorN + 1 });
+          recordEvent(state, `延请「${person.name}」被婉拒——三顾之意又深一分（好感 ${favorN + 1}），改日再访更易。`);
           refused.push({ cfgId: person.cfgId, name: person.name, rate: Math.round(rate * 100), favor: favorN + 1, line: line.text, persona: line.persona });
           continue;
         }
@@ -1062,6 +1074,7 @@ export function handleRequest(ctx, req) {
           cityId || state.strategy?.playerCity || mainCity(state)?.cityId || 1, 1);
         state.generals.push(g);
         added.push(g);
+        recordEvent(state, `以 ${costEach} 金延得「${person.name}」入仕，落籍「${recruitCity}」。`);
         noticeRecruit(state, ctx, cfg.generalByCfg.get(g.cfgId)?.name || '');
         ctx.push('general.push', g);
       }

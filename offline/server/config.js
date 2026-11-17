@@ -211,7 +211,33 @@ export function loadConfig(confDir = defaultConfDir()) {
     const gen = loadOverrides().generals || {};
     for (const [k, patchRaw] of Object.entries(gen)) {
       const row = generalByCfg.get(Number(k));
-      if (!row) continue;
+      /* ★ 2026-11-17 初始数据编辑器：__custom__ 条目是编辑器新建的武将——
+         generalByCfg 里没有原行，直接构造注入（酒馆客池/新开局 makeGeneral 自动可见）。 */
+      if (!row) {
+        if (patchRaw && patchRaw.__custom__) {
+          generalByCfg.set(Number(k), {
+            cfgId: Number(k),
+            name: patchRaw.name || `武将${k}`,
+            country: patchRaw.country || '',
+            arms: Array.isArray(patchRaw.arms) && patchRaw.arms.length ? patchRaw.arms : [1],
+            star: patchRaw.star ?? 3,
+            cost: patchRaw.cost ?? 15,
+            force: patchRaw.force ?? 50,
+            strategy: patchRaw.strategy ?? 50,
+            defense: patchRaw.defense ?? 50,
+            speed: patchRaw.speed ?? 50,
+            destroy: patchRaw.destroy ?? 50,
+            politics: patchRaw.politics ?? patchRaw.strategy ?? 50,
+            force_grow: patchRaw.force_grow ?? 30,
+            strategy_grow: patchRaw.strategy_grow ?? 30,
+            defense_grow: patchRaw.defense_grow ?? 30,
+            speed_grow: patchRaw.speed_grow ?? 30,
+            destroy_grow: patchRaw.destroy_grow ?? 30,
+            skillCfgId: patchRaw.skillCfgId || 0,
+          });
+        }
+        continue;
+      }
       generalOriginal.set(Number(k), { ...row });
       for (const [field, v] of Object.entries(patchRaw)) {
         if (['force', 'strategy', 'defense', 'speed', 'destroy', 'politics',

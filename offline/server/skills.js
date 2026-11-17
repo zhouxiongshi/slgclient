@@ -58,6 +58,21 @@ if (existsSync(INNATE_PATH)) {
   }
   INNATE_SKILLS = innate.skills || [];
 }
+/* ★ 2026-11-17 初始数据编辑器（用户：「技能和属性要提供新增和编辑功能……我要自己来
+   修改和创建」）：conf/campaign/custom-skills.json 覆盖层，最后装载 → 同 cfgId/同名
+   覆盖任何来源的战法。编辑器（server/domain/skill-editor.js）是唯一写入口；五张原表
+   逐字不动。缺文件时此段不生效。 */
+const CUSTOM_SKILL_PATH = join(ROOT, 'conf', 'campaign', 'custom-skills.json');
+if (existsSync(CUSTOM_SKILL_PATH)) {
+  try {
+    const custom = JSON.parse(readFileSync(CUSTOM_SKILL_PATH, 'utf8'));
+    for (const s of custom.skills || []) {
+      const i = TABLE.skills.findIndex((x) => Number(x.cfgId) === Number(s.cfgId) || x.name === s.name);
+      if (i >= 0) TABLE.skills[i] = s;
+      else TABLE.skills.push(s);
+    }
+  } catch { /* 覆盖层损坏不阻塞启动，按无覆盖处理 */ }
+}
 export const SKILLS = TABLE.skills;
 export const SKILL_BY_ID = new Map(SKILLS.map((s) => [s.cfgId, s]));
 export const LEVEL_COUNT = TABLE.levelCount;
@@ -65,6 +80,30 @@ export const SKILL_TABLE_VERSION = TABLE.version;
 export const SKILL_TABLE_SHA = TABLE.sourceSha256;
 
 export function skillById(cfgId) { return SKILL_BY_ID.get(Number(cfgId)) || null; }
+
+/**
+ * ★ 初始数据编辑器：编辑器保存一条战法后，同步进运行时表（UI JsonAsset、
+ *   kernelSkillAt、SKILL_BY_ID 三路同源）。编辑器已做过完整校验，这里只做
+ *   结构防线（十级、概率 0~100）。
+ */
+export function upsertRuntimeSkill(s) {
+  if (!s || !s.kernel || !Array.isArray(s.ui?.levels) || s.ui.levels.length !== LEVEL_COUNT) return false;
+  const i = TABLE.skills.findIndex((x) => Number(x.cfgId) === Number(s.cfgId) || x.name === s.name);
+  if (i >= 0) TABLE.skills[i] = s;
+  else TABLE.skills.push(s);
+  SKILL_BY_ID.set(Number(s.cfgId), s);
+  return true;
+}
+
+/** 编辑器删除一条自定义战法（只允许删 custom-skills.json 里存在的）。 */
+export function removeRuntimeSkill(cfgId) {
+  const id = Number(cfgId);
+  const i = TABLE.skills.findIndex((x) => Number(x.cfgId) === id);
+  if (i < 0) return false;
+  TABLE.skills.splice(i, 1);
+  SKILL_BY_ID.delete(id);
+  return true;
+}
 
 /**
  * ★ P7 战法射程（三战口径）：战场 3 槽 = 前锋/中军/大营，
