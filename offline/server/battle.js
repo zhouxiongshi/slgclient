@@ -61,9 +61,9 @@ export function judgeBattle({ winner, aStart, dStart, aLeft, dLeft }) {
   return 1;
 }
 
-/** 真实兵力 → 内核兵力 1:1（配合下面的 troop_factor 微调）。
- *  原先用 10 会把 1000 兵压成 100 兵，1 回合就打完；实测 1:1 + troop_factor=0.2
- *  时一场战斗平均 2.2 回合 / 59 事件 / 约 22 条战报 hit，四类战法能完整展开。 */
+/** 真实兵力 → 内核兵力 1:1（配合 battleConfig.troop_factor 微调，唯一真源 = 0.45）。
+ *  原先用 10 会把 1000 兵压成 100 兵，1 回合就打完；实测 1:1 + troop_factor=0.45
+ *  时一场战斗四类战法能完整展开，均势仍按未决处理。 */
 export const TROOP_SCALE = 1;
 
 /* ======================= 城防与攻城（2026-11-17）=======================
@@ -99,9 +99,12 @@ export function battleConfig() {
   if (!_cfg) {
     _cfg = structuredClone(DEFAULT_BATTLE_CONFIG);
     _cfg.defense_model = 'corrected';
-    // 原包 troop_factor=1 时单场战斗 1 回合就结束，四类战法与治疗/控制来不及展开；
-    // 按用户授权的「不合适再做微调」下调（实测见 TROOP_SCALE 注释）。
-    _cfg.troop_factor = 0.2;
+    /* ★ 2026-11-18 口径统一： troop_factor 真实生效值一直是 0.45（此前 resolveBattle
+       在派生层覆盖成 0.45，但本函数默认 0.2、注释写 1.25，三处漂移，改配置不生效）。
+       现在把唯一真源放到这里 = 0.45，resolveBattle 不再覆盖。
+       数值未变：原包 troop_factor=1 单场 1 回合结束，四类战法来不及展开；
+       0.45 让约 1.5 倍兵力能在回合上限内打崩小城，均势仍按未决处理。 */
+    _cfg.troop_factor = 0.45;
   }
   return _cfg;
 }
@@ -601,12 +604,11 @@ export function resolveBattle({
      这样「战前推演」可以算出与正式结算**逐位相同**的种子，预演结果才有意义。
      旧口径含 battleLog.length，等于预演必错一档。 */
   const battleSeed = seed ?? battleSeedFor(army.id, x, y, state.clock?.day ?? 1);
-  /* troop_factor 0.2 时 8 回合打不垮守军（兵力只是生命）。1.25 让约 1.5 倍的军队
-     能在回合上限内打崩小城；双方都还剩一成以上时仍是未决，不按人头多判胜。 */
+  /* ★ troop_factor 已在 battleConfig() 统一为唯一真源 0.45（2026-11-18），此处不再覆盖。
+     round_limit 是 per-state 派生（参数表 roundMax），仍在此处套用。 */
   const fightCfg = {
     ...battleConfig(),
     round_limit: Math.round(Number(knobGet(state, 'roundMax')) || 8),
-    troop_factor: 0.45,
   };
   const kernel = runBattle({ units, seed: battleSeed, config: fightCfg });
 

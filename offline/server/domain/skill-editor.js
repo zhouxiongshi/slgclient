@@ -20,7 +20,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LEVEL_COUNT, upsertRuntimeSkill, removeRuntimeSkill } from '../skills.js';
+import { LEVEL_COUNT, upsertRuntimeSkill, removeRuntimeSkill, applyRangeNote } from '../skills.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const CUSTOM_PATH = join(ROOT, 'conf', 'campaign', 'custom-skills.json');
@@ -94,11 +94,27 @@ function valueSeries(v1, v10) {
 function castCountOf(cls) { return cls === '指挥' ? 1 : 8; }
 function targetCountOf(tt) { return /group|all/i.test(String(tt)) ? 3 : 1; }
 
+/** 取战法的效果槽数组（E2 effects 优先，E0 退化为 [kernel]），与 kernelSkillAt 同口径。 */
+function effectSlotsOf(skill) {
+  const k = skill?.kernel || {};
+  return Array.isArray(k.effects) && k.effects.length ? k.effects : [k];
+}
+/**
+ * 编辑器只暴露「一个可编辑效果」，与 skillList 展示口径一致：优先首个伤害/治疗槽，
+ * 否则首个控制槽，再否则首槽。返回索引，供增量编辑只改这一个槽、保留其余槽。
+ */
+function editableSlotIdx(effs) {
+  const dmg = effs.findIndex((e) => ['PHYSICAL_DAMAGE', 'STRATEGY_DAMAGE', 'HEAL'].includes(e.effect_type));
+  if (dmg >= 0) return dmg;
+  const ctl = effs.findIndex((e) => e.effect_type === 'CONTROL');
+  return ctl >= 0 ? ctl : 0;
+}
+
 /**
  * 把编辑器表单输入净化成一整条战法（kernel + ui 十级 + 溯源）。
  * 返回 { ok, skill?, message?, cfgId? }。校验失败给出可读原因，不落盘。
  */
-export function buildCustomSkill(input, existingIds) {
+export function buildCustomSkill(input, existingIds, allSkills) {
   const name = String(input?.name || '').trim().slice(0, 10);
   if (!name) return { ok: false, message: '战法名不能为空（1~10 字）' };
   const cls = SKILL_CLASSES.includes(input?.skillClass) ? input.skillClass : null;
@@ -107,6 +123,13 @@ export function buildCustomSkill(input, existingIds) {
   if (!effKey) return { ok: false, message: '效果必须是 兵刃伤害/谋略伤害/治疗/控制' };
   const tt = input?.targetType && SKILL_TARGETS[input.targetType] ? input.targetType : null;
   if (!tt) return { ok: false, message: '目标必须从下拉里选' };
+  /* ★ 重名防线：新建战法若与现有战法同名，会在装载/upsert 时按 name 命中并整条覆盖
+     原表战法（原 10001 凭空消失）。编辑既有条目（cfgId>0）沿用同名是允许的。
+     这里只在「新建」时拦重名，编辑时由 baseSkillOf 按 cfgId 精确还原，不靠 name。 */
+  if (!(Number(input?.cfgId) > 0) && Array.isArray(allSkills)) {
+    const dup = allSkills.find((s) => s.name === name);
+    if (dup) return { ok: false, message: `已有同名战法「${name}」(#${dup.cfgId})，请换一个名字` };
+  }
 
   const isCmd = cls === '指挥' || cls === '被动';
   const casts = castCountOf(cls);
@@ -239,23 +262,84 @@ export function buildCustomSkill(input, existingIds) {
   return { ok: true, skill, cfgId, isNew: !(input?.cfgId > 0) };
 }
 
+/**
+ * ★ 编辑已有战法的增量 patch（修复「编辑却丢字段」）：
+ *   以原战法为基底深拷贝，只覆盖表单真正可编辑的字段，完整保留原表的
+ *   多效果槽 / prepare / mechanics / bonus_terms / trigger / dir / detail_id /
+ *   range 描述。校验数值仍复用 buildCustomSkill 的平衡闸（把校验产物当"数值来源"）。
+ *   - 发动率：整条 ui.levels[].probability + kernel.probability_init/max 一起覆盖；
+ *   - 值：只改「可编辑主槽」对应的 effect_value[slot]（伤害/治疗比率 或 控制命中率），
+ *     kernel 侧同步 rate_pct_lv1/lv10（伤害槽）或 control_probability/control_state（控制槽）；
+ *   - 名称：改名时 ui/kernel 的 name 一起改（不触碰 cfgId/detail_id）。
+ */
+export function patchExistingSkill(base, built) {
+  const skill = JSON.parse(JSON.stringify(base));
+  const fresh = built.skill;
+  const slot = editableSlotIdx(effectSlotsOf(base));
+  const v1 = fresh.ui.levels[0].effect_value[0];
+  const v10 = fresh.ui.levels[fresh.ui.levels.length - 1].effect_value[0];
+
+  skill.name = fresh.name;
+  if (skill.ui) skill.ui.name = fresh.name;
+  if (skill.kernel) skill.kernel.name = fresh.name;
+
+  /* 发动率整条覆盖（战法级字段，指挥/被动恒 100）。 */
+  for (let i = 0; i < skill.ui.levels.length; i += 1) {
+    skill.ui.levels[i].probability = fresh.ui.levels[i].probability;
+  }
+  skill.kernel.probability_init = fresh.kernel.probability_init;
+  skill.kernel.probability_max = fresh.kernel.probability_max;
+
+  /* 只改主槽的 effect_value，其余槽（控制/mechanics）逐字保留。 */
+  for (let i = 0; i < skill.ui.levels.length; i += 1) {
+    const row = skill.ui.levels[i];
+    if (!Array.isArray(row.effect_value)) row.effect_value = [];
+    row.effect_value[slot] = fresh.ui.levels[i].effect_value[0];
+  }
+  const effs = effectSlotsOf(skill);
+  const target = effs[slot];
+  if (target && target.effect_type === 'CONTROL') {
+    target.control_probability = v1 / 100;
+    target.control_state = fresh.kernel.control_state || target.control_state;
+  } else if (target) {
+    if (target.effect_type === 'PHYSICAL_DAMAGE' || target.effect_type === 'STRATEGY_DAMAGE' || target.effect_type === 'HEAL') {
+      target.rate_pct = v1;
+    }
+    skill.kernel.rate_pct_lv1 = v1;
+    skill.kernel.rate_pct_lv10 = v10;
+  }
+  /* provenance 标注：被用户改过，但保留原溯源（说明改动来自编辑器）。 */
+  skill.provenance = { ...(skill.provenance || {}), editedBy: '初始数据编辑器（增量编辑，保留原结构）' };
+  return skill;
+}
+
 /** 全量列表（编辑器页签）：运行时表 + 自建标记 + 关键数值。allSkills = skills.js 的 SKILLS。 */
 export function skillList(allSkills) {
   const custom = customSkillIds();
   const rows = (allSkills || []).map((s) => {
     const n = s.ui.levels.length;
-    const effs = Array.isArray(s.kernel.effects) ? s.kernel.effects : [s.kernel];
-    const dmg = effs.map((e) => (['PHYSICAL_DAMAGE', 'STRATEGY_DAMAGE', 'HEAL'].includes(e.effect_type) ? 1 : 0));
-    const dmgIdx = dmg.indexOf(1);
+    const effs = effectSlotsOf(s);
+    const slot = editableSlotIdx(effs);
+    const et = effs[slot]?.effect_type || '';
+    const isCtl = et === 'CONTROL';
+    const rateAt = (lv) => {
+      // 控制槽命中率在 ui.effect_value[slot]（kernelSkillAt 用 now/100 消费），
+      // 老代码只认伤害槽 → 控制战法显示 0→0，表单预填 0 被 clamp 成 1%，命中率被清空。
+      const ev = Number(lv.effect_value?.[slot]);
+      if (Number.isFinite(ev) && ev > 0) return ev;
+      if (isCtl && effs[slot]?.control_probability) return Math.round(effs[slot].control_probability * 100);
+      return 0;
+    };
     return {
       cfgId: Number(s.cfgId),
       name: s.name,
       cls: s.kernel.skill_class,
-      effect: dmgIdx >= 0 ? effs[dmgIdx].effect_type : (effs[0]?.effect_type || ''),
+      effect: et,
       p1: s.ui.levels[0].probability,
       p10: s.ui.levels[n - 1].probability,
-      rate1: dmgIdx >= 0 ? (Number(s.ui.levels[0].effect_value[dmgIdx]) || 0) : 0,
-      rate10: dmgIdx >= 0 ? (Number(s.ui.levels[n - 1].effect_value[dmgIdx]) || 0) : 0,
+      rate1: rateAt(s.ui.levels[0]),
+      rate10: rateAt(s.ui.levels[n - 1]),
+      controlState: isCtl ? (effs[slot].control_state || '混乱') : '',
       target: s.kernel.target_type || effs[0]?.target_type || '',
       custom: custom.has(Number(s.cfgId)),
     };
@@ -269,17 +353,27 @@ export function skillList(allSkills) {
  */
 export function saveSkill(allSkills, input) {
   const ids = new Set((allSkills || []).map((s) => Number(s.cfgId)));
-  const built = buildCustomSkill(input, ids);
+  const built = buildCustomSkill(input, ids, allSkills);
   if (!built.ok) return built;
+  /* ★ 编辑既有战法走增量 patch：以运行时表里的原条目为基底，只改表单字段，
+     多效果槽 / prepare / mechanics / bonus_terms 等高级结构逐字保留。
+     新建战法（isNew）才用 buildCustomSkill 的整条构造。 */
+  let toSave = built.skill;
+  if (!built.isNew) {
+    const base = (allSkills || []).find((s) => Number(s.cfgId) === built.cfgId);
+    if (base) toSave = patchExistingSkill(base, built);
+  }
   const doc = loadCustomDoc();
   const i = doc.skills.findIndex((s) => Number(s.cfgId) === built.cfgId);
-  if (i >= 0) doc.skills[i] = built.skill;
-  else doc.skills.push(built.skill);
+  if (i >= 0) doc.skills[i] = toSave;
+  else doc.skills.push(toSave);
   saveCustomDoc(doc);
-  upsertRuntimeSkill(built.skill);
+  upsertRuntimeSkill(toSave);
   return {
-    ok: true, cfgId: built.cfgId, isNew: built.isNew, name: built.skill.name,
-    message: built.isNew ? `已创建战法「${built.skill.name}」(#${built.cfgId})` : `已覆盖战法「${built.skill.name}」(#${built.cfgId})`,
+    ok: true, cfgId: built.cfgId, isNew: built.isNew, name: toSave.name,
+    message: built.isNew
+      ? `已创建战法「${toSave.name}」(#${built.cfgId})`
+      : `已编辑战法「${toSave.name}」(#${built.cfgId})，原有机制/多效果已保留`,
   };
 }
 
@@ -297,17 +391,22 @@ export function resetSkill(allSkills, input) {
   const custom = doc.skills[i];
   doc.skills.splice(i, 1);
   saveCustomDoc(doc);
-  const base = baseSkillOf(cfgId, custom.name);
+  /* 先按 cfgId 从五表精确还原（不再用同名兜底——重名时同名兜底会把
+     "自建战法"错认成原表条目，导致 removeRuntimeSkill 不执行、自建残留内存表）。 */
+  const base = baseSkillOf(cfgId);
   if (base) {
-    upsertRuntimeSkill(base);
-    return { ok: true, cfgId, restored: base.name, message: `已还原为原表「${base.name}」` };
+    /* 还原的是未经过 applyRangeNote 的原始对象，需重新套一次射程/有效距离描述，
+       与模块加载时（skills.js 末尾 for SKILLS applyRangeNote）保持同源。 */
+    const restored = applyRangeNote(JSON.parse(JSON.stringify(base)));
+    upsertRuntimeSkill(restored);
+    return { ok: true, cfgId, restored: restored.name, message: `已还原为原表「${restored.name}」` };
   }
   removeRuntimeSkill(cfgId);
   return { ok: true, cfgId, removed: custom.name, message: `已删除自建战法「${custom.name}」` };
 }
 
-/** 从五张原表找被覆盖前的原条目（cfgId 优先，同名兜底）。 */
-function baseSkillOf(cfgId, name) {
+/** 从五张原表按 cfgId 精确找被覆盖前的原条目（不再同名兜底，避免误伤）。 */
+function baseSkillOf(cfgId) {
   const files = [
     join(ROOT, 'conf', 'skills.json'),
     join(ROOT, 'conf', 'campaign', 'protagonist-skill.json'),
@@ -320,8 +419,7 @@ function baseSkillOf(cfgId, name) {
     try {
       const d = JSON.parse(readFileSync(f, 'utf8'));
       const list = Array.isArray(d.skills) ? d.skills : (d.cfgId ? [d] : []);
-      const hit = list.find((s) => Number(s.cfgId) === cfgId)
-        || (name ? list.find((s) => s.name === name) : null);
+      const hit = list.find((s) => Number(s.cfgId) === cfgId);
       if (hit) return hit;
     } catch { /* 单表损坏跳过 */ }
   }

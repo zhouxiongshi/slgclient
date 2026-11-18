@@ -124,3 +124,21 @@ test('P11 · 城内页必须自带推演入口，且与沙盘同源', () => {
   assert.ok(skills.includes("document.getElementById('slgStratTick').onclick = function () { window.__slgTick(); }"),
     '沙盘推演也必须走 window.__slgTick');
 });
+
+test('P11 · 入门向导可操作闭环：去操作跳转 + 我已完成推进，且无过期概率口径', () => {
+  const ix = read('server/interaction-ui.js');
+  // 每关有「去操作」按钮，点了跳转到对应面板（不是只让玩家读文字）
+  assert.ok(ix.includes('data-act="go"'), '向导必须有「去操作」按钮');
+  assert.ok(/act === 'go'/.test(ix) && /jumpTo\(kind, id\)/.test(ix),
+    '「去操作」必须复用 jumpTo 跳到目标面板');
+  assert.ok(ix.includes('data-act="done"') && ix.includes('我已完成'),
+    '推进按钮应改为「我已完成」，形成「看说明→去操作→完成」闭环');
+  // g0 举义开场步存在
+  assert.ok(/id: 'g0', title: '举义起兵'/.test(ix), '应有举义开场引导（第一次接触的第一块屏幕）');
+  // g3 旧「成功率 +12%」过期口径已移除（当前招募/登庸不显示概率）
+  assert.ok(!/成功率 \+12%/.test(ix), '向导不得残留「成功率 +12%」的过期口径');
+  // 可跳过/稍后/重看：三态齐全
+  assert.ok(ix.includes("data-act='skip'") || ix.includes('data-act="skip"'), '可跳过');
+  assert.ok(ix.includes("data-act='later'") || ix.includes('data-act="later"'), '可稍后');
+  assert.ok(/guide: function \(\)/.test(ix), '可重看（__slgIX.guide）');
+});

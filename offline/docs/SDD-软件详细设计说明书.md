@@ -2110,6 +2110,23 @@ build/SLG-Offline-win32-x64/
 - `conf/library-skills.json` 由 `tools/build-library-skills.js` 从 battle-kit 原文生成，**重新生成会冲掉平衡后的概率**——所以把闸做在测试里（`skill-balance.test.js`），而不是靠口头约定。
 - 本轮未改 `offline/web/` 磁盘产物（1582 文件逐字节不动），未改协议消息计数（`contract-matrix` 72 条不受影响：`dispatchGeneral` 走 HTTP 动作口）。
 
+### 17.14 编辑器 bug / 技能结算核查 / 平衡 / 向导 / 石头闭环 / 招募文案（2026-11-18 用户六项反馈）
+
+| 编号 | 用户反馈 | 根因 | 修复 |
+|---|---|---|---|
+| `DEV-46` | 「检查编辑器是否有 bug，是否每个技能释放时都能正常结算伤害」 | ① 新建战法重名按 `name` 命中 `upsertRuntimeSkill` → 整条覆盖原表战法（10001 凭空消失）；② 编辑已有战法走 `buildCustomSkill` **从零重建**，丢掉多效果槽/`prepare`/`mechanics`/`bonus_terms`；③ `skillList` 只认伤害槽 → 控制战法显示 `0→0`，表单预填 0 被服务端 clamp 成 1%，命中率被清空；④ `editorSave` 无条件 `syncStateSkill` 把自带战法 `lv` 清零；⑤ UI 输出指数用 Lv1、服务端用 Lv10 口径不一；⑥ 重置未重套 `applyRangeNote` 丢有效距离 | 编辑器**入口加同名拦截**（新建重名拒绝）；新增 `patchExistingSkill()`：编辑走增量 patch —— 以运行时原条目深拷贝为基底，只覆盖 name/概率序列/主效果槽数值与控制状态，其余效果槽/准备回合/机制/溯源/`trigger/dir/detail_id` 逐字保留；`skillList` 控制槽取真实命中率并回传 `controlState`；`upsertRuntimeSkill` 与装载覆盖层改为**只按 cfgId 命中**（纵深防重名）；`syncStateSkill` 保留原 `lv`，且仅当编辑确实涉及 `skillCfgId` 时才动存档槽；UI 指数改用 Lv10、`controlState` 回填实际值、复选框状态保留、切页签清搜索；`resetSkill` 按 cfgId 精确还原并重套 `applyRangeNote`。新增 9 条回归 + 1 条端到端（自建战法真战斗产生 damage 事件，非 `rate_pct` 空结算） |
+| `DEV-47` | 「现在游戏平衡性很差，需要持续优化→检查→优化」 | 核查确认技能侧已平衡（177 条、70% 清零、主动/追击 32~50/指挥被动 100%、输出指数闸 300~1843、`all-skills-live` 全战法真战斗通过）；伤害率"二次放大"（Lv10 技能×Lv10 武将 = ×2）是**全局统一**机制，所有技能一视同仁、不改（改则推翻 177 条平衡）；真正问题是 `troop_factor` 三处漂移（默认 0.2 / 实际 0.45 / 注释 1.25）与 `difficultyAi` 旋钮只有定义无消费点 | `battleConfig().troop_factor` 统一为**唯一真源 0.45**，`resolveBattle` 不再覆盖（数值未变，消除"改配置不生效"隐患）；`difficultyAi` 接入 AI 征兵量缩放（默认 1.0 = 原样，1.4 → AI 多征 40%），配 P16-10 测试。诚实边界：`attackerOddsMul` 兵力比斜率 11.2、`difficultyDiplo` 无量化点，本轮未改（见下） |
+| `DEV-48` | 「游戏需要提供一个向导，否则第一次接触都玩不下去」 | 旧 `interaction-ui.js` 已有 6 关教学，但 `done` 情境标记全部未接线，实际是"加载即弹、点 6 次确认"；g3 残留"成功率 +12%"过期口径（当前招募不显示概率）；进度存 localStorage 不随存档 | 向导重做为 **7 关**（新增举义开场），每关「看说明 → **去操作**（jumpTo 直跳对应面板）→ **我已完成**」闭环；`done` 标记落到 `S.guideDone` 并持久化；保留跳过/稍后/按 h 重看；修正 g3/g6 文案与过期概率口径。`GUIDE`/`buildGuide` 静态闸锁闭环 |
+| `DEV-49` | 「游戏中的石头、城池设施都没闭环」 | 石头有采石场/领地石矿产出与设施/城防投资消耗，但：① 玩家城修墙**凭空 +2%** 不花石头（最直觉用途缺位）；② 原表 `cost_stone=0`，征兵完全不用石头；③ 逐城层零产石（特产表无石、`cityYield` 只出粮金），`cityLayer().stone` 恒 0 | ① `repairCityWalls` 玩家城修墙按 `WALL.stonePerHp=3` 石/点扣 `roleRes.stone`、不足按比例少修不透支、走 `recordRes` 流水，NPC 城仍自然修复（不花玩家石头）；② 派生征兵石耗 `max(5, ⌊铁/兵÷2⌋)`（不改原表）；③ `cityYield().extra.stone = 12 + 等级×8 + 城防开发度/50×16`，汇入 `cityLayer().stone` → `playerStockYield`，形成"投石→城防开发→石产↑→修墙"闭环。p17/playtest-fixes 补 4 条测试 |
+| `DEV-50` | 「招募失败提示词不符合要求，拒绝理由非常不和谐」 | `recruit-refusal.js` 莽夫句含"拿刀说话/别费话/少绕弯子"、诸侯句"休要再提/阵前一见高下"、名士三顾"若再相逼…不识抬举"（语义矛盾），带威胁/贬低；探索兜底 `'探索失败：'+reason || '未知'` 优先级错误且直弹英文 reason | 改写莽夫/诸侯/名士三顾与 poor 场面话为"给台阶、留余地、不威胁"的汉末口吻；探索金不足/无人/兜底分支补拟人 `line`，兜底修 `||` 优先级 bug、不暴露英文 reason；婉拒事件日志去掉"（好感 N）"系统播报。ui-player-experience 加"全人设不和谐词"扫描闸 |
+
+**边界（诚实登记）**：
+
+- **技能二次放大不改**：Lv10 技能在 Lv10 武将手上实际伤害率 = 面板 ×2（`kernelSkillAt` 按技能等级注入 → `rules.js levelValue` 再按武将等级放大）。这是所有 177 条技能统一的既有机制，`skill-balance` 与平衡闸都建立在"名义指数"上，单独改一条或整体改都会推翻现有平衡与战报哈希，故本轮只核查确认、不做数值改动。
+- **集市兑换率 / 民居税收语义**：排查确认集市升级加成（addition16）未被 `interior.transform` 读取（当前 1:1）、民居 `type21=税收` 被当金币日产。改兑换率会凭空增产破坏经济平衡、且 `building.test.js` 锁 1:1；民居改口径牵动征收链路。两项为**设计取舍，本轮不改**，在此留痕待产品裁决。
+- **`attackerOddsMul` 斜率 11.2 / `difficultyDiplo`**：兵力比 1.15 倍以上伤害陡增是"人多碾压"的敏感点，但调整会改变大量战斗结果、影响回合数验收；`difficultyDiplo` 无明确量化点。两项本轮未改（旋钮定义保留）。
+- 本轮未改 `offline/web/` 磁盘产物，未改协议消息计数（`contract-matrix` 72 条不受影响：全部改动走既有 HTTP 端点与领域层）。
+
 ---
 
 ## 18. 需求 → 设计 → 实现 → 验证 全链路追溯

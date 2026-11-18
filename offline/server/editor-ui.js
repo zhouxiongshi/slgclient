@@ -261,8 +261,9 @@
     var tgtOpts = Object.keys(TGT_NAMES).map(function (k) {
       return '<option value="' + k + '"' + (k === tgtSel ? ' selected' : '') + '>' + TGT_NAMES[k] + '</option>';
     }).join('');
+    var ctlSel = (row && row.controlState) || '混乱';
     var ctlOpts = (meta.controlStates || ['混乱', '动摇', '犹豫']).map(function (c) {
-      return '<option value="' + c + '"' + (c === '混乱' ? ' selected' : '') + '>' + c + '</option>';
+      return '<option value="' + c + '"' + (c === ctlSel ? ' selected' : '') + '>' + c + '</option>';
     }).join('');
     var valueLabel = isCtl ? '命中率 Lv1（1~50，Lv10 自动 ×2）' : (EFF_NAMES[eff] === '治疗' ? '治疗率' : '伤害率') + ' Lv1（5~300）';
     detail.innerHTML = '<h4>' + (row ? '编辑战法「' + esc(row.name) + '」（#' + row.cfgId + (row.custom ? ' · 自建，可重置/删除' : ' · 原表条目，保存即覆盖') + '）'
@@ -303,10 +304,12 @@
     var p10 = detail.querySelector('[data-field=probLv10]');
     if (isCmd) { p1.value = 100; p10.value = 100; p1.disabled = true; p10.disabled = true; }
     else { p1.disabled = false; p10.disabled = false; if (Number(p1.value) > 45) p1.value = 45; if (Number(p10.value) > 50) p10.value = 50; }
-    var v1 = Number(detail.querySelector('[data-field=valueLv1]').value) || 0;
+    // ★ 与服务端 buildCustomSkill 同口径：输出指数取 Lv10 数值（不是 Lv1），
+    //   否则 UI 提示"通过"却被服务端闸拒绝（或反之）。
+    var v10 = Number(detail.querySelector('[data-field=valueLv10]').value) || 0;
     var casts = cls === '指挥' ? 1 : 8;
     var targets = /group|all|ally/i.test(tgt) ? 3 : 1;
-    var idx = isCtl ? 0 : Math.round(casts * (Number(p10.value) / 100) * v1 * targets);
+    var idx = isCtl ? 0 : Math.round(casts * (Number(p10.value) / 100) * v10 * targets);
     var hint = detail.querySelector('[data-hint]');
     if (isCtl) hint.textContent = '控制命中率 Lv10 自动取 Lv1×2（≤100%）。';
     else if (isCmd) hint.textContent = '输出指数 ≈ ' + idx + '（必发动技 ≤ 2000）';
@@ -326,7 +329,7 @@
     if (tab === 'gen') {
       var g = renderList(listWrap);
       info.textContent = '共 ' + DATA.total + ' 位；筛选后 ' + g.rows + ' 位（第 ' + (page + 1) + '/' + g.pages + ' 页）';
-      barExtra.innerHTML = '<label style="display:flex;align-items:center;gap:4px"><input type="checkbox" class="ovrOnly">只看已改/自建</label>'
+      barExtra.innerHTML = '<label style="display:flex;align-items:center;gap:4px"><input type="checkbox" class="ovrOnly"' + (onlyOverridden ? ' checked' : '') + '>只看已改/自建</label>'
         + '<button data-act="newgeneral"' + (creatingGeneral ? ' disabled' : '') + '>新增武将</button>'
         + '<input type="text" class="q" placeholder="搜索武将名 / cfgId" style="width:180px" value="' + esc(query) + '">';
       if (creatingGeneral) { currentCfgId = 0; renderCreateGeneral(detail); }
@@ -334,7 +337,7 @@
     } else {
       var s = renderSkillList(listWrap);
       info.textContent = '共 ' + SKILL_ROWS.total + ' 条；筛选后 ' + s.rows + ' 条（第 ' + (page + 1) + '/' + s.pages + ' 页）';
-      barExtra.innerHTML = '<label style="display:flex;align-items:center;gap:4px"><input type="checkbox" class="ovrOnly">只看自建</label>'
+      barExtra.innerHTML = '<label style="display:flex;align-items:center;gap:4px"><input type="checkbox" class="ovrOnly"' + (onlyOverridden ? ' checked' : '') + '>只看自建</label>'
         + '<button data-act="newskill">新增战法</button>'
         + '<input type="text" class="q" placeholder="搜索战法名 / cfgId" style="width:180px" value="' + esc(query) + '">';
       renderSkillDetail(detail);
@@ -349,7 +352,10 @@
     function on(node, ev, fn) { node.addEventListener(ev, fn); offs.push(function () { node.removeEventListener(ev, fn); }); }
 
     box.querySelectorAll('.tabbtn').forEach(function (b) {
-      on(b, 'click', function () { tab = b.dataset.tab; page = 0; currentSkillId = 0; creatingGeneral = false; render(box); });
+      on(b, 'click', function () {
+        tab = b.dataset.tab; page = 0; query = ''; // 切页签清空搜索词，避免上一页关键词误过滤当前页签
+        currentSkillId = 0; creatingGeneral = false; render(box);
+      });
     });
     var q = box.querySelector('.q');
     if (q) on(q, 'input', function () { query = q.value; page = 0; render(box); });

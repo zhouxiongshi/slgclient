@@ -32,7 +32,16 @@ export const WALL = {
   /** 每旬自然修复的城墙比例（被围不修）。必须明显低于「一波攻城能打掉的比」，
       否则每旬修 5% 会把 12%~15% 的破墙进度吃掉大半，城墙永远打不穿、城防等于没有。 */
   repairPerTurn: 0.02,
+  /** ★ 2026-11-18 经济闭环：修城墙要花石头（每点耐久耗石）。此前修复是凭空 +2%，
+      石头作为「城防物资」却进不了最直觉的用途。取 3 石/点：1 级城中位耐久约 1250，
+      每旬满修 25 点 = 75 石，与采石场日产同量级，玩家能感知但不至于修不起。 */
+  stonePerHp: 3,
 };
+
+/** 修复 add 点耐久需要的石头（纯函数，供结算与面板同源）。 */
+export function repairCostOf(add) {
+  return Math.max(0, Math.round((Number(add) || 0) * WALL.stonePerHp));
+}
 
 /** 一城的城墙耐久上限：等级 + 城防属性共同决定（城防越高越耐打）。 */
 export function wallMaxOf(target, level) {

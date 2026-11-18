@@ -30,6 +30,7 @@ import { cityLabelRank, labelPolicy } from './map-lod.js';
 /* ★ P11 兵役制：城池视图与战略动作只从 levy.js 取兵源数字，禁止另算一份 */
 import { levyView, checkLevy, commitLevy } from './levy.js';
 import { resolveBattle, battleSeedFor, wallMaxOf, wallDefMul, WALL } from '../battle.js';
+import { repairCostOf } from './city-wall.js';
 import { planCampaign, commitBrainGoal, noteBattleOutcome, noteCityLost, PERSONA_AXES } from './strategy-brain.js';
 import { loadConfig } from '../config.js';
 import { quoteMarch, openMonth, closeMonth, noteMove, noteCity, booksOf } from './strategy-log.js';
@@ -859,7 +860,11 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
 
   for (const order of [...diploFirst, ...afterDiplo]) {
     if (order.type === '征兵') {
-      const count = Math.max(0, Number(order.params?.count) || 0);
+      /* ★ 2026-11-18：difficultyAi 旋钮此前只有定义、无消费点（存档调难度时 AI 强度不变）。
+         接入唯一明确的 AI 强度轴：征兵量随难度倍率缩放（默认 1.0 = 原样，
+         高难度 AI 多征兵、低难度少征兵），成本随之，不改原表。 */
+      const aiMul = Number(knobGet(state, 'difficultyAi')) || 1;
+      const count = Math.max(0, Math.round((Number(order.params?.count) || 0) * aiMul));
       /* ★ M2-3：征兵成本走参数表（参数表 conscriptGoldPer） */
       const cost = count * knobGet(state, 'conscriptGoldPer');
       if (count > 0) {
@@ -1434,7 +1439,12 @@ function wallFieldsOf(state, city) {
   };
 }
 
-/** 每旬城墙自然修复（被围不修）：让「打一半撤走」不白费，也避免城防永久归零。 */
+/**
+ * 每旬城墙修复（被围不修）：让「打一半撤走」不白费，也避免城防永久归零。
+ * ★ 2026-11-18 经济闭环：玩家城修复要花石头（WALL.stonePerHp 石/点），石头不足
+ *   按比例少修，不再凭空 +2%；NPC 城仍自然修复（否则 NPC 城破一次就永久残废，
+ *   且 NPC 不该消耗玩家府库）。花费走 recordRes 流水，玩家可见。
+ */
 export function repairCityWalls(state) {
   const st = state.strategy;
   if (!st?.cities) return 0;
@@ -1445,7 +1455,19 @@ export function repairCityWalls(state) {
     const wall = cityWall(state, c.id);
     if (!wall || row.besieged) continue;
     if (wall.hp >= wall.max) continue;
-    const add = Math.max(1, Math.round(wall.max * WALL.repairPerTurn));
+    let add = Math.max(1, Math.round(wall.max * WALL.repairPerTurn));
+    if (row.owner === 'player') {
+      const have = Math.max(0, Math.floor(Number(state.roleRes?.stone) || 0));
+      const fullCost = repairCostOf(add);
+      if (have < fullCost) {
+        // 石头不够 → 按比例少修（每次至少修 0，攒够再修），不透支府库
+        add = Math.floor(have / WALL.stonePerHp);
+        if (add <= 0) continue;
+      }
+      const cost = repairCostOf(add);
+      state.roleRes.stone = have - cost;
+      recordRes(state, 'stone', -cost, `修葺城墙·${c.name || c.id}`, Math.floor(Number(state.clock?.day) || 1));
+    }
     row.wallHp = Math.min(wall.max, wall.hp + add);
     /* 城墙修回一半以上才重新算「有城防」，破城毁设施的判定随之复位。 */
     if (row.wallRubble && row.wallHp >= wall.max * 0.5) delete row.wallRubble;

@@ -14,8 +14,9 @@ import assert from 'node:assert/strict';
 import { loadConfig } from '../server/config.js';
 import { createWorld, normalizeWorld } from '../server/world.js';
 import {
-  ensureStrategy, oathOptions, chooseOath, strategyTick, factionConf,
+  ensureStrategy, oathOptions, chooseOath, strategyTick, factionConf, applyOrders,
 } from '../server/domain/strategy.js';
+import { knobSet } from '../server/domain/knobs.js';
 import { ensureTavern } from '../server/domain/tavern.js';
 import {
   ensureRosters, rosterDefenders, aiRosterLearnTick, aiRosterGrantExp,
@@ -205,4 +206,34 @@ test('P16-9 确定性：同种子同甸名册成长逐字段一致', () => {
     return JSON.stringify(w.state.strategy.rosters[f.id]);
   };
   assert.equal(mk(), mk(), '同种子双跑名册逐字段一致');
+});
+
+test('P16-10 difficultyAi 旋钮接线：高难度 AI 征兵更多（默认 1.0 不改变原样）', () => {
+  const run = (aiMul) => {
+    const { state, st } = freshWorld();
+    // 找一个真实持有城的 AI faction（举义主公的城已归 player）
+    const owners = Object.values(st.cities).map((r) => r.owner).filter((o) => o && o !== 'player');
+    const fid = owners[0];
+    const f = FACTIONS.find((x) => x.id === fid) || { id: fid, name: fid };
+    const own = Object.keys(st.cities).filter((id) => st.cities[id].owner === fid);
+    assert.ok(own.length, 'AI 应有一座城');
+    const home = own[0];
+    st.cities[home].troops = 100;
+    // 保证粮足够：直接给该势力城库充足粮
+    const econ = st.cityEcon?.[home];
+    if (econ) econ.store = 999999;
+    if (!st.resources[f.id]) st.resources[f.id] = {};
+    st.resources[f.id].grain = 999999;
+    knobSet(state, 'difficultyAi', aiMul);
+    const before = st.cities[home].troops;
+    applyOrders(state, cfg, { push() {}, save() {}, log() {}, schedule() {}, pushes: [] }, f, {
+      internal_orders: [{ type: '征兵', params: { count: 100, cityId: Number(home) } }],
+      strategy_orders: [],
+    });
+    return st.cities[home].troops - before;
+  };
+  const normal = run(1.0);
+  const hard = run(1.4);
+  assert.equal(normal, 100, '默认 1.0：征兵量 = 指令原值（不改变原样）');
+  assert.equal(hard, 140, 'difficultyAi=1.4：AI 征兵 100→140，旋钮真正生效');
 });

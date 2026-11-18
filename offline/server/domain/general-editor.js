@@ -118,9 +118,16 @@ function syncStateSkill(state, cfgId, skillCfgId) {
     if (Number(g.cfgId) !== Number(cfgId)) continue;
     if (!Array.isArray(g.skills) || g.skills.length < 3) {
       g.skills = [null, null, null];
-      if (Array.isArray(g.skills)) { /* 已置三空槽 */ }
     }
-    g.skills[0] = skillCfgId ? { id: skillCfgId, lv: 1, cfgId: skillCfgId } : null;
+    /* ★ 修复：改武将属性/重置时不再把自带战法等级清零。
+       若槽里的 skillCfgId 未变 → 保留原 lv（用户可能已练到高等级）；
+       只有换技能或空槽才新建，等级从 1 起。 */
+    const prev = g.skills[0];
+    if (skillCfgId && Number(prev?.cfgId) === Number(skillCfgId)) {
+      g.skills[0] = { id: skillCfgId, lv: Number(prev.lv) || 1, cfgId: skillCfgId };
+    } else {
+      g.skills[0] = skillCfgId ? { id: skillCfgId, lv: 1, cfgId: skillCfgId } : null;
+    }
     n += 1;
   }
   return n;
@@ -144,7 +151,12 @@ export function editorSave(cfg, state, input) {
 
   applyToConfig(cfg, cfgId, patch || {});
   const row = cfg.generalByCfg.get(cfgId);
-  const stateSynced = syncStateSkill(state, cfgId, row.skillCfgId || 0);
+  /* ★ 只有当编辑真正涉及 skillCfgId 或 cfg 行明确配置了它时才同步存档槽；
+     否则（如主角 19001 由运行时注入、cfg 行无此字段）保留存档现状，
+     避免改一个武力属性就把主角战法清空。 */
+  const wantSync = Object.prototype.hasOwnProperty.call(patch, 'skillCfgId')
+    || row?.skillCfgId != null;
+  const stateSynced = wantSync ? syncStateSkill(state, cfgId, row.skillCfgId || 0) : 0;
   return { ok: true, cfgId, stateSynced, row: editorRowOf(cfg, cfgId) };
 }
 
@@ -159,7 +171,7 @@ export function editorReset(cfg, state, input) {
   saveOverrides({ ...ov, generals });
   restoreFromOriginal(cfg, cfgId);
   const row = cfg.generalByCfg.get(cfgId);
-  const stateSynced = syncStateSkill(state, cfgId, row?.skillCfgId || 0);
+  const stateSynced = row?.skillCfgId != null ? syncStateSkill(state, cfgId, row.skillCfgId) : 0;
   return { ok: true, cfgId, stateSynced, row: editorRowOf(cfg, cfgId) };
 }
 

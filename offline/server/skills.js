@@ -67,7 +67,9 @@ if (existsSync(CUSTOM_SKILL_PATH)) {
   try {
     const custom = JSON.parse(readFileSync(CUSTOM_SKILL_PATH, 'utf8'));
     for (const s of custom.skills || []) {
-      const i = TABLE.skills.findIndex((x) => Number(x.cfgId) === Number(s.cfgId) || x.name === s.name);
+      /* ★ 只按 cfgId 命中：同名不同 ID 不覆盖，避免自建战法重名时把原表战法整条抹掉。
+         编辑器入口也加了重名校验，这里是装载侧的纵深防线。 */
+      const i = TABLE.skills.findIndex((x) => Number(x.cfgId) === Number(s.cfgId));
       if (i >= 0) TABLE.skills[i] = s;
       else TABLE.skills.push(s);
     }
@@ -88,7 +90,8 @@ export function skillById(cfgId) { return SKILL_BY_ID.get(Number(cfgId)) || null
  */
 export function upsertRuntimeSkill(s) {
   if (!s || !s.kernel || !Array.isArray(s.ui?.levels) || s.ui.levels.length !== LEVEL_COUNT) return false;
-  const i = TABLE.skills.findIndex((x) => Number(x.cfgId) === Number(s.cfgId) || x.name === s.name);
+  /* ★ 只按 cfgId 命中（同名不覆盖），与装载侧防线一致：保存时的重名在编辑器入口已拦。 */
+  const i = TABLE.skills.findIndex((x) => Number(x.cfgId) === Number(s.cfgId));
   if (i >= 0) TABLE.skills[i] = s;
   else TABLE.skills.push(s);
   SKILL_BY_ID.set(Number(s.cfgId), s);
@@ -4868,10 +4871,14 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
             toast('使者回报：' + (r2.msg.line || '那位贤才婉言谢绝了此番探访')
               + (r2.msg.favor ? '（已访 ' + r2.msg.favor + ' 次，精诚所至或有转机）' : ''), false);
           } else if (r2.msg && r2.msg.reason === 'not_enough_gold') {
-            toast('金不足（需 ' + r2.msg.cost + '）', false);
+            toast('府库尚差 ' + r2.msg.cost + ' 金，遣使成行还要再备些盘缠', false);
           } else if (r2.msg && r2.msg.reason === 'already_today') {
-            toast('本城今日已探索过', false);
-          } else toast('探索失败：' + (r2.msg && r2.msg.reason) || '未知', false);
+            toast('本城今日已探索过，明日再来', false);
+          } else {
+            /* ★ 兜底不暴露英文 reason（already_today/no_talent 等），且修旧式
+               '探索失败：' + reason || '未知' 的优先级错误（|| 永不生效）。 */
+            toast(r2.msg && r2.msg.line ? r2.msg.line : '使者寻访未果，回城复命。', false);
+          }
         });
       });
       exBtn.style.margin = '0';

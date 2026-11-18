@@ -123,6 +123,13 @@ export function cityYield(state, cityId) {
   for (const sp of SPECIALTY_MAP) {
     if ((c.specialty || '').includes(sp.key)) extra[sp.res] = (extra[sp.res] || 0) + sp.add;
   }
+  /* ★ 2026-11-18 经济闭环：石头此前在逐城层零产出（特产表无石、cityYield 只出粮金），
+     全靠采石场/领地石矿，且和「城防开发度」没有任何关系。
+     这里给一座城一份派生石产：城等级 + 城防开发度越高，采石越多；玩家投石修城防
+     → 石产上升 → 再投石/修墙，形成闭环。不改原表（派生层计算），与木/铁特产同等量级偏低。 */
+  const lv = Math.max(1, Math.min(3, Math.trunc(Number(c.level) || 1)));
+  const stoneBase = Math.round(12 + lv * 8 + (Number(e.devDef ?? 50) / 50) * 16);
+  extra.stone = (extra.stone || 0) + stoneBase;
   if (grainMod !== 1 && extra.grain) extra.grain = Math.round(extra.grain * grainMod);
   return {
     cityId: Number(cityId), grain, gold, extra, grainMod, besieged,

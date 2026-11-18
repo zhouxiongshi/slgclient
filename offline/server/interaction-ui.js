@@ -34,19 +34,24 @@
     { k: '5', id: 'intel', name: '情报覆盖', icon: '◇', desc: '精确 / 估算 / 传闻三级，模糊一律标注原因' },
     { k: '6', id: 'terrain', name: '地形道路', icon: '▲', desc: '地形、特产、主要兵种、关隘' },
   ];
+  /* ★ 2026-11-18 向导重做（用户「第一次接触这个游戏都玩不下去」）：
+     每关提供「去操作」按钮直接跳到对应面板，玩家做完点「我已完成」推进，
+     形成「看说明 → 去操作 → 完成」的闭环；done 仍是情境标记，供后续自动判定用。
+     修正 g3 旧文案（曾写死一个具体成功增幅，与当前不显示概率的口径冲突）。 */
   var GUIDE = [
-    { id: 'g1', title: '选城与内政', hint: '点开一座己方城，看「人口 / 城库 / 灾害风险」，做一次内政开发。', term: 'neizheng', done: 'cityOpened' },
-    { id: 'g2', title: '委任与报告', hint: '在武将页委任一名官员：开发度逐旬推进，回合报告会写清「谁让哪座城涨了多少」。', term: 'weiren', done: 'appointed' },
-    { id: 'g3', title: '探索登庸', hint: '在酒馆探索在野贤才；被拒一次后再次登门，成功率 +12%。', term: 'dengyong', done: 'explored' },
-    { id: 'g4', title: '编队出征', hint: '编好队伍后选出发城与目标城，行军时长按里程 ÷ 速度计算，地图军标逐日推进。', term: 'chuzheng', done: 'attacked' },
-    { id: 'g5', title: '涂色与断粮', hint: '粮道是补给线；出征前看出发城城库能撑几日，不足先运粮。', term: 'liangdao', done: 'transported' },
-    { id: 'g6', title: '政策与经济', hint: '人口→兵役→征兵、逐城产量→全局府库、俸禄→忠诚，是一条完整回路。', term: 'renkou', done: 'economyRead' },
+    { id: 'g0', title: '举义起兵', hint: '先在「举义」页选一位主公与起始城——这是整个游戏的第一块可点屏幕。选定后你才拥有一座城与第一批武将。', term: 'juyi', jump: 'strategy' },
+    { id: 'g1', title: '选城与内政', hint: '点开一座己方城，看「人口 / 城库 / 灾害风险」，再点「内政」做一次开发。开发度越高，逐旬产量越高。', term: 'neizheng', jump: 'city', done: 'cityOpened' },
+    { id: 'g2', title: '委任与报告', hint: '在武将页委任一名官员。开发度逐旬推进，回合报告会写清「谁让哪座城涨了多少」。', term: 'weiren', jump: 'general', done: 'appointed' },
+    { id: 'g3', title: '探索登庸', hint: '在酒馆探索在野贤才。对方可能婉拒——多登门几次，精诚所至或有转机。', term: 'dengyong', jump: 'general', done: 'explored' },
+    { id: 'g4', title: '编队出征', hint: '在「出征」页编好队伍，选出发城与目标城，再确认开战。行军时长按里程 ÷ 速度计算，地图军标逐日推进。', term: 'chuzheng', jump: 'war', done: 'attacked' },
+    { id: 'g5', title: '粮道与运粮', hint: '切到「粮道」透镜看补给线。出征前看出发城城库能撑几日，不足先在城内运粮，断粮会掉民心与守军。', term: 'liangdao', jump: 'city', done: 'transported' },
+    { id: 'g6', title: '经济与征兵', hint: '人口 → 兵役 → 征兵，采石场产石 → 修墙/城防，逐城产量汇入府库、俸禄影响忠诚。这是一条完整回路。', term: 'renkou', jump: 'city', done: 'economyRead' },
   ];
 
   var S = {
     data: null, hoverTip: null, pinned: [], crumbs: [], hoverTimer: 0,
     layers: [], lens: 'faction', lensOpen: false, agendaOpen: true,
-    undo: [], pendingCommit: null, guideStep: 0, guideDismissed: false,
+    undo: [], pendingCommit: null, guideStep: 0, guideDismissed: false, guideDone: {},
     ignored: {}, keys: {}, fontScale: 100, reduceMotion: false,
     drawer: null, lastFocus: null, fetchTimer: 0,
     /* M4-6 窗口 / 弹层治理：
@@ -73,6 +78,7 @@
     var saved = JSON.parse(localStorage.getItem('slgIX') || '{}');
     S.guideStep = saved.guideStep || 0;
     S.guideDismissed = !!saved.guideDismissed;
+    S.guideDone = saved.guideDone || {};
     S.ignored = saved.ignored || {};
     S.keys = saved.keys || {};
     /* 旧存档可能存过 80~150 的连续值：归档到最近的合法档位（M4-2 三档制）。 */
@@ -83,7 +89,7 @@
   function persist() {
     try {
       localStorage.setItem('slgIX', JSON.stringify({
-        guideStep: S.guideStep, guideDismissed: S.guideDismissed, ignored: S.ignored,
+        guideStep: S.guideStep, guideDismissed: S.guideDismissed, guideDone: S.guideDone || {}, ignored: S.ignored,
         keys: S.keys, fontScale: S.fontScale, reduceMotion: S.reduceMotion, lens: S.lens,
       }));
     } catch (e) { /* 隐私模式下不可写，降级为本次会话内存 */ }
@@ -1093,23 +1099,42 @@
     on(mask, 'click', function (e) { if (e.target === mask) mask.remove(); });
   }
 
-  /* ---------------- 10. 6.11 渐进引导（不阻塞 / 可跳过 / 可重看 / 情境触发） ---------------- */
+  /* ---------------- 10. 6.11 渐进引导（不阻塞 / 可跳过 / 可重看 / 情境触发） ----------------
+     ★ 2026-11-18 重做：每关「看说明 → 去操作 → 我已完成」闭环，
+     去操作按钮直接跳到对应面板（复用 jumpTo），玩家真能照着做，而不是读 6 句话点确认。 */
   function buildGuide() {
     var old = document.getElementById('slgIxGuide'); if (old) old.remove();
     if (S.guideDismissed || S.guideStep >= GUIDE.length) return;
     var g = GUIDE[S.guideStep];
     var box = el('div', '', ''); box.id = 'slgIxGuide';
-    box.innerHTML = '<div class="gt">渐进教学 ' + (S.guideStep + 1) + ' / ' + GUIDE.length + ' · ' + esc(g.title) + '</div>'
+    var cities = (S.data && S.data.cities) || [];
+    var firstCity = cities[0] ? cities[0].id : 0;
+    var goBtn = g.jump
+      ? '<button class="primary" data-act="go">去操作 →</button>'
+      : '';
+    box.innerHTML = '<div class="gt">入门向导 ' + (S.guideStep + 1) + ' / ' + GUIDE.length + ' · ' + esc(g.title) + '</div>'
       + '<div class="gb">' + esc(g.hint) + (BY_ID[g.term] ? ' <span class="slgIx-term" data-term="' + esc(g.term) + '">' + esc(BY_ID[g.term].名称) + '</span>' : '') + '</div>'
-      + '<div class="ga"><button data-act="skip">跳过教学</button>'
+      + '<div class="ga">' + goBtn
+      + '<button data-act="done">我已完成 →</button>'
       + '<button data-act="later">稍后</button>'
-      + '<button data-act="next">知道了，下一关 →</button></div>';
+      + '<button data-act="skip">跳过向导</button></div>';
     (document.getElementById('slgIxRoot') || document.body).appendChild(box);
     on(box, 'click', function (e) {
       var b = e.target.closest('button'); if (!b) return;
-      if (b.dataset.act === 'skip') { S.guideDismissed = true; persist(); box.remove(); return; }
-      if (b.dataset.act === 'later') { box.remove(); return; }
-      S.guideStep += 1; persist(); buildGuide();
+      var act = b.dataset.act;
+      if (act === 'skip') { S.guideDismissed = true; persist(); box.remove(); toast('已跳过入门向导，按 h 可随时重看', 'info'); return; }
+      if (act === 'later') { box.remove(); toast('已收起向导，按 h 可随时看', 'info'); return; }
+      if (act === 'go') {
+        var kind = g.jump;
+        var id = (kind === 'city') ? firstCity : 0;
+        jumpTo(kind, id);
+        return; // 去操作不推进，等玩家点「我已完成」
+      }
+      if (act === 'done') {
+        /* ★ done 情境标记：记录本关已完成（供自动判定/审计；当前手动推进为准）。 */
+        if (g.done) { S.guideDone = S.guideDone || {}; S.guideDone[g.done] = true; }
+        S.guideStep += 1; persist(); buildGuide();
+      }
     });
     scanTerms(box);
   }
@@ -1388,7 +1413,7 @@
       tip: function (id) { if (BY_ID[id]) showTip(id, 120, 120, { pinned: true }); },
       encyclopedia: openEncyclopedia,
       keys: openKeys,
-      guide: function () { S.guideDismissed = false; S.guideStep = 0; persist(); buildGuide(); },
+      guide: function () { S.guideDismissed = false; S.guideStep = 0; S.guideDone = {}; persist(); buildGuide(); },
       drawer: openDrawer,
       lens: function (id) { S.lens = id; persist(); buildLens(); },
       terms: function () { return TERMS.slice(); },

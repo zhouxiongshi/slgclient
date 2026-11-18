@@ -19,12 +19,13 @@ import { createWorld, normalizeWorld, makeGeneral } from '../server/world.js';
 import { handleRequest } from '../server/handlers.js';
 import { SKILLS, SKILL_BY_ID, kernelSkillAt, LEVEL_COUNT } from '../server/skills.js';
 import {
-  buildCustomSkill, saveSkill, resetSkill, skillList, customSkillIds,
+  buildCustomSkill, saveSkill, resetSkill, skillList, customSkillIds, patchExistingSkill,
 } from '../server/domain/skill-editor.js';
 import {
-  editorCreate, editorDeleteCustom, CUSTOM_GENERAL_ID_FROM,
+  editorCreate, editorDeleteCustom, CUSTOM_GENERAL_ID_FROM, editorSave, editorReset,
 } from '../server/domain/general-editor.js';
 import { ensureTavern } from '../server/domain/tavern.js';
+import { runBattle, DEFAULT_BATTLE_CONFIG } from '../kernel/index.js';
 
 const cfg = loadConfig();
 const CUSTOM_FILE = resolve(import.meta.dirname, '..', 'conf', 'campaign', 'custom-skills.json');
@@ -237,4 +238,128 @@ test('武将/战法覆盖层收尾干净：测试不留残留数据', () => {
   const ov = JSON.parse(readFileSync(resolve(import.meta.dirname, '..', 'conf', 'campaign', 'overrides.json'), 'utf8'));
   const customs = Object.values(ov.generals || {}).filter((g) => g.__custom__);
   assert.deepEqual(customs, [], 'overrides.generals 不残留自建武将');
+});
+
+/* ---------------- 4. 编辑器 bug 回归（2026-11-18 用户「检查编辑器是否有 bug」） ---------------- */
+
+test('编辑器bug：控制战法列表显示真实命中率而非 0→0（否则编辑后命中率被 clamp 成 1%）', () => {
+  const rows = skillList(SKILLS).rows;
+  const pureCtl = rows.find((r) => r.effect === 'CONTROL' && r.cfgId === 10017);
+  assert.ok(pureCtl, '应能列出纯控制战法');
+  assert.ok(pureCtl.rate1 >= 30 && pureCtl.rate10 === pureCtl.rate1 * 2,
+    `控制战法应显示命中率且 Lv10=Lv1×2，实际 ${pureCtl.rate1}→${pureCtl.rate10}`);
+  assert.ok(pureCtl.controlState, '控制战法应回传 controlState 供表单回填');
+  // 多效果战法里的控制槽也按命中率口径展示主伤害槽（不误显示 0）
+  const multi = rows.find((r) => r.cfgId === 910003);
+  assert.ok(multi && multi.rate1 > 0 && multi.rate10 > multi.rate1, '多效果战法主伤害槽数值正常');
+});
+
+test('编辑器bug：编辑多效果战法只改主槽，保留其余效果槽与控制状态', () => {
+  const base = SKILLS.find((s) => s.cfgId === 910003); // 连弩之策 = 兵刃 + 控制(犹豫)
+  const built = buildCustomSkill({
+    cfgId: 910003, name: '连弩之策', skillClass: '主动', effectType: 'PHYSICAL_DAMAGE',
+    targetType: 'enemy_single', probLv1: 41, probLv10: 49, valueLv1: 80, valueLv10: 160,
+  }, new Set(SKILLS.map((s) => s.cfgId)), SKILLS);
+  assert.ok(built.ok, built.message);
+  const patched = patchExistingSkill(base, built);
+  const effs = patched.kernel.effects;
+  assert.equal(effs.length, 2, '两个效果槽都在');
+  assert.equal(effs[1].effect_type, 'CONTROL', '控制槽保留');
+  assert.equal(effs[1].control_state, '犹豫', '控制状态保留（不被改成默认混乱）');
+  assert.equal(effs[1].control_probability, 0.35, '控制命中率保留');
+  assert.equal(patched.ui.levels[0].effect_value[0], 80, '主伤害槽 Lv1 已改');
+  assert.equal(patched.ui.levels[9].effect_value[1], 70, '控制槽命中率 Lv10 未被触碰');
+  assert.equal(base.ui.levels[0].effect_value[0], 90, '原表对象不被就地修改');
+});
+
+test('编辑器bug：编辑准备型战法保留 prepare，编辑机制战法保留 mechanics', () => {
+  const b2 = buildCustomSkill({
+    cfgId: 10020, name: '一雷惊蛰', skillClass: '主动', effectType: 'STRATEGY_DAMAGE',
+    targetType: 'enemy_single', probLv1: 42, probLv10: 50, valueLv1: 150, valueLv10: 150,
+  }, new Set(SKILLS.map((s) => s.cfgId)), SKILLS);
+  assert.ok(b2.ok, b2.message);
+  assert.equal(patchExistingSkill(SKILLS.find((s) => s.cfgId === 10020), b2).kernel.prepare, 1, '准备回合保留');
+
+  const mech = SKILLS.find((s) => s.cfgId === 19001); // 坐镇中军：3×BUFF+mechanics
+  assert.ok(mech.kernel.effects.some((e) => e.mechanics), '前提：主公战法带 mechanics');
+  const built3 = buildCustomSkill({
+    cfgId: 19001, name: '坐镇中军', skillClass: '指挥', effectType: 'PHYSICAL_DAMAGE',
+    targetType: 'enemy_all', probLv1: 100, probLv10: 100, valueLv1: 10, valueLv10: 20,
+  }, new Set(SKILLS.map((s) => s.cfgId)), SKILLS);
+  assert.ok(built3.ok, built3.message);
+  const patched3 = patchExistingSkill(mech, built3);
+  assert.equal(patched3.kernel.effects.length, 3, '三个机制槽都在');
+  assert.ok(patched3.kernel.effects.every((e) => e.mechanics), 'mechanics 全部保留');
+  assert.equal(patched3.trigger, 4, 'trigger 保留');
+});
+
+test('编辑器bug：新建战法重名被拒，不覆盖原表战法', () => {
+  const dup = buildCustomSkill({
+    name: '击势', skillClass: '主动', effectType: 'PHYSICAL_DAMAGE',
+    targetType: 'enemy_single', probLv1: 35, probLv10: 40, valueLv1: 100, valueLv10: 200,
+  }, new Set(SKILLS.map((s) => s.cfgId)), SKILLS);
+  assert.ok(!dup.ok && /同名/.test(dup.message), `重名应被拒：${dup.message}`);
+  assert.ok(SKILL_BY_ID.get(10001).name === '击势', '原表 10001 仍在且名字未变');
+});
+
+test('编辑器bug：重置覆盖条目后 ui.range/有效距离描述被还原', () => {
+  const orig = SKILLS.find((s) => s.cfgId === 10001);
+  const target = orig.ui.target;
+  const r = saveSkill(SKILLS, {
+    cfgId: 10001, name: '击势', skillClass: '主动', effectType: 'PHYSICAL_DAMAGE',
+    targetType: 'enemy_single', probLv1: 35, probLv10: 40, valueLv1: 100, valueLv10: 200,
+  });
+  assert.ok(r.ok, r.message);
+  const rr = resetSkill(SKILLS, { cfgId: 10001 });
+  assert.ok(rr.ok && rr.restored);
+  const restored = SKILL_BY_ID.get(10001);
+  assert.equal(restored.ui.target, target, 'ui.target 还原');
+  assert.ok(typeof restored.ui.range === 'number' && restored.ui.range >= 1, 'ui.range 应被重新套用');
+});
+
+test('编辑器自建战法在真实内核战斗里正常结算伤害（非空结算）', () => {
+  const mk = (id, side, cfgId) => ({
+    unit_id: id, side, pos: 0,
+    hero: {
+      heroid: id, name: '武', level: 10, hero_type: 'normal', hit_range: 1, country: '', quality: 5,
+      attack_base: 90, defence_base: 40, intel_base: 90, speed_base: 80, destroy_base: 50,
+      attack_grow: 3, defence_grow: 3, intel_grow: 3, speed_grow: 3, destroy_grow: 3,
+      skills: [kernelSkillAt(cfgId, 10)],
+    },
+    troops: 2000, max_troops: 2000, speed: 100, attack_range: 5,
+  });
+  const r = saveSkill(SKILLS, {
+    name: '实测穿刺', skillClass: '主动', effectType: 'PHYSICAL_DAMAGE',
+    targetType: 'enemy_single', probLv1: 35, probLv10: 50, valueLv1: 100, valueLv10: 200,
+  });
+  assert.ok(r.ok, r.message);
+  try {
+    const res = runBattle({
+      units: [mk('a0', 1, r.cfgId), mk('d0', 2, 10001)],
+      seed: 20261118, config: DEFAULT_BATTLE_CONFIG,
+    });
+    assert.ok(Array.isArray(res.events), '内核应产出事件流');
+    const dmgEvents = res.events.filter((e) => e.kind === 'damage' && e.payload?.skill === '实测穿刺');
+    assert.ok(dmgEvents.length > 0, '自建战法必须真实造成至少一次伤害（不能空结算）');
+    assert.ok(dmgEvents.every((e) => Number(e.payload.applied) > 0), '每次伤害 applied 必须 > 0');
+  } finally {
+    resetSkill(SKILLS, { cfgId: r.cfgId });
+  }
+});
+
+test('编辑器bug：保存武将属性不重置自带战法等级', () => {
+  const state = normalizeWorld(createWorld(cfg), cfg);
+  const g = state.generals.find((x) => x.skills?.[0]?.cfgId); // 找有自带战法的武将
+  assert.ok(g, '前提：有带自带战法的武将');
+  g.skills[0].lv = 7; // 模拟已练到高级
+  const skillId = g.skills[0].cfgId;
+  try {
+    editorSave(cfg, state, { cfgId: g.cfgId, force: 61 });
+    // syncStateSkill 原地修改 state.generals，g 引用仍有效
+    assert.equal(g.skills[0].lv, 7, '改属性后自带战法等级保留（不被清零到 1）');
+    assert.equal(g.skills[0].cfgId, skillId, '自带战法不变');
+  } finally {
+    // 还原编辑器覆盖，避免污染其它测试
+    editorReset(cfg, state, { cfgId: g.cfgId });
+  }
 });

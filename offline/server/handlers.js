@@ -996,7 +996,7 @@ export function handleRequest(ctx, req) {
           ctx.push?.('roleRes.push', roleResOf(state));
           ctx.save();
           const line = refusalLine(cfg.generalByCfg.get(targetId) || {}, { cfgId: targetId, favor: favorN + 1 });
-          recordEvent(state, `延请「${row.name}」被婉拒——三顾之意又深一分（好感 ${favorN + 1}），改日再访更易。`);
+          recordEvent(state, `延请「${row.name}」被婉拒——精诚所至，改日再访或可转机。`);
           rsp.msg = {
             generals: [], reason: 'refused', name: row.name,
             rate: Math.round(rate * 100), favor: favorN + 1, parts: calc.parts,
@@ -1060,7 +1060,7 @@ export function handleRequest(ctx, req) {
         if (!success) {
           state.tavern.favor[person.cfgId] = favorN + 1;
           const line = refusalLine(cfg.generalByCfg.get(Number(person.cfgId)) || {}, { cfgId: person.cfgId, favor: favorN + 1 });
-          recordEvent(state, `延请「${person.name}」被婉拒——三顾之意又深一分（好感 ${favorN + 1}），改日再访更易。`);
+          recordEvent(state, `延请「${person.name}」被婉拒——精诚所至，改日再访或可转机。`);
           refused.push({ cfgId: person.cfgId, name: person.name, rate: Math.round(rate * 100), favor: favorN + 1, line: line.text, persona: line.persona });
           continue;
         }
@@ -1309,8 +1309,13 @@ export function handleRequest(ctx, req) {
       // ★ 试玩 P1-1：每兵成本按 basic.json 逐项扣。旧逻辑把四项加总（31/兵）
       //   全从木头扣，还用 Math.max(0, ...) 兜底 —— 资源不足也能白嫖。
       const c = cfg.basic.conscript || {};
+      /* ★ 2026-11-18 经济闭环：原表 cost_stone=0（石头在征兵里完全无用）。
+         不改原表，在派生层给石料军械一个默认成本 = 铁的一半（向下取整、至少 5），
+         让石头成为真实征兵物资。若初始编辑器/未来配置显式给了 cost_stone>0 则以原表为准。 */
+      const ironCost = c.cost_iron ?? 10;
+      const stoneCost = Number(c.cost_stone) > 0 ? Number(c.cost_stone) : Math.max(5, Math.floor(ironCost / 2));
       const per = {
-        wood: c.cost_wood ?? 10, iron: c.cost_iron ?? 10, stone: c.cost_stone ?? 0,
+        wood: c.cost_wood ?? 10, iron: ironCost, stone: stoneCost,
         grain: c.cost_grain ?? 10, gold: c.cost_gold ?? 1,
       };
       const need = {
@@ -1476,11 +1481,19 @@ export function handleRequest(ctx, req) {
       const cityId = Number(m.cityId) || state.strategy?.playerCity || 1;
       const cost = 100;
       if ((state.roleRes.gold || 0) < cost) {
-        rsp.code = 5; rsp.msg = { reason: 'not_enough_gold', cost };
+        const short = Math.max(0, cost - (state.roleRes.gold || 0));
+        rsp.code = 5; rsp.msg = { reason: 'not_enough_gold', cost, short, line: failLine('poor', { cost, short }) };
         break;
       }
       const exp = exploreTalent(state, cfg, cityId);
-      if (!exp.ok) { rsp.code = 0; rsp.msg = { reason: exp.reason }; break; }
+      if (!exp.ok) {
+        /* ★ 与招募同口径：失败给拟人句，不把 already_today/no_talent 暴露给玩家。 */
+        const line = exp.reason === 'already_today'
+          ? '本城今日已遣使探访过，明日再来。'
+          : '本城在野贤才都已探访过，换座城再寻访罢。';
+        rsp.code = 0; rsp.msg = { reason: exp.reason, line };
+        break;
+      }
       /* ★ U15 三顾之礼 + 相性 + 义理：成功率构成条与掷骰同源（relation.talentRecruitRate）。
          旧口径（55% + 政治×0.3%）只看政治，玩家无从判断「为什么这人挖不动」。 */
       state.tavern.favor = state.tavern.favor || {};

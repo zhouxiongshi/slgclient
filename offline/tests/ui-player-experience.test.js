@@ -164,6 +164,29 @@ test('谋略越高拒绝越有情商：高谋略走圆融版本；三顾多次�
   assert.notEqual(revisit.text, high.text, '三顾多次应换软话');
 });
 
+test('拒绝理由和谐度：全人设台词不含威胁/贬低/生硬词（2026-11-18 用户反馈「非常不和谐」）', () => {
+  // 遍历五类人设 × 首访/高谋略/三顾，所有拒绝句都不得出现挑衅、轻慢、命令式措辞
+  const banned = /休要再提|费口舌|一见高下|拿刀说话|别费话|少绕弯子|自家收着|若再相逼|呸！|不识抬举/;
+  const personas = [
+    { five: { wu: 95, zhi: 30 }, type: '莽夫' },
+    { five: { wu: 88, zhi: 60 }, type: '名将' },
+    { five: { zheng: 95, zhi: 90 }, type: '名士' },
+    { five: { zhi: 96, zheng: 88 }, type: '谋士' },
+    { five: { wu: 80, zhi: 60 }, type: '军阀' },
+  ];
+  for (const row of personas) {
+    for (const favor of [0, 2]) {
+      for (const zhi of [30, 95]) {
+        const cfgRow = { ...row, five: { ...row.five, zhi } };
+        const text = refusalLine(cfgRow, { cfgId: 100001, favor }).text;
+        assert.ok(!banned.test(text), `${row.type}(谋略${zhi},访${favor}) 出现不和谐词：${text}`);
+      }
+    }
+  }
+  // poor 场面话也不得再是账房口吻
+  assert.ok(!/体面|账目/.test(failLine('poor', { cost: 30, short: 12 })), '金不足文案去掉账房口吻');
+});
+
 test('招募拒绝响应带拟人 line，且界面不再暴露概率/到店提示', () => {
   const state = normalizeWorld(createWorld(cfg), cfg);
   ensureTavern(state, cfg);

@@ -111,6 +111,9 @@ test('P0-3 征兵按四种资源逐项扣款，资源不足直接拒绝', () => 
   assert.equal(state.roleRes.iron, before.iron - 1000, '铁 -10/兵');
   assert.equal(state.roleRes.grain, before.grain - 1000, '粮 -10/兵');
   assert.equal(state.roleRes.gold, before.gold - 100, '金 -1/兵');
+  /* ★ 2026-11-18 经济闭环：石头派生为征兵物资（原表 cost_stone=0 → 派生铁的一半）。
+     100 兵 × 5 石/兵 = 500 石，石头成为真实消耗端。 */
+  assert.equal(state.roleRes.stone, before.stone - 500, '石 -5/兵（派生，不改原表）');
   assert.ok(rsp.msg.etaSec >= 2 && rsp.msg.etaSec <= 30, `工期要有上限，实际 ${rsp.msg.etaSec}`);
 
   // 资源不足：不能再用 Math.max(0,…) 白嫖

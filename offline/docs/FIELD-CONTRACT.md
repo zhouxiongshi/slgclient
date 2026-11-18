@@ -21,6 +21,7 @@
 | 城库存粮上限 | `city-econ.js storeCapOf(e)`：`clamp(pop×0.12, 2万, 24万)`（★ P13 随人口缩放，小城与旧值 2 万一致） | 斛 | 整数 | ❌ | 城卡城库行、粮道、运输队 |
 | 政策/官员加成 | `panels.js postBonusPct / yieldBonusByResource` | % | 整数 | ❌ | 内政页加成拆解 |
 | 月份口径 | **第 N 月 = turn N**（★ 2026-11-16 统一：天下日志 `chronicle[].month`、城池日志 `cityLogs[].month`、事件流 `events[].month`、视图 `strategyViewState().month`、`advanceToNextTurn().month` 同源；turn 0 显示兜底为第 1 月。旧实现城池/事件/财报各处 `turn+1`，比整体日志快一旬） | 月 | 整数 | ❌ | HUD「第 N 月」、天下日志整体/城池/时序/财报、战略台国势 |
+| 征兵石耗 | `handlers.js army.conscript` 派生层（★ 2026-11-18）：原表 `cost_stone=0` 不改，派生 `石/兵 = max(5, ⌊铁/兵 ÷2⌋)`（铁 10 → 石 5），显式配置 `cost_stone>0` 时以原表为准；四资源逐项扣、不足整笔拒绝 | 石/兵 | 整数 | ❌ | 征兵成本预览、府库石流水 |
 
 ## B. 战略与行军
 
@@ -45,7 +46,8 @@
 | 攻城伤害（破墙） | `battle.js siegeDamageOf()` = Σ(武将攻城值 × `troopStrikeMul(投入兵力)` × `WALL.siegeK=6`)（★ 2026-11-17；零攻城值/零兵 → 0） | 点/波 | 整数 | ❌ | 战报 summary「城墙 a% → b%」、推演「本波攻城打掉 N」 |
 | 守军据城加成 | `city-wall.js wallDefMul()` = `1 + (siegeWallMul−1) × 城墙完好比例`（★ 2026-11-17；满墙 = 旧口径 1.5，破城 = 1.0） | 倍 | 0.01 | ❌ | 战报 siege.defMul、推演「守军据城 ×N」 |
 | 破城 | `wallHp` 归零即破：当阵守军再折损 `WALL.breachRout=12%`，城池 `defense`（AI 战力估算口径）−0.12 且**只扣一次**（修回一半以上才复位）；**不改变 judgeBattle 的占城判定** | — | — | ❌ | 战报「城墙已破」、天下日志「城墙崩塌」 |
-| 城墙修复 | `strategy.js repairCityWalls()`：未被围的城每旬回 `WALL.repairPerTurn=2%` 上限，被围不修 | %/旬 | 整数点 | ❌ | 城池内页城墙条（旬结算后变化） |
+| 城墙修复 | `strategy.js repairCityWalls()`：未被围的城每旬回 `WALL.repairPerTurn=2%` 上限，被围不修（★ 2026-11-18：**玩家城修复耗石** `WALL.stonePerHp=3` 石/点，石头不足按比例少修、不透支，走 `recordRes` 流水；NPC 城仍自然修复不花玩家石头） | %/旬 | 整数点 | ❌ | 城池内页城墙条（旬结算后变化）、府库石流水 |
+| 逐城石产 | `city-econ.js cityYield().extra.stone`（★ 2026-11-18）：`12 + 等级×8 + 城防开发度/50×16`，汇入 `cityLayer().stone` → `playerStockYield`；城防开发度越高石产越高（投石→修城→石产闭环） | 石/日·城 | 整数 | ❌ | 物资去向页「采石」逐城明细 |
 
 ## D. 人事
 
@@ -90,6 +92,7 @@
 | 服务端缺失字段 | `interaction/state.fieldGaps` | — | — | — | 显式降级（禁编造） |
 | 操作回执（P12） | `notice-bus.js notify()` → `/__slg/session?since=N` → 外壳 `slg:notice` 事件 → 交互层 toast | — | — | ❌ 只展示 | 被原版客户端静默吞掉的操作结果（`general.upSkill/lvSkill/downSkill` 的拒绝与学习成功） |
 | 俘虏处置按钮视觉 | `panels-ui.js` `#slgPanelsWin .capbtn` | px / 色值 | 13px；常规 `#e8d7a8` on `#2c2f22`；危险 `#f0b39b` | ❌ 只展示 | 六府武将页「招降／放归／处斩」；小字说明 `#b3a88f` |
+| 入门向导（★ 2026-11-18） | `interaction-ui.js GUIDE`（7 关：举义/内政/委任/登庸/出征/粮道/经济），每关「看说明 → 去操作（jumpTo 跳对应面板）→ 我已完成」闭环；可跳过/稍后/按 h 重看，进度存 localStorage（含 guideDone 情境标记） | — | — | ❌ 只展示 | 首次进入的分步引导浮窗 `#slgIxGuide` |
 
 ## 历史教训（写死，防回归）
 

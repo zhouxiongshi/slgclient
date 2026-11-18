@@ -25,6 +25,7 @@ import { wallMaxOf, wallRatioOf, wallDefMul, WALL } from '../server/domain/city-
 import { siegeDamageOf } from '../server/battle.js';
 import { settleWorld } from '../server/handlers.js';
 import { chapterRules } from '../server/domain/campaign.js';
+import { cityYield, cityLayer } from '../server/domain/city-econ.js';
 
 const cfg = loadConfig();
 
@@ -158,6 +159,52 @@ test('每旬修复：未被围的城逐旬回墙，被围的城不修', () => {
   assert.equal(st.cities[b].wallHp, Math.round(wallB.max * 0.4), '被围城不应修复');
   assert.ok(WALL.repairPerTurn > 0 && WALL.repairPerTurn < 0.05,
     '修复速度必须低于一波攻城能打掉的比，否则城墙永远打不穿');
+});
+
+test('经济闭环：玩家城修墙花石头，石头不足按比例少修；NPC 城不花玩家石头', () => {
+  const { state, st } = oathWorld();
+  const mine = Object.entries(st.cities).find(([, r]) => r.owner === 'player');
+  const npc = Object.entries(st.cities).find(([, r]) => r.owner !== 'player' && r.owner);
+  assert.ok(mine && npc, '前提：有玩家城与 NPC 城');
+  const pid = Number(mine[0]);
+  const nid = Number(npc[0]);
+  const pw = cityWall(state, pid);
+  const nw = cityWall(state, nid);
+  st.cities[pid].wallHp = Math.round(pw.max * 0.4);
+  st.cities[nid].wallHp = Math.round(nw.max * 0.4);
+
+  // ① 石头充足：玩家城修复扣石、有流水
+  state.roleRes.stone = 100000;
+  const stone0 = state.roleRes.stone;
+  const npcHp0 = st.cities[nid].wallHp;
+  repairCityWalls(state);
+  assert.ok(state.roleRes.stone < stone0, '玩家城修墙必须扣石头（不再凭空 +2%）');
+  assert.ok(st.cities[pid].wallHp > Math.round(pw.max * 0.4), '玩家城耐久上升');
+  assert.ok(st.cities[nid].wallHp > npcHp0, 'NPC 城也修复');
+
+  // ② 石头归零：玩家城这次修不动（不透支），NPC 城照常修
+  st.cities[pid].wallHp = Math.round(pw.max * 0.4);
+  st.cities[nid].wallHp = Math.round(nw.max * 0.4);
+  st.cities[nid].besieged = false;
+  state.roleRes.stone = 0;
+  const pidHp0 = st.cities[pid].wallHp;
+  repairCityWalls(state);
+  assert.equal(state.roleRes.stone, 0, '石头为 0 时不得透支');
+  assert.equal(st.cities[pid].wallHp, pidHp0, '无石头则玩家城不修');
+  assert.ok(st.cities[nid].wallHp > Math.round(nw.max * 0.4), 'NPC 城不受玩家石头影响，照常修复');
+});
+
+test('经济闭环：逐城石产入账（cityYield.extra.stone），城防开发度越高石产越高', () => {
+  const { state } = oathWorld();
+  const id = Number(Object.entries(state.strategy.cities).find(([, r]) => r.owner === 'player')[0]);
+  const y0 = cityYield(state, id);
+  assert.ok(y0.extra.stone > 0, `逐城应有石产（实测 ${y0.extra.stone}）`);
+  const layer = cityLayer(state);
+  assert.ok(layer.stone > 0, 'cityLayer 汇总应含石产，供 playerStockYield 消费');
+  // 抬高城防开发度 → 石产上升
+  state.strategy.cityEcon[id].devDef = 110;
+  const y1 = cityYield(state, id);
+  assert.ok(y1.extra.stone > y0.extra.stone, '城防开发度提升 → 石产上升，形成投石-修城闭环');
 });
 
 test('面板与视图同源：城池视图带城墙四件套，旧档缺字段按完整城墙显示', () => {
