@@ -1995,7 +1995,9 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       return f && f.war ? '交战' : (f && f.ally ? '同盟' : (a >= 30 ? '亲善' : (a <= -30 ? '敌视' : '中立')));
     };
     var attNum = function (f) { var a = Number(f && f.attitude) || 0; return (a > 0 ? '+' : '') + a; };
-    addRow('player', '我军', '#e8c670', '', '');
+    /* ★ 2026-11-18：玩家势力显示名归一（举义=所举势力名、建国=国号、旧档=我军） */
+    var myName = (s.oath && s.oath.identity && s.oath.identity.name) || '我军';
+    addRow('player', myName, '#e8c670', '', '');
     dip.forEach(function (f) {
       addRow(f.id, f.name, f.color, attTag(f), '');
     });
@@ -2012,7 +2014,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       if (legendSel) {
         var f2 = legendSel === 'player' ? null
           : dip.filter(function (x) { return String(x.id) === String(legendSel); })[0];
-        var name2 = legendSel === 'player' ? '我军' : (f2 ? f2.name : legendSel);
+        var name2 = legendSel === 'player' ? myName : (f2 ? f2.name : legendSel);
         var hold = (s.cities || []).filter(function (c) { return String(c.owner) === String(legendSel); })
           .slice(0, 10).map(function (c) { return c.name; });
         html += '<div class="lg-detail">'
@@ -4019,9 +4021,43 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
      拒绝必须带 {code,text,factors[]}；停战期内诸侯守约不进犯。 */
   function warDiploPanel(s, body) {
     var dip = (cache && cache.diplomacy) || s.diplomacy || { factions: [], day: s.day };
+    /* ★ 2026-11-18：自建势力入口（局内达条件解锁 + 输入国号）。
+       举义势力=玩家自己已在服务端从外交列表去重；此处提供脱离旧主、自立门户。 */
+    var fs = (s.oath && s.oath.foundStatus) || null;
+    var identity = (s.oath && s.oath.identity) || null;
+    var founded = (s.oath && s.oath.founded) || null;
+    if (founded) {
+      var fcard = el('div', 'card', '<h4 style="margin-top:0">自立门户</h4>'
+        + '<div class="cost">国号 <b style="color:#f0d998">' + esc(founded.name) + '</b>　'
+        + '第 ' + fmt(founded.day) + ' 日自立，自此与旧主分道。原举义势力已重新成为可外交的独立诸侯。</div>');
+      body.appendChild(fcard);
+    } else if (fs) {
+      var fcard2 = el('div', 'card', '<h4 style="margin-top:0">自立门户</h4>');
+      var hint = fs.ok
+        ? '基业已足，可自立为王、独树一帜。'
+        : (fs.reason === 'oath_pending' ? '先举义择主，再图自立。'
+          : (fs.reason === 'not_enough_cities' ? '需占据 ' + fmt(fs.need) + ' 城方可自立（现有 ' + fmt(fs.cities || 0) + ' 城）。' : ''));
+      fcard2.appendChild(el('div', 'cost', hint));
+      if (fs.ok) {
+        var foundBtn = mkBtn('自立为王 · 输入国号', 'pri', function () {
+          var name = window.prompt('请输入国号（1~12 字）：', '');
+          if (name === null) return;
+          send('nation.found', { name: name }).then(function (rsp) {
+            if (rsp.code === 0) {
+              toast('自立为「' + ((rsp.msg && rsp.msg.founded && rsp.msg.founded.name) || name) + '」', true);
+              fetchState().then(function (s2) { cache = s2; renderWar(cache); });
+            } else { toast('自立失败：' + ((rsp.msg && rsp.msg.reason) || errText(rsp)), false); }
+          });
+        });
+        fcard2.appendChild(foundBtn);
+      }
+      body.appendChild(fcard2);
+    }
     var card = el('div', 'card', '<h4 style="margin-top:0">诸侯态度</h4>'
       + '<div class="cost">态度 = 史实基础 + 履约×5 − 背约×10 + 联姻 + 赠礼 − 边境摩擦 + 共同敌人 − 占其城×20。'
-      + '拒绝必给理由；停战期内诸侯不进犯，但停战期攻城即毁约。</div>');
+      + '拒绝必给理由；停战期内诸侯不进犯，但停战期攻城即毁约。'
+      + (identity && identity.kind === 'oath' ? '　阁下现承「' + esc(identity.name) + '」之业，即为该势力本身，故不可与其外交。' : '')
+      + '</div>');
     var bar = function (v) {
       var n = Math.round((Math.max(-100, Math.min(100, Number(v) || 0)) + 100) / 20);
       return '<span class="cost">' + '▓'.repeat(Math.max(0, n)) + '░'.repeat(Math.max(0, 10 - n)) + '</span>';
@@ -5236,6 +5272,13 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         body.innerHTML = '';
         var meta = rs[1] || { conscript: { wood: 10, iron: 10, grain: 10, gold: 1 } };
         var per = meta.conscript || { wood: 10, iron: 10, grain: 10, gold: 1 };
+        /* ★ 2026-11-18：三兵种差异化单兵成本（服务端权威下发），逐槽显示各自单价 */
+        var armsNames = meta.conscriptArmsNames || ['盾步', '弓兵', '骑兵'];
+        var perSlot = meta.conscriptPerSlot || [
+          { wood: per.wood, iron: per.iron, stone: per.stone || 5, grain: per.grain, gold: per.gold },
+          { wood: per.wood, iron: per.iron, stone: per.stone || 5, grain: per.grain, gold: per.gold },
+          { wood: per.wood, iron: per.iron, stone: per.stone || 5, grain: per.grain, gold: per.gold },
+        ];
         var res = (rs[2].msg && rs[2].msg.role_res) || {};
         var gens = (rs[3].msg && rs[3].msg.generals) || [];
         var armies = (rs[0].msg && rs[0].msg.armys) || [];
@@ -5330,9 +5373,9 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
           if (pending) { toast('本旬已在征兵中，等兵入营或推进到下一旬', false); return; }
           var n0 = Math.max(0, Math.min(Math.floor(amount), quotaN, afford));
           if (n0 <= 0) { toast('本旬无兵可征：兵源或资源不足', false); return; }
-          var cnts = [0, 0, 0];
-          cnts[firstSlot.pos] = n0;
-          send('army.conscript', { armyId: firstSlot.army.id, cnts: cnts }).then(function (rsp) {
+          /* ★ 2026-11-18：一键征满由服务端把总量平分到该队伍所有有将槽
+             （受各槽等级+官阶带兵上限约束），不再全塞第一槽。 */
+          send('army.conscript', { armyId: firstSlot.army.id, fill: true, amount: n0 }).then(function (rsp) {
             if (rsp.code === 0) {
               var eta = (rsp.msg && rsp.msg.etaSec) || 2;
               var fc = (rsp.msg && rsp.msg.farmConflict) || null;
@@ -5422,8 +5465,25 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
               left.appendChild(el('span', 'cost',
                 '　攻距 ' + ad + ' · ' + (warn ? '<span style="color:#ff9d6b">' + reach + '</span>' : reach)));
             }
-            left.appendChild(el('span', 'cost', '　兵力 ' + fmt(soldiers)
+            left.appendChild(el('span', 'cost', '　' + armsNames[pos] + ' ' + fmt(soldiers)
               + (waiting > nowSec() ? '（征兵中，' + (waiting - nowSec()) + 's）' : '')));
+            /* ★ 2026-11-18：解甲归田——有兵即可遣散（含空槽残留兵），兵退回驻城+返 30% 兵值金。
+               解决「征兵满了没法解甲归田」以及「剔除武将后残留兵力」两个问题。 */
+            if (soldiers > 0 && a.id) {
+              var disbandBtn = mkBtn('解甲', 'ghost', function () {
+                var counts = [0, 0, 0];
+                counts[pos] = soldiers;
+                send('army.disarm', { armyId: a.id, counts: counts }).then(function (rsp) {
+                  if (rsp.code === 0) {
+                    toast('解甲归田 ' + (rsp.msg && rsp.msg.disbanded || soldiers) + ' 兵，返还 '
+                      + ((rsp.msg && rsp.msg.refund) || 0) + ' 金', true);
+                    tabArmy(body, c);
+                  } else { toast('解甲失败：' + errText(rsp), false); }
+                });
+              });
+              disbandBtn.title = '遣散该兵种全部兵力，退回驻城并返还 30% 兵值金';
+              left.appendChild(disbandBtn);
+            }
             row.appendChild(left);
 
             if (!gid) {
@@ -5451,16 +5511,21 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
                 });
               });
               var n0 = 100;
-              var need = { wood: n0 * per.wood, iron: n0 * per.iron, grain: n0 * per.grain, gold: n0 * per.gold };
+              var pslot = perSlot[pos] || per;
+              var need = {
+                wood: n0 * pslot.wood, iron: n0 * pslot.iron,
+                stone: n0 * (pslot.stone || 0), grain: n0 * pslot.grain, gold: n0 * pslot.gold,
+              };
               var lack = need.wood > res.wood || need.iron > res.iron
+                || (need.stone || 0) > (res.stone || 0)
                 || need.grain > res.grain || need.gold > res.gold;
               var wrap = el('span', '');
               wrap.style.cssText = 'display:flex;align-items:center;gap:4px;';
               wrap.appendChild(input);
               wrap.appendChild(go);
               if (lack) {
-                wrap.title = '资源不足：100 兵需 木' + fmt(need.wood) + ' 铁' + fmt(need.iron)
-                  + ' 粮' + fmt(need.grain) + ' 金' + fmt(need.gold);
+                wrap.title = '资源不足：100 ' + armsNames[pos] + '需 木' + fmt(need.wood) + ' 铁' + fmt(need.iron)
+                  + ' 石' + fmt(need.stone || 0) + ' 粮' + fmt(need.grain) + ' 金' + fmt(need.gold);
                 go.disabled = true;
               }
               row.appendChild(wrap);
@@ -5470,7 +5535,10 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
           body.appendChild(card);
         });
         body.appendChild(el('div', 'cost',
-          '每兵：木 ' + per.wood + ' · 铁 ' + per.iron + ' · 粮 ' + per.grain + ' · 金 ' + per.gold));
+          '单兵消耗：' + perSlot.map(function (p, i) {
+            return armsNames[i] + ' 木' + p.wood + '/铁' + p.iron + '/石' + (p.stone || 0)
+              + '/粮' + p.grain + '/金' + p.gold;
+          }).join('；') + '。带兵上限 = 5000 + 官阶×300 +（等级−1）×200。'));
       })
       .catch(function () { body.innerHTML = '<div class="empty">读取失败，稍后再试。</div>'; });
   }

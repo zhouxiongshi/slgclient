@@ -47,6 +47,8 @@ import {
 import { createHash } from 'node:crypto';
 import { noteIfGeneralDown } from './command.js';
 import { factionTraitOf, protagonistStat } from './domain/oath.js';
+import { conscriptNeed, checkSlotCaps, splitEven, planDisarm, ARMS_NAMES } from './domain/conscript.js';
+import { foundNation, foundStatus, playerIdentity } from './domain/faction-identity.js';
 
 const OK = 0;
 const nowSec = () => Math.floor(Date.now() / 1000);
@@ -906,6 +908,17 @@ export function handleRequest(ctx, req) {
       }
       const from = m.from || [0, 0, 0, 0];
       const to = m.to || [0, 0, 0, 0];
+      /* ★ BUG审计P1-6：只禁净增产（用户裁决：不强制 1:1、不碰 transform_rate 比例口径）。
+       * 旧代码只校验「不扣成负」，单向 to 或 to>>from 可凭空复制资源。
+       * 原版语义要求 from/to 落在不同索引；此处保留该约束并禁止 to 总量 > from 总量。 */
+      const fSum = from.reduce((s, v) => s + Math.max(0, Number(v) || 0), 0);
+      const tSum = to.reduce((s, v) => s + Math.max(0, Number(v) || 0), 0);
+      const sameSlot = from.some((v, i) => Number(v) > 0 && Number(to[i]) > 0);
+      if (fSum <= 0 || tSum <= 0 || sameSlot || tSum > fSum) {
+        rsp.code = CODE.InvalidParam;
+        rsp.msg = { reason: 'bad_transform', hint: '兑换不可凭空增产：产出总量不得超过投入总量' };
+        break;
+      }
       const ret = [0, 0, 0, 0];
       for (let i = 0; i < 4; i += 1) {
         if (Number(from[i] || 0) > 0) ret[i] = -Number(from[i]);
@@ -1277,15 +1290,37 @@ export function handleRequest(ctx, req) {
       }
       army.generals = normalizeTriple(army.generals);
       army.soldiers = normalizeTriple(army.soldiers);
-      // 同一武将只能占一个槽位：先从其它队伍/槽位摘掉，再落到目标槽位
+      /* ★ 2026-11-18 用户诉求：剔除武将后兵力不再停留在空槽。
+         旧实现只改 generals[pos]、不动 soldiers[pos]，出现「有兵无将」槽位仍显示旧兵力。
+         现在任何槽位从「有将」变「无将」，该槽兵力/在途退回驻城并清零，UI 不再显示幽灵兵力。 */
+      const returnTroopsToCity = (a, slot) => {
+        const back = Math.max(0, Math.floor(Number(a.soldiers?.[slot]) || 0))
+          + Math.max(0, Math.floor(Number(a.con_cnts?.[slot]) || 0));
+        a.soldiers = normalizeTriple((a.soldiers || []).map((n, i) => (i === slot ? 0 : n)));
+        a.con_cnts = normalizeTriple((a.con_cnts || []).map((n, i) => (i === slot ? 0 : n)));
+        a.con_times = normalizeTriple((a.con_times || []).map((n, i) => (i === slot ? 0 : n)));
+        if (back > 0) {
+          const city = state.strategy?.cities?.[Number(a.cityId)];
+          if (city) city.troops = Math.max(0, Math.floor(Number(city.troops) || 0) + back);
+          else a.soldiers[slot] = back; // 无驻城记录时兵留队里，绝不蒸发
+        }
+      };
+      // 同一武将只能占一个槽位：先从其它队伍/槽位摘掉（连带退兵），再落到目标槽位
       if (gid > 0) {
         for (const a of state.armys) {
-          a.generals = normalizeTriple(
-            (a.generals || []).map((id, i) => (id === gid && !(a === army && i === pos) ? 0 : id)),
-          );
+          (a.generals || []).forEach((id, i) => {
+            if (id === gid && !(a === army && i === pos)) {
+              returnTroopsToCity(a, i);
+              a.generals[i] = 0;
+            }
+          });
         }
         army.generals[pos] = gid;
       } else {
+        // 显式清空本槽：仅当原本有将/有兵时才退兵，避免重复清空调度
+        if (army.generals[pos] || (army.soldiers?.[pos] > 0) || (army.con_cnts?.[pos] > 0)) {
+          returnTroopsToCity(army, pos);
+        }
         army.generals[pos] = 0;
       }
       for (const g of state.generals) g.order = 0;
@@ -1303,37 +1338,39 @@ export function handleRequest(ctx, req) {
       if (!army) { rsp.code = CODE.InvalidParam; rsp.msg = { reason: 'no_army' }; break; }
       // ★ 试玩 bug-2：行军中不能征兵（否则路上补满兵再打）
       if (army.marchId) { rsp.code = CODE.InvalidParam; rsp.msg = { reason: 'marching', army: clone(army) }; break; }
-      const cnts = normalizeTriple(m.cnts);
+      /* ★ 2026-11-18 用户诉求「一键征满平分所有兵力」：m.fill=true 时服务端按
+         该队伍有将的三槽剩余额度（等级+官阶上限−现有−在途）平分 m.amount，
+         分配逻辑在服务端（界面不复算数值），UI 只发总量。 */
+      let cnts = normalizeTriple(m.cnts);
+      if (m.fill === true) {
+        const plan = splitEven(Number(m.amount) || 0, army, (gid) => findGeneral(state, gid));
+        cnts = plan.cnts;
+      }
       const total = cnts.reduce((s, n) => s + n, 0);
       if (total <= 0) { rsp.code = CODE.InvalidParam; rsp.msg = { reason: 'zero' }; break; }
       // ★ 试玩 P1-1：每兵成本按 basic.json 逐项扣。旧逻辑把四项加总（31/兵）
       //   全从木头扣，还用 Math.max(0, ...) 兜底 —— 资源不足也能白嫖。
       const c = cfg.basic.conscript || {};
-      /* ★ 2026-11-18 经济闭环：原表 cost_stone=0（石头在征兵里完全无用）。
-         不改原表，在派生层给石料军械一个默认成本 = 铁的一半（向下取整、至少 5），
-         让石头成为真实征兵物资。若初始编辑器/未来配置显式给了 cost_stone>0 则以原表为准。 */
-      const ironCost = c.cost_iron ?? 10;
-      const stoneCost = Number(c.cost_stone) > 0 ? Number(c.cost_stone) : Math.max(5, Math.floor(ironCost / 2));
-      const per = {
-        wood: c.cost_wood ?? 10, iron: ironCost, stone: stoneCost,
-        grain: c.cost_grain ?? 10, gold: c.cost_gold ?? 1,
-      };
-      const need = {
-        wood: total * per.wood, iron: total * per.iron, stone: total * per.stone,
-        grain: total * per.grain, gold: total * per.gold,
-      };
-      // ★ P4-①：势力特技改征兵成本（董卓·西凉铁骑 -15%、刘备·仁德 -10%）
+      /* ★ 2026-11-18 征兵领域化（用户诉求：兵种差异化消耗 + 等级/官职带兵上限）：
+         need 计算下沉 domain/conscript.js（盾步/弓/骑分单价、铁派生石耗、势力特技），
+         handlers 变薄。石耗派生规则不变：原表 cost_stone=0 不改，派生 max(5,⌊铁/2⌋)。 */
       const trait = factionTraitOf(state);
-      if (trait.recruitPct) {
-        for (const k of Object.keys(need)) {
-          need[k] = Math.max(1, Math.round(need[k] * (1 + trait.recruitPct / 100)));
-        }
-      }
+      const { need, perSlot, total: needTotal } = conscriptNeed(cnts, c, trait);
+      const per = perSlot[0]; // 兼容回包字段（旧客户端读 per 做展示）
       // 槽位必须已有武将：内核按槽位取将，空槽位征兵等于白扣资源
       const emptySlot = cnts.findIndex((n, i) => n > 0 && !army.generals?.[i]);
       if (emptySlot >= 0) {
         rsp.code = CODE.InvalidParam;
         rsp.msg = { reason: 'empty_slot', slot: emptySlot, per };
+        break;
+      }
+      /* ★ 用户诉求：征兵也校验带兵上限（旧实现只在整编校验，征兵可堆过上限）。
+         本次要征 + 已在途 + 现有 不得超过该槽武将「等级+官阶」上限。 */
+      const capsCheck = checkSlotCaps(cnts, army, (gid) => findGeneral(state, gid));
+      if (!capsCheck.ok) {
+        rsp.code = CODE.InvalidParam;
+        rsp.msg = { reason: 'over_cap', slot: capsCheck.slot, cap: capsCheck.cap,
+          have: capsCheck.have, add: capsCheck.add, caps: capsCheck.caps, perSlot };
         break;
       }
       /* ★ P11 兵役制：先校验兵源，再扣资源。
@@ -1379,9 +1416,38 @@ export function handleRequest(ctx, req) {
       ctx.save();
       rsp.msg = {
         army: clone(army), role_res: roleResOf(state), etaSec: sec, need,
+        // ★ 2026-11-18：兵种明细（各槽单兵成本 + 兵种名 + 本次分配），供 UI 展示差异化消耗
+        perSlot, armsNames: ARMS_NAMES, cnts, caps: capsCheck.caps,
         levy: levyView(state, here), levyCommit, farmConflict,
         levyNote: `本城征 ${total} 丁：一户一丁、妇孺老弱免征；本旬不可再征。`,
       };
+      break;
+    }
+    /* ★ 2026-11-18 用户诉求：解甲归田（玩家协议层此前完全缺失裁兵入口）。
+       领域计算在 domain/conscript.planDisarm，handlers 只做参数校验 + 写回。 */
+    case 'army.disarm': {
+      const army = armyById(state, m.armyId);
+      if (!army) { rsp.code = CODE.InvalidParam; rsp.msg = { reason: 'no_army' }; break; }
+      if (army.marchId) { rsp.code = CODE.InvalidParam; rsp.msg = { reason: 'marching', army: clone(army) }; break; }
+      const plan = planDisarm(m.counts || m.disband, army, null, { marching: !!army.marchId });
+      if (!plan.ok) { rsp.code = CODE.InvalidParam; rsp.msg = { reason: plan.reason }; break; }
+      // 三槽遣散：兵退回驻城、清空在途、兵力写回
+      army.soldiers = normalizeTriple(plan.remaining);
+      army.con_cnts = [0, 0, 0];
+      army.con_times = [0, 0, 0];
+      const city = state.strategy?.cities?.[Number(army.cityId)];
+      const st = state.strategy;
+      if (city) city.troops = Math.max(0, Math.floor(Number(city.troops) || 0) + plan.returnToCity);
+      // 返还 30% 兵值金（与裁军同口径），走流水
+      const r = state.roleRes;
+      r.gold = Math.max(0, Math.floor(Number(r.gold) || 0) + plan.refund);
+      recordRes(state, 'gold', plan.refund, `解甲归田·${plan.disbanded}兵`, Math.floor(Number(state.clock?.day) || 1));
+      recordEvent(state, `第 ${army.order} 军解甲归田 ${plan.disbanded} 兵（${plan.amounts.map((n, i) => ARMS_NAMES[i] + n).join('、')}），退回驻城并返回兵值金 ${plan.refund}。`);
+      ctx.push('roleRes.push', roleResOf(state));
+      ctx.push('army.push', army);
+      ctx.save();
+      rsp.msg = { army: clone(army), disbanded: plan.disbanded, refund: plan.refund,
+        returned: plan.returnToCity, cityTroops: city ? city.troops : null };
       break;
     }
     case 'army.assign': {
@@ -1548,12 +1614,17 @@ export function handleRequest(ctx, req) {
 
     case 'world.meta': {
       const c = cfg.basic.conscript || {};
+      /* ★ 2026-11-18：下发三兵种差异化单兵成本（盾步/弓/骑），并补上此前漏掉的石耗。
+         conscript 保留盾步单价做兼容；conscriptPerSlot 供征兵页逐槽显示各自成本。 */
+      const metaNeed = conscriptNeed([1, 1, 1], c, {});
       rsp.msg = {
         conscript: {
-          wood: c.cost_wood ?? 10, iron: c.cost_iron ?? 10,
-          grain: c.cost_grain ?? 10, gold: c.cost_gold ?? 1,
-          timePer: c.cost_time ?? 1,
+          wood: metaNeed.perSlot[0].wood, iron: metaNeed.perSlot[0].iron,
+          stone: metaNeed.perSlot[0].stone, grain: metaNeed.perSlot[0].grain,
+          gold: metaNeed.perSlot[0].gold, timePer: c.cost_time ?? 1,
         },
+        conscriptPerSlot: metaNeed.perSlot.map((p) => ({ ...p, timePer: c.cost_time ?? 1 })),
+        conscriptArmsNames: ARMS_NAMES,
         drawGeneralCost: cfg.basic.general?.draw_general_cost ?? 30,
         collectLimit: cfg.basic.role?.collect_times_limit ?? 3,
         collectIntervalSec: cfg.basic.role?.collect_interval ?? 30,
@@ -1561,6 +1632,19 @@ export function handleRequest(ctx, req) {
       break;
     }
 
+    /* ★ 2026-11-18 自建势力（用户裁决：局内达条件解锁 + 输入国号；领域在 faction-identity） */
+    case 'nation.foundStatus': {
+      rsp.msg = { ...foundStatus(state), identity: playerIdentity(state, cfg) };
+      break;
+    }
+    case 'nation.found': {
+      const r = foundNation(state, m.name, m.color);
+      if (!r.ok) { rsp.code = CODE.InvalidParam; rsp.msg = r; break; }
+      recordEvent(state, `第 ${r.founded.day} 日，主公于旧主之外自立，国号「${r.founded.name}」，自此独树一帜。`);
+      ctx.save();
+      rsp.msg = { founded: r.founded, identity: playerIdentity(state, cfg) };
+      break;
+    }
     /* ---------------- 联盟（单机：仅自己） ---------------- */
     case 'union.create': {
       state.union = {

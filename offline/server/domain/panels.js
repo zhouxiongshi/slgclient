@@ -611,7 +611,7 @@ export function panelState(state, cfg) {
     ok: true,
     version: 1,
     day: int(state.clock?.day, 1),
-    month: turnOf(state) + 1,
+    month: Math.max(1, turnOf(state)), // ★ BUG审计P1-5：统一权威口径，旧 turnOf+1 快一旬
     turn: turnOf(state),
     roleName: state.role?.nickName || '主公',
     // ★ P4-①：举义状态随面板下发，客户端据此弹举义页 / 显示势力徽记

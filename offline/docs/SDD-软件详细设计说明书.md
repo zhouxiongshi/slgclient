@@ -2125,7 +2125,32 @@ build/SLG-Offline-win32-x64/
 - **技能二次放大不改**：Lv10 技能在 Lv10 武将手上实际伤害率 = 面板 ×2（`kernelSkillAt` 按技能等级注入 → `rules.js levelValue` 再按武将等级放大）。这是所有 177 条技能统一的既有机制，`skill-balance` 与平衡闸都建立在"名义指数"上，单独改一条或整体改都会推翻现有平衡与战报哈希，故本轮只核查确认、不做数值改动。
 - **集市兑换率 / 民居税收语义**：排查确认集市升级加成（addition16）未被 `interior.transform` 读取（当前 1:1）、民居 `type21=税收` 被当金币日产。改兑换率会凭空增产破坏经济平衡、且 `building.test.js` 锁 1:1；民居改口径牵动征收链路。两项为**设计取舍，本轮不改**，在此留痕待产品裁决。
 - **`attackerOddsMul` 斜率 11.2 / `difficultyDiplo`**：兵力比 1.15 倍以上伤害陡增是"人多碾压"的敏感点，但调整会改变大量战斗结果、影响回合数验收；`difficultyDiplo` 无明确量化点。两项本轮未改（旋钮定义保留）。
-- 本轮未改 `offline/web/` 磁盘产物，未改协议消息计数（`contract-matrix` 72 条不受影响：全部改动走既有 HTTP 端点与领域层）。
+- 本轮未改 `offline/web/` 磁盘产物，未改协议消息计数（`contract-matrix` 72 条不受影响：全部改动走既有 HTTP 端点与领域层）。（★ 注：该口径为 §17.11 当时状态；§17.12 新增 3 条 WS 协议后计数变为 75 条。）
+
+---
+
+### 17.12 BUG审计修复 / 征兵队伍改造 / 主公身份归一（2026-11-18 用户指示）
+
+**缘起**：用户要求「修复所有漏洞和bug」+ 三条玩法改造（解甲归田/兵种差异化/主公身份矛盾）。先做五路只读审计 + 动态复现（报告见仓库外 `D:\WorkBuddy\slg\slgclient-全量BUG与漏洞审计报告.md`），再逐条修复。用户裁决：两处战法数值 P1（被动 buff 叠加、减伤词条误入 bonus_terms）**本轮不修**（守住 177 战法平衡闸与战报哈希）；集市**只禁净增产**（不碰 transform_rate 比例）；主公身份走**显示层归一 + 外交去重**；**新增自建势力**（局内达条件解锁 + 输入国号）。
+
+| 编号 | 问题 | 修复 |
+|---|---|---|
+| `BUG-P1-1` | 剧本开局未举义即误判「败亡」：`evaluateEnding` 读从未写入的 `st.oathPending` | 改调 `oathPending(state)` 函数（`oath.js` 零环叶子） |
+| `BUG-P1-2/3` | 事件 `resource('grain')` 恒 0（误取 `st.resources['player']`，无该键）；`min_loyalty/prisoners/besieged_cities/supply_cut_armies` 无数据源 | grain 取 `roleRes.grain`；四字段接真实域（名册忠诚最小值/俘虏数/被围城/断粮在途军） |
+| `BUG-P1-4` | `addMorale` 漏 owner 过滤，改全地图城民心 | 加 `owner==='player'` 过滤 |
+| `BUG-P1-5` | 月份口径漏网：`interaction.js`/`panels.js` 仍 `turn%12+1`/`turnOf+1` | 统一 `Math.max(1,turn)`（契约 §A 已登记权威口径） |
+| `BUG-P1-6` | 集市 `interior.transform` 可凭空复制资源 | 禁净增产：`to总量≤from总量`、from/to 不同索引、均为正；不碰比例口径（UI 发 to=from×rate/100 仍通过） |
+| `P17-1` | 玩家协议层无解甲归田；剔除武将后空槽残留幽灵兵力 | 新增 `army.disarm`（三槽遣散退驻城+返 30% 兵值金，领域 `conscript.planDisarm`）；`army.dispose` 摘将/清空槽位时该槽兵力退回驻城并清零 |
+| `P17-2` | 征兵无法选兵种、消耗无差异、一键征满全塞单槽、带兵上限只看官阶 | 新增 `domain/conscript.js`：兵种差异化单价（骑最贵）、`checkSlotCaps` 征兵也校验上限、`splitEven` 一键平分（服务端算，UI 只发总量）、`world.meta` 下发三兵种单价+石耗；带兵上限扩为 `5000+官阶×300+(等级−1)×200`（`official-rank.slotCapOf`，契约已登记） |
+| `P18-1` | 举义曹操后玩家扛曹旗/用曹将，却仍可单独与曹操外交 | 新增 `domain/faction-identity.js` 唯一权威：显示名归一（举义=所举势力名、旧档=我军）、`diplomacyView` 过滤所举义势力、`diplomacyAct` 拒绝 `self_faction`；底层 `owner='player'` 不动 |
+| `P18-2` | 无自建势力（用户裁决要求新增） | `nation.foundStatus`/`nation.found` 协议 + `foundNation` 领域：占城≥6 解锁、输入国号（1~12 字）、落盘 `state.founded`；建国后显示国号、原举义势力重回外交列表（已脱离） |
+
+**纪律与取舍**：
+- 玩家可见数值（带兵上限公式、兵种单价、集市约束）**先改 FIELD-CONTRACT 再改服务端最后接 UI**；UI 全部运行时注入（`server/skills.js` / `strategy.js` 视图），`web/` 磁盘逐字不动。
+- 新增领域模块 `conscript.js` / `faction-identity.js` 均为零环叶子（后者仅依赖 `oath.js`），handlers 只做参数校验+写回（变薄）。
+- 存档兼容：`state.founded` 旧档缺失走可选链兜底（`playerIdentity` 三态自动降为举义/我军），无需迁移。
+- 契约矩阵 case 数 72→75（新增 `army.disarm`/`nation.foundStatus`/`nation.found`）；两处战法数值 P1 本轮明确不修，留待单独产品裁决。
+- 新增测试 `p17-conscript-reforms.test.js`（11 例）、`p18-faction-identity.test.js`（6 例）；改完必须重打包双态取证 + check-release 全绿。
 
 ---
 

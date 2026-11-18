@@ -58,6 +58,7 @@ import { captureFromBattle } from './captives.js';
    前端只排版；战报/回放共用同一批战法说明。 */
 import { skillProfile, previewNarrative } from './battle-narrative.js';
 import { oathOf, oathPending, oathFactionOf, factionTraitOf, protagonistStat } from './oath.js';
+import { playerIdentity, isFounded, foundStatus } from './faction-identity.js';
 /* ★ M2-4 委任对象化与外交（本作设计）：两个模块都自包含，strategy 单向引它们 */
 import { appointmentTick, appointmentListView, strategyAppoint, strategyCancelAppointment } from './appointment.js';
 import { diplomacyView, diplomacyAct, noteCityCaptured, truceActive, PLAYER_ID, adjustAttitudeByEvent } from './diplomacy.js';
@@ -1102,7 +1103,7 @@ function otherName(state, factionId) {
 /** 归属方显示名：玩家 / 汉廷 / 诸侯。 */
 function ownerNameOf(state, ownerId) {
   const conf = factionConfFor(state);
-  if (ownerId === 'player') return state.role?.nickName || '我军';
+  if (ownerId === 'player') return playerIdentity(state, conf).name;
   if (!ownerId || ownerId === conf.neutral.id) return conf.neutral.name;
   return otherName(state, ownerId);
 }
@@ -2762,9 +2763,29 @@ export function strategyEventCtx(state) {
     cityOwned: owned,
     cityLost: lost,
     resource: (kind) => {
+      /* ★ BUG审计P1-2/P1-3：事件资源口径对齐真实数据源。
+       * grain 取玩家 roleRes（旧代码误取 refreshGrainSummary(state,'player')，
+       * 而 st.resources 无 player 键 → 恒 0 → 粮价事件恒真/死支）。
+       * 四个原本无数据源的字段接上真实域：min_loyalty←名册忠诚最小值、
+       * prisoners←俘虏数、besieged_cities←玩家被围城数（字段有契约、待围城写入）、
+       * supply_cut_armies←玩家在途断粮部队数。 */
       const r = state.roleRes || {};
       if (kind === 'gold') return Math.round(Number(r.gold) || 0);
-      if (kind === 'grain') return Math.round(Number(refreshGrainSummary(state, 'player').grain) || 0);
+      if (kind === 'grain') return Math.round(Number(r.grain) || 0);
+      if (kind === 'min_loyalty') {
+        const gs = (state.generals || []).filter((g) => g && !g.isStandIn);
+        return gs.length ? Math.min(...gs.map((g) => Number(g.loyal) || 0)) : 100;
+      }
+      if (kind === 'prisoners') return Array.isArray(state.captives) ? state.captives.length : 0;
+      if (kind === 'besieged_cities') {
+        return Object.entries(st.cities || {})
+          .filter(([id, row]) => row && row.owner === 'player' && row.besieged
+            && st.cityEcon?.[Number(id)]) .length;
+      }
+      if (kind === 'supply_cut_armies') {
+        return (st.marches || []).filter((mm) => mm && mm.side === 'player'
+          && !mm.resolved && (Number(mm.supplyCutDays) || 0) > 0).length;
+      }
       return Math.round(Number(r[kind]) || 0);
     },
     flag: (name) => !!(st.flags && st.flags[name]),
@@ -2843,10 +2864,12 @@ export function strategyEventChoice(state, cfg, ctx, { id, choice } = {}) {
       recordRes(state, 'gold', clampInt(delta), `事件·${ev.title}`, Math.floor(Number(state.clock?.day) || 1));
     },
     addMorale: (delta) => {
-      // 民心：玩家每座城各 ±（城池经营口径 0..100）
+      // 民心：★ BUG审计P1-4：仅玩家城各 ±（城池经营口径 0..100），旧代码漏 owner 过滤误改全地图
       const econ = ensureCityEcon(state);
-      for (const [, e] of Object.entries(econ || {})) {
-        if (e && typeof e.morale === 'number') e.morale = Math.max(0, Math.min(100, e.morale + clampInt(delta)));
+      const d = clampInt(delta);
+      for (const [key, e] of Object.entries(econ || {})) {
+        if (st.cities?.[Number(key)]?.owner !== 'player') continue;
+        if (e && typeof e.morale === 'number') e.morale = Math.max(0, Math.min(100, e.morale + d));
       }
     },
     addLoyalty: (target, delta) => {
@@ -2939,14 +2962,15 @@ export function strategyViewState(state, cfg = null) {
   const econAll = ensureCityEcon(state) || {};
   /* ★ U20 粮道：整张图一次 BFS（逐城调用会变成 O(n²) 路网搜索，72 城下明显卡） */
   const SUP = supplyMap(state);
-  // ★ P4-①：玩家城旗帜/命名继承所举义的诸侯（择曹操则玩家城就是曹旗蓝）
+  // ★ 2026-11-18：玩家势力显示层归一（举义=所举义势力名；建国=国号；旧档=我军）
   const oathF = oathFactionOf(state);
+  const me = playerIdentity(state, conf);
   const nameOf = (id) => id === 'player'
-    ? '我军'
+    ? me.name
     : (conf.factions.find((f) => f.id === id)?.name
       || (id === conf.neutral.id ? conf.neutral.name : id));
   const colorOf = (id) => id === 'player'
-    ? (oathF?.color || '#c9a227')
+    ? me.color
     : (conf.factions.find((f) => f.id === id)?.color || conf.neutral.color);
   // ★ P1-6：本地地图被遮罩挡住，来犯军必须在天下界面可见、可清剿
   const threats = (state.garrisons || [])
@@ -3099,6 +3123,10 @@ export function strategyViewState(state, cfg = null) {
       done: !oathPending(state),
       lord: oathF?.id || null, lordName: oathF?.name || '', color: oathF?.color || '',
       city: oathOf(state).city || 0,
+      // ★ 2026-11-18：显示层归一 + 自建势力状态（举义势力名/国号/自立门槛）
+      identity: me,
+      founded: isFounded(state) ? { ...state.founded } : null,
+      foundStatus: foundStatus(state),
     },
     // ★ P6 俘虏名册（招降入口）
     captives: (state.captives || []).map((c, i) => ({

@@ -90,7 +90,12 @@ export function makeOfficer(cfgId, level, cityId, skills = []) {
     rank: 0,
     cityId: Number(cityId) || 0,
     loyal: 72 + (Number(cfgId) % 21),
-    skills: Array.isArray(skills) ? skills.slice(0, 3).map((s) => ({ id: Number(s.id || s.cfgId), lv: Number(s.lv) || 1 })) : [],
+    /* ★ BUG审计修复（2026-11-18）：玩家名册战法槽为 [skill, null, null]，
+       挖角 t.obj.skills 直接透传时 null.id 抛 TypeError（60 旬系统审计崩溃）。
+       过滤空槽后再映射，所有调用点受益。 */
+    skills: Array.isArray(skills)
+      ? skills.filter(Boolean).slice(0, 3).map((s) => ({ id: Number(s.id || s.cfgId), lv: Number(s.lv) || 1 }))
+      : [],
   };
 }
 

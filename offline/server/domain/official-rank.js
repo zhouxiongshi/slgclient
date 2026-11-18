@@ -49,13 +49,22 @@ export function rankName(merit) {
  */
 export const SLOT_CAP_BASE = 5000;
 export const SLOT_CAP_PER_RANK = 300;
+export const SLOT_CAP_PER_LEVEL = 200;   // ★ 2026-11-18：等级因子（Lv1 不加，每升 1 级 +200）
+/** 兼容口径：只按官阶的上限（不含等级），供旧测试与无等级对象使用。 */
 export function slotCapForRank(rank) {
   const r = Math.max(0, Math.min(RANK_CAP, Math.trunc(Number(rank) || 0)));
   return SLOT_CAP_BASE + r * SLOT_CAP_PER_RANK;
 }
-/** 由任意带 merit 字段的对象取带兵上限（空对象/空槽回退基础 5000）。 */
+/**
+ * ★ 2026-11-18 用户诉求：单槽带兵上限由「等级 + 官职」共同决定。
+ *   = 5000 + 官阶×300 + (等级−1)×200（等级 clamp 1~10）。
+ * Lv1 白身 5000（与旧口径一致，空槽/无 level 对象自然兼容）；满级三公 Lv10 = 5000+2700+1800 = 9500，
+ * 仍远低于一城兵源（人口上限 100 万），不破经济硬闸。零依赖、确定性。
+ */
 export function slotCapOf(officer) {
-  return slotCapForRank(rankOfMerit(officer?.merit));
+  const rankPart = slotCapForRank(rankOfMerit(officer?.merit));
+  const lv = Math.max(1, Math.min(10, Math.trunc(Number(officer?.level) || 1)));
+  return rankPart + (lv - 1) * SLOT_CAP_PER_LEVEL;
 }
 
 /**

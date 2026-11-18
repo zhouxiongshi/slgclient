@@ -50,7 +50,8 @@ export function interactionState(state, cfg) {
   const st = state.strategy || {};
   const day = Math.floor(num(state.clock?.day, 1));
   const turn = num(st.turn, 0);
-  const month = num(state.clock?.month, (turn % 12) + 1);
+  // ★ BUG审计P1-5：统一权威口径「第 N 月 = turn N，turn 0 兜底 1」；旧 (turn%12)+1 会回绕且快一旬
+  const month = Math.max(1, turn);
   // 逐城经济挂在 state.strategy.cityEcon（不是 state.cityEcon），取错会全城显示 0 粮
   const econ = (st && st.cityEcon) || state.cityEcon || {};
   const roleRes = state.roleRes || {};

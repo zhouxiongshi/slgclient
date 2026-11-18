@@ -10,7 +10,8 @@
  * 任何动作（无论成败）都返回 factors[]，拒绝文案把「差在哪」逐条说清。
  *
  * 硬约束：自包含叶子——自读 conf/campaign/strategy/{factions,map}.json，
- * 邻接自建（marchGraph 复用，只读），只 import strategy-rng（叶子）；strategy 单向 import 本模块。
+ * 邻接自建（marchGraph 复用，只读），只 import 叶子（strategy-rng / general-stat /
+ * faction-identity→oath，均无环）；strategy 单向 import 本模块。
  * 确定性：不掷 Math.random；离间判定走 rngFor(seed, day, tag)。
  */
 
@@ -22,6 +23,8 @@ import { rngFor } from './strategy-rng.js';
 /* ★ M4-8 离间智力判定：与战斗/内政/行军同一份属性基线（零依赖叶子，无环）。
    旧实现把史载智力 ×80 且主公恒 7400，与面板显示的谋略值对不上。 */
 import { gameStatOf } from './general-stat.js';
+/* ★ 2026-11-18：玩家势力身份唯一权威（举义去重 / 建国后放开），零环叶子 */
+import { diplomacyExcluded } from './faction-identity.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const FACTIONS_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'factions.json');
@@ -234,7 +237,10 @@ export function diplomacyView(state) {
   if (!st?.cities) return { factions: [], day: 0 };
   const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
   const myTroops = totalTroops(state, PLAYER_ID);
-  const factions = factionList().map((f) => {
+  /* ★ 2026-11-18：举义势力 = 玩家自己，不能单独外交（用户报告的矛盾根因）；
+     建国后原势力重新独立，回到外交列表。 */
+  const excluded = new Set(diplomacyExcluded(state));
+  const factions = factionList().filter((f) => !excluded.has(f.id)).map((f) => {
     const { value, factors } = attitudeOf(state, PLAYER_ID, f.id);
     const p = pairData(state, PLAYER_ID, f.id);
     const hisTroops = totalTroops(state, f.id);
@@ -310,6 +316,10 @@ export function diplomacyAct(state, cfg, ctx, { action, faction, target, gold })
   const fid = String(faction || '');
   if (!st?.cities) return { ok: false, reason: 'no_state' };
   if (fid === PLAYER_ID || !diploConf().factions.some((f) => f.id === fid)) return { ok: false, reason: 'no_faction' };
+  // ★ 2026-11-18：举义势力就是玩家自己，不能对其外交（防绕过 UI 直接发协议）
+  if (diplomacyExcluded(state).includes(fid)) {
+    return { ok: false, reason: 'self_faction', text: '该势力即阁下麾下，无需外交。', factors: [] };
+  }
   const A = ACTIONS[action];
   if (!A) return { ok: false, reason: 'bad_action' };
   const att = attitudeOf(state, PLAYER_ID, fid);

@@ -105,6 +105,11 @@ const CASES = {
   'strategy.attack': { cityId: 2, frac: 1 },
   'strategy.clearThreat': { x: 0, y: 0 },
   'strategy.recallMarch': { marchId: 1 },
+
+  /* ★ 2026-11-18：征兵/队伍改造 + 自建势力 */
+  'army.disarm': { armyId: '@armyId', counts: [0, 0, 0] },
+  'nation.foundStatus': {},
+  'nation.found': { name: '契约测试国' },
 };
 
 /** 畸形 payload 变体：只要不抛异常、信封合法即通过 */
@@ -144,9 +149,9 @@ test('R1 · 协议契约矩阵（73 消息）', async (t) => {
     ctx.mainCity = st.citys[0].cityId;
     ctx.armyId = st.armys[0].id;
 
-    await t.test('72 条请求型消息 + heartbeat 推送帧 = 73，与 handlers 的 case 数一致', () => {
-      assert.equal(Object.keys(CASES).length, 72, '契约表必须覆盖全部请求型 case');
-      assert.equal(72 + 1, 73, 'heartbeat 是唯一的推送型 case，单独在下一项验证');
+    await t.test('75 条请求型消息 + heartbeat 推送帧 = 76，与 handlers 的 case 数一致', () => {
+      assert.equal(Object.keys(CASES).length, 75, '契约表必须覆盖全部请求型 case');
+      assert.equal(75 + 1, 76, 'heartbeat 是唯一的推送型 case，单独在下一项验证');
     });
 
     await t.test('heartbeat：seq 强制 0、返回 ctime/stime，不进请求-响应配对', async () => {

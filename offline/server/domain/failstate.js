@@ -6,7 +6,10 @@
  *
  * 零依赖叶子：只读 state，不 import strategy/city-econ（它们引用本模块做旬结算时不成环）。
  * 写资源流水复用 economy.recordRes 的形状（自带 recordRes 副本，理由同 supply.js）。
+ * ★ BUG审计P1-1：结局守卫改为调 oathPending(state)（oath.js 是零环叶子），
+ *   不再读从未写入的 st.oathPending——剧本未举义时 owned=0 曾被误判「败亡」。
  */
+import { oathPending } from './oath.js';
 
 const CAP = 20000;
 const GRAIN_GOLD_RATE = 0.5;      // 卖粮市价：1 粮 = 0.5 金（本作设计 资源锚的中位换算）
@@ -179,7 +182,7 @@ const KEY_DECISION_KINDS = ['举义', '攻陷', '迁都', '背盟', '结盟', '�
  */
 export function evaluateEnding(state) {
   const st = state?.strategy;
-  if (!st || st.oathPending === true) return null;
+  if (!st || oathPending(state)) return null;
   const owned = ownedCities(st);
   const factionsWithLand = new Set(Object.values(st.cities)
     .map((v) => v.owner)
