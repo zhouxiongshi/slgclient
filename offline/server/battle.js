@@ -499,6 +499,7 @@ export function buildBattleAnim({ kernel, attackers, defense, army, beginSoldier
       units: attackers.map(({ slot, g }, i) => ({
         slot: i,
         armySlot: slot,
+        cfgId: g.cfgId,
         name: cfg.generalByCfg.get(g.cfgId)?.name || `武将${g.cfgId}`,
         troops: beginSoldiers[slot] ?? 0,
         remain: attackRemain[slot] ?? 0,
@@ -510,6 +511,7 @@ export function buildBattleAnim({ kernel, attackers, defense, army, beginSoldier
       total: defense.soldiers.reduce((s, v) => s + Math.max(0, Number(v) || 0), 0),
       units: defense.generals.map((g, i) => ({
         slot: i,
+        cfgId: g.cfgId,
         name: cfg.generalByCfg.get(g.cfgId)?.name || `武将${g.cfgId}`,
         troops: defense.soldiers[i] ?? 0,
         remain: defenseRemain[i] ?? 0,

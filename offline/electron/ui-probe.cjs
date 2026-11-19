@@ -288,7 +288,14 @@ const SCENARIO_BATTLE = `(async function(){
       out.detailText = d ? (d.innerText || '').slice(0, 3000) : '';
       out.detailHtml = d ? (d.innerHTML || '').slice(0, 2500) : '';
     }
-    /* 回放：真播一次并抓一帧 */
+    /* 回放：真播一次并抓一帧。事件卡会盖住战场，先收起再抓图，
+       否则截图只能证明「有弹窗」，证明不了战场表现。 */
+    Array.prototype.forEach.call(document.querySelectorAll('.modal'), function (m) {
+      var yes = Array.prototype.find.call(m.querySelectorAll('button'), function (b) {
+        return /借粮|接受|确定/.test(b.textContent || '');
+      });
+      if (yes) yes.click(); else m.remove();
+    });
     if (r0 && r0.anim && window.__slgPlayBattle) {
       window.__slgPlayBattle(r0.anim);
       await sleep(1800);

@@ -2819,10 +2819,27 @@ function cfgGeneralNames(state) {
   return nameMapCache;
 }
 
-/** 每旬事件 tick：冷却递减 → 筛选 → pendingEvents。未决事件不堆叠（先处理旧的）。 */
+/** 每旬事件 tick：冷却递减 → 陈旧事件保守结算 → 筛选 → pendingEvents。未决事件不堆叠（先处理旧的）。 */
 export function strategyEventTick(state) {
   const st = ensureStrategy(state);
   eventCooldownTick({ events: st.eventSys });
+  /* ★ 2026-11-19 P1-4：玩家收起/忘记一条事件后，旧实现让 pendingEvents 永久非空，
+     之后任何新事件都不再生成，剧情彻底停摆。超过 4 旬自动按保守项（最后一个选项）
+     结算并落账，事件系统继续向前。 */
+  const turnNow = Math.max(1, Number(st.turn) || 1);
+  const stale = (st.pendingEvents || []).filter((e) => turnNow - (Number(e.sinceTurn) || turnNow) >= 4);
+  if (stale.length) {
+    for (const e of stale) {
+      const conservative = (e.choices || []).length ? (e.choices[e.choices.length - 1].id) : null;
+      if (conservative) {
+        try { strategyEventChoice(state, {}, null, { id: e.id, choice: conservative }); }
+        catch { st.pendingEvents = (st.pendingEvents || []).filter((x) => x.id !== e.id); }
+      } else {
+        st.pendingEvents = (st.pendingEvents || []).filter((x) => x.id !== e.id);
+      }
+      recordEvent(state, `【事件·逾期】「${e.title}」久未决，按保守之策自动结案。`);
+    }
+  }
   if ((st.pendingEvents || []).length) return { pending: st.pendingEvents.length, deferred: 0 };
   const events = campaignEvents();
   if (!events.length) return null;
@@ -2834,6 +2851,7 @@ export function strategyEventTick(state) {
   const { selected, deferred } = selectEvents(pool, ctx, { events: st.eventSys });
   st.pendingEvents = selected.map((e) => ({
     id: e.id, title: e.title, layer: e.layer, priority: e.priority,
+    sinceTurn: turnNow,
     speaker: e.speaker || '', text: e.text || [],
     choices: (e.choices || []).map((c) => ({ id: c.id, label: c.label, preview: c.preview || '' })),
   }));

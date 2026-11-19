@@ -927,8 +927,57 @@ export function patchClientBundle(source) {
     if (!out.includes(from)) throw new Error(`客户端补丁对不上：${from.slice(0, 40)}`);
     out = out.replace(from, to);
   }
-  return `${out}\n${STRATEGY_OVERLAY_SOURCE}\n${BATTLE_ANIM_SOURCE}\n${CITY_WINDOW_V2_IMPL}`;
+  return `${out}\n${VISUAL_ASSETS_SOURCE}\n${STRATEGY_OVERLAY_SOURCE}\n${BATTLE_ANIM_SOURCE}\n${CITY_WINDOW_V2_IMPL}`;
 }
+
+/**
+ * ★ 2026-11-19 视觉资产桥：把冻结 web/ 里的原版立绘/战场底图/技能图标 URL 下发给注入层。
+ * 磁盘 web/ 零改动；只读 /__slg/assets/portraits 返回 cfgId → 静态 PNG 路径。
+ */
+const VISUAL_ASSETS_SOURCE = `;(function () {
+  if (typeof document === 'undefined') return;
+  var V = window.__slgVisual = window.__slgVisual || {
+    portraits: {}, fallback: '', ready: false,
+    bg: '/assets/main/native/cf/cf7c0de9-366b-4e1b-8ddd-224b8985080b.png',
+    pano: '/__slg/strategy/panorama.png',
+    icons: [
+      '/assets/main/native/67/674df64a-e247-4e99-a87a-80298656fc11.png',
+      '/assets/main/native/89/890aca29-71c6-46c5-a44f-12d689ef6eca.png',
+      '/assets/main/native/06/0677877d-bde7-4a7a-9066-4bb82f9f6a38.png',
+      '/assets/main/native/46/46e9d6c6-eaf5-4b11-bc56-c67c9603fc57.png'
+    ]
+  };
+  fetch('/__slg/assets/portraits', { cache: 'no-store' }).then(function (r) { return r.json(); })
+    .then(function (d) {
+      V.portraits = (d && d.portraits) || {};
+      V.fallback = (d && d.fallback) || '';
+      V.ready = true;
+      /* 面板可能先于映射返回渲染：把已上屏的占位 img 回填一次，避免空白立绘。 */
+      Array.prototype.forEach.call(document.querySelectorAll('img[data-slgcid]'), function (im) {
+        var u = window.__slgPortraitUrl(im.getAttribute('data-slgcid'));
+        if (u && im.getAttribute('src') !== u) im.setAttribute('src', u);
+      });
+      window.dispatchEvent(new CustomEvent('slg:portraits-ready'));
+    }).catch(function () { V.ready = false; });
+  window.__slgPortraitUrl = function (cfgId) {
+    var key = String(Math.round(Number(cfgId) || 0));
+    return (V.portraits && V.portraits[key]) || V.fallback || '';
+  };
+  window.__slgIconUrl = function (name) {
+    var list = V.icons || [], h = 0, s = String(name || '');
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    return list[Math.abs(h) % Math.max(1, list.length)] || '';
+  };
+  var css = document.getElementById('slgVisualCss');
+  if (!css) {
+    css = document.createElement('style'); css.id = 'slgVisualCss';
+    css.textContent = '.slgPortrait{object-fit:cover;object-position:top center;border:1px solid #6b5d3d;'
+      + 'border-radius:3px;background:#171a12;box-shadow:0 2px 8px rgba(0,0,0,.45);vertical-align:middle}'
+      + '.slgPortrait.sm{width:28px;height:38px}.slgPortrait.md{width:32px;height:44px}'
+      + '.slgPortrait.lg{width:44px;height:60px}';
+    (document.head || document.documentElement).appendChild(css);
+  }
+})();`;
 
 /** 战略大地图覆盖层：纯 DOM + canvas，不进 Cocos 场景，磁盘不动。 */
 const STRATEGY_OVERLAY_SOURCE = `;(function () {
@@ -2102,6 +2151,18 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       g.fillStyle = '#efe3cb';
       g.fillRect(ox, oy, MAP_W * scale, MAP_H * scale);
     }
+    /* ★ 2026-11-19：把 2400×1350 全景合成图作为低透明度纹理叠在水墨底图上，
+       补山形水纹细节；不拿它当底，路网/城池/关隘仍由我们自己的图层绘制。
+       低透明度 + multiply 只压暗纹理，不会把已画线路洗掉。 */
+    var pano = ensureImg('panorama', window.__slgVisual && window.__slgVisual.pano
+      ? window.__slgVisual.pano : '/__slg/strategy/panorama.png');
+    if (pano) {
+      g.save();
+      g.globalCompositeOperation = 'multiply';
+      g.globalAlpha = 0.28;
+      g.drawImage(pano, ox, oy, MAP_W * scale, MAP_H * scale);
+      g.restore();
+    }
 
     // 选中时只把底图调浅：路网、城池、关隘都还没画，染底色不会把线路卷进去。
     var focus = picked || pickedPass;
@@ -2580,6 +2641,37 @@ const BATTLE_ANIM_SOURCE = `;(function () {
   var SIDE_NAME = { a: '我军', d: '守军' };
   var DUR = { banner: 650, prepare: 450, skill: 950, hit: 620, control: 550, heal: 550, down: 800, result: 1500 };
 
+  /* ★ 2026-11-19 战场视觉：冻结 web/ 里的原版战场底图 / 武将立绘 / 技能图标。
+     只从本地 HTTP 静态路径读，不下载、不改磁盘文件。 */
+  var V = window.__slgVisual || {};
+  var IMG = { bg: null, icons: [], portraits: {} };
+  function loadImg(url, onload) {
+    if (!url) return null;
+    var im = new Image();
+    im.onload = onload || function () {};
+    im.src = url;
+    return im;
+  }
+  IMG.bg = loadImg(V.bg || '');
+  (V.icons || []).forEach(function (url) { IMG.icons.push(loadImg(url)); });
+  function portraitOf(u) {
+    if (!u || !u.cfgId) return null;
+    var key = String(u.cfgId);
+    if (IMG.portraits[key] === undefined) {
+      IMG.portraits[key] = loadImg(window.__slgPortraitUrl
+        ? window.__slgPortraitUrl(u.cfgId) : (V.portraits || {})[key]);
+    }
+    return IMG.portraits[key];
+  }
+  function iconOf(name) {
+    if (window.__slgIconUrl) {
+      var url = window.__slgIconUrl(name);
+      var hit = (V.icons || []).indexOf(url);
+      if (hit >= 0 && IMG.icons[hit] && IMG.icons[hit].complete) return IMG.icons[hit];
+    }
+    return IMG.icons[0] && IMG.icons[0].complete ? IMG.icons[0] : null;
+  }
+
   function fmt(n) { n = Math.round(Number(n) || 0); return n >= 10000 ? (n / 10000).toFixed(1) + '万' : String(n); }
 
   /* ---------------- 样式（与战报/面板同一套金褐色调） ---------------- */
@@ -2626,9 +2718,10 @@ const BATTLE_ANIM_SOURCE = `;(function () {
 
     var state = {
       anim: anim, t0: 0, paused: false, speed: 1, finished: false,
-      particles: [], units: {}, cues: [], total: 0, raf: null,
+      particles: [], effects: [], units: {}, cues: [], total: 0, raf: null,
       roundBanner: null, roundUntil: 0, skillBanner: null, skillUntil: 0,
       resultBanner: null, resultColor: null, subText: '', subUntil: 0,
+      shakeUntil: 0, stepY: 80,
       roundNow: 0, roundTotal: (anim.rounds || []).length,
     };
 
@@ -2638,7 +2731,7 @@ const BATTLE_ANIM_SOURCE = `;(function () {
         (list || []).forEach(function (u, i) {
           state.units[side + (u.slot == null ? i : u.slot)] = {
             side: side, slot: u.slot == null ? i : u.slot, name: u.name,
-            skills: u.skills || [],
+            cfgId: u.cfgId || 0, skills: u.skills || [],
             troops: Math.max(1, u.troops), cur: Math.max(0, u.remain),
             dead: u.remain <= 0, x: 0, y: 0, lungeT: -1, flashT: -1, fallT: -1,
             stateText: '', stateT: 0, skillT: -1,
@@ -2684,7 +2777,20 @@ const BATTLE_ANIM_SOURCE = `;(function () {
       return list;
     }
 
+    /* ★ 2026-11-19：把每条战报 act 变成可见的技能/打击动画。
+       数据仍然完全来自服务端（t / f / to / skill / loss / state），视觉层不编造数值。 */
+    function pushEffect(kind, f, to, act, now) {
+      state.effects.push({
+        kind: kind, t0: now,
+        fx: f ? f.x : 0, fy: f ? f.y : 0,
+        tx: to ? to.x : 0, ty: to ? to.y : 0,
+        skill: act.skill || '', state: act.state || '', loss: act.loss || 0,
+      });
+      if (state.effects.length > 24) state.effects.shift();
+    }
+
     function applyAct(ctx, act) {
+      var now = performance.now();
       var f = state.units[unitKey(act.f)];
       var to = state.units[unitKey(act.to || act.unit)];
       /* 字幕：服务端已经写好的人话；没有再退回「谁 发动了什么」 */
@@ -2693,28 +2799,35 @@ const BATTLE_ANIM_SOURCE = `;(function () {
       ctx.subText = line;
       ctx.subUntil = performance.now() + Math.max(900, (DUR[act.t] || 500) * 1.2);
       if (act.t === 'hit' && f && to && !f.dead) {
-        f.lungeT = performance.now();
-        to.flashT = performance.now();
+        f.lungeT = now;
+        to.flashT = now;
         damage(to, act.loss);
         state.particles.push(mkText('-' + fmt(act.loss), to.x, to.y - 46, '#ff6b5e'));
+        pushEffect('hit', f, to, act, now);
+        state.shakeUntil = now + 220;
       } else if (act.t === 'skill' && f) {
         state.skillBanner = (f.name || '') + ' · ' + (act.skill || '战法');
-        state.skillUntil = performance.now() + 1100;
-        f.skillT = performance.now();
-        if (act.to && to) to.flashT = performance.now();
+        state.skillUntil = now + 1100;
+        f.skillT = now;
+        if (act.to && to) to.flashT = now;
+        pushEffect('skill', f, to || f, act, now);
       } else if (act.t === 'control' && to) {
         to.stateText = act.state;
-        to.stateT = performance.now();
+        to.stateT = now;
         state.particles.push(mkText(act.state || '受制', to.x, to.y - 46, '#b07ce8'));
+        pushEffect('control', f, to, act, now);
       } else if (act.t === 'heal' && to) {
         var amt = Math.min(act.amount || 0, to.troops - to.cur);
         to.cur += amt;
         state.particles.push(mkText('+' + fmt(amt), to.x, to.y - 46, '#6fcf97'));
+        pushEffect('heal', f, to, act, now);
       } else if (act.t === 'prepare' && f) {
         state.skillBanner = (f.name || '') + ' · ' + (act.skill || '战法') + '（蓄）';
-        state.skillUntil = performance.now() + 800;
+        state.skillUntil = now + 800;
+        pushEffect('prepare', f, to || f, act, now);
       } else if (act.t === 'down' && to) {
-        to.dead = true; to.cur = 0; to.fallT = performance.now();
+        to.dead = true; to.cur = 0; to.fallT = now;
+        pushEffect('down', f, to, act, now);
       }
     }
 
@@ -2729,61 +2842,229 @@ const BATTLE_ANIM_SOURCE = `;(function () {
     }
 
     /* ---- 绘制 ---- */
+    /* 单个小兵：盾步举盾 / 弓兵持弓 / 骑兵带马。1 个像素兵代表数十~上百人，
+       用方阵密度表达军势；绝不做 soldiers 数字 1:1 渲染（会瞬间卡死 Canvas）。 */
+    function drawSoldier(g, sx, sy, arms, side, dir, alpha, sc) {
+      g.globalAlpha = alpha;
+      if (arms === 2) {
+        g.strokeStyle = side; g.lineWidth = 1.4 * sc;
+        g.beginPath(); g.ellipse(sx, sy + 2 * sc, 5 * sc, 2.4 * sc, 0, 0, 6.2832); g.stroke();
+      }
+      g.fillStyle = side;
+      g.fillRect(sx - 1.6 * sc, sy - 7 * sc, 3.2 * sc, 6.5 * sc);
+      g.strokeStyle = '#ded0a8'; g.lineWidth = 1 * sc;
+      g.beginPath(); g.moveTo(sx, sy - 6.5 * sc); g.lineTo(sx + dir * 3.4 * sc, sy - 11 * sc); g.stroke();
+      if (arms === 0) {
+        g.fillStyle = 'rgba(228,208,160,.72)';
+        g.fillRect(sx + dir * 2.2 * sc, sy - 7 * sc, 2.4 * sc, 5.6 * sc);
+      } else if (arms === 1) {
+        g.strokeStyle = 'rgba(228,208,160,.8)';
+        g.beginPath(); g.arc(sx + dir * 3 * sc, sy - 8 * sc, 3.2 * sc, -1.1, 1.1); g.stroke();
+      }
+      g.globalAlpha = 1;
+    }
+
     function drawFigure(g, u, now) {
       var side = SIDE_COLOR[u.side] || '#999';
+      var dir = u.side === 'a' ? 1 : -1;
       var x = u.x, y = u.y;
       var lunge = 0;
       if (u.lungeT > 0) {
         var dt = now - u.lungeT;
-        if (dt < 620) lunge = Math.sin((dt / 620) * Math.PI) * 46 * (u.side === 'a' ? 1 : -1);
+        if (dt < 620) lunge = Math.sin((dt / 620) * Math.PI) * 46 * dir;
         else u.lungeT = -1;
       }
       var flash = u.flashT > 0 && now - u.flashT < 260;
       var dying = u.dead && u.fallT > 0;
       var fall = dying ? Math.min(1, (now - u.fallT) / 700) : 0;
-      g.save();
-      g.translate(x + lunge, y);
-      if (fall > 0) { g.rotate((fall * Math.PI / 2) * (u.side === 'a' ? 1 : -1)); g.globalAlpha = 1 - fall * 0.85; }
-      if (flash) g.globalAlpha = 0.55;
-      /* 战法光晕：发动瞬间在脚下铺一圈 */
-      if (u.skillT > 0 && now - u.skillT < 900) {
-        var k = (now - u.skillT) / 900;
-        g.beginPath(); g.arc(0, 6, 20 + k * 34, 0, 6.2832);
-        g.strokeStyle = 'rgba(232,198,112,' + (0.6 * (1 - k)).toFixed(3) + ')';
-        g.lineWidth = 3; g.stroke();
+      var ratio = Math.max(0, Math.min(1, (u.dead ? 0 : u.cur) / Math.max(1, u.troops)));
+      var big = (state.stageH || 300) > 500;
+      var sc = big ? 1.28 : 1;
+      var rows = Math.max(2, Math.min(big ? 6 : 3, Math.floor((state.stepY - 46) / 9)));
+      var perRow = big ? 16 : 10;
+      var gap = (big ? 7.2 : 5.4) * sc;
+      var count = Math.min(rows * perRow, Math.ceil(ratio * (big ? 96 : 48)));
+
+      /* 军阵底影 + 方阵：大屏一支队伍最多 96 个可视兵（1 兵代表数十~上百人），
+         双方三军合计最多 576 个，Canvas2D 仍可稳 60fps。 */
+      if (count > 0) {
+        g.save();
+        g.globalAlpha = 0.10 * Math.max(0.35, ratio);
+        g.fillStyle = side;
+        g.beginPath();
+        g.ellipse(x + lunge + dir * (gap * perRow / 2), y + 14 + rows * 4,
+          gap * perRow * 0.56, 13 * sc, 0, 0, 6.2832);
+        g.fill();
+        g.restore();
       }
-      g.fillStyle = side;
-      g.beginPath(); g.moveTo(-12, 18); g.lineTo(0, -6); g.lineTo(12, 18); g.closePath(); g.fill();
-      g.fillStyle = '#f0d9a8';
-      g.beginPath(); g.arc(0, -14, 7, 0, 6.2832); g.fill();
-      g.fillStyle = side;
-      g.beginPath(); g.arc(0, -20, 4, 0, 6.2832); g.fill();
-      g.strokeStyle = '#d8cfa8'; g.lineWidth = 2;
-      g.beginPath(); g.moveTo(10, 8); g.lineTo(26, -14); g.stroke();
-      if (flash) { g.globalAlpha = 0.9; g.fillStyle = '#fff'; g.fillRect(-14, -26, 30, 48); }
-      g.restore();
-      var count = Math.min(6, Math.ceil((u.dead ? 0 : u.cur) / Math.max(1, u.troops / 10)));
-      for (var i = 0; i < count; i++) {
-        var sx = x + (u.side === 'a' ? -1 : 1) * (26 + i * 10);
-        var sy = y + 22;
-        g.fillStyle = side; g.globalAlpha = 0.75;
-        g.beginPath(); g.arc(sx, sy, 3.4, 0, 6.2832); g.fill();
-        g.strokeStyle = '#d8cfa8'; g.lineWidth = 1;
-        g.beginPath(); g.moveTo(sx, sy - 3); g.lineTo(sx + (u.side === 'a' ? 5 : -5), sy - 12); g.stroke();
-        g.globalAlpha = 1;
-      }
-      if (!u.dead || fall < 1) {
-        g.fillStyle = '#e6dac0'; g.font = '12px "Microsoft YaHei",sans-serif'; g.textAlign = 'center';
-        g.fillText(u.name, x, y - 34);
-        var w = 74;
-        g.fillStyle = '#22252b'; g.fillRect(x - w / 2, y + 34, w, 5);
-        g.fillStyle = side; g.fillRect(x - w / 2, y + 34, w * Math.max(0, u.cur / Math.max(1, u.troops)), 5);
-        g.fillStyle = '#c8b88a'; g.font = '11px "Microsoft YaHei",sans-serif';
-        g.fillText(fmt(u.cur) + '/' + fmt(u.troops), x, y + 56);
-        if (u.stateText && now - u.stateT < 2500) {
-          g.fillStyle = '#b07ce8'; g.fillText(u.stateText, x, y - 48);
+      for (var r = 0; r < rows; r += 1) {
+        for (var c = 0; c < perRow; c += 1) {
+          var idx = r * perRow + c;
+          if (idx >= count) break;
+          var sx = x + lunge + dir * (14 * sc + c * gap + (r % 2) * gap * 0.5)
+            + Math.sin(now / 520 + idx * 1.7) * 1.4 * sc;
+          var sy = y + 12 * sc + r * 8 * sc + Math.sin(now / 680 + idx) * 0.9 * sc;
+          drawSoldier(g, sx, sy, Math.max(0, Math.min(2, u.slot || 0)), side, dir,
+            0.58 + r * 0.05, sc);
         }
       }
+      /* 军旗：每四列一面，形成连绵旗浪 */
+      var flagCount = big ? 3 : 1;
+      for (var fi = 0; fi < flagCount; fi += 1) {
+        var fx = x + lunge + dir * (14 * sc + fi * 4 * gap);
+        g.strokeStyle = 'rgba(232,198,112,.55)'; g.lineWidth = 1.2 * sc;
+        g.beginPath(); g.moveTo(fx, y + 8 * sc); g.lineTo(fx, y - 20 * sc); g.stroke();
+        g.fillStyle = side; g.globalAlpha = 0.85;
+        g.beginPath(); g.moveTo(fx, y - 20 * sc);
+        g.lineTo(fx + dir * 18 * sc, y - 16 * sc);
+        g.lineTo(fx, y - 11 * sc);
+        g.closePath(); g.fill(); g.globalAlpha = 1;
+      }
+
+      g.save();
+      g.translate(x + lunge, y);
+      if (fall > 0) { g.rotate((fall * Math.PI / 2) * dir); g.globalAlpha = 1 - fall * 0.85; }
+      /* 战法蓄力：脚下聚气环 */
+      if (u.skillT > 0 && now - u.skillT < 900) {
+        var k = (now - u.skillT) / 900;
+        g.beginPath(); g.arc(0, 6, 26 - k * 12, 0, 6.2832);
+        g.strokeStyle = 'rgba(232,198,112,' + (0.75 * (1 - k)).toFixed(3) + ')';
+        g.lineWidth = 3; g.stroke();
+      }
+      /* 原版武将立绘卡：laminate 边框用阵营色，倒地时随卡一起旋转淡出 */
+      var pw = big ? 50 : 36, ph = big ? 68 : 48, top = big ? -72 : -40;
+      g.fillStyle = 'rgba(9,11,8,.82)';
+      g.fillRect(-pw / 2 - 2, top - 2, pw + 4, ph + 4);
+      g.strokeStyle = side; g.lineWidth = 1.6;
+      g.strokeRect(-pw / 2 - 2, top - 2, pw + 4, ph + 4);
+      var im = portraitOf(u);
+      if (im && im.complete && im.naturalWidth) {
+        g.drawImage(im, 0, 0, im.naturalWidth, im.naturalHeight, -pw / 2, top, pw, ph);
+      } else {
+        g.fillStyle = '#262a20'; g.fillRect(-pw / 2, top, pw, ph);
+        g.fillStyle = '#e6dac0'; g.font = 'bold 15px "KaiTi",serif'; g.textAlign = 'center';
+        g.fillText(String(u.name || '将').slice(0, 1), 0, top + 29);
+      }
+      if (flash) { g.globalAlpha = 0.9; g.fillStyle = '#fff'; g.fillRect(-pw / 2, top, pw, ph); }
+      g.restore();
+
+      if (!u.dead || fall < 1) {
+        var nameY = big ? y - 78 : y - 46;
+        var hpY = big ? y + 92 : y + 48;
+        var w = big ? 108 : 74;
+        g.fillStyle = '#f0e2b8'; g.font = 'bold ' + (big ? 14 : 12) + 'px "Microsoft YaHei",sans-serif'; g.textAlign = 'center';
+        g.fillText(u.name, x, nameY);
+        g.fillStyle = '#22252b'; g.fillRect(x - w / 2, hpY, w, big ? 7 : 5);
+        g.fillStyle = side; g.fillRect(x - w / 2, hpY, w * ratio, big ? 7 : 5);
+        g.strokeStyle = 'rgba(232,198,112,.45)'; g.lineWidth = 1;
+        g.strokeRect(x - w / 2, hpY, w, big ? 7 : 5);
+        g.fillStyle = '#c8b88a'; g.font = (big ? 12 : 11) + 'px "Microsoft YaHei",sans-serif';
+        g.fillText(fmt(u.cur) + '/' + fmt(u.troops), x, hpY + (big ? 20 : 18));
+        if (u.stateText && now - u.stateT < 2500) {
+          g.fillStyle = '#b07ce8'; g.fillText(u.stateText, x, nameY - 12);
+        }
+      }
+    }
+
+    /* 技能 / 打击特效：光弹 → 命中冲击环 → 斩击火花 / 控制链 / 治疗光点 */
+    function drawEffects(g, now) {
+      state.effects = state.effects.filter(function (e) { return now - e.t0 < 1200; });
+      state.effects.forEach(function (e) {
+        var t = now - e.t0;
+        if (e.kind === 'prepare') {
+          var k = Math.min(1, t / 450);
+          g.strokeStyle = 'rgba(232,198,112,' + (0.7 * (1 - k)).toFixed(3) + ')';
+          g.lineWidth = 2;
+          g.beginPath(); g.arc(e.fx, e.fy, 34 - k * 18, 0, 6.2832); g.stroke();
+          var ic0 = iconOf(e.skill);
+          if (ic0 && ic0.complete) {
+            var isz0 = (state.stageH || 300) > 500 ? 54 : 36;
+            g.globalAlpha = Math.min(1, t / 180) * (1 - Math.max(0, (t - 320) / 130));
+            g.drawImage(ic0, e.fx - isz0 / 2, e.fy - isz0 - 30 + (1 - k) * 10, isz0, isz0);
+            g.globalAlpha = 1;
+          }
+          return;
+        }
+        if (e.kind === 'skill') {
+          /* 施法者头顶技能图标定格 */
+          var ic = iconOf(e.skill);
+          if (ic && ic.complete && t < 620) {
+            g.save();
+            g.shadowColor = 'rgba(255,214,120,.9)'; g.shadowBlur = 16;
+            var isz = (state.stageH || 300) > 500 ? 58 : 40;
+            g.globalAlpha = Math.min(1, t / 100) * (1 - Math.max(0, (t - 460) / 160));
+            g.drawImage(ic, e.fx - isz / 2, e.fy - isz - 38 - Math.min(18, t * 0.04), isz, isz);
+            g.restore();
+          }
+          /* 弧线光弹 */
+          if (t < 480) {
+            var p = Math.min(1, t / 480);
+            var cx = (e.fx + e.tx) / 2, cy = Math.min(e.fy, e.ty) - 46;
+            var px = (1 - p) * (1 - p) * e.fx + 2 * (1 - p) * p * cx + p * p * e.tx;
+            var py = (1 - p) * (1 - p) * e.fy + 2 * (1 - p) * p * cy + p * p * e.ty;
+            g.strokeStyle = 'rgba(255,224,150,' + (0.55 * (1 - p)).toFixed(3) + ')';
+            g.lineWidth = 2;
+            g.beginPath(); g.moveTo(e.fx, e.fy - 18); g.quadraticCurveTo(cx, cy, px, py); g.stroke();
+            g.save(); g.shadowColor = '#ffd979'; g.shadowBlur = 18;
+            g.fillStyle = '#fff1c2'; g.beginPath(); g.arc(px, py, 5, 0, 6.2832); g.fill();
+            g.restore();
+          }
+          /* 目标处冲击环 */
+          if (t > 340) {
+            var q = Math.min(1, (t - 340) / 520);
+            g.strokeStyle = 'rgba(255,206,116,' + (0.85 * (1 - q)).toFixed(3) + ')';
+            g.lineWidth = 3;
+            g.beginPath(); g.arc(e.tx, e.ty, 12 + q * 58, 0, 6.2832); g.stroke();
+            g.beginPath(); g.arc(e.tx, e.ty, 6 + q * 32, 0, 6.2832); g.stroke();
+          }
+          return;
+        }
+        if (e.kind === 'hit') {
+          var h = Math.min(1, t / 420);
+          g.strokeStyle = 'rgba(255,236,196,' + (0.9 * (1 - h)).toFixed(3) + ')';
+          g.lineWidth = 3;
+          g.beginPath(); g.arc(e.tx, e.ty, 10 + h * 22, -1.1, 1.2); g.stroke();
+          for (var i = 0; i < 8; i += 1) {
+            var a = i * 0.785 + h;
+            var rr = 8 + h * (22 + i * 2);
+            g.fillStyle = 'rgba(255,186,110,' + (0.8 * (1 - h)).toFixed(3) + ')';
+            g.beginPath(); g.arc(e.tx + Math.cos(a) * rr, e.ty + Math.sin(a) * rr, 2.2, 0, 6.2832); g.fill();
+          }
+          return;
+        }
+        if (e.kind === 'control') {
+          var c = Math.min(1, t / 700);
+          g.strokeStyle = 'rgba(186,124,236,' + (0.85 * (1 - c)).toFixed(3) + ')';
+          g.lineWidth = 2;
+          g.beginPath();
+          for (var j = 0; j <= 6; j += 1) {
+            var aa = j * Math.PI / 3 + c * 0.8;
+            var xx = e.tx + Math.cos(aa) * 26, yy = e.ty - 10 + Math.sin(aa) * 26;
+            if (j === 0) g.moveTo(xx, yy); else g.lineTo(xx, yy);
+          }
+          g.stroke();
+          return;
+        }
+        if (e.kind === 'heal') {
+          var q2 = Math.min(1, t / 800);
+          for (var m = 0; m < 6; m += 1) {
+            g.fillStyle = 'rgba(126,220,160,' + (0.8 * (1 - q2)).toFixed(3) + ')';
+            g.beginPath();
+            g.arc(e.tx + Math.sin(m * 2.1 + q2 * 3) * 16, e.ty + 12 - q2 * (32 + m * 5), 2.4, 0, 6.2832);
+            g.fill();
+          }
+          return;
+        }
+        if (e.kind === 'down') {
+          var d = Math.min(1, t / 800);
+          for (var n = 0; n < 10; n += 1) {
+            g.fillStyle = 'rgba(176,156,118,' + (0.5 * (1 - d)).toFixed(3) + ')';
+            g.beginPath();
+            g.arc(e.tx + Math.cos(n) * (6 + d * 34), e.ty + 8 + Math.sin(n) * (4 + d * 14), 3 + d * 4, 0, 6.2832);
+            g.fill();
+          }
+        }
+      });
     }
 
     function draw(now) {
@@ -2797,20 +3078,38 @@ const BATTLE_ANIM_SOURCE = `;(function () {
       var g = canvas.getContext('2d');
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
       g.clearRect(0, 0, rect.width, rect.height);
-      /* 背景：夜战 / 地平线 / 双方营寨 */
+      /* 背景：原版 1280×811 战场底图（冻结 web/ 静态路径）+ 夜战调色 / 双方营火。
+         图片未到时退回原渐变，绝不留白屏。 */
       var bg = g.createLinearGradient(0, 0, 0, rect.height);
       bg.addColorStop(0, '#12151a'); bg.addColorStop(1, '#1a1a14');
       g.fillStyle = bg; g.fillRect(0, 0, rect.width, rect.height);
+      if (IMG.bg && IMG.bg.complete && IMG.bg.naturalWidth) {
+        var iw = IMG.bg.naturalWidth, ih = IMG.bg.naturalHeight;
+        var sc = Math.max(rect.width / iw, rect.height / ih);
+        var dw = iw * sc, dh = ih * sc;
+        g.drawImage(IMG.bg, (rect.width - dw) / 2, (rect.height - dh) / 2, dw, dh);
+        g.fillStyle = 'rgba(9,12,16,.42)'; g.fillRect(0, 0, rect.width, rect.height);
+      }
       g.strokeStyle = 'rgba(200,180,130,0.16)'; g.lineWidth = 2;
       g.beginPath(); g.moveTo(0, rect.height * 0.78); g.lineTo(rect.width, rect.height * 0.78); g.stroke();
-      g.fillStyle = 'rgba(192,57,43,.10)'; g.fillRect(0, 0, rect.width * 0.34, rect.height);
-      g.fillStyle = 'rgba(44,95,138,.10)'; g.fillRect(rect.width * 0.66, 0, rect.width * 0.34, rect.height);
+      g.fillStyle = 'rgba(192,57,43,.09)'; g.fillRect(0, 0, rect.width * 0.34, rect.height);
+      g.fillStyle = 'rgba(44,95,138,.09)'; g.fillRect(rect.width * 0.66, 0, rect.width * 0.34, rect.height);
       /* ★ 站位按画布高度均分：嵌入式战报只有 260~320px，用比例站位（0.34/0.58/0.82）
          会让最后一排的兵力数字压进字幕条。这里改成「上留 46、下留 136（字幕 + 血条）」，
          三排均分，任何高度都不会互相压字。 */
       var topY = 46;
-      var bottomY = Math.max(topY + 60, rect.height - 136);
+      state.stageH = rect.height;
+      state.stageW = rect.width;
+      var bottomY = Math.max(topY + 60, rect.height - (rect.height > 500 ? 190 : 136));
       var stepY = (bottomY - topY) / 2;
+      state.stepY = stepY;
+      /* 命中时轻微震屏，让打击有重量；只作用于战场层，不影响字幕/控制条 */
+      if (now < state.shakeUntil) {
+        var sh = (state.shakeUntil - now) / 220;
+        g.save(); g.translate(Math.sin(now * 0.09) * 3 * sh, Math.cos(now * 0.13) * 2 * sh);
+      } else {
+        g.save();
+      }
       for (var k in state.units) {
         var u = state.units[k];
         var row = Math.min(2, Math.max(0, u.slot == null ? 0 : u.slot));
@@ -2818,6 +3117,8 @@ const BATTLE_ANIM_SOURCE = `;(function () {
         u.y = topY + stepY * row;
         drawFigure(g, u, now);
       }
+      drawEffects(g, now);
+      g.restore();
       state.particles = state.particles.filter(function (p) { return now - p.t0 < 1100; });
       state.particles.forEach(function (p) {
         var dt = (now - p.t0) / 1100;
@@ -2918,6 +3219,7 @@ const BATTLE_ANIM_SOURCE = `;(function () {
       state.finished = false;
       state.paused = false;
       state.particles = [];
+      state.effects = []; state.shakeUntil = 0;
       state.subText = ''; state.roundNow = 0;
       Object.keys(state.units).forEach(function (k) {
         var u = state.units[k];
@@ -2929,7 +3231,8 @@ const BATTLE_ANIM_SOURCE = `;(function () {
         var put = function (side, list) {
           (list || []).forEach(function (u, i) {
             state.units[side + (u.slot == null ? i : u.slot)] = {
-              side: side, slot: u.slot == null ? i : u.slot, name: u.name, skills: u.skills || [],
+              side: side, slot: u.slot == null ? i : u.slot, name: u.name,
+              cfgId: u.cfgId || 0, skills: u.skills || [],
               troops: Math.max(1, u.troops), cur: Math.max(0, u.remain),
               dead: u.remain <= 0, x: 0, y: 0, lungeT: -1, flashT: -1, fallT: -1,
               stateText: '', stateT: 0, skillT: -1,
@@ -2982,7 +3285,9 @@ const BATTLE_ANIM_SOURCE = `;(function () {
     injectCss();
     overlay = document.createElement('div');
     overlay.id = 'slgBattleOverlay';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:99997;display:none;background:#0d0f12;';
+    /* ★ 2026-11-19：原 z=99997 低于主窗 100560，「回放」打开后被战报窗口整块盖住，
+       玩家只看得到内嵌小画面。抬到 100700：压住主窗、让位决策预览(100760)/确认(100820)/toast。 */
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:100700;display:none;background:#0d0f12;';
     var head = document.createElement('div'); head.className = 'head';
     head.innerHTML = '<b id="slgBattleTitle"></b><span style="flex:1"></span>'
       + '<span style="font-size:11.5px;color:#9c9382">看清每一回合发生了什么 · Esc 关闭</span>'
@@ -3305,6 +3610,15 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     return a === 2 ? 4 : 3;
   }
 
+  /* ★ 2026-11-19：原版 350×480 武将立绘上屏（web/ 零改动，URL 由资产桥下发）。 */
+  function portraitTag(cfgId, size, alt) {
+    var url = window.__slgPortraitUrl ? window.__slgPortraitUrl(cfgId) : '';
+    var label = esc(alt || ('武将' + cfgId));
+    if (!url) return '<span class="winTag">' + label.slice(0, 2) + '</span>';
+    return '<img class="slgPortrait ' + (size || 'md') + '" data-slgcid="' + esc(cfgId)
+      + '" src="' + esc(url) + '" alt="' + label + '" loading="lazy">';
+  }
+
   function confirmBox(title, lines, okLabel, cancelLabel, onOk) {
     var modal = el('div', 'modal');
     var box = el('div', 'box');
@@ -3316,6 +3630,38 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     box.appendChild(bar);
     modal.appendChild(box);
     host.appendChild(modal);
+  }
+
+  /* ★ 2026-11-19 P1-6：Electron 渲染进程不支持 window.prompt（直接返回 null）。
+     自立为王这类需要玩家输入的入口必须在页面内完成，否则按钮看起来能点、实际什么都没发生。 */
+  function askText(title, hint, defaultValue, onOk) {
+    var modal = el('div', 'modal');
+    var box = el('div', 'box');
+    box.innerHTML = '<h4 style="margin:0 0 8px;font-size:15px;color:#f0d998">' + esc(title) + '</h4>'
+      + '<p>' + esc(hint) + '</p>';
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.value = defaultValue || '';
+    input.maxLength = 12;
+    input.style.cssText = 'width:100%;box-sizing:border-box;background:#12150f;color:#f0e2b8;'
+      + 'border:1px solid #6a624a;border-radius:4px;padding:8px 10px;'
+      + 'font:14px "Microsoft YaHei",sans-serif;';
+    box.appendChild(input);
+    var bar = el('div', 'bar');
+    bar.style.marginTop = '14px';
+    bar.appendChild(mkBtn('取消', 'ghost', function () { modal.remove(); }));
+    bar.appendChild(mkBtn('确定', '', function () {
+      var v = String(input.value || '').trim();
+      modal.remove();
+      if (v) onOk(v);
+    }));
+    box.appendChild(bar);
+    modal.appendChild(box);
+    host.appendChild(modal);
+    try { input.focus(); } catch (e) { /* 无焦点权限时不影响点击 */ }
+    input.onkeydown = function (ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); bar.lastChild.click(); }
+    };
   }
 
   function fetchState() {
@@ -3461,7 +3807,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
   }
   function warGenLine(a) {
     return (a.generals || []).map(function (g) {
-      return g ? esc(g.name) + '<span class="cost">（' + esc(g.arms || '') + '适性 ' + g.apt + '%）</span>' : '';
+      return g ? portraitTag(g.cfgId, 'sm', g.name) + ' ' + esc(g.name)
+        + '<span class="cost">（' + esc(g.arms || '') + '适性 ' + g.apt + '%）</span>' : '';
     }).filter(Boolean).join('、') || '<span class="cost">无武将</span>';
   }
   function warRefresh(s) {
@@ -4040,13 +4387,13 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       fcard2.appendChild(el('div', 'cost', hint));
       if (fs.ok) {
         var foundBtn = mkBtn('自立为王 · 输入国号', 'pri', function () {
-          var name = window.prompt('请输入国号（1~12 字）：', '');
-          if (name === null) return;
+          askText('自立为王', '请输入国号（1~12 字）。自立后与旧主分道，原举义势力重新成为可外交诸侯。', '', function (name) {
           send('nation.found', { name: name }).then(function (rsp) {
             if (rsp.code === 0) {
               toast('自立为「' + ((rsp.msg && rsp.msg.founded && rsp.msg.founded.name) || name) + '」', true);
               fetchState().then(function (s2) { cache = s2; renderWar(cache); });
             } else { toast('自立失败：' + ((rsp.msg && rsp.msg.reason) || errText(rsp)), false); }
+          });
           });
         });
         fcard2.appendChild(foundBtn);
@@ -5323,28 +5670,13 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
             if ((ga.generals || [])[qp] && !ga.marching) { firstSlot = { army: ga, pos: qp }; break; }
           }
         }
-        /* ★ 一键征兵的三条硬约束，全部在点之前就算清楚（用户报的「一键征兵失败」根因）：
-             ① 每旬只能征一次 → 已在征兵中就必须锁按钮，否则二次点击必然撞 cooldown 报错；
-             ② 兵源上限 quota；
-             ③ 资源（木/铁/粮/金）能支撑多少丁 —— 旧实现只拿 quota 当数量，
-                资源不够时服务端拒绝，玩家看到的是「失败了但不知道差多少」。
-           把「能征多少」提前算出来，按钮上直接写这个数。 */
-        var costOf = function (n) {
-          return {
-            wood: n * (Number(per.wood) || 0), iron: n * (Number(per.iron) || 0),
-            grain: n * (Number(per.grain) || 0), gold: n * (Number(per.gold) || 0),
-          };
-        };
-        var maxAffordable = function () {
-          var caps = [];
-          [['wood', per.wood], ['iron', per.iron], ['grain', per.grain], ['gold', per.gold]].forEach(function (pair) {
-            var each = Number(pair[1]) || 0;
-            if (each > 0) caps.push(Math.floor((Number(res[pair[0]]) || 0) / each));
-          });
-          return caps.length ? Math.min.apply(null, caps) : 0;
-        };
+        /* ★ 2026-11-19 P0-2：一键征满的「能征多少」必须由服务端给出。
+             旧 UI 只按木/铁/粮/金、且一律用盾步单价算，漏了石耗与弓骑倍率：
+             按钮亮着、点下去必被服务端拒。现在默认 0（按钮先禁用），
+             由 army.conscriptPreview 用同一套领域函数回填后才可点。 */
         var quotaN = lv ? Math.max(0, Number(lv.quota) || 0) : 0;
-        var afford = Math.max(0, maxAffordable());
+        var afford = 0;
+        var previewInfo = null;
         var pending = levyPending && levyPending.cityId === cid && levyPending.until > Date.now()
           ? levyPending : null;
         var canGo = function () { return !!(firstSlot && quotaN > 0 && afford > 0 && !pending); };
@@ -5363,11 +5695,9 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
             levyPending = null;
             reloadCityView();
           }, 1000);
-        } else if (quotaN > 0 && afford < quotaN) {
-          levyCard.appendChild(el('div', 'cost', '<span style="color:#e0c56a">'
-            + '资源只够征 ' + fmt(afford) + ' 丁（本旬可征 ' + fmt(quotaN) + ' 丁）：'
-            + '每兵需 木' + per.wood + ' 铁' + per.iron + ' 粮' + per.grain + ' 金' + per.gold + '。</span>'));
         }
+        var affordHint = el('div', 'cost', '<span style="color:#9c9382">正在核算可征兵数…</span>');
+        levyCard.appendChild(affordHint);
         var doQuick = function (amount) {
           if (!firstSlot) { toast('先给一个槽位配上武将，再一键征兵', false); return; }
           if (pending) { toast('本旬已在征兵中，等兵入营或推进到下一旬', false); return; }
@@ -5393,22 +5723,63 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
                 over_quota: '超过本旬可征额（' + ((rsp.msg && rsp.msg.quota) || 0) + ' 丁）',
                 no_population: '此城无人口', res_not_enough: '资源不足',
               }[rs] || errText(rsp);
+              var lack = (rsp.msg && rsp.msg.lack) || null;
+              if (lack && Object.keys(lack).length) {
+                var names = { wood: '木', iron: '铁', stone: '石', grain: '粮', gold: '金' };
+                msg = '缺 ' + Object.keys(lack).map(function (k) {
+                  return (names[k] || k) + fmt(lack[k]);
+                }).join('、');
+              }
               toast('征兵失败：' + msg, false);
               reloadCityView();
             }
           });
         };
-        var quick = [['征 100 丁', 100], ['征 300 丁', 300],
-          ['一键征满（' + fmt(Math.min(quotaN, afford || quotaN)) + '）', Math.min(quotaN, afford)]];
-        quick.forEach(function (q) {
-          var b = mkBtn(q[0], '', function () { doQuick(q[1]); });
-          b.setAttribute('data-quick-levy', String(q[1]));
+        var quick = [['征 100 丁', 100], ['征 300 丁', 300], ['一键征满', 0]];
+        var quickBtns = [];
+        quick.forEach(function (q, qi) {
+          var b = mkBtn(q[0], '', function () { doQuick(qi === 2 ? afford : q[1]); });
+          b.setAttribute('data-quick-levy', String(qi === 2 ? 0 : q[1]));
           /* 便捷征兵就是「一键」，旁边已写清人口与资源代价；再弹一次决策预览等于把便捷又变繁琐 */
           b.setAttribute('data-ix-allow', '1');
-          if (!canGo() || q[1] > Math.min(quotaN, afford)) b.disabled = true;
+          b.disabled = true;
           quickRow.appendChild(b);
+          quickBtns.push(b);
         });
         levyCard.appendChild(quickRow);
+        var refreshQuick = function () {
+          quickBtns.forEach(function (b, qi) {
+            var n = qi === 2 ? afford : quick[qi][1];
+            b.textContent = qi === 2
+              ? '一键征满（' + fmt(afford) + '）'
+              : quick[qi][0];
+            if (qi === 2) b.setAttribute('data-quick-levy', String(afford));
+            b.disabled = !canGo() || n <= 0 || n > Math.min(quotaN, afford);
+          });
+          if (previewInfo) {
+            var pneed = previewInfo.need || {};
+            var lackText = Object.keys(pneed).filter(function (k) {
+              return (Number(res[k]) || 0) < (Number(pneed[k]) || 0);
+            }).map(function (k) {
+              return ({ wood: '木', iron: '铁', stone: '石', grain: '粮', gold: '金' })[k] + '缺'
+                + fmt((Number(pneed[k]) || 0) - (Number(res[k]) || 0));
+            }).join('、');
+            affordHint.innerHTML = '<span style="color:' + (afford ? '#a9e2a0' : '#ff9d6b') + '">'
+              + '服务端核算：本旬可征 ' + fmt(afford) + ' 丁'
+              + (lackText ? '（' + esc(lackText) + '）' : '')
+              + '。单兵含石耗与兵种倍率，逐槽明细见下方。</span>';
+          } else {
+            affordHint.innerHTML = '<span style="color:#ff9d6b">无法核算可征兵数，暂不允许一键征满。</span>';
+          }
+        };
+        refreshQuick();
+        if (firstSlot) {
+          send('army.conscriptPreview', { armyId: firstSlot.army.id }).then(function (pv) {
+            previewInfo = (pv && pv.msg) || null;
+            afford = Math.max(0, Number(previewInfo && previewInfo.max) || 0);
+            refreshQuick();
+          }).catch(function () { refreshQuick(); });
+        }
         body.appendChild(levyCard);
         if (!gens.length) {
           body.appendChild(el('div', 'empty', '帐下无人。先去「酒馆」招募。'));
@@ -5454,6 +5825,10 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
               });
             };
             left.appendChild(sel);
+            /* ★ 2026-11-19：槽位武将立绘（原版资产，只读 URL）。 */
+            var slotGen = gens.filter(function (x) { return x.id === gid; })[0];
+            if (slotGen) left.insertAdjacentHTML('afterbegin',
+              portraitTag(slotGen.cfgId, 'md', slotGen.name) + ' ');
             /* ★ P7：槽位 = 战位（一=前锋 二=中军 三=大营）。
                跨阵营距离 = 我方槽位 + 敌方槽位 + 1：能打到哪里由攻距决定。 */
             var curG = gens.filter(function (g) { return g.id === gid; })[0];
@@ -5569,6 +5944,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
           ? '已满 10 级'
           : ('经验 ' + fmt(prog.exp || 0) + '/' + fmt(prog.need || 0));
         card.innerHTML = '<div class="row" style="border:none;padding:0 0 4px">'
+          + portraitTag(g.cfgId, 'lg', g.name)
           + '<b class="star' + (g.star >= 5 ? '5' : g.star === 4 ? '4' : '3') + '">'
           + (g.name || '武将' + g.cfgId) + '</b>'
           + '<span>★' + (g.star || 0) + ' · Lv' + g.level

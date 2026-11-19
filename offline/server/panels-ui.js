@@ -87,7 +87,57 @@
       || data.generals[0] || null;
   }
   function confirmBox(text, onYes) {
-    if (window.confirm(text)) onYes();
+    /* ★ 2026-11-19：Electron 不支持 window.confirm/prompt，一律用页面内弹窗。 */
+    var mask2 = document.createElement('div');
+    mask2.style.cssText = 'position:fixed;inset:0;z-index:100820;background:rgba(0,0,0,.55);'
+      + 'display:flex;align-items:center;justify-content:center;';
+    var box = document.createElement('div');
+    box.style.cssText = 'width:420px;max-width:90vw;background:#20221c;border:1px solid #8a7038;'
+      + 'border-radius:8px;padding:18px 20px;color:#e2d6b8;font:13px "Microsoft YaHei",sans-serif;';
+    var p = document.createElement('div'); p.textContent = text; p.style.lineHeight = '1.9';
+    var bar = document.createElement('div');
+    bar.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;margin-top:14px;';
+    var mk = function (label, primary, fn) {
+      var b = document.createElement('button'); b.textContent = label;
+      b.style.cssText = 'background:' + (primary ? '#4a4225' : '#20221c') + ';color:#e8c670;'
+        + 'border:1px solid ' + (primary ? '#ba9a52' : '#6a624a') + ';border-radius:4px;'
+        + 'padding:5px 14px;cursor:pointer;font:12px "Microsoft YaHei",sans-serif;';
+      b.onclick = function () { mask2.remove(); fn(); };
+      return b;
+    };
+    bar.appendChild(mk('取消', false, function () {}));
+    bar.appendChild(mk('确定', true, onYes));
+    box.appendChild(p); box.appendChild(bar); mask2.appendChild(box); document.body.appendChild(mask2);
+  }
+  /* 文本输入（替代 window.prompt） */
+  function askText(text, defaultValue, onYes) {
+    var mask2 = document.createElement('div');
+    mask2.style.cssText = 'position:fixed;inset:0;z-index:100820;background:rgba(0,0,0,.55);'
+      + 'display:flex;align-items:center;justify-content:center;';
+    var box = document.createElement('div');
+    box.style.cssText = 'width:430px;max-width:90vw;background:#20221c;border:1px solid #8a7038;'
+      + 'border-radius:8px;padding:18px 20px;color:#e2d6b8;font:13px "Microsoft YaHei",sans-serif;';
+    var p = document.createElement('div'); p.textContent = text; p.style.lineHeight = '1.9';
+    var input = document.createElement('input');
+    input.type = 'number'; input.value = defaultValue || '500'; input.min = '1';
+    input.style.cssText = 'width:100%;box-sizing:border-box;background:#12150f;color:#f0e2b8;'
+      + 'border:1px solid #6a624a;border-radius:4px;padding:8px 10px;'
+      + 'font:14px "Microsoft YaHei",sans-serif;';
+    var bar = document.createElement('div');
+    bar.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;margin-top:14px;';
+    var mk = function (label, primary, fn) {
+      var b = document.createElement('button'); b.textContent = label;
+      b.style.cssText = 'background:' + (primary ? '#4a4225' : '#20221c') + ';color:#e8c670;'
+        + 'border:1px solid ' + (primary ? '#ba9a52' : '#6a624a') + ';border-radius:4px;'
+        + 'padding:5px 14px;cursor:pointer;font:12px "Microsoft YaHei",sans-serif;';
+      b.onclick = function () { mask2.remove(); fn(); };
+      return b;
+    };
+    bar.appendChild(mk('取消', false, function () {}));
+    bar.appendChild(mk('确定', true, function () { onYes(String(input.value || '').trim()); }));
+    box.appendChild(p); box.appendChild(input); box.appendChild(bar);
+    mask2.appendChild(box); document.body.appendChild(mask2);
+    try { input.focus(); } catch (e) { /* 忽略焦点权限 */ }
   }
   /* ★ P0/P1/P3 编队/运输/赏赐：走 /__slg/strategy/action。
      修 U01：旧写法 fetch(API + '/strategy/action') 会拼成
@@ -1073,28 +1123,30 @@
     }
     if (act === 'reward') {
       var g0 = data.generals.find(function (x) { return x.id === Number(id); });
-      var amt2 = window.prompt('赏赐 ' + (g0 ? g0.name : '武将') + ' 多少金？每 100 金提升 1 点忠诚（单次上限 15）。', '500');
-      if (amt2) strategyAction({ action: 'reward', generalId: Number(id), amount: Number(amt2) });
+      askText('赏赐 ' + (g0 ? g0.name : '武将') + ' 多少金？每 100 金提升 1 点忠诚（单次上限 15）。', '500', function (amt2) {
+        if (amt2) strategyAction({ action: 'reward', generalId: Number(id), amount: Number(amt2) });
+      });
       return;
     }
     if (act === 'captiveRelease' || act === 'captiveExecute') {
       var cx = (data.captives || []).find(function (x) { return x.idx === Number(id); });
       if (!cx) return;
       var kill = act === 'captiveExecute';
-      if (window.confirm((kill ? '处斩「' : '放归「') + cx.name + '」？\n'
-        + (kill ? '此人将不再可用，并记一笔恶名。' : '不消耗金钱，纵其返回故主。'))) {
+      confirmBox((kill ? '处斩「' : '放归「') + cx.name + '」？ '
+        + (kill ? '此人将不再可用，并记一笔恶名。' : '不消耗金钱，纵其返回故主。'), function () {
         strategyAction({ action: act, idx: cx.idx }, function (r) {
           if (r.ok) toast((kill ? '已处斩 ' : '已放归 ') + cx.name, true);
         });
-      }
+      });
       return;
     }
     if (act === 'captive') {
       var c0 = (data.captives || []).find(function (x) { return x.idx === Number(id); });
       if (!c0) return;
-      if (window.confirm('招降「' + c0.name + '」？\n费用 300 金，成功率约 ' + c0.rate + '%。\n失败：忠诚 -10（降到 0 以下会越狱逃走）。')) {
+      confirmBox('招降「' + c0.name + '」？ 费用 300 金，成功率约 ' + c0.rate + '%。'
+        + '失败：忠诚 -10（降到 0 以下会越狱逃走）。', function () {
         strategyAction({ action: 'captive', idx: c0.idx });
-      }
+      });
       return;
     }
     if (act === 'openwar') {

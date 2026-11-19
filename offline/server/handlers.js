@@ -47,7 +47,7 @@ import {
 import { createHash } from 'node:crypto';
 import { noteIfGeneralDown } from './command.js';
 import { factionTraitOf, protagonistStat } from './domain/oath.js';
-import { conscriptNeed, checkSlotCaps, splitEven, planDisarm, ARMS_NAMES } from './domain/conscript.js';
+import { conscriptNeed, checkSlotCaps, splitEven, affordableConscript, planDisarm, ARMS_NAMES } from './domain/conscript.js';
 import { foundNation, foundStatus, playerIdentity } from './domain/faction-identity.js';
 
 const OK = 0;
@@ -509,6 +509,9 @@ export function processTask(ctx, task) {
   if (task.type === 'conscript_done') {
     const army = armyById(state, task.armyId);
     if (!army) return;
+    /* ★ 2026-11-19 P1-5：令牌不一致 = 玩家已解甲/重新征兵，旧定时器不得再补兵。
+       旧档/旧任务没有 token，保持原行为兼容。 */
+    if (task.token != null && army.conToken != null && task.token !== army.conToken) return;
     // ★ 试玩 P1-2：soldiers 只有 1 个元素时，旧写法 undefined + 0 = NaN，
     //   Math.max(0, NaN) 仍是 NaN，JSON 序列化成 null 写进存档。
     //   这里先补齐数组并按「有限整数」入账，绝不让 null/NaN 落盘。
@@ -1333,6 +1336,32 @@ export function handleRequest(ctx, req) {
       rsp.msg = { army: clone(army) };
       break;
     }
+    /* ★ 2026-11-19 P0-2：一键征满的可征数量由服务端权威给出。
+       UI 旧实现只算木/铁/粮/金、还按盾步单价，漏了石耗与弓骑倍率 → 按钮亮着但必被拒。
+       这里复用与 army.conscript 同一套领域函数，只读、不写 state。 */
+    case 'army.conscriptPreview': {
+      const army = armyById(state, m.armyId);
+      if (!army) { rsp.code = CODE.InvalidParam; rsp.msg = { reason: 'no_army', max: 0 }; break; }
+      const c0 = cfg.basic.conscript || {};
+      const trait0 = factionTraitOf(state);
+      const perSlot0 = conscriptNeed([1, 1, 1], c0, trait0).perSlot;
+      const st0 = state.strategy || {};
+      const own0 = Object.entries(st0.cities || {}).filter(([, v]) => v.owner === 'player').map(([id]) => Number(id));
+      const here0 = Number(army.cityId) || (own0[0] || 0);
+      const levy0 = checkLevy(state, here0, 1, {
+        strict: own0.length > 0, rate: cfg.basic?.conscriptRate ?? 0.06,
+      });
+      const res0 = state.roleRes || {};
+      const max = affordableConscript(levy0.quota || 0, army, (gid) => findGeneral(state, gid), res0, c0, trait0);
+      const plan0 = splitEven(max, army, (gid) => findGeneral(state, gid));
+      const need0 = conscriptNeed(plan0.cnts, c0, trait0).need;
+      rsp.msg = {
+        max, cnts: plan0.cnts, need: need0, perSlot: perSlot0,
+        quota: levy0.quota || 0, reason: levy0.ok || max > 0 ? '' : (levy0.reason || ''),
+        canLevy: !!levy0.ok,
+      };
+      break;
+    }
     case 'army.conscript': {
       const army = armyById(state, m.armyId);
       if (!army) { rsp.code = CODE.InvalidParam; rsp.msg = { reason: 'no_army' }; break; }
@@ -1392,7 +1421,17 @@ export function handleRequest(ctx, req) {
         break;
       }
       const code = tryUseNeed(state, need, `征兵 ${total} 人`);
-      if (code !== OK) { rsp.code = code; rsp.msg = { reason: 'res_not_enough', need, per }; break; }
+      if (code !== OK) {
+        /* ★ 2026-11-19：把“到底差什么”回给 UI，别只说资源不足（石耗最容易被漏掉）。 */
+        const lack = {};
+        for (const key of Object.keys(need || {})) {
+          const short = Math.max(0, Math.floor(Number(need[key]) || 0)
+            - Math.floor(Number(state.roleRes?.[key]) || 0));
+          if (short > 0) lack[key] = short;
+        }
+        rsp.code = code; rsp.msg = { reason: 'res_not_enough', need, per, perSlot, lack };
+        break;
+      }
       /* ★ 农时冲突要在扣人口之前算（扣完人再算，分母缩水，百分比会虚高） */
       const farmConflict = farmConflictOf(state, here, total, { rate: cfg.basic?.conscriptRate ?? 0.06 });
       /* 资源已扣，写兵役台账：本城扣人口基数（×4）、已征户 +N、本旬标记、民心下降 */
@@ -1410,7 +1449,11 @@ export function handleRequest(ctx, req) {
         army.con_cnts[i] = cnts[i];
         army.con_times[i] = cnts[i] > 0 ? nowSec() + sec : 0;
       }
-      ctx.schedule(Date.now() + sec * 1000, { type: 'conscript_done', armyId: army.id, cnts });
+      /* ★ 2026-11-19 P1-5：在途征兵令牌。解甲时作废，避免“退了金还补兵”。 */
+      army.conToken = Math.floor(Number(army.conToken) || 0) + 1;
+      ctx.schedule(Date.now() + sec * 1000, {
+        type: 'conscript_done', armyId: army.id, cnts, token: army.conToken,
+      });
       ctx.push('roleRes.push', roleResOf(state));
       ctx.push('army.push', army);
       ctx.save();
@@ -1435,6 +1478,7 @@ export function handleRequest(ctx, req) {
       army.soldiers = normalizeTriple(plan.remaining);
       army.con_cnts = [0, 0, 0];
       army.con_times = [0, 0, 0];
+      army.conToken = Math.floor(Number(army.conToken) || 0) + 1; // 作废在途征兵
       const city = state.strategy?.cities?.[Number(army.cityId)];
       const st = state.strategy;
       if (city) city.troops = Math.max(0, Math.floor(Number(city.troops) || 0) + plan.returnToCity);

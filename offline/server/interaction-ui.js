@@ -42,7 +42,7 @@
     { id: 'g0', title: '举义起兵', hint: '先在「举义」页选一位主公与起始城——这是整个游戏的第一块可点屏幕。选定后你才拥有一座城与第一批武将。', term: 'juyi', jump: 'strategy' },
     { id: 'g1', title: '选城与内政', hint: '点开一座己方城，看「人口 / 城库 / 灾害风险」，再点「内政」做一次开发。开发度越高，逐旬产量越高。', term: 'neizheng', jump: 'city', done: 'cityOpened' },
     { id: 'g2', title: '委任与报告', hint: '在武将页委任一名官员。开发度逐旬推进，回合报告会写清「谁让哪座城涨了多少」。', term: 'weiren', jump: 'general', done: 'appointed' },
-    { id: 'g3', title: '探索登庸', hint: '在酒馆探索在野贤才。对方可能婉拒——多登门几次，精诚所至或有转机。', term: 'dengyong', jump: 'general', done: 'explored' },
+    { id: 'g3', title: '探索登庸', hint: '在酒馆探索在野贤才。对方可能婉拒——多登门几次，精诚所至或有转机。', term: 'dengyong', jump: 'tavern', done: 'explored' },
     { id: 'g4', title: '编队出征', hint: '在「出征」页编好队伍，选出发城与目标城，再确认开战。行军时长按里程 ÷ 速度计算，地图军标逐日推进。', term: 'chuzheng', jump: 'war', done: 'attacked' },
     { id: 'g5', title: '粮道与运粮', hint: '切到「粮道」透镜看补给线。出征前看出发城城库能撑几日，不足先在城内运粮，断粮会掉民心与守军。', term: 'liangdao', jump: 'city', done: 'transported' },
     { id: 'g6', title: '经济与征兵', hint: '人口 → 兵役 → 征兵，采石场产石 → 修墙/城防，逐城产量汇入府库、俸禄影响忠诚。这是一条完整回路。', term: 'renkou', jump: 'city', done: 'economyRead' },
@@ -923,12 +923,18 @@
   function jumpTo(kind, id) {
     try {
       if (kind === 'city' && typeof window.__slgCityWindow === 'function') window.__slgCityWindow(id);
+      /* ★ 2026-11-19 P1-3：向导第 3 关说“去酒馆探索”，旧跳转却落到六府武将页，
+         那里没有登庸按钮——玩家照做也完不成。改为直接开当前城酒馆页签。 */
+      else if (kind === 'tavern' && typeof window.__slgCityInterior === 'function') {
+        var s0 = S.data || {};
+        window.__slgCityInterior(Number(id) || s0.playerCity || 1, 'tavern');
+      }
       else if (kind === 'war' && typeof window.__slgWarWindow === 'function') window.__slgWarWindow();
       else if (kind === 'captive' && window.__slgPanels) window.__slgPanels.open('general');
       else if (kind === 'general' && window.__slgPanels) window.__slgPanels.open('general');
       else if (window.__slgPanels) window.__slgPanels.open('strategy');
-      openDrawer(kind, id);
-      toast('已跳转到目标对象；地图视口与选中态未丢失（P4）');
+      if (kind !== 'tavern') openDrawer(kind, id);
+      toast(kind === 'tavern' ? '已打开酒馆：可在此探索登庸在野贤才' : '已跳转到目标对象；地图视口与选中态未丢失（P4）');
     } catch (err) { toast('跳转失败：' + err.message, 'fail'); }
   }
 

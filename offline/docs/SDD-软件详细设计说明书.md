@@ -1453,7 +1453,6 @@ legacyFacilitiesEnabled() = process.env.SLG_LEGACY_FACILITIES === '1';
 |---:|---|---|
 | 3 / 4 / 6 | 战略层内部 head / dock / foot / side / logPanel | `skills.js:2515,1232,1284,1680,1019` |
 | 99000 | `slgLocalCover` | `skills.js:1165` |
-| 99997 | `slgBattleOverlay` | `skills.js:2893` |
 | 99998 | `slgStrategyOverlay` | `skills.js:1169` |
 | 99999 | `slgPanelsDock` | `panels-ui.js:195` |
 | 100002 | `slgLegend` | `skills.js:1276` |
@@ -1468,6 +1467,7 @@ legacyFacilitiesEnabled() = process.env.SLG_LEGACY_FACILITIES === '1';
 | 100500 | `slgShellToggle` | `ui-shell.js:104` |
 | 100560 | `#slgUIv2 .win` 主窗 | `skills.js:2979` |
 | 100600 | `slgIxEventBadge` | `interaction-ui.js:220` |
+| 100700 | `slgBattleOverlay` 全屏战斗回放（★ 2026-11-19：原 99997 低于主窗，回放被战报窗盖住） | `skills.js` `ensureOverlay()` |
 | 100760 | `.slgIx-modal` 决策预览 | `interaction-ui.js:199` |
 | 100780 | `.slgIx-tip` 术语 | `interaction-ui.js:156` |
 | 100820 | `#slgUIv2 .modal` 确认框 | `skills.js:3025` |
@@ -2191,7 +2191,17 @@ build/SLG-Offline-win32-x64/
 | FR-31 发布闸 | §14 | `tools/check-release.js`、`pack.js` | `release-check.json`、`pack.json` |
 | FR-32 可观测 | §3.4、§11.1 | `index.js /__slg/*` | `http-endpoints` |
 
-**红线速查（改前必看）**：INV-01~INV-10（§1.4）、ADR-01/04/07/08/13/14（§1.2）、§7.15 键空间警告、§9.3 z-index 阶梯、§10 确定性、§14.7 报告归属、§16.4 内核改法、§17 偏差登记。
+### 17.15 闭环修复 / 原版美术资产上屏 / 千军万马与技能动画（2026-11-19 用户实机反馈）
+
+- **用户原话**：「全流程还是跑不通，游戏没有闭环；画面太过粗糙，武将图片没用起来；战斗不气派，不要压缩成兵马三两只；释放技能要有动画。这些都实现需要你给我来设计。」
+- **设计确权**：仓外 `D:/WorkBuddy/slg/slgclient-全流程闭环与视觉战斗设计方案.md`（v1.0）。本轮先修断点再上美术；`offline/web/` 逐字节不动。
+- **闭环**：`army.conscriptPreview`（石耗+兵种倍率，UI 零复算）/ 解甲令牌作废旧征兵任务 / 事件 `sinceTurn` 4 旬保守自动结案 / 向导 g3 跳酒馆 / 自立与赏赐改页面内输入框（Electron 无 `prompt`）/ `war.digest.done` 真点「进城治理」。check-release 7.11 改为**条件闸**：本次占城（`digest>0`）才强制消化步骤；未占城按败局放行但报告留痕，不再无条件假绿。
+- **美术资产**：构建期 `tools/build-portrait-map.js` 从冻结 `generalpic/card_*.png.meta` 生成 `server/portrait-map.json`（448 条）；新增只读端点 `/__slg/assets/portraits`；`window.__slgPortraitUrl()` 在武将页 / 征兵槽 / 出征队伍 / 战斗将卡统一上屏。战场底图用冻结 `war_bg.png`，技能图标用 tactics_1~4。
+- **战斗表现**：`drawFigure()` 从「6 个点 + 三角小人」改为「方阵 + 军旗 + 立绘将卡」；大屏每槽最多 96 个像素兵（1 像素兵代表数十~上百人），双方合计上限 576，仍是纯表现映射，不改 `soldiers`、不参与结算。新增 `drawEffects()` 消费 `act.t` 发放蓄力/光弹/冲击环/斩击/控制链/治疗/溃散特效。全屏回放 z-index 由 99997 抬到 100700（原值低于主窗 100560，回放被战报窗整块盖住）。
+- **地图**：全景合成图以 28% multiply 叠在水墨底图之上，只补纹理不覆盖路网/城池图层。
+- **验证**：`tests/p19-loop-visual.test.js` 9 条；`npm test` 全绿；源码态冒烟 / UI 审计 / 真鼠标全绿；打包态报告另行重取。
+
+**红线速查（改前必看）**：INV-01~INV-10（§1.4）、ADR-01/04/07/08/13/14（§1.2）、§7.15 键空间警告、§9.3 z-index 阶梯（含回放层 100700）、§10 确定性、§14.7 报告归属、§16.4 内核改法、§17 偏差登记。
 
 ---
 

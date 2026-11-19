@@ -344,8 +344,16 @@ const WALK = `(async function(){
     if (switchBtn) { switchBtn.click(); await sleep(750); }
 
     /* ① 点一条可攻目标行（含「守军约」的行才是目标行，避开「出兵比例」的分段行） */
+    /* ★ 2026-11-19 P0-1：旧断言总挑第一条目标（往往守军远强于我方），打完 digest 恒 0，
+       第 6 门「消化」永远被「战败属正常」放行。现在按守军数升序挑最弱可攻目标，
+       让这条 E2E 有机会真正走完「胜→占城→消化」。 */
+    var guardOf = function (row) {
+      var m = /守军约\s*([\d,]+)/.exec(txt(row) || '');
+      return m ? Number(String(m[1]).replace(/,/g, '')) : Number.MAX_SAFE_INTEGER;
+    };
     var tgtRows = Array.from(document.querySelectorAll('#slgWarWin .row'))
-      .filter(function(r){ return txt(r).indexOf('守军约') >= 0; });
+      .filter(function(r){ return txt(r).indexOf('守军约') >= 0; })
+      .sort(function(a, b){ return guardOf(a) - guardOf(b); });
     if (tgtRows.length) { tgtRows[0].click(); await sleep(650); }
 
     /* ② 推演：等「战斗种子」或明确的失败原因出现（异步 fetch） */
@@ -513,6 +521,27 @@ const WALK = `(async function(){
         visible: true, text: 'digest=' + dg.length,
         note: dg.length ? '' : 'no-digest（本战未占城：战败/平局属正常，胜则必填）',
       });
+      /* ★ 2026-11-19：占了城就必须真点「进城治理」并看到 digest 清空。
+         旧脚本只记录 digest 数量，从没点过这枚按钮，第 6 门形同虚设。 */
+      if (dg.length) {
+        window.__slgWarWindow({ tab: 'digest' });
+        await wait(function(){ return document.getElementById('slgWarWin'); }, 9000);
+        await sleep(700);
+        var dgTab = Array.from(document.querySelectorAll('#slgWarWin .tabs button'))
+          .find(function(b){ return txt(b).indexOf('消化') >= 0; });
+        if (dgTab) { dgTab.click(); await sleep(550); }
+        var dgBtn = Array.from(document.querySelectorAll('#slgWarWin button'))
+          .find(function(b){ return txt(b).indexOf('进城治理') >= 0; });
+        if (dgBtn) dgBtn.click();
+        await sleep(1000);
+        var stDigest = await (await fetch('/__slg/strategy/state', { cache: 'no-store' })).json();
+        rec('war.digest.done', [], {
+          visible: !!dgBtn,
+          text: 'digest.before=' + dg.length + ' digest.after=' + (stDigest.digest || []).length
+            + ' cityPage=' + !!document.getElementById('slgCityPage'),
+          note: !dgBtn ? 'no-digest-button' : ((stDigest.digest || []).length ? 'digest-not-cleared' : ''),
+        });
+      }
     } else {
       rec('war.march.resolved', [], { visible: true, text: 'no-march', note: 'attack-refused-or-not-run' });
     }

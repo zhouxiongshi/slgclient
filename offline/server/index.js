@@ -789,6 +789,19 @@ export async function startOfflineServer(options = {}) {
       });
       return;
     }
+    /* ★ 2026-11-19：武将立绘只读映射。web/ 里的 PNG 已由 serveStatic 暴露，
+       这里只下发 cfgId → URL，运行时注入层据此把原版立绘真正用起来（web/ 零改动）。 */
+    if (urlPath === '/__slg/assets/portraits') {
+      try {
+        const raw = readFileSync(join(ROOT, 'server', 'portrait-map.json'), 'utf8');
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=600' });
+        res.end(raw);
+      } catch {
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end('{"version":0,"fallback":"","portraits":{}}');
+      }
+      return;
+    }
     if (urlPath === '/__slg/strategy/panorama.png') {
       try {
         const img = readFileSync(join(ROOT, 'conf', 'campaign', 'strategy', 'map-panorama.png'));

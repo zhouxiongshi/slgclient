@@ -22,6 +22,7 @@
 | 政策/官员加成 | `panels.js postBonusPct / yieldBonusByResource` | % | 整数 | ❌ | 内政页加成拆解 |
 | 月份口径 | **第 N 月 = turn N**（★ 2026-11-16 统一：天下日志 `chronicle[].month`、城池日志 `cityLogs[].month`、事件流 `events[].month`、视图 `strategyViewState().month`、`advanceToNextTurn().month` 同源；turn 0 显示兜底为第 1 月。旧实现城池/事件/财报各处 `turn+1`，比整体日志快一旬） | 月 | 整数 | ❌ | HUD「第 N 月」、天下日志整体/城池/时序/财报、战略台国势 |
 | 征兵石耗 | `handlers.js army.conscript` 派生层（★ 2026-11-18）：原表 `cost_stone=0` 不改，派生 `石/兵 = max(5, ⌊铁/兵 ÷2⌋)`（铁 10 → 石 5），显式配置 `cost_stone>0` 时以原表为准；四资源逐项扣、不足整笔拒绝 | 石/兵 | 整数 | ❌ | 征兵成本预览、府库石流水 |
+| 一键征满可征数 | ★ 2026-11-19 `handlers.js army.conscriptPreview`，内部 `domain/conscript.js affordableConscript`（二分求最大可征）：与真实征兵共用 `splitEven + conscriptNeed`，含石耗与弓骑倍率。UI 只读 `msg.max/need/perSlot`，**不得自行拼单价** | 丁 | 整数 | ❌ 只能显示 | 征兵页「一键征满（N）」、缺资源提示 |
 
 ## B. 战略与行军
 
@@ -92,7 +93,10 @@
 | 服务端缺失字段 | `interaction/state.fieldGaps` | — | — | — | 显式降级（禁编造） |
 | 操作回执（P12） | `notice-bus.js notify()` → `/__slg/session?since=N` → 外壳 `slg:notice` 事件 → 交互层 toast | — | — | ❌ 只展示 | 被原版客户端静默吞掉的操作结果（`general.upSkill/lvSkill/downSkill` 的拒绝与学习成功） |
 | 俘虏处置按钮视觉 | `panels-ui.js` `#slgPanelsWin .capbtn` | px / 色值 | 13px；常规 `#e8d7a8` on `#2c2f22`；危险 `#f0b39b` | ❌ 只展示 | 六府武将页「招降／放归／处斩」；小字说明 `#b3a88f` |
-| 入门向导（★ 2026-11-18） | `interaction-ui.js GUIDE`（7 关：举义/内政/委任/登庸/出征/粮道/经济），每关「看说明 → 去操作（jumpTo 跳对应面板）→ 我已完成」闭环；可跳过/稍后/按 h 重看，进度存 localStorage（含 guideDone 情境标记） | — | — | ❌ 只展示 | 首次进入的分步引导浮窗 `#slgIxGuide` |
+| 入门向导（★ 2026-11-18，2026-11-19 修 g3） | `interaction-ui.js GUIDE`（7 关：举义/内政/委任/登庸/出征/粮道/经济），每关「看说明 → 去操作（jumpTo 跳对应面板）→ 我已完成」闭环；g3「探索登庸」必须跳当前城「酒馆」页签，不再跳武将页；可跳过/稍后/按 h 重看，进度存 localStorage | — | — | ❌ 只展示 | 首次进入的分步引导浮窗 `#slgIxGuide` |
+| 战场视觉密度（★ 2026-11-19，纯表现） | `skills.js BATTLE_ANIM_SOURCE drawFigure()`：单槽可视兵 = `min(行×列, ceil(剩余/初始 × 96))`，大屏 6×16、小屏 2~3×10；1 个像素兵代表数十~上百人。**只是表现映射，不改 `soldiers` 数值，不参与任何结算** | 像素兵/槽 | 整数 | ❌ 只展示 | 战斗回放、战报内嵌画面 |
+| 武将立绘与技能图标 | `server/portrait-map.json`（构建期由冻结 web/ 的 `card_<cfgId>.png.meta` uuid 生成）→ `/__slg/assets/portraits` → `window.__slgPortraitUrl()`；技能图标为冻结 web/ 的 tactics_1~4。缺失时退文字徽章，绝不显示碎图 | URL | — | ❌ 只展示 | 武将页、征兵槽、出征队伍、战斗将卡 |
+| 事件逾期兜底 | `domain/strategy.js strategyEventTick()`：`pendingEvents[].sinceTurn` 距当前 ≥4 旬时自动取最后一个（保守）选项结算并清出队列，避免剧情永久冻结 | 旬 | 整数 | ❌ | 天下日志「事件·逾期」、事件系统继续出队 |
 
 ## 历史教训（写死，防回归）
 

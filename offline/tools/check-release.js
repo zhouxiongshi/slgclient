@@ -665,9 +665,16 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
     'war.march.resolved',    // 推进旬到到达日、队列结算（非 attack-refused）
     'war.report.after',      // 战报页真的读出战报行
   ];
-  check('真实点击 E2E「推演→确认→战报」链路完整（tools/ui-audit.js，先跑 node tools/ui-audit.js）',
-    !!a?.passed && chain.every(chainOk),
-    a ? `failed=${JSON.stringify((a.failed || []).slice(0, 6))} chain=${chain.map((c) => `${c}:${chainOk(c) ? 'ok' : 'no'}`).join(',')}` : '报告不存在');
+  /* ★ 2026-11-19：第 6 门「消化」按胜败分流——占城（digest>0）时必须有
+     war.digest.done 真点「进城治理」并清空；本战未占城时不得拿 digest=0 假绿，
+     也不该硬红（战败本来就没有新城可消化）。条件闸比无条件放行更严。 */
+  const dgPath = byId.get('war.digest.after');
+  const needDigest = !!dgPath && !/digest=0/.test(String(dgPath.text || ''));
+  const digestOk = needDigest ? chainOk('war.digest.done') : true;
+  check('真实点击 E2E「推演→确认→战报→（占城则）消化」链路完整（tools/ui-audit.js）',
+    !!a?.passed && chain.every(chainOk) && digestOk,
+    a ? `failed=${JSON.stringify((a.failed || []).slice(0, 6))} chain=${chain.map((c) => `${c}:${chainOk(c) ? 'ok' : 'no'}`).join(',')}`
+      + ` digest=${needDigest ? (digestOk ? 'done' : 'missing') : '本次未占城，按败局放行'}` : '报告不存在');
   check('真实点击 E2E 页面零未捕获异常 / 零 error 输出',
     Array.isArray(a?.pageErrors) && a.pageErrors.length === 0 &&
     Array.isArray(a?.consoleErrors) && a.consoleErrors.length === 0,

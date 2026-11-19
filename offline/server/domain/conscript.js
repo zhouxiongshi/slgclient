@@ -133,6 +133,37 @@ export function splitEven(want, army, generalById, opts = {}) {
 }
 
 /**
+ * 一键征满的「最多能征多少」预览（★ 2026-11-19 闭环修复 P0-2）。
+ * 旧 UI 只按木/铁/粮/金、且按盾步单价算，漏掉石耗与弓骑倍率 → 按钮亮着但服务端必拒。
+ * 这里复用与 handlers.army.conscript 完全相同的 splitEven + conscriptNeed，
+ * 二分求「资源与槽位上限都能通过」的最大总量；UI 只读结果，不自行算价。
+ * @param cap 本旬兵源上限（levy.quota）
+ * @param army 队伍
+ * @param generalById id => officer
+ * @param res 当前府库 {wood,iron,stone,grain,gold}
+ * @param conscriptCfg basic.json.conscript
+ * @param trait 势力特技
+ */
+export function affordableConscript(cap, army, generalById, res, conscriptCfg = {}, trait = {}) {
+  const top = Math.max(0, Math.floor(Number(cap) || 0));
+  const can = (n) => {
+    const { cnts, assigned } = splitEven(n, army, generalById);
+    if (assigned <= 0) return false;
+    const { need } = conscriptNeed(cnts, conscriptCfg, trait);
+    return RES.every((k) => need[k] <= Math.max(0, Math.floor(Number(res?.[k]) || 0)));
+  };
+  if (!can(top)) {
+    let lo = 0; let hi = top;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (can(mid)) lo = mid; else hi = mid - 1;
+    }
+    return lo;
+  }
+  return top;
+}
+
+/**
  * 解甲归田（★ 2026-11-18 用户诉求：征兵满了没法解甲归田）：
  * 从指定队伍的三槽遣散兵力，兵退回驻城 troops（归田），并返还 30% 兵值金
  * （兵值按 2 金/兵，与 failstate.disarmForGold 同口径）。拒绝行军中队伍。
