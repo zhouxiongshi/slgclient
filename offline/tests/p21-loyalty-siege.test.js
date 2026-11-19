@@ -19,9 +19,9 @@ import { loadConfig } from '../server/config.js';
 import { createWorld, normalizeWorld } from '../server/world.js';
 import {
   ensureStrategy, oathOptions, chooseOath, strategyMap,
-  spawnFactionAssault, assaultEscalationTick, rebindCapitalIfLost,
+  spawnFactionAssault, assaultEscalationTick, rebindCapitalIfLost, rebindArmiesIfStranded,
   stageGoalTick, STAGE_GOALS, UNIFY_CITIES, generalCapacity,
-  recordEvent, defectTick,
+  recordEvent, defectTick, strategyAttack,
 } from '../server/domain/strategy.js';
 import {
   ensureCityEcon, loyaltyTick, LOYAL_BASELINE, generalCapacity as capOf, salaryDueOf,
@@ -294,4 +294,77 @@ test('旬俸合计与 loyaltyTick 的 salaryDue 同源', () => {
   const before = salaryDueOf(state);
   const r = loyaltyTick(state, cfg, ctx);
   assert.equal(r.salaryDue, before, '面板显示的旬俸必须等于实际扣款');
+});
+
+
+/* ---------------------------------------------------------------- 部队驻地
+ *
+ * ★ 2026-11-20 实测缺陷：`army.cityId` 只在「行军抵达」的四个分支里赋值，
+ *   城被攻破时没人管。玩家部队驻陈留 → 陈留被围城打破 → playerCity 迁走，
+ *   但 army.cityId 仍是那座敌城 → 之后每次出征都在 fromOk 处返回
+ *   `{code:6, reason:'not_own_city'}`。实测主动出征 150 旬，95 次请求全部 code 6，
+ *   玩家一次都没能出兵，而地图上还有 4 座城、帐下 10 名武将 —— 永久软锁。
+ */
+
+test('驻地失守：部队退回己方城，武将 cityId 同步', () => {
+  const { state, ctx } = freshState();
+  const army = state.armys.find((a) => (a.generals || []).some((g) => g));
+  assert.ok(army, '开局应有一支带将部队');
+  const lost = Number(army.cityId);
+  assert.equal(state.strategy.cities[lost].owner, 'player');
+  // 造出「驻地已被敌方攻破」的状态
+  state.strategy.cities[lost].owner = 'yuan';
+  const moved = rebindArmiesIfStranded(state, ctx);
+  assert.ok(moved.some((m) => m.armyId === army.id), '悬空部队应被回收');
+  assert.notEqual(Number(army.cityId), lost, '驻地不能继续指向敌城');
+  assert.equal(state.strategy.cities[army.cityId].owner, 'player', '新驻地必须是己方城');
+  const gid = army.generals.find((g) => g);
+  const g = state.generals.find((x) => x.id === gid);
+  assert.equal(Number(g.cityId), Number(army.cityId), '武将驻地必须跟随部队');
+});
+
+test('驻地有效时不动：正常驻扎的部队不应被搬走', () => {
+  const { state, ctx } = freshState();
+  const army = state.armys.find((a) => (a.generals || []).some((g) => g));
+  const before = Number(army.cityId);
+  const moved = rebindArmiesIfStranded(state, ctx);
+  assert.equal(moved.length, 0, '无悬空部队时不应产生任何搬迁');
+  assert.equal(Number(army.cityId), before);
+});
+
+test('行军中不回收：有 marchId 的队伍跳过（抵达分支自会归位）', () => {
+  const { state, ctx } = freshState();
+  const army = state.armys.find((a) => (a.generals || []).some((g) => g));
+  const lost = Number(army.cityId);
+  state.strategy.cities[lost].owner = 'yuan';
+  army.marchId = 999;
+  const moved = rebindArmiesIfStranded(state, ctx);
+  assert.equal(moved.some((m) => m.armyId === army.id), false, '行军中不得硬改驻地');
+  assert.equal(Number(army.cityId), lost, '行军中的 cityId 保持不动');
+});
+
+test('无己方城时不乱动（亡国交 failstate）', () => {
+  const { state, ctx } = freshState();
+  for (const c of Object.values(state.strategy.cities)) c.owner = 'yuan';
+  const before = state.armys.map((a) => a.cityId);
+  const moved = rebindArmiesIfStranded(state, ctx);
+  assert.equal(moved.length, 0);
+  assert.deepEqual(state.armys.map((a) => a.cityId), before);
+});
+
+test('回收后可以再次出征（软锁解除）', () => {
+  const { state, ctx } = freshState();
+  const army = state.armys.find((a) => (a.generals || []).some((g) => g));
+  const lost = Number(army.cityId);
+  // 先确认软锁：驻地被占后出发校验必失败
+  state.strategy.cities[lost].owner = 'yuan';
+  const blocked = strategyAttack(state, cfg, ctx, { cityId: 1, armyId: army.id, frac: 1, fromCityId: lost });
+  assert.equal(blocked.ok, false);
+  assert.equal(blocked.reason, 'not_own_city');
+  // 回收后从新驻地出发：不再卡在 not_own_city
+  rebindArmiesIfStranded(state, ctx);
+  const home = Number(army.cityId);
+  assert.equal(state.strategy.cities[home].owner, 'player');
+  const again = strategyAttack(state, cfg, ctx, { cityId: 1, armyId: army.id, frac: 1, fromCityId: home });
+  assert.notEqual(again.reason, 'not_own_city', '回收后不应再因驻地无效被拒');
 });

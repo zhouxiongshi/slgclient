@@ -1400,7 +1400,55 @@ export function assaultEscalationTick(state, cfg, ctx) {
   }
   /* 城破可能带走都城：统一在函数末尾兜一次，任何路径丢城都不会留下悬空的 playerCity。 */
   rebindCapitalIfLost(state, ctx);
+  /* 城破也可能带走「部队驻地」：同一次兜底里回收，见 rebindArmiesIfStranded。 */
+  rebindArmiesIfStranded(state, ctx);
   return out;
+}
+
+/** ★ 2026-11-20：部队驻地失效时回收残部。
+ *
+ *  根因：`army.cityId` 只在「行军抵达」的四个分支里被赋值（strategyResolveMarches），
+ *  城被攻破时没有任何代码管它。于是出现这样一条死路——
+ *    玩家部队驻陈留 → 陈留被围城打破 → playerCity 迁走（rebindCapitalIfLost 生效），
+ *    但 army.cityId 仍然等于 7（敌城）→ 之后每一次 strategyAttack 都在
+ *    `fromOk` 检查处返回 `{code:6, reason:'not_own_city'}`。
+ *  实测：主动出征 150 旬，95 次出征请求全部 code 6，玩家一次都没能出兵，
+ *  而地图上明明还有 4 座城、帐下 10 名武将 —— 这是**永久软锁**，不是数值问题。
+ *
+ *  处理：把驻地已不属于己方的部队退回「都城（若在）或守军最多的己方城」，
+ *  同步武将 cityId（否则内政/委任仍指向敌城），并给一条提示。
+ *  行军中（marchId 存在）的队伍跳过——抵达分支自会归位，硬改会打断行军。
+ */
+export function rebindArmiesIfStranded(state, ctx) {
+  const st = state?.strategy;
+  if (!st || !Array.isArray(state.armys) || !state.armys.length) return [];
+  const own = Object.entries(st.cities || {})
+    .filter(([, c]) => c && c.owner === 'player')
+    .map(([id, c]) => ({ id: Number(id), troops: Number(c.troops) || 0 }));
+  if (!own.length) return [];
+  const home = own.find((c) => c.id === Number(st.playerCity))
+    || own.slice().sort((a, b) => b.troops - a.troops)[0];
+  const moved = [];
+  for (const a of state.armys) {
+    if (a.marchId) continue;
+    const cid = Number(a.cityId) || 0;
+    if (cid && st.cities[cid] && st.cities[cid].owner === 'player') continue;
+    const hadSomething = (a.generals || []).some((g) => g) || (a.soldiers || []).some((n) => n > 0);
+    a.cityId = home.id;
+    syncGeneralsCity(state, a, home.id);
+    moved.push({ armyId: a.id, from: cid, had: hadSomething });
+  }
+  const real = moved.filter((m) => m.had);
+  if (real.length) {
+    const nm = strategyMap().cities.find((c) => c.id === home.id)?.name || cityName(home.id);
+    recordEvent(state, `驻地失守，残部退守${nm}重新集结（部队已可再次出征）。`);
+    ctx?.push?.('chat.push', {
+      rid: 0, nickName: '系统', type: 0,
+      msg: `【军情】驻地失守，残部已退守${nm}集结。请在此补兵后再图进取。`,
+      time: Date.now(),
+    });
+  }
+  return moved;
 }
 
 /** ★ 2026-11-20：都城失陷后自动迁都。
