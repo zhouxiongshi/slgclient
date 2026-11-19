@@ -235,7 +235,11 @@ export function disasterTick(state, cfg, ctx) {
       e.morale = Math.max(0, (e.morale ?? 60) - 5);       // 灾害伤民心
       fired.push({ cityId: Number(id), name: cityName(id), type: '蝗灾', text: `${cityName(id)}爆发蝗灾：城内存粮蚀耗四成，未来十日粮产减半，民心 -5。` });
     } else if (roll < (0.03 + 0.02) * risk * civic * orderK) {
-      if (Array.isArray(row.troops)) row.troops = row.troops.map((v) => Math.max(0, Math.round(Number(v) * 0.9)));
+      /* 城池守军权威类型是数字（strategy.cities[id].troops = garrisonOf(c)），
+         旧写 Array.isArray 恒 false，文案说「守军折损一成」却从未生效。 */
+      if (Number.isFinite(Number(row.troops))) {
+        row.troops = Math.max(0, Math.round((Number(row.troops) || 0) * 0.9));
+      }
       e.pop = Math.round(e.pop * 0.95);
       e.disaster = { type: 'plague', name: '瘟疫', day };
       e.morale = Math.max(0, (e.morale ?? 60) - 3);
@@ -438,7 +442,12 @@ export function consumeMarchGrain(state, cityId, need) {
 /** 运输队送达：粮入目标城库。 */
 export function deliverGrain(state, cityId, grain) {
   ensureCityEcon(state);
-  const e = state.strategy?.cityEcon?.[Number(cityId)];
+  const cid = Number(cityId);
+  /* 运输在路上可能耗时数日：到达时城池已被攻陷就不能入库，
+     否则等于给敌方送粮。调用方已有「粮车折返」分支，这里补上归属闸让它真正生效。 */
+  const owner = state.strategy?.cities?.[cid]?.owner;
+  if (owner && owner !== 'player') return false;
+  const e = state.strategy?.cityEcon?.[cid];
   if (!e) return false;
   e.store = Math.min(storeCapOf(e), e.store + Math.max(0, Math.floor(grain)));
   return true;

@@ -5,6 +5,7 @@
  *  3. 政治第六维所有武将初始化即带；官阶按功勋晋升、反哺统帅/政治；
  *  4. 主公六维上调、防御标签改「统帅」、指挥技能 100% 发动 + 回击 35% 起。
  */
+import './_isolate-overrides.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';

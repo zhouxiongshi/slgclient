@@ -279,6 +279,10 @@ export function kernelEventsToRounds(result, idMap, skillLookup) {
     const ids = Object.entries(idMap).filter(([k]) => k.startsWith(isAttacker ? 'd' : 'a'));
     return ids.length ? Number(ids[0][1]) : 0;
   };
+  /* 原版 rounds 的 d_loss 语义恒为「攻方本回合造成的守军损失」。
+     内核 events 里守方也会主动 damage 我方，必须按 actor 前缀隔离，
+     否则守军普攻会被写成「我军攻击守军」，歼敌数虚高且攻守颠倒。 */
+  const isDefender = (actor) => String(actor).startsWith('d');
 
   const rounds = [];
   for (let r = 1; r <= Math.max(1, result.rounds); r += 1) {
@@ -305,6 +309,10 @@ export function kernelEventsToRounds(result, idMap, skillLookup) {
     });
     for (const ev of evs) {
       if (ev.kind !== 'damage' || String(ev.payload.skill ?? '') !== '普通攻击') continue;
+      /* 守军普攻属于守方动作，不能写成 a_id=守将 的伪攻方 hit。
+         原版战报回合结构没有独立的「我方损失」槽，守方普通攻击的完整记录
+         仍保留在 anim.rounds/battleLog.events；这里只跳过会造成误读的 legacy hit。 */
+      if (isDefender(ev.actor)) continue;
       const loss = Math.max(0, Math.round((ev.payload.applied ?? 0) * TROOP_SCALE));
       const hit = hitsByActor.get(ev.actor);
       if (hit) hit.d_loss += loss;
@@ -344,14 +352,20 @@ export function kernelEventsToRounds(result, idMap, skillLookup) {
         hitsByActor.set(se.actor, hit);
         b.push(hit);
       }
-      hit.d_loss += loss;
-      if (String(se.actor).startsWith('d')) hit.d_as.push(skillHit);
+      /* 守方战法的伤害记在 d_as.kill（原版 skillString 会显示「我方损失 N 士兵」），
+         不再叠加到 d_loss；d_loss 只能是攻方造成的守军损失。 */
+      if (!isDefender(se.actor)) hit.d_loss += loss;
+      if (isDefender(se.actor)) hit.d_as.push(skillHit);
       else if (info.class === '追击' || info.class === '被动') hit.a_as.push(skillHit);
       else hit.a_bs.push(skillHit);
     }
     if (b.length > 0) rounds.push({ b });
   }
-  if (rounds.length === 0) rounds.push({ b: [{ a_id: 0, d_id: 0, d_loss: 0 }] });
+  /* 兜底回合必须和 mkHit 同形，否则 resolveBattle 汇总 reportSkillIds 时
+     [...h.a_bs, ...h.a_as, ...h.d_as] 会抛 TypeError（内核零 damage 事件场景）。 */
+  if (rounds.length === 0) {
+    rounds.push({ b: [{ a_id: 0, d_id: 0, d_loss: 0, a_bs: [], a_as: [], d_as: [] }] });
+  }
   return rounds;
 }
 

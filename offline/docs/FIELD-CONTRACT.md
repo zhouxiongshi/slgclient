@@ -78,6 +78,7 @@
 | 战法发动率区间 | `tools/skill-balance.mjs planProb()`（★ 2026-11-17 唯一平衡口径）：指挥/被动恒 **100%**；主动/追击按「伤害率越高、发动率越低」反推，Lv1 **30~45%**、Lv10 **32~50%**，且末级 > 首级。旧实现 27 条战法清一色 70% | % | 整数 | ❌ | 战法面板「发动率」、`tests/skill-balance.test.js` |
 | 战法期望输出指数 | `tools/skill-balance.mjs`：`发动次数 × 发动率(Lv10) × 伤害率(Lv10) × 目标数`。主动/追击收敛在 **300~2000**（每目标 200~950）；指挥为功能型不强求下界，但 ≤2000 | 点 | 整数 | ❌ | 战法平衡验收、`tests/skill-balance.test.js` |
 | 主公战法回击率 | 自身受击时的回击概率：Lv1=35%，每升 1 级 +5%（`ui.levels[].effect_value[1]` = 35+5×(lv−1)，kernel counter.chance 同源）；回击伤害率恒 87% | % | 整数 | ❌ | 战法面板效果是、战报「受击回击」 |
+| E0 控制命中率 | `skills.js kernelSkillAt()` E0 分支：`control_probability = min(1, 原表 Lv1 命中率 × (本等级 effect_value / Lv1 effect_value))`；即 Lv10 = Lv1×2（≤100%），与编辑器/原版 UI 口径同源；旧固定值不成长已废止 | % 小数 | 0.01 | ❌ | 控制战法面板、内核控制判定、战报 |
 | 主公初始属性 | `conf/campaign/protagonist.json`：武力 99／谋略 96／统帅(原 defense 键)91／速度 87／政治 93；玩家可见标签「防御」统一改为「统帅」，内部键 `defense` 不变 | 点 | 整数 | ❌ | 武将卡、编辑器（GM）、战报 |
 | 招募拒绝台词 | `domain/recruit-refusal.js`：拒绝理由拟人化，按武将性格（莽夫/名将/名士等）与谋略高低选台词，汉末语境；不显示「成功率/概率」数字 | — | — | ❌ 只展示 | 酒馆招募 toast |
 | 酒馆在店名单 | `tavern.js guestsNow()` 只返回此刻在店者；界面不再展示「何时到店 / 尚未到店」，不在店武将不出现在酒店 | — | — | ❌ | 城内/主城酒馆名单 |
@@ -95,6 +96,8 @@
 | 俘虏处置按钮视觉 | `panels-ui.js` `#slgPanelsWin .capbtn` | px / 色值 | 13px；常规 `#e8d7a8` on `#2c2f22`；危险 `#f0b39b` | ❌ 只展示 | 六府武将页「招降／放归／处斩」；小字说明 `#b3a88f` |
 | 入门向导（★ 2026-11-18，2026-11-19 修 g3） | `interaction-ui.js GUIDE`（7 关：举义/内政/委任/登庸/出征/粮道/经济），每关「看说明 → 去操作（jumpTo 跳对应面板）→ 我已完成」闭环；g3「探索登庸」必须跳当前城「酒馆」页签，不再跳武将页；可跳过/稍后/按 h 重看，进度存 localStorage | — | — | ❌ 只展示 | 首次进入的分步引导浮窗 `#slgIxGuide` |
 | 战场视觉密度（★ 2026-11-19，纯表现） | `skills.js BATTLE_ANIM_SOURCE drawFigure()`：单槽可视兵 = `min(行×列, ceil(剩余/初始 × 96))`，大屏 6×16、小屏 2~3×10；1 个像素兵代表数十~上百人。**只是表现映射，不改 `soldiers` 数值，不参与任何结算** | 像素兵/槽 | 整数 | ❌ 只展示 | 战斗回放、战报内嵌画面 |
+| 战斗回放兵力初态/终态 | `skills.js BATTLE_ANIM_SOURCE createStage()`：`cur` 开局取战前 `troops`、`dead=false`，事件流逐击扣减；追击/破城溃散等内核事件外折损在结果横幅前用 `remain` 终态校准。**旧实现把战后余兵当初态，导致败方第一帧即 0 兵** | 兵 | 整数 | ❌ 只展示 | 战报内嵌画面、全屏回放 |
+| 原版战报回合 `d_loss` | `battle.js kernelEventsToRounds()`：`d_loss` 恒为「攻方本回合造成的守军损失」。守军普攻不生成伪攻方 hit；守军战法伤害只写 `d_as[].kill`，不叠加 `d_loss`。守方动作完整记录仍在 `anim.rounds` / `battleLog.events` | 兵 | 整数 | ❌ | 原版战报逐回合文本、`battleLog.reportSkillIds` |
 | 武将立绘与技能图标 | `server/portrait-map.json`（构建期由冻结 web/ 的 `card_<cfgId>.png.meta` uuid 生成）→ `/__slg/assets/portraits` → `window.__slgPortraitUrl()`；技能图标为冻结 web/ 的 tactics_1~4。缺失时退文字徽章，绝不显示碎图 | URL | — | ❌ 只展示 | 武将页、征兵槽、出征队伍、战斗将卡 |
 | 事件逾期兜底 | `domain/strategy.js strategyEventTick()`：`pendingEvents[].sinceTurn` 距当前 ≥4 旬时自动取最后一个（保守）选项结算并清出队列，避免剧情永久冻结 | 旬 | 整数 | ❌ | 天下日志「事件·逾期」、事件系统继续出队 |
 

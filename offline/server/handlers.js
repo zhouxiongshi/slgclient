@@ -218,8 +218,18 @@ function tickBuilds(state, cfg) {
 /** 设施加成（复刻 facilityMgr.GetYield / GetDepotCapacity）。 */
 function facilityAdditions(state, cfg) {
   const y = { wood: 0, iron: 0, stone: 0, grain: 0, gold: 0, capacity: 0 };
-  for (const list of Object.values(state.facilities || {})) {
-    for (const f of list) {
+  const localId = Number(state.citys?.[0]?.cityId) || 0;
+  for (const [key, list] of Object.entries(state.facilities || {})) {
+    /* 城池失守后设施表还在，但加成必须归当前城主。
+       ownFacilityList 的键约定：战略城 s<id>，本地主城/旧档用纯数字 id。 */
+    const cid = /^s\d+$/.test(key) ? Number(key.slice(1))
+      : (/^\d+$/.test(key) ? Number(key) : 0);
+    const cityRow = cid ? state.strategy?.cities?.[cid] : null;
+    /* 序章/旧档的本地主城沿用数字键，战略层 mirror 的 owner 可能还是 NPC，
+       但此时设施仍属玩家（不按 mirror 处理）；举义后则一律按当前归属判。 */
+    const localPrologue = cid === localId && state.oath?.done !== true;
+    if (cityRow?.owner && cityRow.owner !== 'player' && !localPrologue) continue;
+    for (const f of list || []) {
       const lv = facilityGetLevel(cfg, f);
       if (lv <= 0) continue;
       const values = cfg.facilityValues(f.type, lv);

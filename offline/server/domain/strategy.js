@@ -138,6 +138,9 @@ export function strategySetScenario(state, sid) {
   delete state.strategy;
   delete state.oath;
   ensureStrategy(state);
+  /* 行军队列随 strategy 一起清空，但锁队标记挂在 armys 上；
+     不清会造成切剧本后队伍永久 pending / 选不中（marchId 指向已消失的队列）。 */
+  for (const a of state.armys || []) delete a.marchId;
   return { ok: true, scenario: scenarioView(state) };
 }
 
@@ -1782,9 +1785,10 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
   const tstate = st.cities[id];
   if (!target || !tstate) return { ok: false, code: 1, reason: 'no_city' };
   if (tstate.owner === 'player') return { ok: false, code: 2, reason: 'own_city' };
-  // 出发城必须能用：己方城，或玩家本城（未举义时本城尚未易帜，沿用旧档语义）
+  // 出发城必须归我：己方城，或未举义时那座尚未易帜的指定起点城。
+  // 举义后都城失守时 playerCity 仍指向旧城，绝不能再当成「无条件可用出发城」。
   const fromState = st.cities[home];
-  const fromOk = fromState && (fromState.owner === 'player' || home === st.playerCity);
+  const fromOk = fromState && (fromState.owner === 'player' || (home === st.playerCity && oathPending(state)));
   if (!fromOk) return { ok: false, code: 6, reason: 'not_own_city' };
   if (home === id) return { ok: false, code: 2, reason: 'own_city' };
   // 行军校验：只能沿既有行军段推进，关隘封锁则过不去
@@ -1811,7 +1815,10 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
   if ((army.soldiers || []).every((n) => !(n > 0))) return { ok: false, code: 4, reason: 'no_troops' };
   /* ★ 2026-11-16：单槽超出「该槽武将官阶带兵上限」的兵退回出发城，不能整槽拉出去。 */
   let overflow = 0;
-  army.soldiers = [0, 1, 2].map((i) => {
+  /* ★ 失败动作不得改状态：钳兵与退兵先算在局部，粮检通过后才写回 army/城库。
+     旧实现先改 army.soldiers 与 fromState.troops，再因缺粮返回 no_grain，
+     玩家一次失败出征就被永久压兵，属于可复现的存档污染。 */
+  const clampSoldiers = [0, 1, 2].map((i) => {
     const n = Math.max(0, Math.floor(Number(army.soldiers?.[i]) || 0));
     const gid = (army.generals || [])[i];
     const g = gid ? (state.generals || []).find((x) => x.id === gid) : null;
@@ -1819,19 +1826,20 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
     if (n > cap) { overflow += n - cap; return cap; }
     return n;
   });
-  if (overflow > 0 && fromState) {
-    fromState.troops = Math.max(0, Math.round(Number(fromState.troops) || 0) + overflow);
-  }
   // 行军粮：实出兵力 × 每日口粮 × 行军日（本作设计：1 兵 1 旬吃 1 粮，路程按日计）
   // 优先从出发城城库扣，城库不足吃全局池并 +25% 损耗
-  const troopsTotal = (army.soldiers || []).reduce((s, v) => s + Math.max(0, Number(v) || 0), 0);
+  const troopsTotal = clampSoldiers.reduce((s, v) => s + Math.max(0, Number(v) || 0), 0);
   const ratio = Math.max(0.01, Math.min(1, Number(frac) || 1));
   const deploy = Math.max(1, Math.round(troopsTotal * ratio));
-  const plan = marchPlan(state, cfg, home, id, army);
+  const plan = marchPlan(state, cfg, home, id, { ...army, cityId: home, soldiers: clampSoldiers });
   const grainCost = marchGrainCost(state, deploy, plan.days, target.terrain);
   const pay = consumeMarchGrain(state, home, grainCost);
   if (!pay.enough) {
     return { ok: false, code: 5, reason: 'no_grain', need: grainCost };
+  }
+  army.soldiers = clampSoldiers;
+  if (overflow > 0 && fromState) {
+    fromState.troops = Math.max(0, Math.round(Number(fromState.troops) || 0) + overflow);
   }
 
   if (!Array.isArray(st.marches)) st.marches = [];

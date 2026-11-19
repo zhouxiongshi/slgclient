@@ -10,6 +10,7 @@
  *   3. 武将编辑器：新增 890001+（loadConfig 注入 → 酒馆客池 → makeGeneral），
  *      初始口径不改当前存档；自建可删、原表条目不可删。
  */
+import './_isolate-overrides.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';

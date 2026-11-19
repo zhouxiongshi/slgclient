@@ -2168,6 +2168,27 @@ build/SLG-Offline-win32-x64/
 - 新增测试：`ui-presentation-hygiene` 本地口径闸、`p11-ui-integrity` 人物卡契约闸；真机取证（`probe-herocard-herocard3.png`）确认在野名士立绘/五维 98-72-96-98-92/13 个缩略头像全部上屏，0 页面错误、0 控制台错误。
 - 改完重打包 + 双态取证 + perf/layout/terms/compliance + check-release 全绿；未改协议消息计数、未改 byteIdentical 基线。
 
+### 17.17 严重 bug 全量修复 / 0 兵力战斗画面根因（2026-11-19 深度测试）
+
+| 编号 | 根因 | 修复落点 |
+|---|---|---|
+| `BUG-01` | 战斗回放 `createStage.buildUnits()` 把战后余兵 `remain` 当开局 `cur`，并把 `remain<=0` 预标记 `dead`，败方第一帧即 0 兵 | 开局改取战前 `troops`、`dead=false`；events 逐击扣血；结果横幅前用 `remain` 终态校准（含追击/破城额外折损） |
+| `BUG-02` | 内核零 damage 事件时兜底 hit 缺 `a_bs/a_as/d_as`，`resolveBattle` 汇总 `reportSkillIds` 抛 `TypeError` | 兜底 hit 与 `mkHit` 同形，三条技能数组恒为空数组 |
+| `BUG-03` | 普攻/战法未按 actor side 分流，守军打我军被写成「我军攻击守军」，歼敌虚高且攻守颠倒 | `kernelEventsToRounds()` 按 `a*/d*` 分流：守军普攻不进 legacy hit；守军战法只进 `d_as.kill`，`d_loss` 只统计我军伤害 |
+| `BUG-04` | E0 控制分支 `control_probability` 固定取原表值，Lv1→Lv10 不成长，与编辑器「Lv10=Lv1×2」冲突 | 按等级倍率放大并夹在 `[0,1]`，Lv1 保留原表值，Lv10 双倍封顶 |
+| `BUG-05` | `makeOfficer` 已滤空战法槽，但 `rosterDefenders` 反查名册时仍 `null.id` 崩溃，旧档守军整城消失 | 同一过滤口径补到 `rosterDefenders` |
+| `BUG-06` | `strategySetScenario` 清 `strategy.marches` 但不清 `armys[].marchId`，切剧本后队伍永久锁死 | 切剧本后遍历 `armys` 删除 `marchId` |
+| `BUG-07` | `strategyAttack` 先按带兵上限压兵并回补守军，再因缺粮返回 `no_grain`，失败动作污染存档 | 钳兵/回补改为局部计算，粮检通过后才写回；`marchPlan` 用局部快照 |
+| `BUG-08` | `fromState.owner==='player' || home===st.playerCity` 是无条件逃生门，举义后都城失守仍可出征 | 逃生门限定为「未举义的指定起点城」，失守都城不再放行 |
+| `BUG-09` | 运输在途时城池被攻陷，`deliverGrain` 不查归属仍入库，等于资敌 | 到达时按 `strategy.cities[id].owner` 拒绝，触发既有「粮车折返」分支 |
+| `BUG-10` | `facilityAdditions` 不查城池归属，失守城设施继续给玩家日产/仓容加成 | 按 `s<id>` / 数字键反解 cityId，明确归属他方即跳过；序章本地主城沿用旧语义 |
+| `BUG-11` | 瘟疫分支 `Array.isArray(row.troops)` 恒 false，文案称「守军折损一成」却从未生效 | 城池守军权威类型为 number，改为数字打折并保持有限非负 |
+
+**纪律与取舍**：
+- 10 项缺陷 + 0 兵力画面根因全部落在既有真链路函数内；`settleWorld` 仍是世界推进唯一入口，没有新增任何手写结算链。
+- 战斗内核结算数值、战报哈希、协议字段、存档结构、`web/` 磁盘产物零改动；本次修正的是错误的字段初始化、side 归属与失败动作写状态。
+- 新增 `tests/bugfix-regression.test.js` 11 条回归锁；`FIELD-CONTRACT.md` 同步登记回放初态/终态、`d_loss` 语义与 E0 控制命中率。
+
 ---
 
 ## 18. 需求 → 设计 → 实现 → 验证 全链路追溯

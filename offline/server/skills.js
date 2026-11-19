@@ -286,7 +286,13 @@ export function kernelSkillAt(cfgId, lv) {
       attack_type: k.attack_type,
       available_round: 0,
       range: rangeOf(s),
-      control_probability: k.control_probability,
+      /* E0 控制槽此前固定取 kernel.control_probability，Lv1→Lv10 永不成长；
+         与编辑器「控制命中率 Lv10=Lv1×2」及 E2 分支口径不一致。
+         这里按同一等级倍率 growth 放大并夹在 [0,1]，
+         Lv1 保持原表命中率，Lv10 取两倍（≤100%）。 */
+      control_probability: k.effect_type === 'CONTROL'
+        ? Math.min(1, (Number(k.control_probability) || 0) * growth)
+        : (k.control_probability || 0),
       control_state: k.control_state,
       bonus_terms: k.bonus_terms.map((b) => ({
         name: b.name,
@@ -2732,8 +2738,11 @@ const BATTLE_ANIM_SOURCE = `;(function () {
           state.units[side + (u.slot == null ? i : u.slot)] = {
             side: side, slot: u.slot == null ? i : u.slot, name: u.name,
             cfgId: u.cfgId || 0, skills: u.skills || [],
-            troops: Math.max(1, u.troops), cur: Math.max(0, u.remain),
-            dead: u.remain <= 0, x: 0, y: 0, lungeT: -1, flashT: -1, fallT: -1,
+            /* ★ 0 兵力战斗画面根因：旧代码把战后余兵 remain 当开局当前兵力，
+               败方第一帧就 cur=0/dead=true，看起来像「一方有兵、一方 0 兵开打」。
+               动画必须从战前兵力 troops 起画，由事件流逐击扣到终态。 */
+            troops: Math.max(0, u.troops), cur: Math.max(0, u.troops),
+            dead: false, x: 0, y: 0, lungeT: -1, flashT: -1, fallT: -1,
             stateText: '', stateT: 0, skillT: -1,
           };
         });
@@ -2766,9 +2775,26 @@ const BATTLE_ANIM_SOURCE = `;(function () {
           t += Math.max(200, dur * 0.55);
         });
       });
-      list.push({
-        t: t, fn: function (c) {
-          c.resultBanner = anim.winner === 2 ? '胜' : (anim.winner === 0 ? '败' : '平');
+    /* 内核事件流只覆盖战斗中的 damage/heal；追击与破城溃散在 remain 里二次折损。
+       这里在结果横幅前做一次终态校准，保证「开局满兵 → 逐击扣减 → 战后余兵」闭环，
+       而不是直接把战后余兵当开局状态。 */
+    list.push({
+      t: t, fn: function () {
+        [['a', anim.a && anim.a.units], ['d', anim.d && anim.d.units]].forEach(function (pair) {
+          (pair[1] || []).forEach(function (u, i) {
+            var unit = state.units[pair[0] + (u.slot == null ? i : u.slot)];
+            if (!unit) return;
+            var remain = Math.max(0, Number(u.remain) || 0);
+            unit.cur = remain;
+            if (remain <= 0 && !unit.dead) { unit.dead = true; unit.fallT = performance.now(); }
+          });
+        });
+      },
+    });
+    t += 1;
+    list.push({
+      t: t, fn: function (c) {
+        c.resultBanner = anim.winner === 2 ? '胜' : (anim.winner === 0 ? '败' : '平');
           c.resultColor = anim.winner === 2 ? '#e8c670' : (anim.winner === 0 ? '#c0392b' : '#9aa0a6');
         },
       });

@@ -141,7 +141,10 @@ export function rosterDefenders(state, cfg, owner, cityId, level, exclude = []) 
     hasPrPoint: 0, usePrPoint: 0, attack_distance: 0,
     force_added: 0, strategy_added: 0, defense_added: 0,
     speed_added: 0, destroy_added: 0, star_lv: 0, parentId: 0,
-    skills: (g.skills || []).slice(0, 3).map((s) => ({ id: Number(s.id), lv: Number(s.lv) || 1, cfgId: Number(s.id) })),
+    /* 与 makeOfficer 同源：名册/旧档的战法槽允许 [skill, null, null]，
+       反查守将时同样先滤空槽，避免 null.id 抛错让整座城的守军消失。 */
+    skills: (g.skills || []).filter(Boolean).slice(0, 3)
+      .map((s) => ({ id: Number(s.id || s.cfgId), lv: Number(s.lv) || 1, cfgId: Number(s.id || s.cfgId) })),
     state: 0,
   }));
 }
