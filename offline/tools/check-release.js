@@ -669,7 +669,7 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
      war.digest.done 真点「进城治理」并清空；本战未占城时不得拿 digest=0 假绿，
      也不该硬红（战败本来就没有新城可消化）。条件闸比无条件放行更严。 */
   const dgPath = byId.get('war.digest.after');
-  const needDigest = !!dgPath && !/digest=0/.test(String(dgPath.text || ''));
+  const needDigest = !!dgPath && !/digest=0/.test(String(dgPath.sample || dgPath.text || ''));
   const digestOk = needDigest ? chainOk('war.digest.done') : true;
   check('真实点击 E2E「推演→确认→战报→（占城则）消化」链路完整（tools/ui-audit.js）',
     !!a?.passed && chain.every(chainOk) && digestOk,
