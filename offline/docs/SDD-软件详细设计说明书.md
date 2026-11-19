@@ -2236,10 +2236,11 @@ build/SLG-Offline-win32-x64/
 | `LIVE-09` | **18 城之后无目标**。`STAGE_GOALS` 只到 18 城且只播一行字，沙盘没有终局 | 常量抽到零依赖叶子 `domain/stage-goals.js`（panels 与结算同源）；补 30 城「霸业」；达成发**实际收益**（金/名望/编制）；新增一统线 45 城 → `strategy.sandboxEnding`，只结算一次、不硬中断 |
 | `LIVE-10` | **养人成本不可见**：玩家看不到「帐下 12 人每旬 720 金」，只会突然发现府库见底 | `salaryDueOf()` 与 `loyaltyTick` 同源上屏；战略页新增「帐下武将 x/y」「旬俸合计」两卡 |
 | `LIVE-11` | **部队驻地悬空 = 永久软锁**。`army.cityId` 只在 `strategyResolveMarches` 的四个分支里赋值，城被攻破时无人处理：部队驻陈留 → 陈留被围破 → `playerCity` 迁走（`LIVE-06` 已修）但 `army.cityId` 仍是那座敌城 → 之后每次 `strategyAttack` 都在 `fromOk` 返回 `{code:6,not_own_city}`。实测「主动出征 150 旬」：地图上还有 4 城、帐下 10 将、府库充盈，**95 次出征请求全部被拒，一次都没能出兵** | 新增 `rebindArmiesIfStranded()`，在 `assaultEscalationTick` 末尾与迁都同批兜底：驻地失效的部队退回「都城或守军最多的己方城」，同步武将 `cityId` 并播报；行军中跳过。修复后同一探针 5→15 城、兵力 7200、金 32 万 |
+| `LIVE-12` | **事件冷却字段是死配置**。`events.json` 给条件事件配了 `cooldown: 8`，但 `selectEvents()` 只在 exclusive 挤掉时写 1 旬冷却，配置里的值从没被读过。条件长期成立的事件（流民就食 / 金盈库满 / 仓廪充盈）每 4~5 旬重新触发，150 旬同一条刷 33 次、每次连播三行（触发 + 抉择 + 逾期），占满 418 条事件流的 96 条 | `selectEvents()` 选中即写冷却：有配置按配置，非 `once` 未配置走默认 6 旬。修复后同一探针该事件 33 → 18 次（150÷8） |
 
 **踩坑记录（给后人省一次调试）**：`export { X } from './x.js'` **只转出、不建立本地绑定**。把 `STAGE_GOALS` 搬走后只写 `export ... from`，文件内 `stageGoalTick` 引用 `STAGE_GOALS` 即 `ReferenceError`——而 `node -e "import(...)"` 不会报错（模块能加载，函数没被调用）。表现是 90 个与忠诚无关的测试集体失败。必须 `import` 后再 `export`。
 
-**纪律**：`settleWorld` 仍是唯一世界推进入口；`web/` 零改动；未动伤害公式、`troop_factor`、`Lv10=Lv1×2`；新增 `tests/p21-loyalty-siege.test.js` **22 条**回归锁（每条对应上表一个缺陷）。
+**纪律**：`settleWorld` 仍是唯一世界推进入口；`web/` 零改动；未动伤害公式、`troop_factor`、`Lv10=Lv1×2`；新增 `tests/p21-loyalty-siege.test.js` **22 条** + `tests/p22-event-cooldown.test.js` **5 条**回归锁（每条对应上表一个缺陷）。
 
 **对照实验（同一缺陷的不同玩法）**：`LIVE-01~03` 修完后，用两支探针对比同一份代码——「挂机不动」150 旬丢掉 4 座城、府库见底；「正常管理」120 旬**零武将流失**、帐下 17 人、忠诚 71~100。这说明忠诚的表现是**玩法选择的结果**，不是数值把人耗死。唯一需要修的是 `LIVE-11` 那种「玩家想做但做不到」的软锁。
 

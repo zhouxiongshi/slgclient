@@ -37,6 +37,9 @@ function exclusiveKey(e) {
   return e.exclusive && e.exclusive.length ? e.exclusive.slice().sort().join('|') : null;
 }
 
+/** 未配 cooldown 的非 once 事件，两次之间至少隔几旬（见 selectEvents 注释）。 */
+const DEFAULT_EVENT_COOLDOWN = 6;
+
 /**
  * 事件筛选。events 是 conf/campaign/events.json 的数组（已过 schema 校验）。
  * 返回 { selected, deferred }；调用方应把 selected 呈现给玩家，
@@ -79,6 +82,15 @@ export function selectEvents(events, ctx, state, opts = {}) {
     }
     selected.push(e);
     if (e.once) es.fired[e.id] = ctx.turn;
+    /* ★ 2026-11-20：选中即写冷却。
+       旧实现只在 exclusive 挤掉时写 1 旬冷却，`events.json` 里配的 `cooldown: 8`
+       从来没有被读过——条件成立的常驻事件（流民就食 / 金盈库满）于是每 4~5 旬
+       重新触发一次：150 旬实测同一条事件刷 33 次、连播三行（触发 + 抉择 + 逾期），
+       占满 418 条事件流里的 96 条。玩家自己的战事被这些背景事件挤出视野。
+       现在：有 cooldown 配置就按配置，没有的（非 once）走默认 6 旬。 */
+    const cd = Number(e.cooldown) > 0 ? Math.floor(Number(e.cooldown))
+      : (e.once ? 0 : DEFAULT_EVENT_COOLDOWN);
+    if (cd > 0) es.cooldown[e.id] = cd;
   }
   return { selected, deferred };
 }

@@ -3347,9 +3347,10 @@ export function strategyViewState(state, cfg = null) {
         faction: g.faction || '', patrol: !!g.patrol,
         targetCity: tid,
         targetName: tid ? cityNameById(tid) : '',
-        /* 距离围城开始还有几天（负值=已围）；到 SIEGE_MAX_DAYS 粮尽自退 */
-        daysToSiege: Math.round(SIEGE_GRACE_DAYS - (today0 - spawnDay)),
-        daysToWithdraw: Math.round(SIEGE_MAX_DAYS - (today0 - spawnDay)),
+        /* 距离围城开始还有几天（已围则为 0，用 besieging 判断状态——不要用负值当状态码）；
+           到 SIEGE_MAX_DAYS 粮尽自退。 */
+        daysToSiege: Math.max(0, Math.round(SIEGE_GRACE_DAYS - (today0 - spawnDay))),
+        daysToWithdraw: Math.max(0, Math.round(SIEGE_MAX_DAYS - (today0 - spawnDay))),
         besieging: !!(row && row.besieged),
         targetMorale: econ ? Math.round(Number(econ.morale) || 0) : null,
       };

@@ -115,6 +115,7 @@
 | 原版战报回合 `d_loss` | `battle.js kernelEventsToRounds()`：`d_loss` 恒为「攻方本回合造成的守军损失」。守军普攻不生成伪攻方 hit；守军战法伤害只写 `d_as[].kill`，不叠加 `d_loss`。守方动作完整记录仍在 `anim.rounds` / `battleLog.events` | 兵 | 整数 | ❌ | 原版战报逐回合文本、`battleLog.reportSkillIds` |
 | 武将立绘与技能图标 | `server/portrait-map.json`（构建期由冻结 web/ 的 `card_<cfgId>.png.meta` uuid 生成）→ `/__slg/assets/portraits` → `window.__slgPortraitUrl()`；技能图标为冻结 web/ 的 tactics_1~4。缺失时退文字徽章，绝不显示碎图 | URL | — | ❌ 只展示 | 武将页、征兵槽、出征队伍、战斗将卡 |
 | 事件逾期兜底 | `domain/strategy.js strategyEventTick()`：`pendingEvents[].sinceTurn` 距当前 ≥4 旬时自动取最后一个（保守）选项结算并清出队列，避免剧情永久冻结 | 旬 | 整数 | ❌ | 天下日志「事件·逾期」、事件系统继续出队 |
+| 事件冷却 | `domain/event-engine.js selectEvents()`（★ 2026-11-20）：**选中即写 `state.events.cooldown[id]`**——有 `cooldown` 配置按配置（如「流民就食」8 旬），非 `once` 且未配置走默认 **6 旬**；`eventCooldownTick()` 每旬递减。旧实现只在 exclusive 挤掉时写 1 旬冷却，`events.json` 里的 `cooldown` 是死配置，条件长期成立的事件每 4~5 旬重刷（实测 150 旬同一条刷 33 次、连播三行，占 418 条事件流的 96 条） | 旬 | 整数 | ❌ | 事件触发频率、天下日志事件流 |
 
 ## 历史教训（写死，防回归）
 
