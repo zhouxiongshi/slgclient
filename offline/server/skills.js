@@ -4317,9 +4317,9 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         + list.map(function (g) {
           return '<div class="fg"><b>' + esc(g.name) + '</b>'
             + (g.skills && g.skills.length
-              ? g.skills.map(function (sk) {
+              ? g.skills.filter(Boolean).map(function (sk) {
                 return '<div class="fs">「' + esc(sk.name) + '」' + esc(sk.effect || '') + '</div>';
-              }).join('')
+              }).join('') || '<div class="fs" style="opacity:.6">无战法</div>'
               : '<div class="fs" style="opacity:.6">无战法</div>')
             + '</div>';
         }).join('') + '</div>';

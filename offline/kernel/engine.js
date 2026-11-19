@@ -51,8 +51,10 @@ function cloneUnits(inputs) {
             pos,
             attack_range,
             states: [],
-            buffs: [],
-            reactions: [],
+            /* ★ 2026-11-19：开局常驻加成/反应可注入（缺省空数组，旧用例逐字节不变）。
+               游戏层用它表达系统级修正（如兵力压制带来的减伤），不需要伪造战法。 */
+            buffs: Array.isArray(u.initial_buffs) ? structuredCloneSafe(u.initial_buffs) : [],
+            reactions: Array.isArray(u.initial_reactions) ? structuredCloneSafe(u.initial_reactions) : [],
             alive: true,
         };
     });

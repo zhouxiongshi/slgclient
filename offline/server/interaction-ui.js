@@ -38,14 +38,17 @@
      每关提供「去操作」按钮直接跳到对应面板，玩家做完点「我已完成」推进，
      形成「看说明 → 去操作 → 完成」的闭环；done 仍是情境标记，供后续自动判定用。
      修正 g3 旧文案（曾写死一个具体成功增幅，与当前不显示概率的口径冲突）。 */
+  /* ★ 2026-11-19 玩法修复：旧顺序把「编队出征」排在「征兵」之前，默认 800 兵
+     去撞 1750 守军必全灭，玩家第一场仗就是送死。现在先教征兵与钱粮，再教出征，
+     并在出征关直接给「我军 / 守军 / 建议兵力」的对比口径。 */
   var GUIDE = [
     { id: 'g0', title: '举义起兵', hint: '先在「举义」页选一位主公与起始城——这是整个游戏的第一块可点屏幕。选定后你才拥有一座城与第一批武将。', term: 'juyi', jump: 'strategy' },
     { id: 'g1', title: '选城与内政', hint: '点开一座己方城，看「人口 / 城库 / 灾害风险」，再点「内政」做一次开发。开发度越高，逐旬产量越高。', term: 'neizheng', jump: 'city', done: 'cityOpened' },
     { id: 'g2', title: '委任与报告', hint: '在武将页委任一名官员。开发度逐旬推进，回合报告会写清「谁让哪座城涨了多少」。', term: 'weiren', jump: 'general', done: 'appointed' },
     { id: 'g3', title: '探索登庸', hint: '在酒馆探索在野贤才。对方可能婉拒——多登门几次，精诚所至或有转机。', term: 'dengyong', jump: 'tavern', done: 'explored' },
-    { id: 'g4', title: '编队出征', hint: '在「出征」页编好队伍，选出发城与目标城，再确认开战。行军时长按里程 ÷ 速度计算，地图军标逐日推进。', term: 'chuzheng', jump: 'war', done: 'attacked' },
+    { id: 'g4', title: '征兵与钱粮', hint: '出征之前先补兵：人口 → 兵役 → 征兵。每座城每旬有征兵名额，兵力不足时开战必败。采石场产石 → 修墙/城防，逐城产量汇入府库、俸禄影响忠诚。', term: 'renkou', jump: 'city', done: 'economyRead' },
     { id: 'g5', title: '粮道与运粮', hint: '切到「粮道」透镜看补给线。出征前看出发城城库能撑几日，不足先在城内运粮，断粮会掉民心与守军。', term: 'liangdao', jump: 'city', done: 'transported' },
-    { id: 'g6', title: '经济与征兵', hint: '人口 → 兵役 → 征兵，采石场产石 → 修墙/城防，逐城产量汇入府库、俸禄影响忠诚。这是一条完整回路。', term: 'renkou', jump: 'city', done: 'economyRead' },
+    { id: 'g6', title: '编队出征', hint: '在「出征」页编好队伍，选出发城与目标城。面板会同时给出我军兵力与守军兵力——守军明显更多时先回去征兵，再确认开战。', term: 'chuzheng', jump: 'war', done: 'attacked' },
   ];
 
   var S = {

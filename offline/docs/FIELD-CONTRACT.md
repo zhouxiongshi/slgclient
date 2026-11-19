@@ -13,7 +13,9 @@
 | 金（国库） | `interaction/state.treasury.gold`（底层 `state.strategy.resources[faction].gold`） | 两 | 整数 | ❌ 只能显示 | 顶栏、任务确认、外交 |
 | 逐城粮 | `state.strategy.cityEcon[id].store` | 斛 | 整数 | ❌ | 城卡、粮道透镜、出征面板 |
 | 全国粮合计 | `interaction/state.treasury.grain`（城库汇总的显示值） | 斛 | 整数 | ❌ | 顶栏（仅显示，禁止参与判定） |
-| 城日产金/粮 | `city-econ.js cityYield()` | 两·斛/日 | 整数（trunc） | ❌ | 城卡经济行 |
+| 城日产金/粮 | `city-econ.js cityYield()`：金 `60 × 开发度/50 × 被围 × 民心`、粮 `38 × 开发度/50 × …`（★ 2026-11-19 上调：旧系数 20/30 下 5 城金产仅 274/旬，不够付 380 的武将旬俸，占城是纯负收益） | 两·斛/日 | 整数（trunc） | ❌ | 城卡经济行 |
+| 府库上限 | `handlers.totalYield`：有城后 `100000 + 城数×20000 + 仓廪设施`，无城沿用配置 100 万（★ 2026-11-19：旧值固定 100 万，木/铁/石 20 旬内全部封顶，采集失去意义） | 单位 | 整数 | ❌ | 府库条、`applyDays` 截顶 |
+| 领地建筑产量 | `handlers.buildYield()`：**举义后不再计入**（`state.oath.done`），序章坞堡阶段照常（★ 2026-11-19：旧实现把坞堡「土地 Lv.7」的 7000 石/日一直发到战略层，实测 10 旬把石头从 1 万顶到 74 万） | 单位/日 | 整数 | ❌ | 物资去向页、序章坞堡面板 |
 | 逐旬内政增量 | `interior-task.js taskView().perTick` | 点/旬 | 整数 | ❌ | 内政任务卡 |
 | 内政工期档位阈值 | `interior-task.js OFFICER_TICKS_TOP=85 / OFFICER_TICKS_OK=68`（**百分制 0~100**） | 属性点 | 整数 | ❌ | 内政任务卡「预计 N 旬完工」 |
 | 国库沉淀税 | `economy.js applyDays()` 的 `hoardTaxPct`（参数表 `goldHoardTaxPct`，默认 4%/旬）；免税额 = 10 × 每旬金毛产 | 两 | 整数（floor） | ❌ | 府库流水「国库沉淀税」、顶栏金 |
@@ -34,6 +36,8 @@
 | 推演结论 | `strategy.js previewAssault()`（只读沙盒） | — | — | ❌ | 出征面板推演卡 |
 | 战斗种子 | `battle.js battleSeedFor(armyId, x, y, arriveDay)` | uint32 | — | ❌ 只有一个公式 | 结算与推演共用 |
 | 诸侯守将/名册等级 | `domain/ai-roster.js`（`state.strategy.rosters[fid]`；★ P16 名册优先于旧 hash，`defenseFor` 在 level≥2 城取真实等级/战法，1 级城保留 hash 守 P0-3） | 级 | 整数 | ❌ 只读显示 | 战报守将、遭遇页、天下日志（学战法/升级/招降/挖角/求援文案） |
+| 来犯军围城 | `domain/strategy.js assaultEscalationTick()`（★ 2026-11-19）：来犯军出现 **40 日**不清剿 → 城 `besieged`（产出减半），围城每旬守军 −2%、民心 −3、治安 −1；守军归零则城陷；**120 日**仍不破则客军粮尽自退；同势力场上至多 2 支 | 日/% | 整数 | ❌ | 城卡「被围」标、军情推送、围城条 |
+| 沙盘分段目标 | `domain/strategy.js STAGE_GOALS`：6 城「立足」/ 10 城「割据」/ 18 城「争雄」，跨过阈值记一次里程碑（`strategy.stages`） | 城 | 整数 | ❌ | 里程碑推送、大事记 |
 
 ## C. 战斗
 
@@ -49,6 +53,9 @@
 | 破城 | `wallHp` 归零即破：当阵守军再折损 `WALL.breachRout=12%`，城池 `defense`（AI 战力估算口径）−0.12 且**只扣一次**（修回一半以上才复位）；**不改变 judgeBattle 的占城判定** | — | — | ❌ | 战报「城墙已破」、天下日志「城墙崩塌」 |
 | 城墙修复 | `strategy.js repairCityWalls()`：未被围的城每旬回 `WALL.repairPerTurn=2%` 上限，被围不修（★ 2026-11-18：**玩家城修复耗石** `WALL.stonePerHp=3` 石/点，石头不足按比例少修、不透支，走 `recordRes` 流水；NPC 城仍自然修复不花玩家石头） | %/旬 | 整数点 | ❌ | 城池内页城墙条（旬结算后变化）、府库石流水 |
 | 逐城石产 | `city-econ.js cityYield().extra.stone`（★ 2026-11-18）：`12 + 等级×8 + 城防开发度/50×16`，汇入 `cityLayer().stone` → `playerStockYield`；城防开发度越高石产越高（投石→修城→石产闭环） | 石/日·城 | 整数 | ❌ | 物资去向页「采石」逐城明细 |
+| 兵力压制减伤 | `battle.js suppressionOf(atk, def)`（★ 2026-11-19）：`clamp(0.88 × (1 − 守军/攻军), 0, 0.5)`，守军不占优时不生效；作为攻方**开局常驻 `damage_reduce`** 注入内核（`initial_reactions`），**不写进任何战法 bonus_terms**，不进原表 | 倍（减伤） | 0.01 | ❌ | 战报「攻方减伤」、推演 |
+| 出征槽位回填 | `battle.js settleArmyBattle()`：未上阵的槽位（该槽无将）兵力**原样带回**，不记 0（★ 2026-11-19：旧实现记 0，等于出征顺手扔掉 2/3 的兵，战报还把没参战的兵算进折损——实测 4000 兵只有 1333 上阵却报「折损 3141」） | 兵 | 整数 | ❌ | 战报 summary、队伍余兵 |
+| 忠诚对战力影响 | `battle.js makeUnit()`：`loyal < 80` 时攻方 `attack_base × (0.88 + loyal/80 × 0.12)`（★ 2026-11-19：此前 `loyal` 只是个 UI 数字，赏赐/忽略都没有反馈） | 倍 | 0.01 | ❌ | 战报、武将面板忠诚提示 |
 
 ## D. 人事
 
@@ -61,6 +68,8 @@
 | 招募事件日志 | `drawGeneral` 八类分支（成功/婉拒/离席/未到/不在本城/金不足/座上无人/连抽逐人）全部 `recordEvent`（★ 2026-11-17）；文案与探索登庸同口径，无英文 reason | — | — | ❌ | 事件卡、战略事件流（最近 8 条） |
 | 自建武将 | `editorCreate()`：cfgId 从 **890001** 起，写 `overrides.json` generals 段 `__custom__`；`config.js loadConfig` 注入 generalByCfg → 酒馆客池/新开局 `makeGeneral` 自动可见；**初始口径，不写当前存档 state**（★ 2026-11-17 FR-34） | — | — | ❌ | 初始数据编辑器（武将页签） |
 | 自建/覆盖战法 | `skill-editor.js`：cfgId 从 **29001** 起（detail_id 9200001+），唯一写入口 `conf/campaign/custom-skills.json`，`skills.js` 五表装载之后合并（同 cfgId/同名覆盖）；保存即 `upsertRuntimeSkill`，UI JsonAsset 与 kernel 同源；编辑器校验与 skill-balance 平衡闸同口径 | — | — | ❌ | 初始数据编辑器（战法页签）、战法面板、内核 |
+| 武将战法三槽 | `general-editor.js SKILL_SLOT_KEYS` = `skillCfgId / skillCfgId2 / skillCfgId3`（★ 2026-11-19）：三槽都可编辑，写 `overrides.generals`，同步 `skills[0..2]`；**只改被编辑的那个槽**（未动的槽保留原等级），新开局 `world.innateSlots()` 生效 | — | — | ❌ | 初始数据编辑器（武将页签「战法装配」）、武将详情 |
+| 内政经验 | `interior-task.js advanceInteriorTasks()`：每旬 **5 点**给执行武将（`applyGeneralExp`；lv1→2 需 40 点，约 8 旬一级）（★ 2026-11-19：此前经验只来自战斗，纯内政武将永远 1 级） | 点/旬 | 整数 | ❌ | 武将面板经验条、成长推送 |
 | 招降率 | `captive-rules.js`（单一公式） | % | 整数 | ❌ | 俘虏面板 |
 | 放归名望 | `captives.js releaseCaptive()`：`state.strategy.fame += FAME_PER_RELEASE(2)`（★ 2026-11-16，取事件系统既有 +1~+4 中位；处斩 −2） | 点 | 整数 | ❌ | 放归 toast、名望显示；消费见下行 |
 | 名望→来投率 | `captive-reputation.js defectRateWithFame()`：`rate = min(0.45, base + min(40,fame)/700)`（★ 2026-11-16，城数/武将名望与放归名望同轴；封顶 40 点防刷） | 小数 | — | ❌ | `strategy.js defectTick()` 在野慕名来投判定 |

@@ -50,6 +50,22 @@ export function attackerOddsMul(atkTroops, defTroops) {
   return Math.min(6.5, 1 + (odds - 1) * 11.2);
 }
 
+/**
+ * 兵力压制：守军明显少于攻军时，攻方承受的伤害降低（守军打不动人多的那方）。
+ * 旧口径只有 attackerOddsMul 放大攻方攻击力，不改变「攻方挨打」的强度，
+ * 于是 4000 兵与 12000 兵打同一座城，折损率都是 ~70%（探针 p11）。
+ * ratio = 守军/攻军：≥1 无压制；0.58 → 37%；≤0.43 封顶 50%。
+ * 只作为开局常驻 reaction 注入内核，不写进任何战法的 bonus_terms。
+ */
+export function suppressionOf(atkTroops, defTroops) {
+  const a = Math.max(0, Number(atkTroops) || 0);
+  const d = Math.max(0, Number(defTroops) || 0);
+  if (!(a > 0) || !(d > 0)) return 0;
+  const ratio = d / a;
+  const v = 0.88 * (1 - ratio);
+  return Math.max(0, Math.min(0.5, Math.round(v * 100) / 100));
+}
+
 export function judgeBattle({ winner, aStart, dStart, aLeft, dLeft }) {
   const aRout = aStart > 0 && aLeft / aStart <= ROUT_RATIO;
   const dRout = dStart > 0 && dLeft / dStart <= ROUT_RATIO;
@@ -199,6 +215,14 @@ function makeUnit(unitId, side, general, cfg, troops, pos = 0) {
     : 1;
   hero.attack_base = Math.min(100, Math.max(1, Math.round(hero.attack_base * apt)));
   hero.defence_base = Math.min(100, Math.max(1, Math.round(hero.defence_base * apt)));
+  /* ★ 2026-11-19 忠诚消费点：低忠诚的武将出工不出力，攻击力最低打 88 折。
+     旧版 loyal 只在 UI 上有个数字（82~92 起步），玩家赏赐/忽略都没有任何反馈。
+     忠诚 80 以上基本无感，50 折 0.925，20 折 0.88——温和但可感知。 */
+  const loyal = Number(general.loyal);
+  if (Number.isFinite(loyal) && loyal < 80) {
+    const loyalMul = 0.88 + Math.max(0, Math.min(80, loyal)) / 80 * 0.12;
+    hero.attack_base = Math.max(1, Math.round(hero.attack_base * loyalMul));
+  }
   return {
     unit_id: unitId,
     side,
@@ -626,13 +650,35 @@ export function resolveBattle({
     ...battleConfig(),
     round_limit: Math.round(Number(knobGet(state, 'roundMax')) || 8),
   };
+  /* ★ 2026-11-19 玩法修复：兵力压制减伤（见 suppressionOf 注释）。
+     不是新战法，不进 bonus_terms，也不改原表；只在开战前给攻方挂一条常驻减伤。 */
+  const supAtk = units.filter((u) => u.side === 1).reduce((s, u) => s + (Number(u.troops) || 0), 0);
+  const supDef = units.filter((u) => u.side === 2).reduce((s, u) => s + (Number(u.troops) || 0), 0);
+  const suppress = suppressionOf(supAtk, supDef);
+  if (suppress > 0) {
+    for (const u of units) {
+      if (u.side !== 1) continue;
+      u.initial_reactions = [{
+        kind: 'damage_reduce', skill_id: -1, skill_name: '兵力压制', rounds: 0, value: suppress,
+      }];
+    }
+  }
   const kernel = runBattle({ units, seed: battleSeed, config: fightCfg });
 
   // 按槽位回填：没上阵的槽位余兵记 0（它们本来就没有兵）
   const attackRemain = [0, 0, 0];
+  const fielded = new Set(attackers.map(({ slot }) => slot));
   attackers.forEach(({ slot }, i) => {
     attackRemain[slot] = Math.max(0, Math.round((kernel.final_troops[`a${i}`] ?? 0) * TROOP_SCALE));
   });
+  /* ★ 2026-11-19 玩法修复：有兵但「没将」的槽位不会上阵，旧实现把它的余兵记 0，
+     等于出征时把这几槽兵直接扔掉，战报还把没参战的兵算进折损（实测 4000 兵出征
+     只有 1/3 真正上阵，却报「折损 3141」）。现在原样留在队伍里带回城。 */
+  for (const slot of [0, 1, 2]) {
+    if (!fielded.has(slot)) {
+      attackRemain[slot] = Math.max(0, Math.floor(Number(beginSoldiers[slot]) || 0));
+    }
+  }
   const defenseRemain = defenders.map((_, i) =>
     Math.max(0, Math.round((kernel.final_troops[`d${i}`] ?? 0) * TROOP_SCALE)));
 

@@ -2191,6 +2191,36 @@ build/SLG-Offline-win32-x64/
 
 ---
 
+### 17.18 玩法缺陷全量修复 / 沙盘压力与扩张闭环（2026-11-19 用户「修复所有问题」）
+
+诊断阶段用官方入口实跑（`settleWorld` / `advanceToNextTurn` / `strategyAttack`），脚本在仓外 `D:\WorkBuddy\slg\_probe\`。**其中两条诊断结论在实施时被实测推翻，记录在此以免后人对错案再做一遍。**
+
+| 编号 | 根因（含实测证据） | 修复落点 |
+|---|---|---|
+| `GAME-01` | 出征把「有兵但该槽无将」的兵力当折损扔掉：`attackRemain` 对所有槽位按内核余兵回填，未上阵槽位记 0。实测 4000 兵出征只有 1333 真正上阵，战报却报「折损 3141」 | `settleArmyBattle()` 记 `fielded` 集合，未上阵槽位原样带回兵力；折损只算真实参战 |
+| `GAME-02` | 兵力优势只放大攻方攻击力（`attackerOddsMul`），不改「攻方挨打」，以多打少仍按高比例折损 | 新增 `suppressionOf(atk,def)=clamp(0.88×(1−守/攻),0,0.5)`，作为攻方开局常驻 `damage_reduce` 注入内核（`UnitInput.initial_reactions`，缺省空数组，黄金向量不变） |
+| `GAME-03` | 序章坞堡领地建筑（「土地 Lv.7」石 7000/日）举义后继续供资源，实测 10 旬把石头顶到 74 万、20 旬撞 100 万上限 | `buildYield()` 在 `state.oath.done` 后返回零；序章阶段照旧 |
+| `GAME-04` | 城产过低：金 20/日系数下 5 城仅 274/旬，不够付 380 武将旬俸，占城是负收益 | `cityYield()` 金 20→60、粮 30→38；维持费仍按毛产 35%，5 城净 +150/旬 |
+| `GAME-05` | 府库上限固定 100 万，木/铁/石 20 旬内全部封顶 | `totalYield()` 改为 `10 万 + 城数×2 万 + 仓廪`（5 城约 20 万），无城沿用配置 |
+| `GAME-06` | 向导 `GUIDE` 把「编队出征」排在「征兵」之前，默认 800 兵撞 1750 守军必全灭，且战败不提示下一步 | 顺序改为 征兵(g4) → 粮道(g5) → 出征(g6)；战败 summary 在守军 >1.2 倍时加「先征兵补足」 |
+| `GAME-07` | 武将编辑器只有「自带战法」一个下拉，第 2/3 槽无入口，12 槽只装 4 条 | `SKILL_SLOT_KEYS` 三槽可编辑；`editorSave` 只同步被编辑的槽；编辑器表单只提交「改动过」的字段（`data-orig`），避免改武力把战法清空 |
+| `GAME-08` | 存档 `skills` 含半残对象（`{id:0}`、字符串、lv>10），下游 `.map(s=>s.name)` 抛 `TypeError`（ai-roster 同源） | `normalizeWorld` 统一清成 `null` 或 `{id,lv,cfgId}`，lv 钳到 1~10 |
+| `GAME-09` | 诸侯来犯只是家门口摆一支野战军，玩家不理也没有任何后果——挂机 130 旬 5 城不失，世界零压力 | 新增 `assaultEscalationTick()`：40 日不清剿即围城（`besieged`，产出减半），每旬守军 −2%/民心 −3；守军归零则城陷；120 日粮尽自退；同势力场上限 2 支 |
+| `GAME-10` | AI 讨伐玩家门槛为「城数 ≥3 或占比 ≥25%」，5 城时永远进不了池子，AI 全程只互殴 | `strategy-brain.playerOption` 门槛降为「≥2 城」，仍受「打得过」与 6 旬冷却约束 |
+| `GAME-11` | 八幕仅序章可玩，沙盘期无目标锚点；`scenarioGoal` 恒 null，偏安结局不可达 | 新增 `STAGE_GOALS`（6/10/18 城）与 `stageGoalTick()`，跨阈值记里程碑并发军情 |
+| `GAME-12` | 纯内政武将永不成长（经验只来自战斗，`exp` 恒 0）；`loyal` 只是 UI 数字 | 内政每旬 +5 经验；`makeUnit` 按 `loyal<80` 折攻（最低 0.88） |
+
+**被实测推翻的两条（不要再按旧诊断改）**：
+- 「战斗回放 1302 回合」：`warReport.rounds` 是 **JSON 字符串**，1302 是字符数；真实回合看 `state.battleLog[-1].rounds`，实测 7 回合/57 事件。
+- 「战法强度 190 倍极差」：那是「概率×伤害率×目标数」的粗口径，未计入发动次数；`tests/skill-balance.test.js` 已有闸门（主动/追击 300~2000、极差 ≤7 倍）且全绿，**不改战法数值**。
+
+**纪律与取舍**：
+- 内核只加「可选初始 reaction/buff」两个向后兼容字段（缺省空数组），`battle-core` 37/37 黄金向量不变；未改伤害公式、未改 `troop_factor`、未改 `Lv10=Lv1×2`。
+- 围城只读 `state.garrisons` 与 `strategy.cities`，不新建实体、不加协议字段；`settleWorld` 仍是唯一入口（新增 `assaultEscalationTick` / `stageGoalTick` 两次调用）。
+- `web/` 磁盘产物零改动；新增 `tests/p20-gameplay-fixes.test.js` 13 条回归锁。
+
+---
+
 ## 18. 需求 → 设计 → 实现 → 验证 全链路追溯
 
 | 需求组（PRD） | 本文设计章节 | 主要实现 | 验证证据 |

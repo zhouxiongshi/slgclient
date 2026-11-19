@@ -33,6 +33,16 @@ function innateOf(cfg, cfgId) {
   return { id, lv: 1, cfgId: id };
 }
 
+/** 三个战法槽（自带 + 编辑器的第二/第三战法）。编辑器改过的槽对新开局立即生效。 */
+function innateSlots(cfg, cfgId) {
+  const ov = loadOverrides().generals?.[String(Number(cfgId))] || {};
+  const slotOf = (v) => {
+    const id = Number(v) || 0;
+    return id && skillById(id) ? { id, lv: 1, cfgId: id } : null;
+  };
+  return [innateOf(cfg, cfgId), slotOf(ov.skillCfgId2), slotOf(ov.skillCfgId3)];
+}
+
 // v3：游戏日、军饷、序章标记。v1/v2 读档时补字段，不丢资源、城池、武将。
 export const SAVE_VERSION = 3;
 
@@ -83,7 +93,7 @@ export function makeGeneral(cfg, id, cfgId, cityId, level = 10) {
     star: g.star ?? 5,
     loyal: 82 + (Number(g.star) || 3) % 11,   // ★ P1 忠诚 82~92（星级微调），旬结算与赏赐改这里
     parentId: 0,
-    skills: [innateOf(cfg, cfgId), null, null],
+    skills: innateSlots(cfg, cfgId),
     talent: null,
     talentUnlocked: false,
     state: 0,
@@ -412,6 +422,17 @@ export function normalizeWorld(state, cfg) {
     applyGeneralExp(g, 0);
     if (!Array.isArray(g.skills)) g.skills = [null, null, null];
     while (g.skills.length < 3) g.skills.push(null);
+    /* ★ 2026-11-19 健壮性：三个槽允许 null（空槽是设计），但不允许半残对象。
+       旧档里出现过 {id:0}、字符串、lv 越界等形态，下游任何 `.map(s => s.name)`
+       都会抛 TypeError（ai-roster 同源崩溃即此）。这里统一清成合法形状。 */
+    g.skills = [0, 1, 2].map((i) => {
+      const s = g.skills[i];
+      if (!s || typeof s !== 'object') return null;
+      const cfgId = Number(s.cfgId ?? s.id);
+      if (!Number.isFinite(cfgId) || cfgId <= 0) return null;
+      const lv = Math.max(1, Math.min(10, Math.round(Number(s.lv) || 1)));
+      return { id: cfgId, lv, cfgId };
+    });
     if (g.isProtagonist || g.skills[0]) continue;
     const innate = innateOf(cfg, g.cfgId);
     if (!innate) continue;

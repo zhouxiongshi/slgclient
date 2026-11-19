@@ -35,6 +35,12 @@ export const EDIT_RANGES = {
 };
 export const EDIT_KEYS = Object.keys(EDIT_RANGES);
 
+/* ★ 2026-11-19 战法装配：旧编辑器只能改「自带战法」（skills[0]），
+   第 2/3 槽在界面上没有任何入口——实测新档 12 个技能槽只装得上 4 条，
+   177 条战法库里 173 条玩家永远摸不到。这里把三个槽都开放为可编辑。 */
+export const SKILL_SLOT_KEYS = ['skillCfgId', 'skillCfgId2', 'skillCfgId3'];
+export const SKILL_SLOT_LABELS = ['自带战法', '第二战法', '第三战法'];
+
 const clampNum = (v, lo, hi) => Math.min(hi, Math.max(lo, Math.round(Number(v))));
 
 /** 一条武将覆盖的净化：只保留可编辑字段、越界钳位、非法战法归 0。 */
@@ -45,9 +51,10 @@ export function sanitizeGeneralEdit(input) {
     const n = Number(src[key]);
     if (Number.isFinite(n)) out[key] = clampNum(n, EDIT_RANGES[key].min, EDIT_RANGES[key].max);
   }
-  if (src.skillCfgId !== undefined) {
-    const n = Number(src.skillCfgId);
-    out.skillCfgId = Number.isFinite(n) && SKILL_BY_ID.has(Math.round(n)) ? Math.round(n) : 0;
+  for (const key of SKILL_SLOT_KEYS) {
+    if (src[key] === undefined) continue;
+    const n = Number(src[key]);
+    out[key] = Number.isFinite(n) && SKILL_BY_ID.has(Math.round(n)) ? Math.round(n) : 0;
   }
   return Object.keys(out).length ? out : null;
 }
@@ -74,6 +81,8 @@ export function editorList(cfg) {
         destroy_grow: Number(g.destroy_grow) || 0,
       },
       skillCfgId: Number(ov?.skillCfgId ?? g.skillCfgId ?? 0),
+      skillCfgId2: Number(ov?.skillCfgId2 ?? g.skillCfgId2 ?? 0),
+      skillCfgId3: Number(ov?.skillCfgId3 ?? g.skillCfgId3 ?? 0),
       overridden: !!ov,
       custom: !!ov?.__custom__,
       isProtagonist: Number(g.cfgId) === 880001,
@@ -92,7 +101,7 @@ function applyToConfig(cfg, cfgId, patch) {
     cfg.generalOriginal.set(Number(cfgId), { ...row });
   }
   for (const [k, v] of Object.entries(patch)) {
-    if (k === 'skillCfgId') row.skillCfgId = v;
+    if (SKILL_SLOT_KEYS.includes(k)) row[k] = v;
     else row[k] = v;
   }
   return true;
@@ -103,31 +112,37 @@ function restoreFromOriginal(cfg, cfgId) {
   const row = cfg.generalByCfg.get(Number(cfgId));
   const orig = cfg.generalOriginal?.get(Number(cfgId));
   if (!row || !orig) return false;
-  for (const k of [...EDIT_KEYS, 'skillCfgId']) {
+  for (const k of [...EDIT_KEYS, ...SKILL_SLOT_KEYS]) {
     if (orig[k] !== undefined) row[k] = orig[k];
     else delete row[k];
   }
   return true;
 }
 
-/** 当前存档里 cfgId 对应武将的自带战法槽（skills[0]）同步。 */
-function syncStateSkill(state, cfgId, skillCfgId) {
+/** 当前存档里 cfgId 对应武将的战法槽同步（支持 1~3 槽，只改本次编辑涉及的那个槽）。 */
+function syncStateSkill(state, cfgId, skillIds) {
   if (!state || !Array.isArray(state.generals)) return 0;
   let n = 0;
   for (const g of state.generals) {
     if (Number(g.cfgId) !== Number(cfgId)) continue;
     if (!Array.isArray(g.skills) || g.skills.length < 3) {
-      g.skills = [null, null, null];
+      const old = Array.isArray(g.skills) ? g.skills.slice(0, 3) : [];
+      while (old.length < 3) old.push(null);
+      g.skills = old;
     }
-    /* ★ 修复：改武将属性/重置时不再把自带战法等级清零。
+    /* ★ 修复：改武将属性/重置时不再把战法等级清零。
        若槽里的 skillCfgId 未变 → 保留原 lv（用户可能已练到高等级）；
        只有换技能或空槽才新建，等级从 1 起。 */
-    const prev = g.skills[0];
-    if (skillCfgId && Number(prev?.cfgId) === Number(skillCfgId)) {
-      g.skills[0] = { id: skillCfgId, lv: Number(prev.lv) || 1, cfgId: skillCfgId };
-    } else {
-      g.skills[0] = skillCfgId ? { id: skillCfgId, lv: 1, cfgId: skillCfgId } : null;
-    }
+    SKILL_SLOT_KEYS.forEach((key, i) => {
+      if (skillIds[key] === undefined) return;   // 本次没编辑这个槽 → 保持存档现状
+      const id = Number(skillIds[key]) || 0;
+      const prev = g.skills[i];
+      if (id && Number(prev?.cfgId) === id) {
+        g.skills[i] = { id, lv: Number(prev.lv) || 1, cfgId: id };
+      } else {
+        g.skills[i] = id ? { id, lv: 1, cfgId: id } : null;
+      }
+    });
     n += 1;
   }
   return n;
@@ -151,12 +166,15 @@ export function editorSave(cfg, state, input) {
 
   applyToConfig(cfg, cfgId, patch || {});
   const row = cfg.generalByCfg.get(cfgId);
-  /* ★ 只有当编辑真正涉及 skillCfgId 或 cfg 行明确配置了它时才同步存档槽；
+  /* ★ 只有当编辑真正涉及战法槽或 cfg 行明确配置了它时才同步存档槽；
      否则（如主角 19001 由运行时注入、cfg 行无此字段）保留存档现状，
      避免改一个武力属性就把主角战法清空。 */
-  const wantSync = Object.prototype.hasOwnProperty.call(patch, 'skillCfgId')
-    || row?.skillCfgId != null;
-  const stateSynced = wantSync ? syncStateSkill(state, cfgId, row.skillCfgId || 0) : 0;
+  const slots = {};
+  for (const key of SKILL_SLOT_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(patch || {}, key)) slots[key] = patch[key];
+    else if (row?.[key] != null) slots[key] = row[key];
+  }
+  const stateSynced = Object.keys(slots).length ? syncStateSkill(state, cfgId, slots) : 0;
   return { ok: true, cfgId, stateSynced, row: editorRowOf(cfg, cfgId) };
 }
 
@@ -171,7 +189,11 @@ export function editorReset(cfg, state, input) {
   saveOverrides({ ...ov, generals });
   restoreFromOriginal(cfg, cfgId);
   const row = cfg.generalByCfg.get(cfgId);
-  const stateSynced = row?.skillCfgId != null ? syncStateSkill(state, cfgId, row.skillCfgId) : 0;
+  const slots = {};
+  for (const key of SKILL_SLOT_KEYS) {
+    if (row?.[key] != null) slots[key] = row[key] || 0;
+  }
+  const stateSynced = Object.keys(slots).length ? syncStateSkill(state, cfgId, slots) : 0;
   return { ok: true, cfgId, stateSynced, row: editorRowOf(cfg, cfgId) };
 }
 
@@ -211,6 +233,8 @@ export function editorCreate(cfg, input) {
     speed_grow: patch.speed_grow ?? 30,
     destroy_grow: patch.destroy_grow ?? 30,
     skillCfgId: patch.skillCfgId ?? 0,
+    skillCfgId2: patch.skillCfgId2 ?? 0,
+    skillCfgId3: patch.skillCfgId3 ?? 0,
     __custom__: true,
   };
   generals[String(cfgId)] = row;
@@ -249,6 +273,9 @@ export function editorRowOf(cfg, cfgId) {
     defense_grow: Number(row.defense_grow) || 0, speed_grow: Number(row.speed_grow) || 0,
     destroy_grow: Number(row.destroy_grow) || 0,
     skillCfgId: Number(row.skillCfgId) || 0,
+    skillCfgId2: Number(row.skillCfgId2) || 0,
+    skillCfgId3: Number(row.skillCfgId3) || 0,
+    skillSlotLabels: SKILL_SLOT_LABELS,
     isProtagonist: Number(row.cfgId) === 880001,
     overridden: !!cfg.generalOriginal?.has(Number(row.cfgId)),
   };

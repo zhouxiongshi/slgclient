@@ -962,7 +962,15 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
           continue;
         }
         // 打玩家的城：换算成本地地图来犯军，走既有战报
-        spawnFactionAssault(state, cfg, ctx, faction, target, troops, drawn?.fromId);
+        const spawned = spawnFactionAssault(state, cfg, ctx, faction, target, troops, drawn?.fromId);
+        if (!spawned) {
+          /* 场上已有 2 支该势力来犯军，不再生成——把抽出来的兵退回出发城，不白扣。 */
+          if (drawn?.fromId && st.cities[drawn.fromId]) {
+            const row = st.cities[drawn.fromId];
+            row.troops = Math.max(0, (Number(row.troops) || 0) + troops);
+          }
+          continue;
+        }
         applied.attacked_player += 1;
         noteMarch(state, faction, order, target, tstate, quote, '来犯', 0, drawn);
         continue;
@@ -1119,6 +1127,10 @@ export function spawnFactionAssault(state, cfg, ctx, faction, targetCity, troops
   if (!city) return;
   const st = ensureStrategy(state);
   if (!Array.isArray(st.marches)) st.marches = [];
+  /* 同势力在场上限 2 支来犯军：多了只会糊地图，不会增加压力。 */
+  const onField = (state.garrisons || [])
+    .filter((g) => g.faction === faction.id && !g.cleared).length;
+  if (onField >= 2) return null;
   const departDay = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
   const srcId = Number(fromId) || Number(Object.entries(st.cities || {})
     .find(([, v]) => v.owner === faction.id)?.[0]) || 0;
@@ -1147,6 +1159,8 @@ export function spawnFactionAssault(state, cfg, ctx, faction, targetCity, troops
     id: nextId(state, 'garrisonId'),
     x: at.x, y: at.y, soldiers, name: build.name, cleared: false, drifted: false,
     faction: faction.id,
+    /* ★ 2026-11-19：记录出现日，围城倒计时从这里算起。 */
+    spawnDay: departDay,
   };
   state.garrisons.push(garrison);
   ctx.push?.('roleBuild.push', build);
@@ -1156,6 +1170,148 @@ export function spawnFactionAssault(state, cfg, ctx, faction, targetCity, troops
     time: Date.now(),
   });
   return garrison;
+}
+
+/* ---------------------------------------------------------------- 分段目标
+ * ★ 2026-11-19 玩法修复：八幕剧本只有序章可玩（acts.json 其余 playable=false），
+ *   进沙盘后玩家只剩「统一全国」这一个远期目标，中间 60 旬没有任何锚点。
+ *   这里补三个沙盘里程碑（不写剧情，只给目标与结算），让中局有节奏。
+ */
+export const STAGE_GOALS = [
+  { id: 'foothold', at: 6, title: '立足', hint: '拿下第 6 座城——你已经不是流寇，是一方势力了。' },
+  { id: 'separatist', at: 10, title: '割据', hint: '10 城在手，州郡侧目。诸侯开始把你写进讨伐名单。' },
+  { id: 'hegemon', at: 18, title: '争雄', hint: '18 城，天下三分有其名。下一步就是州治。' },
+];
+
+export function stageGoalTick(state, cfg, ctx) {
+  const st = ensureStrategy(state);
+  if (!st.stages || typeof st.stages !== 'object') st.stages = {};
+  const owned = Object.values(st.cities || {}).filter((r) => r && r.owner === 'player').length;
+  const hit = [];
+  for (const s of STAGE_GOALS) {
+    if (owned < s.at || st.stages[s.id]) continue;
+    st.stages[s.id] = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+    recordEvent(state, `【${s.title}】${s.hint}`);
+    ctx.push?.('chat.push', {
+      rid: 0, nickName: '系统', type: 0,
+      msg: `【里程碑·${s.title}】${s.hint}`,
+      time: Date.now(),
+    });
+    hit.push({ id: s.id, title: s.title, at: s.at });
+  }
+  return hit;
+}
+
+/* ---------------------------------------------------------------- 围城压力
+ * ★ 2026-11-19 玩法修复（用户：「修复所有问题」）。
+ *   旧实现里诸侯来犯只是在家门口摆一支「XX军」野战军（spawnFactionAssault），
+ *   玩家完全不理它也没有任何后果——实测挂机 60 旬，5 座城一座不失，
+ *   世界对玩家零压力。现在给来犯军加一条围城倒计时：
+ *     · 出现后 40 日内不动它：城进入 besieged（产出减半，cityYield 已消费该字段）；
+ *     · 围城每旬：守军逃散 2%、民心 −3、治安 −1；
+ *     · 守军归零：城破，归该势力（走既有归属迁移链路，含 playerCity 兜底）；
+ *     · 玩家把野战军清剿掉：围城立即解除（不夺城，只惩罚不作为）。
+ *   全程只读 state.garrisons / strategy.cities，不新建实体、不改协议。
+ */
+export const SIEGE_GRACE_DAYS = 40;
+
+function playerCityRows(st) {
+  return Object.entries(st.cities || {})
+    .filter(([, row]) => row && row.owner === 'player')
+    .map(([id, row]) => ({ id: Number(id), row }));
+}
+
+/** 找离某点最近的玩家城（用战略地图坐标；查不到按 id 最小兜底）。 */
+function nearestPlayerCity(st, x, y) {
+  const rows = playerCityRows(st);
+  if (!rows.length) return null;
+  let best = null;
+  let bestD = Infinity;
+  for (const r of rows) {
+    const c = strategyMap().cities.find((c2) => c2.id === r.id);
+    const d = c ? (Number(c.x) - Number(x)) ** 2 + (Number(c.y) - Number(y)) ** 2 : Infinity;
+    if (d < bestD) { bestD = d; best = r; }
+  }
+  return best;
+}
+
+/** 来犯军围城推进：settleWorld 每旬调用一次（幂等，可重复调）。 */
+export function assaultEscalationTick(state, cfg, ctx) {
+  const st = ensureStrategy(state);
+  const today = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  const out = [];
+  const aliveFactions = new Set();
+  for (const g of state.garrisons || []) {
+    if (!g.faction || g.cleared) continue;
+    aliveFactions.add(String(g.faction));
+    if (!Number.isFinite(Number(g.spawnDay))) g.spawnDay = today;
+    /* 围城 120 日仍未破：客军粮尽自退。否则不打不走的来犯军会在地图上无限堆积
+       （实测 130 旬留下 19 支），既糊画面也让「清剿」失去意义。 */
+    if (today - Number(g.spawnDay) >= 120) {
+      g.cleared = true;
+      const nm0 = strategyMap().cities.find((c) => c.id === nearestPlayerCity(st, g.x, g.y)?.id)?.name || '城下';
+      recordEvent(state, `${g.name || '敌军'}围${nm0}日久，粮尽自退。`);
+      out.push({ kind: 'withdraw', faction: g.faction });
+      continue;
+    }
+    if (today - Number(g.spawnDay) < SIEGE_GRACE_DAYS) continue;
+    const hit = nearestPlayerCity(st, g.x, g.y);
+    if (!hit) continue;
+    const city = st.cities[hit.id];
+    if (!city || city.owner !== 'player') continue;
+    const nm = strategyMap().cities.find((c) => c.id === hit.id)?.name || cityName(hit.id);
+    if (!city.besieged) {
+      city.besieged = true;
+      city.besiegedBy = g.faction;
+      city.besiegeSince = today;
+      recordEvent(state, `${g.name || '敌军'}围了${nm}：粮道商路受阻，产出减半。出兵清剿即可解围。`);
+      ctx.push?.('chat.push', {
+        rid: 0, nickName: '系统', type: 0,
+        msg: `【军情】${g.name || '敌军'}围困${nm}，请速派兵清剿或运粮固守。`,
+        time: Date.now(),
+      });
+      out.push({ kind: 'besiege', cityId: hit.id, city: nm, faction: g.faction });
+    }
+    /* 围城损耗按旬结算（避免按日重复扣） */
+    if (today % 10 === 0) {
+      city.troops = Math.max(0, Math.round((Number(city.troops) || 0) * 0.98));
+      const e = st.cityEcon?.[hit.id];
+      if (e) {
+        e.morale = Math.max(0, (Number(e.morale) || 0) - 3);
+        e.order = Math.max(0, (Number(e.order) || 0) - 1);
+      }
+    }
+    /* 守军打光 → 城破。玩家都城失守由 ensureStrategy/failstate 既有链路兜底。 */
+    if ((Number(city.troops) || 0) <= 0) {
+      const prevOwner = city.owner;
+      city.owner = g.faction;
+      city.besieged = false;
+      delete city.besiegedBy;
+      delete city.besiegeSince;
+      city.troops = Math.max(300, Math.round((Number(g.soldiers) || 0) * 0.6));
+      g.cleared = true;
+      noteCityCaptured(state, g.faction, prevOwner);
+      noteCityLost(state, prevOwner, hit.id, g.faction);
+      recordEvent(state, `${nm}守军耗尽，城陷于${g.name || '敌军'}。`);
+      ctx.push?.('chat.push', {
+        rid: 0, nickName: '系统', type: 0,
+        msg: `【天下】${nm}失守，落入${g.name || '敌军'}之手。`,
+        time: Date.now(),
+      });
+      out.push({ kind: 'fallen', cityId: hit.id, city: nm, faction: g.faction });
+    }
+  }
+  /* 围城解除：围攻方已无存活野战军（被玩家清剿或已破城） */
+  for (const [cid, row] of Object.entries(st.cities || {})) {
+    if (!row || !row.besieged) continue;
+    const still = row.besiegedBy && aliveFactions.has(String(row.besiegedBy));
+    if (still) continue;
+    row.besieged = false;
+    delete row.besiegedBy;
+    delete row.besiegeSince;
+    out.push({ kind: 'relieved', cityId: Number(cid) });
+  }
+  return out;
 }
 
 /* ---------------------------------------------------------------- 驰援
@@ -1556,7 +1712,10 @@ function settleArmyBattle(state, cfg, ctx, {
     : draw
       ? `攻${place}未决：双方收兵。我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}，歼敌 ${dLoss}。守军未溃，城池未下。`
       : `攻${place}不利：我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}，歼敌 ${dLoss}`
-        + (rec > 0 ? `，溃兵 ${rec} 归营。` : '。');
+        + (rec > 0 ? `，溃兵 ${rec} 归营。` : '。')
+        /* ★ 2026-11-19 玩法修复：战败后必须告诉玩家下一步怎么做。
+           旧版只报数字，玩家 800 兵撞 1750 守军全灭后不知道原因。 */
+        + (dTotal > aTotal * 1.2 ? `守军兵力占优（${dTotal} 对 ${aTotal}），下次出征前先在城内征兵补足。` : '');
   const counterNote = counter > 0
     ? `我军${ARMS_NAMES[atkArms]}克制守军${ARMS_NAMES[defArms]}（战力+15%）。`
     : (counter < 0 ? `守军${ARMS_NAMES[defArms]}克制我军${ARMS_NAMES[atkArms]}（战力-15%）。` : '');

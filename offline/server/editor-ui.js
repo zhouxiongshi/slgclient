@@ -144,6 +144,14 @@
       return '<option value="' + s.cfgId + '"' + (s.cfgId === row.skillCfgId ? ' selected' : '') + '>'
         + esc(s.name) + ' #' + s.cfgId + '</option>';
     }).join('');
+    /* ★ 2026-11-19 战法装配：三个槽都可编辑。旧版只有「自带战法」一个下拉，
+       第 2/3 槽在界面上没有任何入口，177 条战法里玩家实际只摸得到 4 条。 */
+    function slotOpts(cur) {
+      return '<option value="0">— 空 —</option>' + SKILLS.map(function (s) {
+        return '<option value="' + s.cfgId + '"' + (s.cfgId === cur ? ' selected' : '') + '>'
+          + esc(s.name) + ' #' + s.cfgId + '</option>';
+      }).join('');
+    }
     detail.innerHTML = '<h4>' + esc(row.name) + '（#' + row.cfgId + '）'
       + (row.custom ? '<span class="ovr-tag">自建 · 可删除</span>' : row.overridden ? '<span class="ovr-tag">已改 · 可重置</span>' : '') + '</h4>'
       + '<div class="grid">'
@@ -153,14 +161,20 @@
       + '</div>'
       + '<h4>每级成长率（Lv10 属性 = 基础 + 9×每级点数，点数 = 成长率/10，上限按 100 封顶）</h4>'
       + '<div class="grid">' + growKeys.map(function (k) { return fld(k, row.grows[k], ranges[k]); }).join('') + '</div>'
-      + '<h4>自带战法</h4>'
-      + '<div class="bar"><select data-field="skillCfgId" style="max-width:340px">' + skillOpts + '</select>'
-      + '<span class="muted">新招募/新开局按此生效；当前存档武将立即同步。</span></div>'
+      + '<h4>战法装配（三个槽位）</h4>'
+      + '<div class="bar"><span class="lb">槽 1 · 自带</span><select data-field="skillCfgId" style="max-width:320px">' + skillOpts + '</select></div>'
+      + '<div class="bar"><span class="lb">槽 2</span><select data-field="skillCfgId2" style="max-width:320px">' + slotOpts(row.skillCfgId2) + '</select></div>'
+      + '<div class="bar"><span class="lb">槽 3</span><select data-field="skillCfgId3" style="max-width:320px">' + slotOpts(row.skillCfgId3) + '</select></div>'
+      + '<div class="bar"><span class="muted">新招募/新开局按此生效；当前存档武将立即同步（只改你动过的槽，其余槽与等级保持不变）。</span></div>'
       + '<div class="bar" style="margin-top:10px">'
       + '<button class="primary" data-act="save">保存</button>'
       + (row.custom ? '<button data-act="delcustom">删除该自建武将</button>' : row.overridden ? '<button data-act="reset">重置为原值</button>' : '')
       + '<span class="muted">保存写入 GM 覆盖层 conf/campaign/overrides.json（generals 段），原表逐字不动。</span>'
       + '</div>';
+    /* ★ 2026-11-19：给每个字段记下原值。保存时只提交「真正改过」的字段，
+       否则表单会把没动的下拉（如战法槽的 0）当成「用户要清空」一起提交，
+       改一次武力就把武将战法清空了。 */
+    detail.querySelectorAll('[data-field]').forEach(function (i) { i.dataset.orig = String(i.value); });
   }
 
   function renderCreateGeneral(detail) {
@@ -188,12 +202,15 @@
       + '</div>'
       + '<h4>每级成长率（留空按 30）</h4>'
       + '<div class="grid">' + growKeys.map(function (k) { return fld(k, growNames[k], 1, 100, 30); }).join('') + '</div>'
-      + '<h4>自带战法</h4>'
-      + '<div class="bar"><select data-field="skillCfgId" style="max-width:340px">' + skillOpts + '</select></div>'
+      + '<h4>战法装配（三个槽位，可留空）</h4>'
+      + '<div class="bar"><span class="lb">槽 1</span><select data-field="skillCfgId" style="max-width:320px">' + skillOpts + '</select></div>'
+      + '<div class="bar"><span class="lb">槽 2</span><select data-field="skillCfgId2" style="max-width:320px">' + skillOpts + '</select></div>'
+      + '<div class="bar"><span class="lb">槽 3</span><select data-field="skillCfgId3" style="max-width:320px">' + skillOpts + '</select></div>'
       + '<div class="bar" style="margin-top:10px">'
       + '<button class="primary" data-act="create">创建</button>'
       + '<button data-act="cancelcreate">取消</button>'
       + '</div>';
+    detail.querySelectorAll('[data-field]').forEach(function (i) { i.dataset.orig = String(i.value); });
   }
 
   /* ---------------- 战法页签 ---------------- */
@@ -422,7 +439,11 @@
       if (!currentCfgId && (act === 'save' || act === 'reset' || act === 'delcustom')) return;
       if (act === 'save') {
         var payload2 = { cfgId: currentCfgId };
-        detail.querySelectorAll('[data-field]').forEach(function (i) { payload2[i.dataset.field] = i.value; });
+        detail.querySelectorAll('[data-field]').forEach(function (i) {
+          /* 只提交改动过的字段：没动的槽位保持存档现状，不会被「空值」覆盖。 */
+          if (i.dataset.orig !== undefined && i.dataset.orig === String(i.value)) return;
+          payload2[i.dataset.field] = i.value;
+        });
         fetchJson(API + '/save', payload2).then(function (r) {
           if (!r.ok) { toast(r.message || '保存失败', 'fail'); return; }
           toast('已保存 ' + (r.row ? r.row.name : '') + ' 的修改' + (r.stateSynced ? '，当前存档已同步' : ''), 'ok');

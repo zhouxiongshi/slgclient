@@ -43,6 +43,7 @@ import { refusalLine, failLine } from './domain/recruit-refusal.js';
 import {
   strategyTick, strategyAttack, strategyTurnDays, ensureStrategy, clearThreat,
   strategyResolveMarches, strategyRecallMarch, recordEvent, factionReliefTick,
+  assaultEscalationTick, stageGoalTick,
 } from './domain/strategy.js';
 import { createHash } from 'node:crypto';
 import { noteIfGeneralDown } from './command.js';
@@ -245,9 +246,14 @@ function facilityAdditions(state, cfg) {
   return y;
 }
 
-/** 领地建筑产量（复刻 roleBuildMgr.GetYield；原版把粮食误加给石矿，此处按正确语义）。 */
+/** 领地建筑产量（复刻 roleBuildMgr.GetYield；原版把粮食误加给石矿，此处按正确语义）。
+ *  ★ 2026-11-19 玩法修复：这些「土地」是序章坞堡周边的领地建筑。玩家举义后已经离开
+ *  坞堡、改以城池为基本盘，旧实现却继续按静态字段发产量——实测土地Lv.7 单条就供
+ *  7000 石/日，10 旬把府库石头从 1 万顶到 74 万、20 旬撞上 100 万上限，木/铁同理。
+ *  举义后一律停发，资源改由城池与设施产出（cityYield 已同步上调，保证仍能自持）。 */
 function buildYield(state) {
   const y = { wood: 0, iron: 0, stone: 0, grain: 0 };
+  if (state.oath?.done === true) return y;
   for (const b of state.builds) {
     y.wood += b.wood || 0;
     y.iron += b.iron || 0;
@@ -270,7 +276,15 @@ function totalYield(state, cfg) {
   r.stone_yield = playerStockYield(state, 'stone', base.stone_yield ?? 1000, fa.stone, by.stone);
   r.grain_yield = playerGrainYield(state, base.grain_yield ?? 1000, fa.grain, by.grain);
   r.gold_yield = playerGoldYield(state, base.gold_yield ?? 1000, fa.gold);
-  r.depot_capacity = (base.depot_capacity ?? 1000000) + fa.capacity;
+  /* ★ 2026-11-19 玩法修复：府库上限旧为常量 100 万，木/铁/石 20 旬内全部封顶，
+     采集系统彻底失去意义。改成「有城后随城数派生」：10 万起底 + 每城 2 万，
+     5 城约 20 万，既留出周转空间，又让资源在 3~5 旬尺度上真正流动。
+     序章（尚无城）沿用配置基数，不影响原有坞堡节奏。 */
+  const ownedCities = Object.values(state.strategy?.cities || {})
+    .filter((row) => row?.owner === 'player').length;
+  r.depot_capacity = ownedCities > 0
+    ? 100000 + ownedCities * 20000 + fa.capacity
+    : ((base.depot_capacity ?? 1000000) + fa.capacity);
   r.city_layer = cl;   // 内政面板「城池加成」明细展示用
   return r;
 }
@@ -328,6 +342,10 @@ export function settleWorld(ctx, now = Date.now()) {
   // ★ P14：驰援感知在到达结算**之前**跑——玩家大军在途时守方就有机会派援军
   factionReliefTick(state, cfg, ctx);
   strategyResolveMarches(state, cfg, ctx);
+  /* ★ 2026-11-19：来犯军围城推进。旧版来犯军摆在家门口没有任何后果，
+     世界对玩家零压力；现在 40 日不清剿就围城，围城每旬掉守军/民心。 */
+  assaultEscalationTick(state, cfg, ctx);
+  stageGoalTick(state, cfg, ctx);
   strategyTick(state, cfg, ctx, now);
   ensureTavern(state, cfg);
   announceTavern(state, ctx, chapterRules().realMsPerDay);

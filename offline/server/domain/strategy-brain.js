@@ -402,7 +402,11 @@ function balanceOfPower(view) {
 
 function playerOption(view) {
   const p = balanceOfPower(view);
-  if (p.count < 3 && p.share < 0.25) return null;
+  /* ★ 2026-11-19 玩法修复：旧门槛是「城数 ≥3 或占比 ≥25%」才把玩家列入讨伐目标，
+     实测玩家 5 城、占比 8% 时永远进不了池子，AI 全程只互殴，前中期零压力。
+     现在只要玩家有 2 座城就进入候选（仍受「打得过」与 6 旬冷却约束），
+     让扩张本身开始招来反扑——这才是「占城有代价」的另一半。 */
+  if (p.count < 2 && p.share < 0.15) return null;
   /* ★ 讨伐冷却（P15 灭国闭环回归）：打玩家的出征在战略层永不消耗目标（玩家城
      不随 NPC 进攻易主），无冷却会让制衡吃掉全部输出、饿死正常扩张——
      每次讨伐玩家后歇 6 旬，压力保持但不空转。 */

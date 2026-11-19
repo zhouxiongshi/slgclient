@@ -151,6 +151,13 @@ export interface UnitInput {
    * 给了 1~5 才生效：距离不足者本回合无法普攻，只能靠战法输出。
    */
   attack_range?: number;
+  /**
+   * 开局常驻反应（可选）。缺省 = 空数组，旧用例与黄金向量逐字节不变。
+   * 游戏层用它注入「系统级修正」，例如兵力优势方的压制减伤；不写进战法 bonus_terms。
+   */
+  initial_reactions?: Reaction[];
+  /** 开局常驻加成（可选）。缺省 = 空数组。 */
+  initial_buffs?: BonusTerm[];
 }
 
 /** 由 BUFF 槽授予的常驻反应：洞察 / 回击 / 减伤。rounds=0 表示整场有效。 */
