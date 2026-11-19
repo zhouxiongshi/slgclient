@@ -21,7 +21,9 @@ import { rankName as meritRankName, RANK_NAMES, meritForRank, rankOfMerit, slotC
 /* 刻意只 import oath.js（零依赖小模块）而不 import strategy.js ——
    它反向 import world.js，而 world.js 又 import 本文件，会成环。 */
 import { oathOf, oathFactionOf, strategyCity, factionTraitOf } from './oath.js';
-import { ensureCityEcon, cityYield, armsApt, ARMS_NAMES } from './city-econ.js';
+import { ensureCityEcon, cityYield, armsApt, ARMS_NAMES, generalCapacity, salaryDueOf } from './city-econ.js';
+/* ★ 2026-11-20：里程碑常量放零依赖叶子，面板与结算同源（见 stage-goals 头注）。 */
+import { STAGE_GOALS, UNIFY_CITIES, SANDBOX_ENDING, nextStageGoal } from './stage-goals.js';
 /* ★ M4-12：六府·内政的设施区段与 city.facilities 协议共用同一份生效清单。 */
 import { facilityView } from './facility-catalog.js';
 /* ★ 2026-11-17 城防：城墙耐久与战斗内用的是同一份公式（零依赖叶子，不成环） */
@@ -672,6 +674,25 @@ export function panelState(state, cfg) {
       cityCount: myCities.length,
       totalCities: mapCities.length,
       soldiers: (state.armys || []).reduce((n, a) => n + (a.soldiers || []).reduce((m, x) => m + (Number(x) || 0), 0), 0),
+      /* ★ 2026-11-20：编制与旬俸上屏。旧版玩家看不到「养 12 个武将每旬要 720 金」，
+         只会突然发现府库见底、忠诚暴跌，归因链断了。 */
+      /* ★ 2026-11-20：里程碑进度与下一目标上屏，中局才有节奏锚点。 */
+      stages: STAGE_GOALS.map((s) => ({
+        id: s.id, at: s.at, title: s.title, hint: s.hint,
+        done: Boolean(state.strategy?.stages?.[s.id]),
+        day: Number(state.strategy?.stages?.[s.id]) || 0,
+      })),
+      nextStage: nextStageGoal(myCities.length, state.strategy?.stages || {}),
+      unifyCities: UNIFY_CITIES,
+      sandboxEnding: state.strategy?.sandboxEnding || null,
+      endingTitle: SANDBOX_ENDING.title,
+      generalCount: (state.generals || []).length,
+      generalCapacity: generalCapacity(state),
+      salaryDue: salaryDueOf(state),
+      /* ★ 2026-11-20：势力动态（NPC 背景音）与玩家事件流分栏展示。 */
+      dynamics: (state.strategy?.dynamics || []).slice(-40).map((e) => ({
+        turn: e.turn, day: e.day, text: e.text, month: Math.max(1, Number(e.turn) || 0),
+      })),
       threats, events, cities: cityBrief,
       // ★ P0 编队：三槽=盾步/弓兵/骑兵，带武将名与适性（编队弹窗数据源）
       armies: (state.armys || []).map((a) => ({

@@ -5588,8 +5588,11 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
           if (!th.length) mil.appendChild(el('div', 'empty', '境内无来犯之敌。'));
           th.forEach(function (t) {
             var row = el('div', 'row');
+            var siegeNote = t.besieging
+              ? ' · <b style="color:#e07a5f">正围' + esc(t.targetName || '城') + '</b>（民心 ' + fmt(t.targetMorale == null ? 0 : t.targetMorale) + '）'
+              : (t.targetName ? ' · 兵锋指向 ' + esc(t.targetName) + (t.daysToSiege > 0 ? '（' + t.daysToSiege + ' 日后围城）' : '') : '');
             row.innerHTML = '<span>' + t.name + ' <span class="winTag">兵力 ' + fmt(t.soldiers)
-              + ' · (' + t.x + ',' + t.y + ')</span></span>';
+              + ' · (' + t.x + ',' + t.y + ')</span>' + siegeNote + '</span>';
             row.appendChild(mkBtn('出兵清剿', '', function () {
               confirmBox('清剿来犯军', [
                 '目标：<b>' + t.name + '</b>（兵力约 ' + fmt(t.soldiers) + '）',

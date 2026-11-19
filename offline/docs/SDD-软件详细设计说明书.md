@@ -2219,6 +2219,27 @@ build/SLG-Offline-win32-x64/
 - 围城只读 `state.garrisons` 与 `strategy.cities`，不新建实体、不加协议字段；`settleWorld` 仍是唯一入口（新增 `assaultEscalationTick` / `stageGoalTick` 两次调用）。
 - `web/` 磁盘产物零改动；新增 `tests/p20-gameplay-fixes.test.js` 13 条回归锁。
 
+### 17.19 自迭代第二轮：忠诚可持续 / 围城可破城 / 编制上限 / 里程碑兑现（2026-11-20）
+
+触发方式：不预设问题清单，直接用官方入口跑**挂机长局**（`_probe/p12-longrun.mjs` 150 旬、`p13c` 逐将追踪、`p15c` 编年史统计、`p17` 用 `defineProperty` 抓 `cleared` 写入栈），从「玩家实际会遇到的坏结果」反推根因。以下每条的数值都是跑出来的，不是估的。
+
+| 编号 | 根因（实测证据） | 修复落点 |
+|---|---|---|
+| `LIVE-01` | **主角会叛逃**。`loyaltyTick` 对所有 `state.generals` 一视同仁：未委任 −1/旬、无下限。实测挂机到第 62 旬，主角（`id=1000, cfgId=880001, isProtagonist`）忠诚跌破 40，掷骰出走，整局叙事断裂且不可恢复 | `loyaltyTick` 对 `isProtagonist` 直接 `continue`：不衰减、不叛逃、不吃欠饷罚 |
+| `LIVE-02` | **忠诚是倒计时不是状态**。岗位全图固定 5 个（`conf/panels/posts.json`），第 6 名武将起注定流失——「招到人」= 惩罚。实测 T15/T30 各来投 1 人，反而加速崩盘 | 改为「可管理状态」：委任 +0.6/旬；未委任向基线 70 回落 −0.3/旬、低于基线 +0.2 回血；欠饷 −5；民心崩再 −1（下限 45）；叛逃阈值降至 `<40` 10%、`40~55` 3%；首次跌破 55 给一次「离心」预警（赏赐/委任两条低成本补救路） |
+| `LIVE-03` | **名声正反馈**。「名士来投」名声含「帐下武将×2」，人越多名声越高 → 来投越快。实测只剩 1 座城时帐下 19 人，旬俸 1140 金 vs 单城旬入约 200，欠饷 → 忠诚崩 → 出走，名单还在涨 | 新增 `generalCapacity = max(4, 4+城数×2+bonusSeats)`；编制满不再来投；名声里的武将项封顶 10。**招降（花钱）不受限**——刻意留的口子 |
+| `LIVE-04` | **围城是死机制**。损耗写死 2%/旬，但 120 日就粮尽自退 → 最多 8 旬、累计掉 15% 守军，1800 守军的城永远破不了，`fallen` 分支是死代码。实测 80 旬内 AI 对玩家出兵 2 次（刘备），两次都是「围一下就走」 | 三条并行压力：兵力 `clamp(3%+6%×攻方兵力占比,3%,9%)`/旬；民心 −4/旬（叠 `cityDevTick` 被围 −3，实际约 −7）；治安 −1。**城破两条线**：守军归零 或 民心 ≤20 开城。撤围放宽 120→180 日；解围补民心 +8 |
+| `LIVE-05` | **围错城**。`spawnFactionAssault` 把营地摆在 `target.x+2`，围城却用 `nearestPlayerCity` 现算——两城相邻时战报说打定陶、实际围陈留 | 来犯军记 `targetCity`，围城以出发目标为准，查不到才回落近邻；视图新增 `targetName/daysToSiege/daysToWithdraw/besieging/targetMorale` |
+| `LIVE-06` | **都城丢了 playerCity 还指着敌城**。实测陈留第 121 旬被袁绍攻破，此后 `failstate.capitalLost` 恒真，`makeGeneral` 把新武将塞进敌国城。`ensureStrategy` 只在城墙编号失效时重绑 | 新增 `rebindCapitalIfLost()`，`assaultEscalationTick` 末尾兜一次：迁到「守军最多的己方城」并播报；无己方城不迁（交 failstate） |
+| `LIVE-07` | **事件流被背景音淹没**。150 旬 480 条事件里大半是「某某晋为中郎将」「某某按兵」，玩家自己的战事被 shift 出去 | `recordEvent(state, text, {quiet:true})` → `strategy.dynamics`（120 条）；NPC 官阶/学艺/积功/登庸/按兵/招降/挖角（非玩家）走此通道。战略页新增「势力动态」栏 |
+| `LIVE-08` | **战报把人名打成 id**：`俘获……将100121` | 改为 `nameOfCfg(state, cfg, c.cfgId)` |
+| `LIVE-09` | **18 城之后无目标**。`STAGE_GOALS` 只到 18 城且只播一行字，沙盘没有终局 | 常量抽到零依赖叶子 `domain/stage-goals.js`（panels 与结算同源）；补 30 城「霸业」；达成发**实际收益**（金/名望/编制）；新增一统线 45 城 → `strategy.sandboxEnding`，只结算一次、不硬中断 |
+| `LIVE-10` | **养人成本不可见**：玩家看不到「帐下 12 人每旬 720 金」，只会突然发现府库见底 | `salaryDueOf()` 与 `loyaltyTick` 同源上屏；战略页新增「帐下武将 x/y」「旬俸合计」两卡 |
+
+**踩坑记录（给后人省一次调试）**：`export { X } from './x.js'` **只转出、不建立本地绑定**。把 `STAGE_GOALS` 搬走后只写 `export ... from`，文件内 `stageGoalTick` 引用 `STAGE_GOALS` 即 `ReferenceError`——而 `node -e "import(...)"` 不会报错（模块能加载，函数没被调用）。表现是 90 个与忠诚无关的测试集体失败。必须 `import` 后再 `export`。
+
+**纪律**：`settleWorld` 仍是唯一世界推进入口；`web/` 零改动；未动伤害公式、`troop_factor`、`Lv10=Lv1×2`；新增 `tests/p21-loyalty-siege.test.js` 17 条回归锁（每条对应上表一个缺陷）。
+
 ---
 
 ## 18. 需求 → 设计 → 实现 → 验证 全链路追溯

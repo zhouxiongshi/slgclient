@@ -513,9 +513,9 @@
         : (' · 经验 ' + fmt(g.progress ? g.progress.exp : g.exp) + '/' + fmt(g.progress ? g.progress.need : 0)))
       + (g.progress && g.progress.next ? (' · ' + esc(g.progress.next)) : '')
       + ' · 状态 ' + esc(g.state) + ' · 在编岗位 ' + (g.appointed.length ? esc(g.appointed.join('、')) : '无')
-      + (g.loyal != null ? ' · 忠诚 <b class="v" style="color:' + (g.loyal >= 80 ? '#9ec97f' : g.loyal >= 70 ? '#d8b45a' : '#e07a5f') + '">' + g.loyal + '</b>（旬俸 ' + fmt(g.salaryPerXun || 20 * (g.star || 3)) + ' 金/旬）'
+      + (g.loyal != null ? ' · 忠诚 <b class="v" style="color:' + (g.loyal >= 80 ? '#9ec97f' : g.loyal >= 55 ? '#d8b45a' : '#e07a5f') + '">' + g.loyal + '</b>（旬俸 ' + fmt(g.salaryPerXun || 20 * (g.star || 3)) + ' 金/旬）'
         + '<button class="btn" data-act="reward" data-id="' + g.id + '">赏赐</button>'
-        + '<div class="muted">忠诚每旬 -1（委任岗位不减反微升）；欠饷全军 -5；低于 70 有出走风险。赏赐可快速回稳。</div>' : '')
+        + '<div class="muted">委任岗位 +0.6/旬；闲置回落到基线 70 后不再下降；欠饷 −5、全境民心崩额外 −1；低于 55 会预警，低于 40 才有出走风险。赏赐可快速回稳。</div>' : '')
       + '<div class="muted" style="margin-top:6px">出征中的武将内政收益减半（明写规则，不做隐藏惩罚）。</div></div></div>'
       + relationCardHtml(g);
   }
@@ -705,10 +705,33 @@
     var s = data.strategy;
     var out = '<h3>国势 · 第 ' + data.month + ' 月（游戏日 ' + data.day + '）</h3><div class="grid">'
       + [['我方城池', s.cityCount + ' / ' + s.totalCities], ['在编兵力', fmt(s.soldiers)],
+         ['帐下武将', s.generalCount + ' / ' + s.generalCapacity
+           + (s.generalCount >= s.generalCapacity ? '（已满，扩城才收得下）' : '')],
+         ['旬俸合计', fmt(s.salaryDue) + ' 金/旬'],
          ['可出征邻城', (s.marchable ? s.marchable.length : 0) + ' 座'],
          ['章节进度', '第 ' + s.chapter + ' 章' + (s.ending ? ' · ' + esc(s.ending) : '')]].map(function (p) {
         return '<div class="card"><span class="k">' + p[0] + '</span><div class="v" style="font-size:19px">' + p[1] + '</div></div>';
       }).join('') + '</div>';
+
+    /* ★ 2026-11-20：里程碑进度条。旧版 18 城之后玩家没有任何新锚点，
+       一路只剩「继续打」；现在把 4 个阶段 + 一统线全部明写，并标出还差几城。 */
+    if (s.stages && s.stages.length) {
+      var ng = s.nextStage || {};
+      out += '<div class="card"><h3>霸业进程'
+        + (s.sandboxEnding ? '　<b style="color:#9ec97f">已达成「' + esc(s.endingTitle || '天下一统') + '」</b>'
+          + '（第 ' + fmt(s.sandboxEnding.day) + ' 日 · ' + fmt(s.sandboxEnding.cities) + ' 城）' : '')
+        + '</h3><div class="muted" style="margin-bottom:8px">'
+        + (s.sandboxEnding ? '结局已记录，仍可继续经营。'
+          : '下一目标：<b>' + esc(ng.title || '—') + '</b>（还差 ' + fmt(ng.need == null ? 0 : ng.need) + ' 城）　' + esc(ng.hint || ''))
+        + '　一统线 ' + fmt(s.unifyCities) + ' 城</div>'
+        + '<div style="display:flex;gap:6px;flex-wrap:wrap">'
+        + s.stages.map(function (st) {
+          return '<span class="winTag" style="opacity:' + (st.done ? 1 : 0.55) + '">'
+            + (st.done ? '✓ ' : '') + esc(st.title) + ' ' + st.at + ' 城'
+            + (st.done && st.day ? '（第' + fmt(st.day) + '日）' : '') + '</span>';
+        }).join('')
+        + '</div></div>';
+    }
 
     out += '<div class="card"><h3>资源与产出</h3><table><thead><tr><th>资源</th><th>库存</th><th>日产</th><th>府库上限</th></tr></thead><tbody>'
       + data.interior.output.resources.map(function (r) {
@@ -811,10 +834,31 @@
 
     out += '<div class="card"><h3>边境威胁</h3>';
     out += s.threats.length ? s.threats.map(function (t) {
+      var siegeTxt = '';
+      if (t.besieging) {
+        siegeTxt = '　<b style="color:#e07a5f">正在围' + esc(t.targetName || '城') + '</b>'
+          + '（民心 ' + fmt(t.targetMorale == null ? 0 : t.targetMorale) + '，民心≤20 即开城）';
+      } else if (t.daysToSiege > 0) {
+        siegeTxt = '　' + (t.targetName ? '兵锋指向 ' + esc(t.targetName) + '，' : '')
+          + '约 ' + t.daysToSiege + ' 日后开始围城';
+      } else if (t.targetName) {
+        siegeTxt = '　兵锋指向 ' + esc(t.targetName);
+      }
       return '<div>· ' + esc(t.name || '来犯军') + '　兵 ' + fmt(t.soldiers || 0)
-        + (t.faction ? '　来自 ' + esc(t.faction) : '') + (t.patrol ? '　巡弋中' : '') + '</div>';
+        + (t.faction ? '　来自 ' + esc(t.faction) : '') + (t.patrol ? '　巡弋中' : '') + siegeTxt + '</div>';
     }).join('') : '<div class="muted">当前无来犯军。</div>';
-    out += '<div class="muted" style="margin-top:6px">清剿请到「本城 → 军情」；盟约与背盟预警以天下沙盘为准。</div></div>';
+    out += '<div class="muted" style="margin-top:6px">围城 40 日后开始掉守军与民心，民心崩到 20 以内城内开门；'
+      + '180 日仍不破则客军粮尽自退。清剿请到「本城 → 军情」；盟约与背盟预警以天下沙盘为准。</div></div>';
+
+    /* ★ 2026-11-20：势力动态独立成栏。NPC 官阶晋升/学艺/登庸属于「世界在动」，
+       不再挤占上面的军情流（旧版 150 旬 480 条事件里大半是这类背景音）。 */
+    var dyn = s.dynamics || [];
+    if (dyn.length) {
+      out += '<div class="card"><h3>势力动态 <span class="muted" style="font-size:12px">（近 ' + Math.min(dyn.length, 8) + ' 条 · 背景音，不影响你的决策）</span></h3>'
+        + dyn.slice(-8).reverse().map(function (e) {
+          return '<div class="muted">· 第' + esc(e.month) + '月　' + esc(e.text) + '</div>';
+        }).join('') + '</div>';
+    }
 
     // 优先显示战略层拟人月志（对方叙事层），未产出时回退旧事件流
     var monthLogs = (s.chronicle || []).length

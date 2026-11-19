@@ -249,6 +249,8 @@ export function ensureStrategy(state, cfgArg = null) {
     if (!st.memory) st.memory = {};
     if (!st.chronicle) st.chronicle = [];
     if (!st.cityLogs) st.cityLogs = {};
+    /* ★ 2026-11-20：势力动态独立通道（NPC 官阶/学艺/登庸），不占玩家军情流。 */
+    if (!Array.isArray(st.dynamics)) st.dynamics = [];
     // ★ P7：旧档队伍没有 cityId（那时只有本城概念），一律并到本城
     for (const a of state.armys || []) if (!a.cityId) a.cityId = st.playerCity || 0;
     /* ★ M3-4 事件系统/宿命/事件效果的存档域（旧档补字段） */
@@ -282,6 +284,8 @@ export function ensureStrategy(state, cfgArg = null) {
     turn: 0,
     lastTurnDay: 0,
     events: [],
+    /* ★ 2026-11-20：势力动态（背景音）与玩家事件流分离，见 recordEvent(opts.quiet)。 */
+    dynamics: [],
     scenarioId: scInit?.id || null,
     scenarioYear: scInit?.year || null,
     /* ★ M3-4 事件系统存档域（event-engine 落这里，与 chronicle 数组 st.events 分开） */
@@ -695,38 +699,39 @@ function aiRosterTurn(state, cfg, ctx, faction, conf, turn) {
   /* ★ 2026-11-16：先按旬练兵治政累积功勋、晋官、长经验——诸侯不再原地踏步。 */
   for (const n of aiRosterCultivateTick(state, rosterConf, cfg, faction, turn)) {
     if (n.kind === '升官') {
-      recordEvent(state, `${faction.name}麾下${n.name}治政有功，晋为${n.rankName}（功勋官阶 ${n.rank}）。`);
+      recordEvent(state, `${faction.name}麾下${n.name}治政有功，晋为${n.rankName}（功勋官阶 ${n.rank}）。`, { quiet: true });
     }
     notes.push(n);
   }
   for (const n of aiRosterLearnTick(state, rosterConf, cfg, faction, turn)) {
-    recordEvent(state, `${faction.name}麾下${nameOfCfg(state, cfg, n.cfgId)}习得新战法（${skillById(n.skillId)?.name || n.skillId}）。`);
+    recordEvent(state, `${faction.name}麾下${nameOfCfg(state, cfg, n.cfgId)}习得新战法（${skillById(n.skillId)?.name || n.skillId}）。`, { quiet: true });
     notes.push(n);
   }
   const rec = aiRecruitTick(state, rosterConf, cfg, faction, turn);
   if (rec) {
     if (rec.kind === '登庸') {
-      recordEvent(state, `${faction.name}遣使登庸在野贤才${rec.name}，礼金入帐，已列入帐下。`);
+      recordEvent(state, `${faction.name}遣使登庸在野贤才${rec.name}，礼金入帐，已列入帐下。`, { quiet: true });
       noteMove(state, { kind: '登庸', faction: faction.id, who: faction.name, cfgId: rec.cfgId, name: rec.name });
     } else {
-      recordEvent(state, `${faction.name}欲招${rec.name}，对方未允。`);
+      recordEvent(state, `${faction.name}欲招${rec.name}，对方未允。`, { quiet: true });
     }
     notes.push(rec);
   }
   for (const n of aiCaptiveTick(state, rosterConf, cfg, faction, turn)) {
-    if (n.kind === '招降') recordEvent(state, `${faction.name}招降俘虏${n.name}，编入名册。`);
-    else if (n.kind === '释俘') recordEvent(state, `${faction.name}释放俘虏${n.name}归乡。`);
+    if (n.kind === '招降') recordEvent(state, `${faction.name}招降俘虏${n.name}，编入名册。`, { quiet: true });
+    else if (n.kind === '释俘') recordEvent(state, `${faction.name}释放俘虏${n.name}归乡。`, { quiet: true });
     notes.push(n);
   }
   const poach = aiPoachTick(state, rosterConf, cfg, faction, turn);
   if (poach) {
     if (poach.kind === '挖角') {
       const to = poach.from === 'player' ? '我军' : (nameOfFaction(state, poach.from));
-      recordEvent(state, `【挖角】${faction.name}以厚礼招揽${to}的${poach.name}，已易旗。`);
+      /* 玩家自己的将被挖走是大事，必须进事件流；NPC 之间互相挖角只是背景音。 */
+      recordEvent(state, `【挖角】${faction.name}以厚礼招揽${to}的${poach.name}，已易旗。`, { quiet: poach.from !== 'player' });
       noteMove(state, { kind: '挖角', faction: faction.id, who: faction.name, cfgId: poach.cfgId, name: poach.name, from: poach.from });
       ctx?.push?.('chat.push', { rid: 0, nickName: '系统', type: 0, msg: `【人事】${faction.name}挖走了${to}的${poach.name}。`, time: Date.now() });
     } else {
-      recordEvent(state, `${faction.name}欲挖${nameOfCfg(state, cfg, poach.cfgId)}，未果，对方反生戒心。`);
+      recordEvent(state, `${faction.name}欲挖${nameOfCfg(state, cfg, poach.cfgId)}，未果，对方反生戒心。`, { quiet: true });
     }
     notes.push(poach);
   }
@@ -846,8 +851,19 @@ export function accrueFactionGrain(state, factionId) {
 
 /* ---------------------------------------------------------------- 执行层 */
 /** 天下大事记。保留整局 200 条（旧实现 50 条滚动截断，读档后本局早先的转折全没了）。 */
-export function recordEvent(state, text) {
+/** 事件书写。默认进玩家事件流（st.events，上限 480 条）。
+ *  ★ 2026-11-20：加 quiet 通道。诸侯麾下的官阶晋升 / 习得战法 / 积功升级
+ *  属于「世界在动」的背景音，不该占据玩家的军情流——实测 150 旬 480 条事件里
+ *  大部分是「某某晋为中郎将」，玩家自己的战事被挤掉了。现在这类写 st.dynamics
+ *  （上限 120 条，战略页单独一栏「势力动态」展示），玩家事件流只留与我有关的。 */
+export function recordEvent(state, text, opts) {
   const st = state.strategy;
+  if (opts && opts.quiet) {
+    if (!Array.isArray(st.dynamics)) st.dynamics = [];
+    st.dynamics.push({ turn: st.turn, text, day: state.clock?.day ?? 0 });
+    while (st.dynamics.length > 120) st.dynamics.shift();
+    return;
+  }
   st.events.push({ turn: st.turn, text, day: state.clock?.day ?? 0 });
   while (st.events.length > 480) st.events.shift();
 }
@@ -894,9 +910,9 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
       /* 双账本：屯田收成入城库（优先指令城），汇总账自动跟随 */
       creditFactionGrain(state, faction.id, 400, order.params?.cityId);
       noteMove(state, { kind: '屯田', faction: faction.id, who: faction.name, grain: -400 });
-      if (order.expect) recordEvent(state, `${faction.name}${order.expect}`);
+      if (order.expect) recordEvent(state, `${faction.name}${order.expect}`, { quiet: true });
     } else if (order.type === '固守') {
-      if (order.expect) recordEvent(state, `${faction.name}${order.expect}`);
+      if (order.expect) recordEvent(state, `${faction.name}${order.expect}`, { quiet: true });
       noteMove(state, {
         kind: '固守', faction: faction.id, who: faction.name,
         reason: order.expect || '',
@@ -927,7 +943,7 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
             kind: '出征', faction: faction.id, who: faction.name, result: '未发',
             fromName: fromCity?.name || '', toName: target.name, reason: quote.reason || '粮饷不足',
           });
-          recordEvent(state, `${faction.name}欲出兵${target.name}，${quote.reason || '粮饷不足'}，未发兵。`);
+          recordEvent(state, `${faction.name}欲出兵${target.name}，${quote.reason || '粮饷不足'}，未发兵。`, { quiet: true });
           continue;
         }
         /* 双账本：出征粮饷从城库扣（优先出发城），金从国库扣（本作设计） */
@@ -997,7 +1013,7 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
           const expEach = 60 + Math.round(winRatio * 90);
           const expMap = Object.fromEntries(atkRoster.map((g) => [g.cfgId, expEach]));
           const ups = aiRosterGrantExp(state, cfg, faction.id, expMap);
-          for (const u of ups) recordEvent(state, `${faction.name}麾下${u.name}积功升至 ${u.to} 级。`);
+          for (const u of ups) recordEvent(state, `${faction.name}麾下${u.name}积功升至 ${u.to} 级。`, { quiet: true });
           /* ★ 2026-11-16：攻城算大功，名册武将记功勋并按功晋官（守土/治政见 cultivateTick）。 */
           const meritEach = 16 + Math.round(winRatio * 20);
           for (const g of atkRoster) {
@@ -1005,7 +1021,7 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
             const mr = grantMerit(g, meritEach);
             if (mr.promoted) {
               const name = cfg?.generalByCfg?.get?.(Number(g.cfgId))?.name || `武将${g.cfgId}`;
-              recordEvent(state, `${faction.name}麾下${name}积功封为${mr.rank >= 7 ? '将军' : '校尉'}（功勋 ${mr.merit}）。`);
+              recordEvent(state, `${faction.name}麾下${name}积功封为${mr.rank >= 7 ? '将军' : '校尉'}（功勋 ${mr.merit}）。`, { quiet: true });
             }
           }
         }
@@ -1018,7 +1034,7 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
           const ratio = prevTroops > 0 ? Math.max(0, Math.min(1, (prevTroops - defender.troops) / prevTroops)) : 0.8;
           const caps = aiCaptureTick(state, cfg, faction.id, prevOwner, targetId, ratio, state.clock?.day || 1);
           for (const c of caps) {
-            recordEvent(state, `${faction.name}于${target.name}俘获${ownerNameOf(state, prevOwner)}将${c.cfgId}。`);
+            recordEvent(state, `${faction.name}于${target.name}俘获${ownerNameOf(state, prevOwner)}将「${nameOfCfg(state, cfg, c.cfgId)}」。`);
           }
         }
         ctx.push?.('chat.push', { rid: 0, nickName: '系统', type: 0, msg: `【天下】${faction.name}自${ownerNameOf(state, prevOwner)}手中攻陷${target.name}。`, time: Date.now() });
@@ -1159,6 +1175,10 @@ export function spawnFactionAssault(state, cfg, ctx, faction, targetCity, troops
     id: nextId(state, 'garrisonId'),
     x: at.x, y: at.y, soldiers, name: build.name, cleared: false, drifted: false,
     faction: faction.id,
+    /* ★ 2026-11-20：记住「本来要打哪座城」。旧版围城用 nearestPlayerCity 现算，
+       而营地摆在 target.x+2，两城相邻时经常围到另一座城上——战报说打定陶、
+       实际围的是陈留，玩家完全看不懂。现在以出发时的目标为准，查不到才回落近邻。 */
+    targetCity: Number(targetCity?.id) || 0,
     /* ★ 2026-11-19：记录出现日，围城倒计时从这里算起。 */
     spawnDay: departDay,
   };
@@ -1177,27 +1197,60 @@ export function spawnFactionAssault(state, cfg, ctx, faction, targetCity, troops
  *   进沙盘后玩家只剩「统一全国」这一个远期目标，中间 60 旬没有任何锚点。
  *   这里补三个沙盘里程碑（不写剧情，只给目标与结算），让中局有节奏。
  */
-export const STAGE_GOALS = [
-  { id: 'foothold', at: 6, title: '立足', hint: '拿下第 6 座城——你已经不是流寇，是一方势力了。' },
-  { id: 'separatist', at: 10, title: '割据', hint: '10 城在手，州郡侧目。诸侯开始把你写进讨伐名单。' },
-  { id: 'hegemon', at: 18, title: '争雄', hint: '18 城，天下三分有其名。下一步就是州治。' },
-];
+/* ★ 2026-11-20：常量搬到零依赖叶子 domain/stage-goals.js（panels 也要用）。
+   注意：`export ... from` 只转出、不建立本地绑定，本文件内部要用必须同时 import。 */
+import { STAGE_GOALS, UNIFY_CITIES, SANDBOX_ENDING, nextStageGoal } from './stage-goals.js';
+export { STAGE_GOALS, UNIFY_CITIES, SANDBOX_ENDING, nextStageGoal };
 
 export function stageGoalTick(state, cfg, ctx) {
   const st = ensureStrategy(state);
   if (!st.stages || typeof st.stages !== 'object') st.stages = {};
   const owned = Object.values(st.cities || {}).filter((r) => r && r.owner === 'player').length;
+  const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
   const hit = [];
   for (const s of STAGE_GOALS) {
     if (owned < s.at || st.stages[s.id]) continue;
-    st.stages[s.id] = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
-    recordEvent(state, `【${s.title}】${s.hint}`);
+    st.stages[s.id] = day;
+    /* ★ 2026-11-20：里程碑不再只是一行字。达成即发实际收益，
+       玩家能感到「扩城是有回报的」，而不是只收到一条播报。 */
+    const gains = [];
+    if (s.gold) {
+      state.roleRes.gold = Math.round((Number(state.roleRes.gold) || 0) + s.gold);
+      gains.push(`金 +${s.gold}`);
+    }
+    if (s.fame) {
+      st.fame = Math.min(FAME_DEFECT_CAP * 2, Math.round((Number(st.fame) || 0) + s.fame));
+      gains.push(`名望 +${s.fame}`);
+    }
+    if (s.seats) {
+      st.bonusSeats = Math.round(Number(st.bonusSeats) || 0) + s.seats;
+      gains.push(`帐下编制 +${s.seats}`);
+    }
+    const gainTxt = gains.length ? `（${gains.join('，')}）` : '';
+    recordEvent(state, `【${s.title}】${s.hint}${gainTxt}`);
     ctx.push?.('chat.push', {
       rid: 0, nickName: '系统', type: 0,
-      msg: `【里程碑·${s.title}】${s.hint}`,
+      msg: `【里程碑·${s.title}】${s.hint}${gainTxt}`,
       time: Date.now(),
     });
-    hit.push({ id: s.id, title: s.title, at: s.at });
+    ctx.push?.('roleRes.push', { ...state.roleRes });
+    hit.push({ id: s.id, title: s.title, at: s.at, gains });
+  }
+  /* 沙盘终局：一统即结算，不硬性中断（玩家可以继续经营或退出看总览）。 */
+  if (owned >= UNIFY_CITIES && !st.sandboxEnding) {
+    st.sandboxEnding = {
+      id: SANDBOX_ENDING.id, title: SANDBOX_ENDING.title,
+      day, turn: st.turn ?? 0, cities: owned,
+      generals: (state.generals || []).length,
+      battles: Array.isArray(st.battleHistory) ? st.battleHistory.length : 0,
+    };
+    recordEvent(state, `【${SANDBOX_ENDING.title}】${SANDBOX_ENDING.hint}第 ${day} 日，${owned} 城尽入我手。`);
+    ctx.push?.('chat.push', {
+      rid: 0, nickName: '系统', type: 0,
+      msg: `【${SANDBOX_ENDING.title}】${SANDBOX_ENDING.hint}（第 ${day} 日 · ${owned} 城 · 帐下 ${(state.generals || []).length} 人）`,
+      time: Date.now(),
+    });
+    hit.push({ id: 'unify', title: SANDBOX_ENDING.title, at: owned });
   }
   return hit;
 }
@@ -1208,12 +1261,24 @@ export function stageGoalTick(state, cfg, ctx) {
  *   玩家完全不理它也没有任何后果——实测挂机 60 旬，5 座城一座不失，
  *   世界对玩家零压力。现在给来犯军加一条围城倒计时：
  *     · 出现后 40 日内不动它：城进入 besieged（产出减半，cityYield 已消费该字段）；
- *     · 围城每旬：守军逃散 2%、民心 −3、治安 −1；
- *     · 守军归零：城破，归该势力（走既有归属迁移链路，含 playerCity 兜底）；
+ *     · 围城每旬：守军按围攻兵力占比逃散、民心 −5、治安 −1；
+ *     · 守军归零 或 民心 ≤ 20（城内开门）：城破，归该势力；
  *     · 玩家把野战军清剿掉：围城立即解除（不夺城，只惩罚不作为）。
  *   全程只读 state.garrisons / strategy.cities，不新建实体、不改协议。
+ *
+ * ★ 2026-11-20 自迭代第二轮：上一版围城是「死机制」。
+ *   损耗写死 2%/旬，但 120 日就粮尽自退 → 围城最多 8 旬，累计只掉 15% 守军，
+ *   而守军 1800 → 城永远破不了，`fallen` 分支是死代码。
+ *   实测 80 旬内 AI 对玩家出兵 2 次（刘备），两次都只是「围一下就走」。
+ *   现在改成三条并行压力，并且撤围时间放宽到 180 日：
+ *     · 兵力：p = clamp(3% + 6% × 围攻方兵力占比, 3%, 9%)/旬，兵多破得快；
+ *     · 民心：−5/旬，民心 ≤ 20 直接开城（民心崩比杀光守军更早到，符合史实直觉）；
+ *     · 治安：−1/旬，治安崩会连带流寇事件。
+ *   于是「放着不管」≈ 100~140 日丢城，玩家有明确的解围窗口。
  */
 export const SIEGE_GRACE_DAYS = 40;
+export const SIEGE_MAX_DAYS = 180;
+export const SIEGE_GATE_OPEN_MORALE = 20;
 
 function playerCityRows(st) {
   return Object.entries(st.cities || {})
@@ -1245,17 +1310,21 @@ export function assaultEscalationTick(state, cfg, ctx) {
     if (!g.faction || g.cleared) continue;
     aliveFactions.add(String(g.faction));
     if (!Number.isFinite(Number(g.spawnDay))) g.spawnDay = today;
-    /* 围城 120 日仍未破：客军粮尽自退。否则不打不走的来犯军会在地图上无限堆积
-       （实测 130 旬留下 19 支），既糊画面也让「清剿」失去意义。 */
-    if (today - Number(g.spawnDay) >= 120) {
+    /* 围城 SIEGE_MAX_DAYS 日仍未破：客军粮尽自退。否则不打不走的来犯军会在地图上无限堆积
+       （实测 130 旬留下 19 支），既糊画面也让「清剿」失去意义。
+       ★ 2026-11-20：120 → 180 日。旧值下围城只剩 8 旬，配合 2%/旬 损耗
+       连一座 1800 守军的城都推不动，`fallen` 成了死代码。 */
+    if (today - Number(g.spawnDay) >= SIEGE_MAX_DAYS) {
       g.cleared = true;
-      const nm0 = strategyMap().cities.find((c) => c.id === nearestPlayerCity(st, g.x, g.y)?.id)?.name || '城下';
+      const nm0 = strategyMap().cities.find((c) => c.id === (Number(g.targetCity) || nearestPlayerCity(st, g.x, g.y)?.id))?.name || '城下';
       recordEvent(state, `${g.name || '敌军'}围${nm0}日久，粮尽自退。`);
       out.push({ kind: 'withdraw', faction: g.faction });
       continue;
     }
     if (today - Number(g.spawnDay) < SIEGE_GRACE_DAYS) continue;
-    const hit = nearestPlayerCity(st, g.x, g.y);
+    /* 优先用出发时记下的目标城（见 spawnFactionAssault.targetCity），查不到才用近邻兜底。 */
+    const aimed = Number(g.targetCity) || 0;
+    const hit = (aimed && st.cities[aimed]?.owner === 'player') ? { id: aimed, row: st.cities[aimed] } : nearestPlayerCity(st, g.x, g.y);
     if (!hit) continue;
     const city = st.cities[hit.id];
     if (!city || city.owner !== 'player') continue;
@@ -1274,15 +1343,25 @@ export function assaultEscalationTick(state, cfg, ctx) {
     }
     /* 围城损耗按旬结算（避免按日重复扣） */
     if (today % 10 === 0) {
-      city.troops = Math.max(0, Math.round((Number(city.troops) || 0) * 0.98));
+      const defenders = Math.max(0, Number(city.troops) || 0);
+      const attackers = Math.max(1, Number(g.soldiers) || 0);
+      /* 围攻方兵力占比：兵越多逃散越快，3%~9%/旬封顶（不会一旬秒城） */
+      const share = attackers / Math.max(1, attackers + defenders);
+      const lossPct = Math.max(0.03, Math.min(0.09, 0.03 + 0.06 * share));
+      city.troops = Math.max(0, Math.round(defenders * (1 - lossPct)));
       const e = st.cityEcon?.[hit.id];
       if (e) {
-        e.morale = Math.max(0, (Number(e.morale) || 0) - 3);
+        /* 民心 -4/旬（cityDevTick 对被围城另有 -3，实际约 -7/旬）→ 70 起步约 7 旬开城，
+           50 起步约 4~5 旬。给玩家 4~7 回合的解围窗口，够反应也不至于毫无压力。 */
+        e.morale = Math.max(0, (Number(e.morale) || 0) - 4);
         e.order = Math.max(0, (Number(e.order) || 0) - 1);
       }
     }
-    /* 守军打光 → 城破。玩家都城失守由 ensureStrategy/failstate 既有链路兜底。 */
-    if ((Number(city.troops) || 0) <= 0) {
+    /* 城破两条线：守军打光（饿殍/战殁），或民心崩到 20 以下（城内开门）。
+       玩家都城失守由 ensureStrategy/failstate 既有链路兜底。 */
+    const econ2 = st.cityEcon?.[hit.id];
+    const gateOpen = econ2 && Number(econ2.morale) <= SIEGE_GATE_OPEN_MORALE;
+    if ((Number(city.troops) || 0) <= 0 || gateOpen) {
       const prevOwner = city.owner;
       city.owner = g.faction;
       city.besieged = false;
@@ -1292,7 +1371,9 @@ export function assaultEscalationTick(state, cfg, ctx) {
       g.cleared = true;
       noteCityCaptured(state, g.faction, prevOwner);
       noteCityLost(state, prevOwner, hit.id, g.faction);
-      recordEvent(state, `${nm}守军耗尽，城陷于${g.name || '敌军'}。`);
+      recordEvent(state, gateOpen && (Number(city.troops) || 0) > 0
+        ? `${nm}被围既久，民心溃散，城内开门降于${g.name || '敌军'}。`
+        : `${nm}守军耗尽，城陷于${g.name || '敌军'}。`);
       ctx.push?.('chat.push', {
         rid: 0, nickName: '系统', type: 0,
         msg: `【天下】${nm}失守，落入${g.name || '敌军'}之手。`,
@@ -1309,9 +1390,45 @@ export function assaultEscalationTick(state, cfg, ctx) {
     row.besieged = false;
     delete row.besiegedBy;
     delete row.besiegeSince;
+    /* ★ 2026-11-20：解围给一次民心回补（+8），否则被围过的城要几十旬才缓过来，
+       玩家「出兵解围」的正反馈太弱。 */
+    const eR = st.cityEcon?.[cid];
+    if (eR) eR.morale = Math.min(100, Math.round(((Number(eR.morale) || 0) + 8) * 10) / 10);
+    const nmR = strategyMap().cities.find((c) => String(c.id) === String(cid))?.name || cityName(Number(cid));
+    recordEvent(state, `${nmR}之围已解，城中人心稍定（民心 +8）。`);
     out.push({ kind: 'relieved', cityId: Number(cid) });
   }
+  /* 城破可能带走都城：统一在函数末尾兜一次，任何路径丢城都不会留下悬空的 playerCity。 */
+  rebindCapitalIfLost(state, ctx);
   return out;
+}
+
+/** ★ 2026-11-20：都城失陷后自动迁都。
+ *  旧实现里 st.playerCity 只在「城墙编号不存在」时才重绑，城被敌人打下来时不管。
+ *  实测挂机 150 旬：陈留（都城）第 121 旬被袁绍攻破，之后 playerCity 一直指着敌方城池，
+ *  failstate.capitalLost 从此恒为 true，而 makeGeneral 会把新武将塞进「本城」——
+ *  也就是塞进敌国城里。玩家看到的是「招来的武将不见了」。
+ *  这里改成：都城一丢，立刻迁到「守军最多的己方城」，并明确播报。
+ *  没有己方城时不迁（亡国流程交给 failstate / 章节结局）。 */
+export function rebindCapitalIfLost(state, ctx) {
+  const st = state?.strategy;
+  if (!st || !st.playerCity) return null;
+  if (st.cities[st.playerCity]?.owner === 'player') return null;
+  const own = Object.entries(st.cities || {})
+    .filter(([, c]) => c && c.owner === 'player')
+    .sort((a, b) => (Number(b[1].troops) || 0) - (Number(a[1].troops) || 0));
+  if (!own.length) return null;
+  const fromId = st.playerCity;
+  st.playerCity = Number(own[0][0]);
+  const toName = strategyMap().cities.find((c) => c.id === st.playerCity)?.name || cityName(st.playerCity);
+  const fromName = strategyMap().cities.find((c) => c.id === Number(fromId))?.name || cityName(Number(fromId));
+  recordEvent(state, `都城${fromName}失守，行在移驻${toName}——诸事仍可照常。`);
+  ctx?.push?.('chat.push', {
+    rid: 0, nickName: '系统', type: 0,
+    msg: `【朝堂】都城${fromName}失守，已迁行在于${toName}。请重整旗鼓，或从外交上先稳住一方。`,
+    time: Date.now(),
+  });
+  return { from: Number(fromId), to: st.playerCity, city: toName };
 }
 
 /* ---------------------------------------------------------------- 驰援
@@ -2829,9 +2946,14 @@ export function captivesTick(state, ctx) {
   }
 }
 
+/* ★ 2026-11-20：generalCapacity 权威实现搬到 city-econ（零依赖叶子，panels 也要用），
+   这里转出一次，保持既有 import 路径有效。 */
+export { generalCapacity } from './city-econ.js';
+import { generalCapacity as capacityOf } from './city-econ.js';
+
 /**
  * ★ P7 出仕：在野贤才主动来投（「名声」机制）。
- *   名声 = 城池数×8 + 帐下武将×2 + 君主魅力/100；每旬掷一次，概率 3%~45%。
+ *   名声 = 城池数×8 + 帐下武将×2（封顶 10）+ 君主魅力/100；每旬掷一次，概率 3%~45%。
  *   优先投奔「籍贯正好在我方城里」的人——版图越大、名声越响，来投者越多，
  *   这条线补上了原先只有「酒馆来访 / 探索 / 招降」三条的缺口。
  *   修 U21：掷骰改走 rngFor(seed, turn, 'defect:tavern')，可回放。
@@ -2843,7 +2965,9 @@ export function defectTick(state, cfg, ctx) {
   const own = Object.entries(st.cities || {})
     .filter(([, v]) => v.owner === 'player').map(([id]) => Number(id));
   if (!own.length) return null;
-  const baseFame = own.length * 8 + (state.generals || []).length * 2
+  /* ★ 2026-11-20：编制满则不再来投（见 generalCapacity 头注）。 */
+  if ((state.generals || []).length >= capacityOf(state)) return null;
+  const baseFame = own.length * 8 + Math.min(10, (state.generals || []).length * 2)
     + protagonistStat(state, '魅力') / 100;
   /* ★ 2026-11-16：名望进入来投率。放归俘虏累积 st.fame（上限 FAME_DEFECT_CAP），
      与城数/武将数同走一条公式；无本作名望时数值与旧实现完全一致。 */
@@ -3158,13 +3282,30 @@ export function strategyViewState(state, cfg = null) {
     ? me.color
     : (conf.factions.find((f) => f.id === id)?.color || conf.neutral.color);
   // ★ P1-6：本地地图被遮罩挡住，来犯军必须在天下界面可见、可清剿
+  /* ★ 2026-11-20：补三项玩家必须看得见的围城信息——打哪座城、还剩多少日撤围、
+     那座城现在的民心。旧版只给「兵力/坐标」，玩家无法判断该不该出兵。 */
+  const today0 = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  const cityNameById = (id) => strategyMap().cities.find((c) => c.id === Number(id))?.name || '';
   const threats = (state.garrisons || [])
     .filter((g) => !g.cleared)
-    .map((g) => ({
-      id: g.id, x: g.x, y: g.y, name: g.name,
-      soldiers: Math.max(0, Math.round(Number(g.soldiers) || 0)),
-      faction: g.faction || '', patrol: !!g.patrol,
-    }));
+    .map((g) => {
+      const tid = Number(g.targetCity) || 0;
+      const row = tid ? st.cities[tid] : null;
+      const econ = tid ? st.cityEcon?.[tid] : null;
+      const spawnDay = Math.max(1, Math.floor(Number(g.spawnDay) || today0));
+      return {
+        id: g.id, x: g.x, y: g.y, name: g.name,
+        soldiers: Math.max(0, Math.round(Number(g.soldiers) || 0)),
+        faction: g.faction || '', patrol: !!g.patrol,
+        targetCity: tid,
+        targetName: tid ? cityNameById(tid) : '',
+        /* 距离围城开始还有几天（负值=已围）；到 SIEGE_MAX_DAYS 粮尽自退 */
+        daysToSiege: Math.round(SIEGE_GRACE_DAYS - (today0 - spawnDay)),
+        daysToWithdraw: Math.round(SIEGE_MAX_DAYS - (today0 - spawnDay)),
+        besieging: !!(row && row.besieged),
+        targetMorale: econ ? Math.round(Number(econ.morale) || 0) : null,
+      };
+    });
   return {
     turn: st.turn,
     // ★ 口径统一（2026-11-16 日志排查）：第 N 月 = turn N，与天下日志 chronicle、
@@ -3182,6 +3323,11 @@ export function strategyViewState(state, cfg = null) {
       day: state.clock?.day ?? 1,
     },
     threats,
+    /* ★ 2026-11-20：势力动态（NPC 官阶晋升/学艺/登庸等背景音），与玩家事件流分开展示。 */
+    dynamics: (st.dynamics || []).slice(-40).map((e) => ({
+      turn: e.turn, day: e.day, text: e.text,
+      month: Math.max(1, Number(e.turn) || 0),
+    })),
     /* ★ 验收 #22：缩放档位阈值下发一次，客户端只做 rank ≤ 档位 的过滤 + 屏幕占位去重 */
     labelPolicy: labelPolicy(),
     armies: (state.armys || []).map((a) => ({

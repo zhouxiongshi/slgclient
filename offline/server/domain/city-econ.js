@@ -344,34 +344,120 @@ export function cityDevTick(state, cfg, ctx) {
   return { gains, upsets };
 }
 
-/** 每 10 日（旬）：忠诚自然变化 + 旬俸 + 叛逃判定。口径。 */
+/* ★ 2026-11-20 玩法修复（自迭代第一轮）：忠诚不是「倒计时」，是「可管理的状态」。
+ *
+ *   旧实现：只要没被委任到 5 个岗位之一，就每旬 -1 忠诚、无下限。
+ *   岗位全图固定 5 个，而「名士来投」「招降敌将」会持续加人 →
+ *   第 6 名武将起就是一颗定时炸弹：约 48 旬跌到 40 以下，之后每旬 10% 叛逃。
+ *   实测：开局 4 将挂机 150 旬，主角（id 1000）在 T62 因忠诚过低叛逃离队，
+ *   整局叙事断裂且不可恢复；同期 T15/T30 各来投 1 人，来的人反而加速崩盘。
+ *   也就是说「招到新武将」= 惩罚，激励方向完全反了。
+ *
+ *   新口径（FIELD-CONTRACT 同名段落）：
+ *     · 主角不参与忠诚系统：不衰减、不叛逃（叙事锚点，掉了无法恢复）；
+ *     · 委任岗位：+0.6/旬（上限 100）；
+ *     · 未委任：向「基线 70」缓慢回落 -0.3/旬，已低于基线则 +0.2 缓慢回血
+ *       —— 闲置不会把人耗死，但也不会白送到 100；
+ *     · 欠饷 -5 / 民心崩（任一城 morale < 30）额外 -1：这是真压力，靠玩家解决；
+ *     · 叛逃只在 loyal < 40（10%）与 40~55（3%）时掷骰；
+ *     · 首次跌破 55 给一条「离心」预警，玩家还有赏赐/委任两条路可救。
+ */
+export const LOYAL_BASELINE = 70;
+const LOYAL_UNPOSTED_DECAY = 0.3;
+const LOYAL_UNPOSTED_RECOVER = 0.2;
+const LOYAL_POSTED_GAIN = 0.6;
+const LOYAL_WARN_LINE = 55;
+/* 民心崩的额外惩罚有下限：只把人压到 45（进入 3% 出走风险区），
+   不会一路压到 0。否则「闲置 + 民心低」= 慢性清队，仍然是无解的死循环。 */
+const LOYAL_CRISIS_FLOOR = 45;
+
+/** ★ 2026-11-20：帐下人数上限 = 4 + 己方城数 × 2（下限 4）。
+ *  旧版没有上限，而「名士来投」的名声公式里含「帐下武将数 × 2」——人多 → 名声高 →
+ *  来投更快 → 人更多。实测挂机 150 旬，只剩 1 座城的玩家帐下有 19 名武将，
+ *  旬俸 1140 金而单城旬入约 200，直接进入「欠饷 → 忠诚崩 → 出走」的死亡螺旋。
+ *  上限把这条正反馈掐掉，同时让「扩城」变成养人的硬前提。
+ *  招降（花钱）不受此限——钱可以买到编制外的人，这是刻意留的口子。
+ *  放在 city-econ（零依赖叶子）而不是 strategy：panels 需要它但不能 import strategy（会成环）。 */
+export function generalCapacity(state) {
+  const cities = Object.values(state?.strategy?.cities || {})
+    .filter((c) => c && c.owner === 'player').length;
+  /* 里程碑奖励的编制加成（strategy.stageGoalTick 写 strategy.bonusSeats） */
+  const bonus = Math.max(0, Math.round(Number(state?.strategy?.bonusSeats) || 0));
+  return Math.max(4, 4 + cities * 2 + bonus);
+}
+
+/** 当前旬俸合计（金/旬）。UI 与忠诚结算共用同一口径，避免双轨。 */
+export function salaryDueOf(state) {
+  return (state?.generals || []).reduce((n, g) => n + 20 * (Number(g.star) || 3), 0);
+}
+
+/** 本地事件写入（city-econ 是零依赖叶子，不能 import strategy 的 recordEvent，否则成环）。
+ *  形状与 strategy.recordEvent 完全一致，上限同 480，保证 UI 与存档口径单源。 */
+function pushEvent(state, text) {
+  const st = state?.strategy;
+  if (!st) return;
+  if (!Array.isArray(st.events)) st.events = [];
+  st.events.push({ turn: st.turn ?? 0, text: String(text || ''), day: state.clock?.day ?? 0 });
+  while (st.events.length > 480) st.events.shift();
+}
+
+/** 每 10 日（旬）：忠诚自然变化 + 旬俸 + 叛逃判定。口径见上方块注释。 */
 export function loyaltyTick(state, cfg, ctx) {
   const day = Math.floor(Number(state.clock?.day) || 1);
   const posts = state.interior?.posts || {};
   const postedIds = new Set(Object.values(posts).map(Number).filter((v) => v > 0));
+  /* 民心崩：全境任一城 morale < 30，视为「人心浮动」，忠诚再 -1。 */
+  const moraleCrisis = Object.values(state.strategy?.cityEcon || {})
+    .some((e) => e && Number(e.morale) < 30);
   let salaryDue = 0;
   for (const g of state.generals || []) {
-    if (postedIds.has(Number(g.id))) g.loyal = Math.min(100, (g.loyal ?? 88) + 0.5);
-    else g.loyal = Math.max(0, (g.loyal ?? 88) - 1);
     salaryDue += 20 * (Number(g.star) || 3);
+    if (g.isProtagonist) continue;                  // 主角恒定，不进入忠诚/叛逃链路
+    const loyal = Number(g.loyal ?? 88);
+    let next;
+    if (postedIds.has(Number(g.id))) next = Math.min(100, loyal + LOYAL_POSTED_GAIN);
+    else if (loyal > LOYAL_BASELINE) next = Math.max(LOYAL_BASELINE, loyal - LOYAL_UNPOSTED_DECAY);
+    else next = Math.min(LOYAL_BASELINE, loyal + LOYAL_UNPOSTED_RECOVER);
+    if (moraleCrisis) next = Math.max(LOYAL_CRISIS_FLOOR, next - 1);
+    g.loyal = Math.max(0, Math.round(next * 10) / 10);
   }
   const r = state.roleRes;
   const salaryPaid = Math.min(r.gold || 0, salaryDue);
   r.gold = (r.gold || 0) - salaryPaid;
   if (salaryDue > 0) {
     if (salaryPaid < salaryDue) {
-      for (const g of state.generals || []) g.loyal = Math.max(0, g.loyal - 5);
+      for (const g of state.generals || []) {
+        if (g.isProtagonist) continue;              // 欠饷罚不到主角身上（他不是雇员）
+        g.loyal = Math.max(0, Math.round((Number(g.loyal ?? 88) - 5) * 10) / 10);
+      }
       recordRes(state, 'gold', -salaryPaid, '欠饷（俸禄不足，全军忠诚-5）', day);
       ctx?.push?.('chat.push', { rid: 0, nickName: '系统', type: 0, msg: '【朝堂】府库空虚，武将俸禄发放不足，军心浮动（忠诚-5）。', time: Date.now() });
     } else {
       recordRes(state, 'gold', -salaryPaid, '武将旬俸', day);
     }
   }
-  // 叛逃
+  /* 离心预警：首次跌破预警线时给一次明确提示，玩家还有「赏赐 / 委任」两条低成本补救路。 */
+  if (!state.loyalWarned || typeof state.loyalWarned !== 'object') state.loyalWarned = {};
+  for (const g of state.generals || []) {
+    if (g.isProtagonist) continue;
+    const key = String(g.id);
+    if (Number(g.loyal) < LOYAL_WARN_LINE && !state.loyalWarned[key]) {
+      state.loyalWarned[key] = day;
+      const nmW = cfg.generalByCfg?.get(Number(g.cfgId))?.name || `武将${g.cfgId}`;
+      pushEvent(state, `${nmW} 忠诚降至 ${Math.floor(Number(g.loyal))}，已现离心之意——委任岗位或赏赐可挽回。`);
+      ctx?.push?.('chat.push', {
+        rid: 0, nickName: '系统', type: 0,
+        msg: `【朝堂】${nmW} 忠诚仅 ${Math.floor(Number(g.loyal))}，心怀去意。可在武将页「赏赐」，或委任内政岗位稳住。`,
+        time: Date.now(),
+      });
+    }
+  }
+  // 叛逃（主角永不叛逃）
   const defected = [];
   for (const g of [...(state.generals || [])]) {
-    const loyal = g.loyal ?? 88;
-    const p = loyal < 40 ? 0.10 : (loyal < 70 ? 0.03 : 0);
+    if (g.isProtagonist) continue;
+    const loyal = Number(g.loyal ?? 88);
+    const p = loyal < 40 ? 0.10 : (loyal < LOYAL_WARN_LINE ? 0.03 : 0);
     if (p > 0 && rngFor(state.seed ?? 20261110, day, `defect:${g.id}`).random() < p) defected.push(g);
   }
   for (const g of defected) {

@@ -36,8 +36,10 @@
 | 推演结论 | `strategy.js previewAssault()`（只读沙盒） | — | — | ❌ | 出征面板推演卡 |
 | 战斗种子 | `battle.js battleSeedFor(armyId, x, y, arriveDay)` | uint32 | — | ❌ 只有一个公式 | 结算与推演共用 |
 | 诸侯守将/名册等级 | `domain/ai-roster.js`（`state.strategy.rosters[fid]`；★ P16 名册优先于旧 hash，`defenseFor` 在 level≥2 城取真实等级/战法，1 级城保留 hash 守 P0-3） | 级 | 整数 | ❌ 只读显示 | 战报守将、遭遇页、天下日志（学战法/升级/招降/挖角/求援文案） |
-| 来犯军围城 | `domain/strategy.js assaultEscalationTick()`（★ 2026-11-19）：来犯军出现 **40 日**不清剿 → 城 `besieged`（产出减半），围城每旬守军 −2%、民心 −3、治安 −1；守军归零则城陷；**120 日**仍不破则客军粮尽自退；同势力场上至多 2 支 | 日/% | 整数 | ❌ | 城卡「被围」标、军情推送、围城条 |
-| 沙盘分段目标 | `domain/strategy.js STAGE_GOALS`：6 城「立足」/ 10 城「割据」/ 18 城「争雄」，跨过阈值记一次里程碑（`strategy.stages`） | 城 | 整数 | ❌ | 里程碑推送、大事记 |
+| 来犯军围城 | `domain/strategy.js assaultEscalationTick()`（★ 2026-11-19 立，★ 2026-11-20 强化）：来犯军出现 **40 日**不清剿 → 目标城 `besieged`（产出减半）。围城每旬：守军按 `clamp(3% + 6%×围攻方兵力占比, 3%, 9%)` 逃散、**民心 −4**（另叠加 `cityDevTick` 的被围 −3，实际约 −7/旬）、治安 −1。**城破两条线**：守军归零，或民心 ≤ 20（城内开门）。**180 日**仍不破则客军粮尽自退；解围补民心 +8。同势力场上至多 2 支。目标城记在 `garrison.targetCity`（★ 2026-11-20：旧版按坐标取最近城，相邻城常围错） | 日/% | 整数 | ❌ | 城卡「被围」标、军情推送（含剩几日围城 / 目标民心）、围城条 |
+| 都城失陷迁都 | `domain/strategy.js rebindCapitalIfLost()`（★ 2026-11-20）：`strategy.playerCity` 一被攻破立即迁到「守军最多的己方城」，并播报；无己方城时不迁（亡国交 failstate）。旧版只在城墙编号失效时重绑，都城丢了 `playerCity` 一直指着敌城 | — | — | ❌ | 迁都推送、天下沙盘「本城」、新武将落城 |
+| 沙盘分段目标 | `domain/stage-goals.js STAGE_GOALS`（★ 2026-11-20 从 strategy.js 抽出为叶子，面板与结算同源）：**6 城「立足」/ 10 城「割据」/ 18 城「争雄」/ 30 城「霸业」**。达成即发**实际收益**：金 3000/6000/12000/24000、名望 +2/+3/+5/+8、后两档另加帐下编制 +2/+4（`strategy.bonusSeats`）；`strategy.stages[id] = 达成日` | 城 | 整数 | ❌ | 战略页「霸业进程」进度条、里程碑推送、大事记 |
+| 沙盘终局 | `domain/stage-goals.js UNIFY_CITIES = 45`（全图 72 城的 62.5%）：达成即写 `strategy.sandboxEnding = {id:'unify',day,turn,cities,generals,battles}`，**只结算一次、不硬中断**，可继续经营 | 城 | 整数 | ❌ | 战略页「霸业进程」结局横幅、终局推送 |
 
 ## C. 战斗
 
@@ -76,7 +78,10 @@
 | 处斩恶名 | `state.role.infamy += INFAMY_PER_EXECUTE(1)`（★ 2026-11-16，旧实现只写不读；现同步对外态度，见下行） | 笔 | 整数 | ❌ | 处斩 toast |
 | 处置对外态度 | `captive-reputation.js`：放归 −5、处斩 −15（董卓 `sili` 豁免）；全部经 `diplomacy.js adjustAttitudeByEvent()` 落 `eventAdj`，理由链标签「事件」，界面只显示不重算 | 点 | 整数 | ❌ | 外交面板态度理由链、劝降/停战门槛 |
 | 相性/义理 | `relation.js xiangxingOf/yiliOf` + `conf/relations.json` | 1–149 / 0–100 | 整数 | ❌ | 武将卡、关系 chip |
-| 忠诚 | `state.generals[].loyal`（运行期） | 0–100 | 整数 | ❌ | 武将卡、预警 |
+| 忠诚 | `state.generals[].loyal`（运行期，`city-econ.js loyaltyTick()` 唯一写入口）。★ 2026-11-20 重定口径：**主角不参与**（`isProtagonist` 直接跳过，不衰减/不叛逃/不吃欠饷罚）；委任岗位 **+0.6/旬**（≤100）；未委任向**基线 70** 回落 **−0.3/旬**，已低于基线则 **+0.2** 回血（闲置不清队）；欠饷 **−5**（无下限，破产是真惩罚）；全境任一城民心 < 30 再 **−1**（下限 45）。叛逃掷骰：`< 40` → 10%/旬，`40~55` → 3%/旬；首次跌破 55 给一次「离心」预警。旧口径（未委任 −1/旬无下限）实测会清空全队，含主角 | 0–100 | 0.1 | ❌ | 武将卡忠诚色条、离心预警、赏赐按钮 |
+| 帐下编制 | `city-econ.js generalCapacity(state) = max(4, 4 + 己方城数×2 + strategy.bonusSeats)`（★ 2026-11-20）。编制满则 `strategy.defectTick` 不再有「名士来投」（名声公式里的「帐下武将×2」封顶 10，掐掉「人越多来投越快」的正反馈）；**招降（花钱）不受此限**——钱可以买到编制外的人 | 人 | 整数 | ❌ | 战略页「帐下武将 x/y」、来投判定 |
+| 旬俸合计 | `city-econ.js salaryDueOf(state) = Σ 20 × star`（★ 2026-11-20 上屏）：面板显示值与 `loyaltyTick` 实际扣款同源 | 金/旬 | 整数 | ❌ | 战略页「旬俸合计」、府库流水「武将旬俸」 |
+| 势力动态 | `strategy.recordEvent(state, text, {quiet:true})` → `strategy.dynamics`（上限 120 条，★ 2026-11-20）。NPC 官阶晋升／习得战法／积功升级／登庸／按兵／招降／挖角（非玩家）等**背景音**走此通道，不再挤占 `strategy.events`（上限 480 条）的玩家军情流 | — | — | ❌ | 战略页「势力动态」栏（近 8 条）、天下沙盘月报 |
 | 战法槽位规则 | `slots.js slotBlock()`：自带不可替换；**学习槽 Lv5 开**；觉醒槽 Lv10 且自带 10 级 | 级 | 整数 | ❌ | 武将战法页、六府装配 |
 | 战法装配上限 | `conf/skills.json` 原表 `ui.limit`（可研习 80 条分布 **1~6 人**）；协议层 `general.upSkill` 与六府 `learn` 同读此值 | 人 | 整数 | ❌ | 六府装配按钮、limit_reached 回执 |
 | 武将升级经验 | `general-progress.js expToAdvance()`：`40 × 当前等级`，经验来自出征折损（`battle.js` 每槽损失 × 0.5）与 AI 月度人事（`ai-roster.js` 攻城/守城/内政按功勋发 exp）；玩家与 AI 同口径 | 点 | 整数 | ❌ | 武将卡「经验 x/y」 |
