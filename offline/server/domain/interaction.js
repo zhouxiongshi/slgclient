@@ -92,7 +92,7 @@ export function interactionState(state, cfg) {
       pop: num(e.pop, num(meta.population, 0)), store, yieldGrain, dailyUse,
       order: num(e.order, 60), morale: num(e.morale, 60),
       devAgri: num(e.devAgri), devTrade: num(e.devTrade), devArms: num(e.devArms), devDef: num(e.devDef),
-      disasterRisk: risk, disasterBasis: meta.disasterBasis || '按州估算（服务端未逐城下发依据）',
+      disasterRisk: risk, disasterBasis: meta.disasterBasis || '按州估算（本地未逐城下发依据）',
       supportDays: Math.floor(store / dailyUse),
       investReady: Object.keys(investDays).length === 0 || day - Math.max(...Object.values(investDays).map(num)) >= 1,
       /* ★ U20 粮道连通（断粮城由 supplyTick 打上 supplyCut，界面据此变色） */

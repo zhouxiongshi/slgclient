@@ -4246,7 +4246,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
           : '<div class="cost" style="color:#ff9d6b">推演失败：' + esc(warReason(rs && rs.reason)) + '</div>';
       }).catch(function () {
         btn.disabled = false; btn.textContent = '再推演一次';
-        out.innerHTML = '<div class="cost" style="color:#ff9d6b">推演失败：服务端无响应</div>';
+        out.innerHTML = '<div class="cost" style="color:#ff9d6b">推演失败：本机无响应</div>';
       });
     });
     btn.style.marginTop = '6px';
@@ -4360,7 +4360,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         } else {
           toast('出兵失败：' + warReason(rs && rs.reason), false);
         }
-      }).catch(function () { toast('出兵失败：服务端无响应', false); });
+      }).catch(function () { toast('出兵失败：本机无响应', false); });
     });
   }
 
@@ -4422,7 +4422,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
             toast(rs.text || (rs.ok ? '外交已成' : '外交未成'), !!rs.ok);
             fetchState().then(function (s2) { cache = s2; renderWar(cache); });
           })
-          .catch(function () { toast('外交动作失败：服务端无响应', false); });
+          .catch(function () { toast('外交动作失败：本机无响应', false); });
       });
       b.style.margin = '0';
       if (disabled) b.disabled = true;
@@ -4561,7 +4561,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
                   toast('已撤回' + rs.from + '，退回粮 ' + fmt(rs.refund), true);
                   warRefresh(s);
                 } else toast('撤回失败：' + warReason(rs && rs.reason), false);
-              }).catch(function () { toast('撤回失败：服务端无响应', false); });
+              }).catch(function () { toast('撤回失败：本机无响应', false); });
             });
           });
         }
@@ -4591,7 +4591,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
           var why = { edge: '已经到头了', blocked: '相邻那支不是你的队伍（或已结算）', no_march: '该队已出发或已抵达' };
           toast('调整失败：' + (why[rs && rs.reason] || '队列里找不到这支队'), false);
         }
-      }).catch(function () { toast('调整失败：服务端无响应', false); });
+      }).catch(function () { toast('调整失败：本机无响应', false); });
   }
 
   /* 批量撤回：服务端只有单支撤回的动作口（撤回要退粮、要解锁队伍、要记归因），
@@ -5765,7 +5765,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
                 + fmt((Number(pneed[k]) || 0) - (Number(res[k]) || 0));
             }).join('、');
             affordHint.innerHTML = '<span style="color:' + (afford ? '#a9e2a0' : '#ff9d6b') + '">'
-              + '服务端核算：本旬可征 ' + fmt(afford) + ' 丁'
+              + '本地核算：本旬可征 ' + fmt(afford) + ' 丁'
               + (lackText ? '（' + esc(lackText) + '）' : '')
               + '。单兵含石耗与兵种倍率，逐槽明细见下方。</span>';
           } else {

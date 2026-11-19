@@ -109,3 +109,21 @@ test('术语表玩家可见字段不再写借鉴来源，但工程溯源字段�
     assert.ok(t.source_id && t.confidence, `${t.id} 工程溯源字段缺失`);
   }
 });
+
+test('纯单机口径：注入层玩家可见文案不出现「服务端 / 服务器」，只用本地 / 本机', () => {
+  // 逐行剔除行注释与块注释后，只检查真正会渲染的字符串字面量；
+  // 源码注释里的「服务端」是工程术语，不属于玩家可见层，允许保留。
+  for (const file of UI_FILES) {
+    const raw = read(file);
+    let code = raw.replace(/\/\*[\s\S]*?\*\//g, ''); // 去块注释
+    code = code.split('\n').map((line) => line.replace(/\/\/.*$/, '')).join('\n'); // 去行注释
+    const literals = [...code.matchAll(/'([^'\\]*(?:\\.[^'\\]*)*)'|"([^"\\]*(?:\\.[^"\\]*)*)"/g)]
+      .map((m) => m[1] ?? m[2] ?? '').join(' ');
+    for (const bad of ['服务端', '服务器', '服务器端']) {
+      assert.ok(!literals.includes(bad), `${file} 玩家可见文案仍有「${bad}」`);
+    }
+  }
+  // 关键本地口径确实落地（防呆：避免空扫描误判通过）
+  assert.ok(read('server/skills.js').includes('本地核算：本旬可征'), '征兵卡应为「本地核算」');
+  assert.ok(read('server/skills.js').includes('本机无响应'), '失败提示应为「本机无响应」');
+});

@@ -142,3 +142,21 @@ test('P11 · 入门向导可操作闭环：去操作跳转 + 我已完成推进�
   assert.ok(ix.includes("data-act='later'") || ix.includes('data-act="later"'), '可稍后');
   assert.ok(/guide: function \(\)/.test(ix), '可重看（__slgIX.guide）');
 });
+
+test('P11 · 武将人物卡：原版立绘主视觉 + 史载五维条 + 列表缩略头像，且资产异步就绪后重绘', () => {
+  const p = read('server/panels-ui.js');
+  // 人物卡主体：立绘 img[data-slgcid] + 阵营描边 + 星级 + 五维条
+  assert.ok(p.includes('function heroCardHtml(g)'), '人物卡渲染函数存在');
+  assert.ok(p.includes('class="hcArt"') && p.includes('hcPortrait'), '立绘主视觉存在');
+  assert.ok(p.includes('data-slgcid='), '立绘走原版资产桥（带 cfgId 回填锚点）');
+  assert.ok(/--hcc:/.test(p) && p.includes('function campColor('), '阵营色描边存在');
+  assert.ok(p.includes('hcStars') && p.includes('historyStats'), '史载五维条取自 lore.historyStats（不编造）');
+  assert.ok(p.includes('hcName') && p.includes('hcStar'), '武将名与星级展示');
+  // 列表缩略头像（帐下 + 在野）
+  assert.ok(p.includes('function portraitThumb('), '列表缩略头像函数存在');
+  assert.equal((p.match(/portraitThumb\(/g) || []).length >= 3, true, '帐下与在野列表都用缩略头像');
+  // 资产异步就绪后重绘
+  assert.ok(p.includes("'slg:portraits-ready'"), '立绘映射就绪后重绘面板');
+  // 五维条口径：史载五维 0~100，长度 5
+  assert.ok(/dims = \['统率', '武力', '智力', '政治', '魅力'\]/.test(p), '五维条为史载五维五项');
+});

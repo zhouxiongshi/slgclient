@@ -721,7 +721,7 @@
       parts.push({ k: '最终成功率', v: (c.parts ? c.parts.final : c.rate) + '%（构成逐项可查）', final: true });
       parts.push({ k: '失败后果', v: '不扣费；俘虏忠诚 -10，低于 0 越狱' });
     }
-    if (!d.ok) parts.push({ k: '服务端数据', v: '聚合端点未就绪，以下为按公开规则推算，不视为权威值' });
+    if (!d.ok) parts.push({ k: '本地数据', v: '汇总尚未就绪，以下为按公开规则推算，仅供参考' });
     /* ★ M0-3（本作设计-2 / §2.1 判据「预览含如果钱不够会怎样」）：
        决策预览不只给收益，还必须给三种失败态——做不成会怎样。 */
     (function failStates() {
@@ -731,12 +731,12 @@
       var needGrain = (String(m.cost).match(/(\d+)\s*粮/) || [0, 0])[1];
       if (Number(needGold) > 0 && tw < Number(needGold)) {
         parts.push({ k: '失败态 · 资源不足', v: '需要 ' + needGold + ' 金，府库现有 ' + tw
-          + ' 金。点了会怎样：请求被服务端拒绝（资源不足），不扣费、状态不变；'
+          + ' 金。点了会怎样：本地校验拦截（资源不足），不扣费、状态不变；'
           + '建议先招商/等田赋或降级做更便宜的任务。', bad: true });
       }
       if (Number(needGrain) > 0 && d.treasury && Number(needGrain) > (d.treasury.grain || 0)) {
         parts.push({ k: '失败态 · 粮不足', v: '需要 ' + needGrain + ' 粮，现有 ' + (d.treasury.grain || 0)
-          + ' 粮。同上：服务端拒绝，不扣粮。可先屯田/调运。', bad: true });
+          + ' 粮。同上：本地校验拦截，不扣粮。可先屯田/调运。', bad: true });
       }
       /* ② 粮道断：出征/运输类动作 + 存在断粮城 */
       if (/出征|进军|运输|运粮/.test(m.title) && d.alerts && d.alerts.supplyCut && d.alerts.supplyCut.length) {
@@ -858,7 +858,7 @@
     var last = S.undo[0];
     if (!last) { toast('没有可撤销的操作', 'fail'); return; }
     toast(last.reversible
-      ? '「' + last.label + '」已提交服务端，前端无法回滚；请通过读档回退。'
+      ? '「' + last.label + '」已生效且无法直接撤销；请通过读档回退。'
       : '「' + last.label + '」属不可逆操作，需读档回退', 'fail');
   }
   /* 四态反馈：包装 fetch，只对同域 /__slg/ 请求显示状态，不改请求体与协议 */
@@ -873,7 +873,7 @@
         if (isAct) phase(r.ok ? '成功：' + url.split('?')[0] : '失败：HTTP ' + r.status, r.ok ? 'ok' : 'fail');
         return r;
       }).catch(function (e) {
-        if (isAct) phase('失败：' + e.message + '（可重试或检查服务端）', 'fail');
+        if (isAct) phase('失败：' + e.message + '（可重试）', 'fail');
         throw e;
       });
     };
@@ -964,7 +964,7 @@
       var g = (d.generals || []).find(function (x) { return n(x.id) === n(id); });
       if (g) rows = [['武将', g.name], ['星级', g.star], ['忠诚', g.loyal], ['旬俸', g.due + ' 金']];
     }
-    if (!rows.length) rows = [['说明', '服务端未提供该对象的详情字段；以下为聚合态占位，见「字段缺口」。']];
+    if (!rows.length) rows = [['说明', '本地暂无该对象的详情字段；以下为聚合态占位，见「字段缺口」。']];
     box.innerHTML = '<h3>' + esc(title) + '</h3>'
       + '<div class="muted" style="font-size:11px;margin-bottom:9px">面包屑：'
       + (S.lastFocus ? '当前对象' : '—') + ' › 就地抽屉 · '

@@ -320,6 +320,37 @@
     '  border-radius:5px;padding:7px 9px;margin-bottom:3px;cursor:pointer;font:13px "Microsoft YaHei",sans-serif;}',
     '#slgPanelsWin .genrow:hover{background:#20221c;}#slgPanelsWin .genrow.on{background:#3a3325;border-color:#ba9a52;color:#ffe6a6;}',
     '#slgPanelsWin .genrow small{color:#8f8676;display:block;font-size:11px;}',
+    /* 人物卡：原版立绘主视觉 + 阵营色描边 + 史载五维条（不编造数值，取自 lore.historyStats） */
+    '#slgPanelsWin .genrow{min-height:46px;}',
+    '#slgPanelsWin .genrow .hcThumb{float:left;width:30px;height:40px;object-fit:cover;object-position:top;',
+    '  border:1px solid #6a624a;border-radius:3px;margin:0 8px 0 0;background:#12150f;}',
+    '#slgPanelsWin .genrow .hcThumbFallback{float:left;width:30px;height:40px;line-height:40px;text-align:center;',
+    '  border:1px solid #6a624a;border-radius:3px;margin:0 8px 0 0;background:#262a20;color:#e6dac0;font:16px "KaiTi",serif;}',
+    '#slgPanelsWin .hcCard{display:flex;gap:16px;background:linear-gradient(135deg,#23251a,#1a1c14);',
+    '  border:1px solid #5a5238;border-left:4px solid var(--hcc,#ba9a52);border-radius:9px;padding:14px 16px;margin-bottom:14px;}',
+    '#slgPanelsWin .hcArt{flex:0 0 158px;position:relative;border:1px solid var(--hcc,#ba9a52);border-radius:7px;',
+    '  overflow:hidden;background:#12150f;box-shadow:0 0 14px #0008 inset;}',
+    '#slgPanelsWin .hcArt img.hcPortrait{display:block;width:158px;height:216px;object-fit:cover;object-position:top center;}',
+    '#slgPanelsWin .hcArt .hcNoArt{width:158px;height:216px;display:flex;align-items:center;justify-content:center;',
+    '  font:700 72px "KaiTi",serif;color:#e8c670;background:radial-gradient(circle at 50% 30%,#3a3a24,#14160f);}',
+    '#slgPanelsWin .hcArt .hcRank{position:absolute;left:0;right:0;bottom:0;padding:4px 8px;',
+    '  background:linear-gradient(transparent,#0b0c08 42%);color:#ffe6a6;font:700 17px "KaiTi",serif;text-align:center;',
+    '  text-shadow:0 2px 4px #000;}',
+    '#slgPanelsWin .hcMeta{flex:1;min-width:0;}',
+    '#slgPanelsWin .hcName{font:700 25px "KaiTi","Microsoft YaHei",serif;color:#ffe6a6;letter-spacing:2px;}',
+    '#slgPanelsWin .hcName .hcStar{color:#f0c14b;font:14px "Microsoft YaHei",sans-serif;letter-spacing:1px;margin-left:8px;}',
+    '#slgPanelsWin .hcLine{margin-top:3px;color:#b9ac8f;font-size:12px;}',
+    '#slgPanelsWin .hcLine .hcCamp{display:inline-block;padding:1px 8px;border:1px solid var(--hcc,#ba9a52);',
+    '  border-radius:9px;color:#f0d998;margin-right:8px;}',
+    '#slgPanelsWin .hcStars{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:11px;}',
+    '#slgPanelsWin .hcStars .hcS{background:#1b1d14;border:1px solid #3a3428;border-radius:5px;padding:5px 6px;}',
+    '#slgPanelsWin .hcStars .hcS .n{color:#9c9382;font-size:11px;}',
+    '#slgPanelsWin .hcStars .hcS .b{height:6px;background:#2b2d20;border-radius:3px;margin-top:4px;overflow:hidden;}',
+    '#slgPanelsWin .hcStars .hcS .b i{display:block;height:100%;background:linear-gradient(90deg,#7c6a37,#e8c670);}',
+    '#slgPanelsWin .hcStars .hcS .v{color:#f0e2b8;font:700 14px "Microsoft YaHei",sans-serif;text-align:right;}',
+    '#slgPanelsWin .hcBrief{margin-top:10px;color:#cfc4a6;font-size:12px;line-height:1.7;border-top:1px dashed #3a3428;padding-top:8px;}',
+    '#slgPanelsWin .hcTags{margin-top:8px;color:#8f8676;font-size:11px;}',
+    '#slgPanelsWin .hcTags b{color:#c9bfa3;font-weight:600;}',
     '#slgPanelsWin .cols{display:flex;gap:16px;align-items:flex-start;}#slgPanelsWin .cols>.right{flex:1;min-width:0;}',
     '#slgPanelsWin .src{border-left:2px solid #6a5a32;padding:4px 0 4px 11px;margin:8px 0;}',
     '#slgPanelsWin .src b{color:#e8c670;}#slgPanelsWin .src .muted{color:#9c9382;font-size:12px;}',
@@ -354,10 +385,66 @@
       + '</select> <button class="btn" data-act="dispatch" data-gid="' + g.id + '">调防</button>';
   }
 
+  /* 人物卡：立绘 URL 走 skills.js 下发的全局资产桥（web/ 磁盘零改动）。
+     资产映射是异步 fetch 的，渲染时可能还没就绪——img 带 data-slgcid，
+     skills.js 的 slg:portraits-ready 回填会把占位补成真实立绘。 */
+  function portraitUrl(cfgId) {
+    return (typeof window.__slgPortraitUrl === 'function') ? (window.__slgPortraitUrl(cfgId) || '') : '';
+  }
+  /* 阵营配色：沿用战场红/蓝基调，扩到多势力；史载五维口径 0~100 同源展示。 */
+  var HC_CAMP_COLORS = ['#ba9a52', '#c0392b', '#2c5f8a', '#3e8e5a', '#8a5a9c', '#b0752e', '#4a6b8a', '#9c4a4a'];
+  function campColor(camp) {
+    return HC_CAMP_COLORS[(Number(camp) || 0) % HC_CAMP_COLORS.length];
+  }
+  function portraitThumb(g) {
+    var url = portraitUrl(g.cfgId);
+    if (url) return '<img class="hcThumb" data-slgcid="' + esc(g.cfgId) + '" src="' + esc(url)
+      + '" alt="' + esc(g.name) + '" loading="lazy">';
+    return '<span class="hcThumbFallback" data-slgcid="' + esc(g.cfgId) + '">'
+      + esc(String(g.name || '将').slice(0, 1)) + '</span>';
+  }
+  /* 人物卡大图：立绘主视觉 + 阵营描边 + 星级 + 史载五维条 + 生平。
+     五维只展示 lore.historyStats（0~100 史载同源），不展示任何编造数值；
+     主角无史载时明确标注「本局穿越者，史无明载」，本局战斗数值仍可在「属性」页查。 */
+  function heroCardHtml(g) {
+    var color = campColor(g.camp);
+    var url = portraitUrl(g.cfgId);
+    var art = url
+      ? '<img class="hcPortrait" data-slgcid="' + esc(g.cfgId) + '" src="' + esc(url) + '" alt="' + esc(g.name) + '">'
+      : '<div class="hcNoArt" data-slgcid="' + esc(g.cfgId) + '">' + esc(String(g.name || '将').slice(0, 1)) + '</div>';
+    var star = Math.round(Number(g.star) || 0);
+    var starTxt = '★'.repeat(Math.max(0, Math.min(5, star))) + '☆'.repeat(Math.max(0, 5 - star));
+    var lore = g.lore;
+    var dims = ['统率', '武力', '智力', '政治', '魅力'];
+    var starsHtml = dims.map(function (d) {
+      var v = lore ? Number((lore.historyStats || {})[d]) || 0 : 0;
+      return '<div class="hcS"><div class="n">' + d + '</div>'
+        + '<div class="v">' + (lore ? v : '—') + '</div>'
+        + '<div class="b"><i style="width:' + Math.max(0, Math.min(100, v)) + '%"></i></div></div>';
+    }).join('');
+    var brief = lore && lore.brief ? esc(lore.brief)
+      : '本局穿越者，史无明载；立绘与本局画像由章节事件逐步写入。';
+    var meta = lore
+      ? '字 ' + esc(lore.zi || '—') + ' · 籍贯 ' + esc(lore.hometown || '—') + ' · ' + esc(lore.era || '')
+      : '本局设定人物';
+    return '<div class="hcCard" style="--hcc:' + color + '">'
+      + '<div class="hcArt">' + art
+      + '<div class="hcRank">' + esc(g.name || '武将') + '</div></div>'
+      + '<div class="hcMeta">'
+      + '<div class="hcName">' + esc(g.name || '武将') + '<span class="hcStar">' + starTxt + '</span></div>'
+      + '<div class="hcLine"><span class="hcCamp">' + (g.isProtagonist ? '主公' : (Number(g.camp) ? ('势力 ' + g.camp) : '在野')) + '</span>'
+      + 'Lv' + esc(g.level) + ' · ' + esc(g.careerName || '干才') + ' · ' + esc(g.state) + '</div>'
+      + '<div class="hcStars">' + starsHtml + '</div>'
+      + '<div class="hcBrief">' + brief + '<div class="hcTags">' + meta
+      + (g.cityName ? ' · 驻 ' + esc(g.cityName) : '') + '</div></div>'
+      + '</div></div>';
+  }
+
   function genListHtml() {
     var out = '<div class="genlist"><h4>帐下武将（' + data.generals.length + '）</h4>';
     data.generals.forEach(function (g) {
       out += '<button class="genrow' + (g.id === ui.genId ? ' on' : '') + '" data-act="gen" data-id="' + g.id + '">'
+        + portraitThumb(g)
         + esc(g.name) + ' <span class="tag">' + esc(g.state) + '</span><small>Lv' + g.level + ' · ★' + g.star
         + ' · <span style="color:' + (g.loyal >= 80 ? '#9ec97f' : g.loyal >= 70 ? '#d8b45a' : '#e07a5f') + '">忠' + (g.loyal != null ? g.loyal : 88) + '</span>'
         + (g.appointed.length ? ' · 委任中' : '') + '</small></button>';
@@ -365,6 +452,7 @@
     out += '<h4>在野名士（可招贤）<span class="muted" style="font-weight:normal;font-size:11px"> · 下列统率为史载五维 0~100</span></h4>';
     (data.prospects || []).forEach(function (p, i) {
       out += '<button class="genrow' + (ui.genId === -i - 1 ? ' on' : '') + '" data-act="prospect" data-i="' + i + '">'
+        + portraitThumb(p)
         + esc(p.name) + '<small>' + esc(p.zi === '史无明载' ? '' : '字' + p.zi) + ' · ' + esc(p.faction)
         + ' · 史载统率 ' + esc(p.historyStats.统率) + '</small></button>';
     });
@@ -575,7 +663,17 @@
       var rateRows = (prospect.recruitParts || []).map(function (p) {
         return '<tr><td>' + esc(p.label) + '</td><td class="v">' + (p.value > 0 ? '+' : '') + p.value + '%</td></tr>';
       }).join('');
-      body = '<h3>在野名士 · ' + esc(prospect.name)
+      var pCard = {
+        cfgId: prospect.cfgId, name: prospect.name, camp: 0, star: 0,
+        level: '—', careerName: '在野名士', state: '在野', cityName: '',
+        isProtagonist: false,
+        lore: {
+          historyStats: prospect.historyStats, zi: prospect.zi,
+          hometown: prospect.faction, era: '在野', brief: prospect.brief,
+        },
+      };
+      body = heroCardHtml(pCard)
+        + '<h3>在野名士 · ' + esc(prospect.name)
         + '<span class="muted" style="font-weight:normal;font-size:11px;margin-left:8px">史载五维 0~100；招贤后即为本局战斗数值（同一 0~100 口径）</span></h3><div class="card">'
         + '<div class="grid">' + ['统率', '武力', '智力', '政治', '魅力'].map(function (s) {
           return '<div><span class="k">' + s + '</span> <span class="v">' + esc(prospect.historyStats[s]) + '</span></div>';
@@ -591,7 +689,8 @@
       var g = currentGeneral();
       if (!g) return '<div class="muted">暂无武将</div>';
       var tabs = [['attr', '属性'], ['skill', '战法'], ['equip', '兵刃'], ['story', '经历']];
-      body = '<div class="tabs">' + tabs.map(function (t) {
+      body = heroCardHtml(g)
+        + '<div class="tabs">' + tabs.map(function (t) {
         return '<button class="' + (ui.genTab === t[0] ? 'on' : '') + '" data-act="gtab" data-id="' + t[0] + '">' + t[1] + '</button>';
       }).join('') + '</div>';
       if (ui.genTab === 'attr') body += genAttrHtml(g);
@@ -1382,6 +1481,13 @@
 
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && mask.style.display === 'flex') close();
+    });
+
+    /* 立绘资产异步下发：映射到位后，若武将页正开着就重绘一次，把占位的
+       缩略图/大字占位换成真实原版立绘（skills.js 只回填 img[data-slgcid]，
+       本层的 span/div 占位由这里负责换成 img）。 */
+    window.addEventListener('slg:portraits-ready', function () {
+      if (data && mask && mask.style.display === 'flex' && ui.tab === 'general') render();
     });
 
     window.__slgPanels = {
