@@ -767,6 +767,9 @@
     }
     out += '<div style="margin-top:10px">'
       + '<button class="btn" data-act="openwar">打开出征面板</button> '
+      /* ★ 2026-11-20：外交视图本来就在出征窗第 5 个页签里，功能齐全但玩家找不到。
+         这里给一个直达入口——不做新面板、不改协议，只复用 __slgWarWindow({tab:'diplo'})。 */
+      + '<button class="btn" data-act="diplomacy">外交 · 诸侯态度</button> '
       + '<button class="btn" data-act="gotostrategy">打开天下沙盘</button></div></div>';
 
     // ★ P2/P3 城池经营：人口/逐城产出/城库/灾害 + 运粮入口
@@ -1296,6 +1299,13 @@
       close();
       if (typeof window.__slgWarWindow === 'function') window.__slgWarWindow();
       else toast('出征面板尚未就绪，请稍候', false);
+      return;
+    }
+    /* ★ 2026-11-20：外交直达。落到既有出征窗的外交页签，不新建视图/协议。 */
+    if (act === 'diplomacy') {
+      close();
+      if (typeof window.__slgWarWindow === 'function') window.__slgWarWindow({ tab: 'diplo' });
+      else toast('外交面板尚未就绪，请稍候', false);
       return;
     }
     if (act === 'gotostrategy') {      close();

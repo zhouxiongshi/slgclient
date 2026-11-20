@@ -3169,14 +3169,15 @@ export function strategyEventTick(state) {
   const stale = (st.pendingEvents || []).filter((e) => turnNow - (Number(e.sinceTurn) || turnNow) >= 4);
   if (stale.length) {
     for (const e of stale) {
-      const conservative = (e.choices || []).length ? (e.choices[e.choices.length - 1].id) : null;
-      if (conservative) {
-        try { strategyEventChoice(state, {}, null, { id: e.id, choice: conservative }); }
+      const last = (e.choices || []).length ? e.choices[e.choices.length - 1] : null;
+      if (last) {
+        /* quiet：只留一条「逾期…按「X」结案」；不再叠「事件·抉择」行。 */
+        try { strategyEventChoice(state, {}, null, { id: e.id, choice: last.id, quiet: true }); }
         catch { st.pendingEvents = (st.pendingEvents || []).filter((x) => x.id !== e.id); }
       } else {
         st.pendingEvents = (st.pendingEvents || []).filter((x) => x.id !== e.id);
       }
-      recordEvent(state, `【事件·逾期】「${e.title}」久未决，按保守之策自动结案。`);
+      recordEvent(state, `【事件·逾期】「${e.title}」久未决，按保守之策「${last?.label || '默认'}」结案。`);
     }
   }
   if ((st.pendingEvents || []).length) return { pending: st.pendingEvents.length, deferred: 0 };
@@ -3199,7 +3200,7 @@ export function strategyEventTick(state) {
 }
 
 /** 玩家点选事件（index.js 路由 strategy/action eventChoice）。效果词白名单落账。 */
-export function strategyEventChoice(state, cfg, ctx, { id, choice } = {}) {
+export function strategyEventChoice(state, cfg, ctx, { id, choice, quiet } = {}) {
   const st = ensureStrategy(state);
   const idx = (st.pendingEvents || []).findIndex((e) => e.id === id);
   if (idx < 0) return { ok: false, reason: 'no_pending' };
@@ -3262,7 +3263,9 @@ export function strategyEventChoice(state, cfg, ctx, { id, choice } = {}) {
               : a.kind === 'attitude' ? `${a.target}态度 ${a.delta > 0 ? '+' : ''}${a.delta}`
                 : `名声 ${a.delta > 0 ? '+' : ''}${a.delta}`))
     .join('、');
-  recordEvent(state, `【事件·抉择】${ev.title}：${(ev.choices || []).find((c) => c.id === choice)?.label || choice}`
+  /* ★ 2026-11-20：逾期兜底走 quiet——效果照落、流水照记，但不再写一行「事件·抉择」。
+     否则一次未决事件产生「触发 / 抉择 / 逾期」三行，实测占事件日志的 2/3。 */
+  if (!quiet) recordEvent(state, `【事件·抉择】${ev.title}：${(ev.choices || []).find((c) => c.id === choice)?.label || choice}`
     + (appliedText ? `（${appliedText}）` : ''));
   ctx?.push?.('chat.push', {
     rid: 0, nickName: '系统', type: 0,

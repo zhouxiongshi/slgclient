@@ -205,12 +205,21 @@ export function attitudeOf(state, a, b) {
   return { value, factors };
 }
 
-/** 我军总兵力（劝降兵力比口径：己方全部城守军之和）。 */
+/** 势力总兵力（劝降兵力比口径）。
+ *  ★ 2026-11-20：旧实现只算城池守军，**不算在编部队**。玩家带着 2 万大军
+ *  仍然满足不了「3:1 劝降」——实测 400 旬外交劝降 0 次，整片归附的加速路径
+ *  形同虚设。玩家我方的口径必须与界面「在编兵力」一致：城守军 + 在编部队；
+ *  NPC 没有 armys（用的是 garrisons），仍按城守军计。 */
 function totalTroops(state, id) {
   const st = state.strategy;
   let n = 0;
   for (const row of Object.values(st.cities)) {
     if (row.owner === id) n += Number(row.troops) || 0;
+  }
+  if (id === PLAYER_ID) {
+    for (const a of state.armys || []) {
+      for (const v of a.soldiers || []) n += Math.max(0, Number(v) || 0);
+    }
   }
   return n;
 }

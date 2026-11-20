@@ -269,9 +269,10 @@ test('nextStageGoal 给出「还差几城」，全达成后指向一统线', () 
   assert.equal(g1.id, STAGE_GOALS[0].id);
   assert.equal(g1.need, STAGE_GOALS[0].at - 5);
   const all = Object.fromEntries(STAGE_GOALS.map((s) => [s.id, 1]));
-  const g2 = nextStageGoal(31, all);
+  /* 用相对阈值取「还差 2 城」，避免把旧的一统线数值写死在测试里。 */
+  const g2 = nextStageGoal(UNIFY_CITIES - 2, all);
   assert.equal(g2.id, 'unify');
-  assert.equal(g2.need, UNIFY_CITIES - 31);
+  assert.equal(g2.need, 2);
 });
 
 /* ---------------------------------------------------------------- 事件流 */

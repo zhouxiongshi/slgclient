@@ -16,13 +16,19 @@ export const STAGE_GOALS = [
     gold: 6000, fame: 3 },
   { id: 'hegemon', at: 18, title: '争雄', hint: '18 城，天下三分有其名。下一步就是州治。',
     gold: 12000, fame: 5, seats: 2 },
-  { id: 'overlord', at: 30, title: '霸业', hint: '30 城。剩下的诸侯加起来也没你大了——该收尾了。',
+  /* ★ 2026-11-20：原为 30 城「霸业」，但实测「会打 + 会管理」的玩家
+     400 旬峰值只有 24 城（再往上军粮养不起：1 兵 1 旬 1 粮），
+     30 城是永远够不到的台阶。改为 22 城，作为终局前最后一级。 */
+  { id: 'overlord', at: 22, title: '封王', hint: '22 城。州郡尽归节制，只差最后几座坚城。',
     gold: 24000, fame: 8, seats: 4 },
 ];
 
-/** 终局线：全图 72 城的 62.5%。达成记 sandboxEnding（不硬中断，可继续经营）。 */
-export const UNIFY_CITIES = 45;
-export const SANDBOX_ENDING = { id: 'unify', title: '天下一统', hint: '四海归一，霸业已成。' };
+/** 沙盘终局线：全图 72 城的 1/3。
+ *  ★ 2026-11-20：原为 45 城（62.5%），实测任何玩法都够不到（主动 400 旬峰值 24 城）。
+ *  24 城是「会打 + 会管理」玩家在 400 旬内确实能摸到的线。
+ *  这是**沙盘终局**不是全图统一：达成记 sandboxEnding，不硬中断，可继续经营。 */
+export const UNIFY_CITIES = 24;
+export const SANDBOX_ENDING = { id: 'unify', title: '定鼎', hint: '二十四城在手，天下格局已定。可继续经营，完成真正的四海归一。' };
 
 /** 下一个未达成的阶段目标（纯展示用；已全达成返回终点线）。 */
 export function nextStageGoal(owned, stages = {}) {

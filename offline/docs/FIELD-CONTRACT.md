@@ -39,8 +39,8 @@
 | 来犯军围城 | `domain/strategy.js assaultEscalationTick()`（★ 2026-11-19 立，★ 2026-11-20 强化）：来犯军出现 **40 日**不清剿 → 目标城 `besieged`（产出减半）。围城每旬：守军按 `clamp(3% + 6%×围攻方兵力占比, 3%, 9%)` 逃散、**民心 −4**（另叠加 `cityDevTick` 的被围 −3，实际约 −7/旬）、治安 −1。**城破两条线**：守军归零，或民心 ≤ 20（城内开门）。**180 日**仍不破则客军粮尽自退；解围补民心 +8。同势力场上至多 2 支。目标城记在 `garrison.targetCity`（★ 2026-11-20：旧版按坐标取最近城，相邻城常围错） | 日/% | 整数 | ❌ | 城卡「被围」标、军情推送（含剩几日围城 / 目标民心）、围城条 |
 | 都城失陷迁都 | `domain/strategy.js rebindCapitalIfLost()`（★ 2026-11-20）：`strategy.playerCity` 一被攻破立即迁到「守军最多的己方城」，并播报；无己方城时不迁（亡国交 failstate）。旧版只在城墙编号失效时重绑，都城丢了 `playerCity` 一直指着敌城 | — | — | ❌ | 迁都推送、天下沙盘「本城」、新武将落城 |
 | 部队驻地回收 | `domain/strategy.js rebindArmiesIfStranded()`（★ 2026-11-20）：`army.cityId` 指向的城一旦不再属于玩家，立即把该队（含武将 `cityId`）退回「都城（若在）或守军最多的己方城」并播报。**行军中（有 `marchId`）跳过**——抵达分支自会归位。无己方城时不动（亡国交 failstate）。旧版 `army.cityId` 只在行军抵达的四个分支里赋值，城破后悬空 → 之后每次出征都返回 `not_own_city`，属**永久软锁**（实测主动出征 150 旬、95 次请求全部被拒） | — | — | ❌ | 军情推送「残部退守 X 集结」、出征出发城校验 |
-| 沙盘分段目标 | `domain/stage-goals.js STAGE_GOALS`（★ 2026-11-20 从 strategy.js 抽出为叶子，面板与结算同源）：**6 城「立足」/ 10 城「割据」/ 18 城「争雄」/ 30 城「霸业」**。达成即发**实际收益**：金 3000/6000/12000/24000、名望 +2/+3/+5/+8、后两档另加帐下编制 +2/+4（`strategy.bonusSeats`）；`strategy.stages[id] = 达成日` | 城 | 整数 | ❌ | 战略页「霸业进程」进度条、里程碑推送、大事记 |
-| 沙盘终局 | `domain/stage-goals.js UNIFY_CITIES = 45`（全图 72 城的 62.5%）：达成即写 `strategy.sandboxEnding = {id:'unify',day,turn,cities,generals,battles}`，**只结算一次、不硬中断**，可继续经营 | 城 | 整数 | ❌ | 战略页「霸业进程」结局横幅、终局推送 |
+| 沙盘分段目标 | `domain/stage-goals.js STAGE_GOALS`（★ 2026-11-20 从 strategy.js 抽出为叶子，面板与结算同源）：**6 城「立足」/ 10 城「割据」/ 18 城「争雄」/ 22 城「封王」**。达成即发**实际收益**：金 3000/6000/12000/24000、名望 +2/+3/+5/+8、后两档另加帐下编制 +2/+4（`strategy.bonusSeats`）；`strategy.stages[id] = 达成日`。★ 2026-11-20 第三轮：末档原为 30 城，实测任何玩法 400 旬峰值只有 24 城，改为 22 城 | 城 | 整数 | ❌ | 战略页「霸业进程」进度条、里程碑推送、大事记 |
+| 沙盘终局 | `domain/stage-goals.js UNIFY_CITIES = 24`（全图 72 城的 1/3；★ 2026-11-20 第三轮：原 45 城实测不可达，会打+会管理的玩家 400 旬峰值 24 城）、`SANDBOX_ENDING = {id:'unify',title:'定鼎'}`：达成即写 `strategy.sandboxEnding = {id,day,turn,cities,generals,battles}`，**只结算一次、不硬中断**，可继续经营。实测第 330 旬 / 24 城触发 | 城 | 整数 | ❌ | 战略页「霸业进程」结局横幅、终局推送 |
 
 ## C. 战斗
 
@@ -114,7 +114,9 @@
 | 战斗回放兵力初态/终态 | `skills.js BATTLE_ANIM_SOURCE createStage()`：`cur` 开局取战前 `troops`、`dead=false`，事件流逐击扣减；追击/破城溃散等内核事件外折损在结果横幅前用 `remain` 终态校准。**旧实现把战后余兵当初态，导致败方第一帧即 0 兵** | 兵 | 整数 | ❌ 只展示 | 战报内嵌画面、全屏回放 |
 | 原版战报回合 `d_loss` | `battle.js kernelEventsToRounds()`：`d_loss` 恒为「攻方本回合造成的守军损失」。守军普攻不生成伪攻方 hit；守军战法伤害只写 `d_as[].kill`，不叠加 `d_loss`。守方动作完整记录仍在 `anim.rounds` / `battleLog.events` | 兵 | 整数 | ❌ | 原版战报逐回合文本、`battleLog.reportSkillIds` |
 | 武将立绘与技能图标 | `server/portrait-map.json`（构建期由冻结 web/ 的 `card_<cfgId>.png.meta` uuid 生成）→ `/__slg/assets/portraits` → `window.__slgPortraitUrl()`；技能图标为冻结 web/ 的 tactics_1~4。缺失时退文字徽章，绝不显示碎图 | URL | — | ❌ 只展示 | 武将页、征兵槽、出征队伍、战斗将卡 |
-| 事件逾期兜底 | `domain/strategy.js strategyEventTick()`：`pendingEvents[].sinceTurn` 距当前 ≥4 旬时自动取最后一个（保守）选项结算并清出队列，避免剧情永久冻结 | 旬 | 整数 | ❌ | 天下日志「事件·逾期」、事件系统继续出队 |
+| 事件逾期兜底 | `domain/strategy.js strategyEventTick()`：`pendingEvents[].sinceTurn` 距当前 ≥4 旬时自动取最后一个（保守）选项结算并清出队列，避免剧情永久冻结。★ 2026-11-20 第三轮：逾期走 `strategyEventChoice(..., {quiet:true})`，效果与流水照落但**不再另写「事件·抉择」行**；逾期行写明所取选项。旧实现一条未决事件占「触发/抉择/逾期」三行，实测 150 旬 224 行事件日志中 148 行是这种噪音 | 旬 | 整数 | ❌ | 天下日志「事件·逾期」、事件系统继续出队 |
+| 事件全局间隔 | `domain/event-engine.js CONDITION_EVENT_GAP = 4`（★ 2026-11-20 第三轮）：**条件事件（非 `once`）之间至少隔 4 旬**，与每条自身的 `cooldown` 并行生效；`state.events.lastConditionTurn` 记上次触发旬，被间隔挡住的事件**不写单条冷却**（否则越挡越久）。史实节点（`once`）完全不受限——剧情该来就得来。测试可传 `opts.gap:0` 关闭 | 旬 | 整数 | ❌ | 事件触发频率 |
+| 劝降兵力比 | `domain/diplomacy.js totalTroops()`（★ 2026-11-20 第三轮）：玩家 = **城池守军 + 在编部队**（`state.armys[].soldiers`），与界面「在编兵力」同源；NPC 仍只算城守军（用 garrisons，无 armys）。旧实现只算城守军，实测带 2 万大军仍判不出 3:1，400 旬劝降 0 次 | 兵 | 整数 | ❌ | 外交面板「我/彼 兵力比」、劝降门槛 |
 | 事件冷却 | `domain/event-engine.js selectEvents()`（★ 2026-11-20）：**选中即写 `state.events.cooldown[id]`**——有 `cooldown` 配置按配置（如「流民就食」8 旬），非 `once` 且未配置走默认 **6 旬**；`eventCooldownTick()` 每旬递减。旧实现只在 exclusive 挤掉时写 1 旬冷却，`events.json` 里的 `cooldown` 是死配置，条件长期成立的事件每 4~5 旬重刷（实测 150 旬同一条刷 33 次、连播三行，占 418 条事件流的 96 条） | 旬 | 整数 | ❌ | 事件触发频率、天下日志事件流 |
 
 ## 历史教训（写死，防回归）
