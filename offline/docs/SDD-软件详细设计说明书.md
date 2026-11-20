@@ -2325,6 +2325,21 @@ build/SLG-Offline-win32-x64/
 
 **验证**：单测 692/692（新增 `tests/p26-arrears-desertion.test.js` 6 条：缓冲期/逃散率/恢复出口/收敛不归零/行军豁免/单机文案/存档累计）。
 
+### 17.24 战斗画面守军 0 兵 / 逐击反馈（2026-11-20 用户实机反馈）
+
+用户反馈「每次开战战斗画面中守军兵力总显示 0，要看到每次被攻击后减少多少兵力、部队数量同比变化、有打斗动态感」。数据与脚本本身是对的：`battle.js buildBattleAnim()` 给每个单位写战前 `troops` 与战后 `remain`，每个 `hit` 带 `loss`；根因在注入层播放器初始化。
+
+| 项 | 权威口径 |
+|---|---|
+| 根因 | `createStage()` 建好初始单位后会立即 `play()→reset()`，旧 `reset()` 用 `cur: u.remain` / `dead: u.remain<=0` 重建；败方 `remain=0` 时首帧即空阵，后续逐击扣减无从展示。`buildUnits()` 用 troops 的那份状态被覆盖，等于死代码 |
+| 初态唯一入口 | 新增 `makeUnitState(side,u,i)`：`troops = round(u.troops)`、`cur = troops`、`dead=false`，`buildUnits()` 与 `reset()` 共用；终态仍由事件流逐击扣减，并在结果横幅前用 `remain` 校准（`remain>0` 时撤销 `dead`） |
+| 逐击反馈 | `applyAct()` 对 `hit` 解析整数 `loss`：`damage(to,loss)`、粒子 `−N`、目标 `flashT`、攻击方 `lungeT`、冲击环/火花/震屏；`loss=0` 显示灰色「未折卒」，不再误导为红色掉血 |
+| 兵力总览 | `drawSideTotals()` 每帧按 `state.units` 汇总双方「当前/战前」，命中后 1.3 秒内追加「−本击折损」，命中瞬间面板闪红；血条右端同时保留该单位本击数字 |
+| 部队数量映射 | `drawFigure()` 的可视兵数仍为 `ceil(cur/troops × 96)`（大屏）/ `×48`（小屏），随逐击扣减同比收缩；1 像素兵代表数十~上百人，只是表现映射，不改 `soldiers`、不进结算 |
+| 边界 | 不改协议、不改 `battle-core` / `kernel/`、不改 `web/` 磁盘字节、不改结算数值或战报哈希；只改运行时注入的回放脚本与文档/测试 |
+
+**验证**：新增 `tests/p27-battle-replay-visual.test.js` 2 条，锁住「data 层守军 troops>0 / remain=0 / 命中带 loss」与「注入层无 `cur:u.remain`、首帧重播共用 `makeUnitState`、逐击写 `lastLoss`/`sideHitLoss`、像素密度按 ratio 收缩」；连同 `battle-anim.test.js` 定向 5/5 通过。
+
 
 ---
 

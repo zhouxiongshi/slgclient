@@ -2728,23 +2728,30 @@ const BATTLE_ANIM_SOURCE = `;(function () {
       roundBanner: null, roundUntil: 0, skillBanner: null, skillUntil: 0,
       resultBanner: null, resultColor: null, subText: '', subUntil: 0,
       shakeUntil: 0, stepY: 80,
+      sideHitT: { a: 0, d: 0 }, sideHitLoss: { a: 0, d: 0 }, sideHitLossT: { a: 0, d: 0 },
       roundNow: 0, roundTotal: (anim.rounds || []).length,
     };
+
+    /* ★ 2026-11-20 回放初态唯一入口：战前 troops 起画，死后由事件流逐击扣减。
+       旧版 buildUnits 用 troops、reset 用 remain，而 createStage 一开始就会 play()→reset()，
+       实际首帧永远走 remain；败方 remain=0 时守军从第一帧就是空阵、没法看到掉兵过程。 */
+    function makeUnitState(side, u, i) {
+      var troops = Math.max(0, Math.round(Number(u.troops) || 0));
+      return {
+        side: side, slot: u.slot == null ? i : u.slot, name: u.name,
+        cfgId: u.cfgId || 0, skills: u.skills || [],
+        troops: troops, cur: troops, dead: false,
+        x: 0, y: 0, lungeT: -1, flashT: -1, fallT: -1,
+        stateText: '', stateT: 0, skillT: -1,
+        lastLoss: 0, lastLossT: -1,
+      };
+    }
 
     /* 参战单位：名字 / 兵力 / 战法说明 */
     (function buildUnits() {
       var put = function (side, list) {
         (list || []).forEach(function (u, i) {
-          state.units[side + (u.slot == null ? i : u.slot)] = {
-            side: side, slot: u.slot == null ? i : u.slot, name: u.name,
-            cfgId: u.cfgId || 0, skills: u.skills || [],
-            /* ★ 0 兵力战斗画面根因：旧代码把战后余兵 remain 当开局当前兵力，
-               败方第一帧就 cur=0/dead=true，看起来像「一方有兵、一方 0 兵开打」。
-               动画必须从战前兵力 troops 起画，由事件流逐击扣到终态。 */
-            troops: Math.max(0, u.troops), cur: Math.max(0, u.troops),
-            dead: false, x: 0, y: 0, lungeT: -1, flashT: -1, fallT: -1,
-            stateText: '', stateT: 0, skillT: -1,
-          };
+          state.units[side + (u.slot == null ? i : u.slot)] = makeUnitState(side, u, i);
         });
       };
       put('a', anim.a && anim.a.units);
@@ -2784,9 +2791,10 @@ const BATTLE_ANIM_SOURCE = `;(function () {
           (pair[1] || []).forEach(function (u, i) {
             var unit = state.units[pair[0] + (u.slot == null ? i : u.slot)];
             if (!unit) return;
-            var remain = Math.max(0, Number(u.remain) || 0);
+            var remain = Math.max(0, Math.round(Number(u.remain) || 0));
             unit.cur = remain;
             if (remain <= 0 && !unit.dead) { unit.dead = true; unit.fallT = performance.now(); }
+            if (remain > 0 && unit.dead) { unit.dead = false; unit.fallT = -1; }
           });
         });
       },
@@ -2825,12 +2833,22 @@ const BATTLE_ANIM_SOURCE = `;(function () {
       ctx.subText = line;
       ctx.subUntil = performance.now() + Math.max(900, (DUR[act.t] || 500) * 1.2);
       if (act.t === 'hit' && f && to && !f.dead) {
+        var loss = Math.max(0, Math.round(Number(act.loss) || 0));
         f.lungeT = now;
         to.flashT = now;
-        damage(to, act.loss);
-        state.particles.push(mkText('-' + fmt(act.loss), to.x, to.y - 46, '#ff6b5e'));
+        to.lastLoss = loss; to.lastLossT = now;
+        state.sideHitT[to.side] = now;
+        state.sideHitLoss[to.side] = loss;
+        state.sideHitLossT[to.side] = now;
+        if (loss > 0) {
+          damage(to, loss);
+          state.particles.push(mkText('−' + fmt(loss), to.x, to.y - 46, '#ff6b5e'));
+          state.shakeUntil = now + Math.min(320, 180 + Math.round(Math.log10(loss + 1) * 40));
+        } else {
+          state.particles.push(mkText('未折卒', to.x, to.y - 46, '#9aa0a6'));
+          state.shakeUntil = Math.max(state.shakeUntil, now + 90);
+        }
         pushEffect('hit', f, to, act, now);
-        state.shakeUntil = now + 220;
       } else if (act.t === 'skill' && f) {
         state.skillBanner = (f.name || '') + ' · ' + (act.skill || '战法');
         state.skillUntil = now + 1100;
@@ -2868,6 +2886,37 @@ const BATTLE_ANIM_SOURCE = `;(function () {
     }
 
     /* ---- 绘制 ---- */
+    /* 双方兵力总览：每次 hit 都刷新当前/战前总数，并在 1.3 秒内显示这一击折了多少。
+       放在画面左上/右上，不占字幕条，也不遮三排军阵；数值只从 state.units 读。 */
+    function drawSideTotals(g, rect, now) {
+      var totals = {
+        a: { cur: 0, max: 0 }, d: { cur: 0, max: 0 },
+      };
+      for (var k in state.units) {
+        var u = state.units[k];
+        totals[u.side].cur += u.cur;
+        totals[u.side].max += u.troops;
+      }
+      ['a', 'd'].forEach(function (side) {
+        var s = totals[side];
+        var hit = now - state.sideHitLossT[side] < 1300 && state.sideHitLoss[side] > 0;
+        var label = (side === 'a' ? '我军 ' : '守军 ') + fmt(s.cur) + '/' + fmt(s.max)
+          + (hit ? '　−' + fmt(state.sideHitLoss[side]) : '');
+        g.font = 'bold 12px "Microsoft YaHei",sans-serif';
+        g.textAlign = 'left';
+        var w = Math.ceil(g.measureText(label).width) + 18;
+        var bx = side === 'a' ? 8 : rect.width - w - 8;
+        var flash = now - state.sideHitT[side] < 220;
+        g.fillStyle = flash ? 'rgba(96,30,24,.88)' : 'rgba(9,11,8,.72)';
+        g.fillRect(bx, 6, w, 24);
+        g.strokeStyle = flash ? '#ff8f77' : 'rgba(232,198,112,.45)';
+        g.lineWidth = 1;
+        g.strokeRect(bx, 6, w, 24);
+        g.fillStyle = hit ? '#ff9d8b' : '#f0e2b8';
+        g.fillText(label, bx + 9, 23);
+      });
+    }
+
     /* 单个小兵：盾步举盾 / 弓兵持弓 / 骑兵带马。1 个像素兵代表数十~上百人，
        用方阵密度表达军势；绝不做 soldiers 数字 1:1 渲染（会瞬间卡死 Canvas）。 */
     function drawSoldier(g, sx, sy, arms, side, dir, alpha, sc) {
@@ -2986,6 +3035,17 @@ const BATTLE_ANIM_SOURCE = `;(function () {
         g.strokeRect(x - w / 2, hpY, w, big ? 7 : 5);
         g.fillStyle = '#c8b88a'; g.font = (big ? 12 : 11) + 'px "Microsoft YaHei",sans-serif';
         g.fillText(fmt(u.cur) + '/' + fmt(u.troops), x, hpY + (big ? 20 : 18));
+        /* 本击掉兵贴在血条右端，粒子飘走后还能看清「这一下少了多少」。 */
+        if (u.lastLoss > 0 && now - u.lastLossT < 1200) {
+          var la = 1 - (now - u.lastLossT) / 1200;
+          g.globalAlpha = la;
+          g.fillStyle = '#ff9d8b';
+          g.font = 'bold ' + (big ? 12 : 11) + 'px "Microsoft YaHei",sans-serif';
+          g.textAlign = 'left';
+          g.fillText('−' + fmt(u.lastLoss), x + w / 2 + 6, hpY + (big ? 7 : 5));
+          g.globalAlpha = 1;
+          g.textAlign = 'center';
+        }
         if (u.stateText && now - u.stateT < 2500) {
           g.fillStyle = '#b07ce8'; g.fillText(u.stateText, x, nameY - 12);
         }
@@ -3120,6 +3180,7 @@ const BATTLE_ANIM_SOURCE = `;(function () {
       g.beginPath(); g.moveTo(0, rect.height * 0.78); g.lineTo(rect.width, rect.height * 0.78); g.stroke();
       g.fillStyle = 'rgba(192,57,43,.09)'; g.fillRect(0, 0, rect.width * 0.34, rect.height);
       g.fillStyle = 'rgba(44,95,138,.09)'; g.fillRect(rect.width * 0.66, 0, rect.width * 0.34, rect.height);
+      drawSideTotals(g, rect, now);
       /* ★ 站位按画布高度均分：嵌入式战报只有 260~320px，用比例站位（0.34/0.58/0.82）
          会让最后一排的兵力数字压进字幕条。这里改成「上留 46、下留 136（字幕 + 血条）」，
          三排均分，任何高度都不会互相压字。 */
@@ -3247,26 +3308,18 @@ const BATTLE_ANIM_SOURCE = `;(function () {
       state.particles = [];
       state.effects = []; state.shakeUntil = 0;
       state.subText = ''; state.roundNow = 0;
-      Object.keys(state.units).forEach(function (k) {
-        var u = state.units[k];
-        u.cur = Math.max(0, u.dead ? 0 : u.cur);
-      });
-      /* 全场重放：按初始兵力重建，避免「重播时兵已经打光」 */
+      state.sideHitT = { a: 0, d: 0 };
+      state.sideHitLoss = { a: 0, d: 0 };
+      state.sideHitLossT = { a: 0, d: 0 };
+      /* 全场重放：与首次渲染共用 makeUnitState，战前满兵起画、逐击扣到终态。
+         旧 reset 用 remain 当初态，首帧就把败方守军画成 0 兵空阵。 */
       state.units = {};
-      (function rebuild() {
-        var put = function (side, list) {
-          (list || []).forEach(function (u, i) {
-            state.units[side + (u.slot == null ? i : u.slot)] = {
-              side: side, slot: u.slot == null ? i : u.slot, name: u.name,
-              cfgId: u.cfgId || 0, skills: u.skills || [],
-              troops: Math.max(1, u.troops), cur: Math.max(0, u.remain),
-              dead: u.remain <= 0, x: 0, y: 0, lungeT: -1, flashT: -1, fallT: -1,
-              stateText: '', stateT: 0, skillT: -1,
-            };
-          });
-        };
-        put('a', anim.a && anim.a.units); put('d', anim.d && anim.d.units);
-      })();
+      var put = function (side, list) {
+        (list || []).forEach(function (u, i) {
+          state.units[side + (u.slot == null ? i : u.slot)] = makeUnitState(side, u, i);
+        });
+      };
+      put('a', anim.a && anim.a.units); put('d', anim.d && anim.d.units);
       state.cues = buildCues();
       state.resultBanner = null;
     }

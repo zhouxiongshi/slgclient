@@ -59,10 +59,10 @@ function readyArmy(state, home) {
 test('BUG-01 战斗画面：开局用战前兵力，事件流扣减后才收敛到战后余兵', () => {
   const assets = createSkillAssets(resolve(ROOT, 'web'));
   const js = assets.intercept('/assets/main/index.js').body;
-  assert.ok(js.includes('cur: Math.max(0, u.troops)'), '开局当前兵力必须取战前兵力');
+  assert.match(js, /troops: troops, cur: troops, dead: false/, '开局当前兵力必须取战前兵力');
   assert.ok(js.includes('dead: false'), '开局不得把败方预标记阵亡');
-  assert.ok(js.includes('var remain = Math.max(0, Number(u.remain) || 0)'), '结尾必须用战后余兵校准');
-  assert.ok(!js.includes('troops: Math.max(0, u.troops), cur: Math.max(0, u.remain)'), '旧错误口径不得回退');
+  assert.ok(js.includes('var remain = Math.max(0, Math.round(Number(u.remain) || 0))'), '结尾必须用战后余兵校准');
+  assert.ok(!js.includes('cur: Math.max(0, u.remain)'), '旧 reset 错误口径不得回退');
 });
 
 test('BUG-02 内核零 damage 事件：兜底回合与 mkHit 同形，不再抛 TypeError', () => {
