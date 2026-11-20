@@ -23,7 +23,7 @@ import { supplyMap, marchSupplyEstimate } from './supply.js';
 /* 修 U08：招降成功率收敛到唯一公式，面板图鉴/预览/实际掷骰同源 */
 import { captiveRecruitRate, captiveRateParts, CAPTIVE_COST } from './captive-rules.js';
 /* ★ 2026-11-16：名望（放归累积）进入在野来投率，让名望字段有真实消费点 */
-import { defectRateWithFame, FAME_DEFECT_CAP } from './captive-reputation.js';
+import { defectRate, FAME_DEFECT_CAP } from './captive-reputation.js';
 import { canMarchBetween, marchableNeighbors, marchGraph } from './march.js';
 /* ★ 验收 #22：地图标注分级（哪座城算要城只有这一处口径） */
 import { cityLabelRank, labelPolicy } from './map-lod.js';
@@ -2971,6 +2971,18 @@ export function recruitCaptive(state, cfg, ctx, { idx }) {
   const g = makeGeneral(cfg, nextId(state, 'generalId'), cap.cfgId, st.playerCity || 1, 1);
   g.loyal = Math.min(100, 70 + Math.round(protagonistStat(state, '魅力') / 25));
   state.generals.push(g);
+  /* ★ 2026-11-20 修：招降与酒馆/来投走同一份名册口径——
+     不标记 recruited，敌将次日仍出现在酒馆可被二次登庸，招出同名同 cfgId 的重复武将。 */
+  for (const p of (state.tavern?.people || [])) {
+    if (Number(p.cfgId) === Number(cap.cfgId)) p.recruited = true;
+  }
+  /* 战法登记表增量更新（与 defectTick / 原版技能面板共用一张表） */
+  const s0 = g.skills?.[0];
+  if (s0?.cfgId && skillById(s0.cfgId)) {
+    const row = (state.skills || []).find((x) => Number(x.cfgId) === Number(s0.cfgId));
+    if (row) { if (!row.generals.includes(g.id)) row.generals.push(g.id); }
+    else state.skills = [...(state.skills || []), { id: s0.cfgId, cfgId: s0.cfgId, generals: [g.id] }];
+  }
   noticeRecruit(state, ctx, cap.name);
   recordEvent(state, `敌将「${cap.name}」感主公之义，解甲来投，即日入营。`);
   ctx.push?.('general.push', g);
@@ -3017,10 +3029,9 @@ export function defectTick(state, cfg, ctx) {
   if ((state.generals || []).length >= capacityOf(state)) return null;
   const baseFame = own.length * 8 + Math.min(10, (state.generals || []).length * 2)
     + protagonistStat(state, '魅力') / 100;
-  /* ★ 2026-11-16：名望进入来投率。放归俘虏累积 st.fame（上限 FAME_DEFECT_CAP），
-     与城数/武将数同走一条公式；无本作名望时数值与旧实现完全一致。 */
-  const fame = baseFame + Math.min(FAME_DEFECT_CAP, Number(st.fame) || 0);
-  const rate = defectRateWithFame(0.03, fame);
+  /* ★ 2026-11-20 修：版图/实力名望（不封顶）与放归名望（封顶 FAME_DEFECT_CAP）分开算，
+     否则占 5 城就把总名望顶到 40 上限，之后扩张与放归对来投率再无影响。 */
+  const rate = defectRate(0.03, baseFame, Number(st.fame) || 0);
   const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
   if (rngFor(state.seed ?? 20261110, st.turn ?? day, 'defect:tavern').random() > rate) return null;
   const local = tavern.people.filter((p) => !p.recruited && own.includes(Number(p.birthCity)));
@@ -3047,7 +3058,8 @@ export function defectTick(state, cfg, ctx) {
     time: Date.now(),
   });
   ctx?.push?.('general.push', g);
-  return { cfgId: pick.cfgId, name: pick.name, cityId, city: cityName(cityId), fame: Math.round(fame), rate: Math.round(rate * 100) };
+  const fameForView = baseFame + Math.min(FAME_DEFECT_CAP, Number(st.fame) || 0);
+  return { cfgId: pick.cfgId, name: pick.name, cityId, city: cityName(cityId), fame: Math.round(fameForView), rate: Math.round(rate * 100) };
 }
 
 /* ================================================================ M3-4 接线

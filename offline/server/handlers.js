@@ -1466,6 +1466,13 @@ export function handleRequest(ctx, req) {
       const levyCommit = strict || econ?.[here]
         ? commitLevy(state, here, total)
         : null;
+      /* ★ 2026-11-20 修：春征超限的「秋收田赋 −15%」此前只弹 toast、从未落账。
+         这里把惩罚写到城经营对象（当年有效），由 cityYield 在秋季真正扣减粮产，
+         兑现 farmConflict 对玩家的承诺。跨年后年份不匹配自动失效。 */
+      if (farmConflict && econ?.[here]) {
+        econ[here].farmPenaltyYear = Math.floor((Math.max(1, Math.floor(Number(state.clock?.day) || 1)) - 1) / 360);
+        econ[here].farmPenaltyPct = farmConflict.penaltyPct;
+      }
       /* ★ P7 兵营与民心：兵营等级越高征兵越快，民心低则征不动 */
       const secRaw = conscriptSec(total, c.cost_time);
       const cf = conscriptFactor(state, army.cityId || mainCity(state)?.cityId || 1);

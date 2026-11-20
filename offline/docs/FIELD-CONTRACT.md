@@ -14,6 +14,7 @@
 | 逐城粮 | `state.strategy.cityEcon[id].store` | 斛 | 整数 | ❌ | 城卡、粮道透镜、出征面板 |
 | 全国粮合计 | `interaction/state.treasury.grain`（城库汇总的显示值） | 斛 | 整数 | ❌ | 顶栏（仅显示，禁止参与判定） |
 | 城日产金/粮 | `city-econ.js cityYield()`：金 `60 × 开发度/50 × 被围 × 民心`、粮 `38 × 开发度/50 × …`（★ 2026-11-19 上调：旧系数 20/30 下 5 城金产仅 274/旬，不够付 380 的武将旬俸，占城是纯负收益） | 两·斛/日 | 整数（trunc） | ❌ | 城卡经济行 |
+| 春征秋收减产 | ★ 2026-11-20：`handlers.js army.conscript` 在春征超兵源上限 50% 时给城打 `cityEcon[id].farmPenaltyYear/Pct`；`cityYield()` 在该年秋季（复用 `levy.seasonOf`，1 年 360 日、90 日一季）粮产 ×(1−Pct/100)，跨年自动失效。旧实现只有 `farmConflictOf` 回包弹 toast、从不落账，玩家看到「秋收 −15%」警告但秋天田赋一分不少 | 斛/日 | 整数 | ❌ | 征兵回包 `farmConflict` 警告、城卡粮产（秋季实测 73→62） |
 | 府库上限 | `handlers.totalYield`：有城后 `100000 + 城数×20000 + 仓廪设施`，无城沿用配置 100 万（★ 2026-11-19：旧值固定 100 万，木/铁/石 20 旬内全部封顶，采集失去意义） | 单位 | 整数 | ❌ | 府库条、`applyDays` 截顶 |
 | 领地建筑产量 | `handlers.buildYield()`：**举义后不再计入**（`state.oath.done`），序章坞堡阶段照常（★ 2026-11-19：旧实现把坞堡「土地 Lv.7」的 7000 石/日一直发到战略层，实测 10 旬把石头从 1 万顶到 74 万） | 单位/日 | 整数 | ❌ | 物资去向页、序章坞堡面板 |
 | 逐旬内政增量 | `interior-task.js taskView().perTick` | 点/旬 | 整数 | ❌ | 内政任务卡 |
@@ -75,7 +76,7 @@
 | 内政经验 | `interior-task.js advanceInteriorTasks()`：每旬 **5 点**给执行武将（`applyGeneralExp`；lv1→2 需 40 点，约 8 旬一级）（★ 2026-11-19：此前经验只来自战斗，纯内政武将永远 1 级） | 点/旬 | 整数 | ❌ | 武将面板经验条、成长推送 |
 | 招降率 | `captive-rules.js`（单一公式） | % | 整数 | ❌ | 俘虏面板 |
 | 放归名望 | `captives.js releaseCaptive()`：`state.strategy.fame += FAME_PER_RELEASE(2)`（★ 2026-11-16，取事件系统既有 +1~+4 中位；处斩 −2） | 点 | 整数 | ❌ | 放归 toast、名望显示；消费见下行 |
-| 名望→来投率 | `captive-reputation.js defectRateWithFame()`：`rate = min(0.45, base + min(40,fame)/700)`（★ 2026-11-16，城数/武将名望与放归名望同轴；封顶 40 点防刷） | 小数 | — | ❌ | `strategy.js defectTick()` 在野慕名来投判定 |
+| 名望→来投率 | `captive-reputation.js defectRate(base,baseFame,releaseFame)`：`rate = min(0.45, 0.03 + baseFame/700 + min(40,releaseFame)/700)`（★ 2026-11-20 修：版图/实力名望 `baseFame = 城数×8 + 帐下武将×2(封顶10) + 魅力/100` **不封顶**；只封顶放归名望 40 点防刷。旧实现把两者相加后一起截断到 40，导致占 5 城就来投率恒 8.71%、扩张零正反馈；实测现为 1城5.39%→5城10.25%→24城31.96%）。旧 `defectRateWithFame(base,fame)` 保留为「仅放归名望」兼容包装 | 小数 | — | ❌ | `strategy.js defectTick()` 在野慕名来投判定 |
 | 处斩恶名 | `state.role.infamy += INFAMY_PER_EXECUTE(1)`（★ 2026-11-16，旧实现只写不读；现同步对外态度，见下行） | 笔 | 整数 | ❌ | 处斩 toast |
 | 处置对外态度 | `captive-reputation.js`：放归 −5、处斩 −15（董卓 `sili` 豁免）；全部经 `diplomacy.js adjustAttitudeByEvent()` 落 `eventAdj`，理由链标签「事件」，界面只显示不重算 | 点 | 整数 | ❌ | 外交面板态度理由链、劝降/停战门槛 |
 | 相性/义理 | `relation.js xiangxingOf/yiliOf` + `conf/relations.json` | 1–149 / 0–100 | 整数 | ❌ | 武将卡、关系 chip |

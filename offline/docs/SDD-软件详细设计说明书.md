@@ -2270,6 +2270,20 @@ build/SLG-Offline-win32-x64/
 
 **纪律**：`settleWorld` 仍是唯一世界推进入口；`web/` 零改动；未动伤害公式、`troop_factor`、`Lv10=Lv1×2`、军粮参数；新增 `tests/p23-selfiteration3.test.js` 4 条回归锁（含「UI 必须落到既有页签」的静态闸）。
 
+### 17.21 自迭代第四轮：来投率封顶 / 招降去重 / 农时惩罚落账（2026-11-20）
+
+宏观 400 旬探针（`_probe/p41`）、存读档 roundtrip（`p42`）、断粮定向（`p43`）与领域代码审查交叉验证。前两条探针（存读档逐字节一致、招降链路接线完整）为阴性结论，不产生改动；以下三条为实测确认的真缺陷。
+
+| 编号 | 缺陷 / 实测证据 | 修法（落点） |
+|---|---|---|
+| `ITER4-01` | `defectTick` 把两类名望相加后一起过 `FAME_DEFECT_CAP=40` 截断：占 5 城/24 城、放归 0~100 名望，来投率恒 8.71%，与「3%~45%」设计矛盾 | `captive-reputation.defectRate(base,baseFame,releaseFame)` 分开算：版图名望不封顶、只封顶放归名望，整体 ≤45%；旧 `defectRateWithFame` 降为兼容包装（`strategy.js`） |
+| `ITER4-02` | `recruitCaptive` 成功只 push 武将，不标记 `tavern.people[].recruited`、不同步技能表；实测招降后敌将仍在可登庸池，可二次登庸出重复武将 | 招降成功后按 cfgId 置酒馆 recruited=true，按战法 cfgId 增量同步 `state.skills`（`strategy.js`，与 `defectTick` 同源） |
+| `ITER4-03` | `farmConflictOf` 的「春征超 50%→秋收田赋−15%」只进回包弹 toast，无 state 写入、秋收结算不读；警告与实收不符 | 春征超限给城打 `farmPenaltyYear/Pct`（`handlers.js`），`cityYield` 秋季粮产 ×0.85、复用 `levy.seasonOf` 单一口径、跨年自动失效（`city-econ.js`） |
+
+**下轮候选（确认但未改）**：`p43` 实测全局粮池见底时 800 大军连 30 日无粮、兵力零减员——行军/断粮城有逃兵惩罚，全局粮池见底却没有，形成「打不动也饿不死」的僵尸大军。与 `interaction.js`「断粮会影响守军」承诺矛盾，属逻辑缺失；但直接关联前轮明确列为产品裁决的军粮体系（0.1 不动），补逃兵会改变长局兵力曲线与终局时点，故留待裁决。另有 16 个 knob 在参数表外零引用（多为已留痕的设计取舍），仅记录。
+
+**验证**：单测 678/678（新增 `tests/p24-selfiteration4.test.js` 5 条）。纪律不变：`settleWorld` 唯一世界推进、`web/` 零改动、未动伤害公式/战报哈希/军粮参数。
+
 
 ---
 

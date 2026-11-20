@@ -35,12 +35,24 @@ export const EXEMPT_FACTION_ON_EXECUTE = 'sili';
 export const FAME_DEFECT_CAP = 40;
 
 /**
- * 名望 → 来投率增量。沿 `defectTick` 既有口径 rate = min(0.45, 0.03 + fame/700)，
- * 名望每 1 点贡献 1/700 的来投率，封顶 FAME_DEFECT_CAP 点。
- * @param {number} fame 当前名望（state.strategy.fame）
- * @returns {number} 加成后的来投率小数（0~1）
+ * 来投率唯一权威公式（2026-11-20 修）：rate = min(0.45, 0.03 + baseFame/700 + releaseFame/700)。
+ * 两类名望**分开算**：
+ *  - baseFame = 城数×8 + 帐下武将×2（封顶10）+ 君主魅力/100——版图与实力的自然成长，不封顶；
+ *  - releaseFame = 放归俘虏累积的 st.fame——只封顶 FAME_DEFECT_CAP 点，防止靠放归刷满来投率。
+ * 旧实现把两者相加后一起塞进 FAME_DEFECT_CAP 截断，导致占 5 城就顶到上限：
+ * 5 城/24 城/放归多少俘虏来投率都钉死在 8.71%，扩张与仁德对招贤毫无正反馈。
+ * @returns {number} 来投率小数（0~1）
+ */
+export function defectRate(baseRate, baseFame, releaseFame) {
+  const base = Math.max(0, Number(baseFame) || 0);
+  const release = Math.max(0, Math.min(FAME_DEFECT_CAP, Number(releaseFame) || 0));
+  return Math.min(0.45, (Number(baseRate) || 0) + (base + release) / 700);
+}
+
+/**
+ * 兼容包装：只传「放归名望」时使用（baseFame=0）。保留既有调用/测试签名。
+ * defectTick 传两类名望，请直接走 defectRate。
  */
 export function defectRateWithFame(baseRate, fame) {
-  const effective = Math.max(0, Math.min(FAME_DEFECT_CAP, Number(fame) || 0));
-  return Math.min(0.45, (Number(baseRate) || 0) + effective / 700);
+  return defectRate(baseRate, 0, fame);
 }

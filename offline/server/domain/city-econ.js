@@ -19,6 +19,8 @@ import { supplyTick, armySupplyTick } from './supply.js';
 /* ★ M2-4 委任对象化（本作设计）：旬界自动派单，走 interior-task 同源（无环） */
 import { appointmentTick } from './appointment.js';
 import { knobGet } from './knobs.js';
+/* ★ 2026-11-20：春征秋收惩罚的季节判定复用 levy 的唯一口径（零依赖叶子，无环）。 */
+import { seasonOf } from './levy.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const MAP_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'map.json');
@@ -117,13 +119,19 @@ export function cityYield(state, cityId) {
   const moraleMod = 0.85 + (Number(e.morale ?? 60) / 400);
   /* ★ U20 断粮：陆上粮道断了，粮产 ×0.55（金产不受影响——商路走的是另一条线） */
   const cut = e.supplyCut ? 0.55 : 1;
+  /* ★ 2026-11-20 修：春征超过兵源上限 50% 的城，当年秋季粮产按 farmConflict 承诺扣减。
+     惩罚落账在 handlers 春征处（farmPenaltyYear/Pct），这里只在秋季兑现；跨年自动失效。 */
+  const curYear = Math.floor((Math.max(1, Math.floor(Number(state.clock?.day) || 1)) - 1) / 360);
+  const autumnPenalty = (seasonOf(state) === '秋'
+    && Number(e.farmPenaltyYear) === curYear && Number(e.farmPenaltyPct) > 0)
+    ? 1 - Math.min(90, Number(e.farmPenaltyPct)) / 100 : 1;
   /* ★ 2026-11-19 城产平衡：旧系数（粮 30 / 金 20）下单城满开发只有 40 金/旬，
      5 座城合计 274 金/旬，而武将旬俸就要 380——占城是纯负收益，扩张越多亏越多。
      实测（探针 p3/p6）：纯城产口径净亏 202 金/旬。
      这里把金产 20→60、粮产 30→38，使 5 城金产约 820/旬、粮产约 3300/旬，
      在扣掉 35% 城防俸饷与武将俸禄后仍为正循环（约 +150 金/旬）。
      只改派生系数，不动原表、不动战斗数值。 */
-  const grain = Math.round(38 * (e.devAgri / 50) * grainMod * besieged * moraleMod * cut);
+  const grain = Math.round(38 * (e.devAgri / 50) * grainMod * besieged * moraleMod * cut * autumnPenalty);
   const gold = Math.round(60 * (e.devTrade / 50) * besieged * moraleMod);
   const extra = {};
   for (const sp of SPECIALTY_MAP) {
