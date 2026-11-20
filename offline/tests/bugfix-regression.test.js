@@ -96,7 +96,8 @@ test('BUG-03 战报 side 隔离：守军普攻/战法不得计入我军歼敌', 
 });
 
 test('BUG-04 E0 控制战法：命中率随等级成长且不超 100%', () => {
-  for (const id of [10018, 10019, 10028]) {
+  /* 10019 已按公开同名战法镜像为减益（不再是控制），改取未镜像的 910003 验证成长。 */
+  for (const id of [10018, 10028, 910014]) {
     const low = kernelSkillAt(id, 1).effects[0].control_probability;
     const high = kernelSkillAt(id, 10).effects[0].control_probability;
     assert.ok(low > 0, `${id} Lv1 命中率不应为 0`);

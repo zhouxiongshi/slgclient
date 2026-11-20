@@ -1,0 +1,3214 @@
+{
+  "version": 1,
+  "generatedBy": "tools/mirror-official-skills.mjs",
+  "sourceUrl": "https://g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10",
+  "sourceSha256": "db82f837fb765ea11de77398ddbe57ba66f6e8022b8140403e58c4130cfe3d92",
+  "count": 12,
+  "skippedCount": 164,
+  "rules": "同名逐字匹配；仅镜像伤害/治疗/控制/增减益可忠实落地的百分比槽；其余保留原样",
+  "skills": [
+    {
+      "cfgId": 10003,
+      "name": "万箭齐发",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10003,
+        "name": "万箭齐发",
+        "des": "对敌军群体发动一次攻击（伤害率%n%），并使敌军群体进行策略攻击的伤害降低%n%（受攻击属性影响），持续1回合",
+        "trigger": 1,
+        "target": 8,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1,
+          2
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              75,
+              25
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              83.33,
+              27.78
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              91.67,
+              30.56
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              100,
+              33.33
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              108.33,
+              36.11
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              116.67,
+              38.89
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              125,
+              41.67
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              133.33,
+              44.44
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              141.67,
+              47.22
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              150,
+              50
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ],
+        "range": 5,
+        "rangeNote": "有效距离 4 · 3 人"
+      },
+      "kernel": {
+        "cfgId": 10003,
+        "name": "万箭齐发",
+        "skill_class": "主动",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_lv1": 75,
+        "rate_pct_lv10": 150,
+        "probability_init": 0.35,
+        "probability_max": 0.35,
+        "prepare": 0,
+        "target_type": "enemy_group",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900002,
+        "effects": [
+          {
+            "detail_id": 900002,
+            "effect_type": "PHYSICAL_DAMAGE",
+            "rate_pct": 150,
+            "target_type": "enemy_group",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_probability": 0,
+            "control_state": null,
+            "bonus_terms": []
+          },
+          {
+            "detail_id": 900003,
+            "effect_type": "DEBUFF",
+            "rate_pct": 50,
+            "target_type": "enemy_single",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_probability": 0,
+            "control_state": null,
+            "bonus_terms": [
+              {
+                "name": "伤害降低",
+                "value": 25,
+                "op": 0
+              }
+            ]
+          }
+        ]
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径",
+        "mirror": {
+          "officialId": 200714,
+          "sourceUrl": "https://g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10",
+          "sourceSha256": "db82f837fb765ea11de77398ddbe57ba66f6e8022b8140403e58c4130cfe3d92",
+          "officialType": "主动",
+          "officialProbability": "35%",
+          "officialTarget": "敌军群体（有效距离内2个目标）",
+          "officialLv1": "对敌军群体发动一次攻击（伤害率75.0%），并使敌军群体进行策略攻击的伤害降低25.0%（受攻击属性影响），持续1回合",
+          "officialLv10": "对敌军群体发动一次攻击（伤害率150.0%），并使敌军群体进行策略攻击的伤害降低50.0%（受攻击属性影响），持续1回合"
+        }
+      }
+    },
+    {
+      "cfgId": 10008,
+      "name": "一骑当千",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10008,
+        "name": "一骑当千",
+        "des": "1回合准备，对敌军全体发动一次猛烈攻击（伤害率%n%）",
+        "trigger": 1,
+        "target": 9,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 30,
+            "effect_value": [
+              140
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              155.56
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              171.11
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              186.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              202.22
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              217.78
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              233.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              248.89
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              264.44
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              280
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ],
+        "range": 5,
+        "rangeNote": "有效距离 3 · 单体"
+      },
+      "kernel": {
+        "cfgId": 10008,
+        "name": "一骑当千",
+        "skill_class": "主动",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_lv1": 140,
+        "rate_pct_lv10": 280,
+        "probability_init": 0.3,
+        "probability_max": 0.3,
+        "prepare": 1,
+        "target_type": "enemy_all",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 900007,
+        "effects": [
+          {
+            "detail_id": 900007,
+            "effect_type": "PHYSICAL_DAMAGE",
+            "rate_pct": 280,
+            "target_type": "enemy_all",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_probability": 0,
+            "control_state": null,
+            "bonus_terms": []
+          }
+        ]
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径",
+        "mirror": {
+          "officialId": 200647,
+          "sourceUrl": "https://g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10",
+          "sourceSha256": "db82f837fb765ea11de77398ddbe57ba66f6e8022b8140403e58c4130cfe3d92",
+          "officialType": "主动",
+          "officialProbability": "30%",
+          "officialTarget": "敌军群体（有效距离内3个目标）",
+          "officialLv1": "1回合准备，对敌军全体发动一次猛烈攻击（伤害率140.0%）",
+          "officialLv10": "1回合准备，对敌军全体发动一次猛烈攻击（伤害率280.0%）"
+        }
+      }
+    },
+    {
+      "cfgId": 10019,
+      "name": "乱阵",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 10019,
+        "name": "乱阵",
+        "des": "使敌军群体进行策略攻击时的伤害降低%n%（受谋略属性影响），持续2回合",
+        "trigger": 1,
+        "target": 8,
+        "limit": 3,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 30,
+            "effect_value": [
+              7.5
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              8.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              9.17
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              10
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              10.83
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              11.67
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              12.5
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              13.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              14.17
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              15
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ],
+        "range": 4,
+        "rangeNote": "有效距离 3 · 单体"
+      },
+      "kernel": {
+        "cfgId": 10019,
+        "name": "乱阵",
+        "skill_class": "主动",
+        "effect_type": "DEBUFF",
+        "rate_pct_lv1": 7.5,
+        "rate_pct_lv10": 15,
+        "probability_init": 0.3,
+        "probability_max": 0.3,
+        "prepare": 0,
+        "target_type": "enemy_single",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [
+          {
+            "name": "伤害降低",
+            "value": 7.5,
+            "op": 0
+          }
+        ],
+        "detail_id": 900018,
+        "effects": [
+          {
+            "detail_id": 900018,
+            "effect_type": "DEBUFF",
+            "rate_pct": 15,
+            "target_type": "enemy_single",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_probability": 0,
+            "control_state": null,
+            "bonus_terms": [
+              {
+                "name": "伤害降低",
+                "value": 7.5,
+                "op": 0
+              }
+            ]
+          }
+        ]
+      },
+      "provenance": {
+        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
+        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
+        "rateSource": "片段内 lv1→lv10 真实成长对",
+        "pairing": "reconstructed",
+        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径",
+        "mirror": {
+          "officialId": 200200,
+          "sourceUrl": "https://g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10",
+          "sourceSha256": "db82f837fb765ea11de77398ddbe57ba66f6e8022b8140403e58c4130cfe3d92",
+          "officialType": "主动",
+          "officialProbability": "30%",
+          "officialTarget": "敌军群体（有效距离内1-2个目标）",
+          "officialLv1": "使敌军群体进行策略攻击时的伤害降低7.5%（受谋略属性影响），持续2回合",
+          "officialLv10": "使敌军群体进行策略攻击时的伤害降低15.0%（受谋略属性影响），持续2回合"
+        }
+      }
+    },
+    {
+      "cfgId": 920012,
+      "name": "玄武洰流",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 920012,
+        "name": "玄武洰流",
+        "des": "1回合准备，对敌军全体发动策略攻击（伤害率%n%，受谋略属性影响），并使其陷入怯战状态（命中率%n%%），持续2回合",
+        "trigger": 1,
+        "target": 9,
+        "limit": 3,
+        "arms": [
+          2,
+          5,
+          8
+        ],
+        "include_effect": [
+          1,
+          2
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              75,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              83.33,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              91.67,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              100,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              108.33,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              116.67,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              125,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              133.33,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              141.67,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              150,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ],
+        "range": 5,
+        "rangeNote": "有效距离 5 · 3 人"
+      },
+      "kernel": {
+        "cfgId": 920012,
+        "name": "玄武洰流",
+        "skill_class": "主动",
+        "effect_type": "STRATEGY_DAMAGE",
+        "rate_pct_lv1": 75,
+        "rate_pct_lv10": 150,
+        "probability_init": 0.35,
+        "probability_max": 0.35,
+        "prepare": 1,
+        "target_type": "enemy_all",
+        "attack_type": "chain",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 9200121,
+        "effects": [
+          {
+            "detail_id": 9200121,
+            "effect_type": "STRATEGY_DAMAGE",
+            "rate_pct": 150,
+            "target_type": "enemy_all",
+            "attack_type": "chain",
+            "available_round": 0,
+            "control_probability": 0,
+            "control_state": null,
+            "bonus_terms": []
+          },
+          {
+            "detail_id": 9200122,
+            "effect_type": "CONTROL",
+            "rate_pct": 100,
+            "target_type": "enemy_all",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_probability": 1,
+            "control_state": "怯战",
+            "bonus_terms": []
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "stzb-w0",
+        "source": "battle-kit/skill-library/source/raw/stzb_skill_extra.json",
+        "sourceId": 200031,
+        "sourceName": "玄武洰流",
+        "quality": "A",
+        "effectTags": [
+          "策略攻击伤害",
+          "怯战"
+        ],
+        "signature": "主动|STRATEGY_DAMAGE+CONTROL|group|怯战",
+        "referenceIds": [
+          200031
+        ],
+        "rateSource": "adapted/full_mapping_stzb.json（20 档位钳位近似，非官网原文数值）",
+        "license": "参考用：战法名来自率土之滨官网公开名录，描述与数值为本游戏重写/内核档位近似；仅本地学习与内部对照，对外发布须换皮",
+        "evidence_level": "W0",
+        "mirror": {
+          "officialId": 200031,
+          "sourceUrl": "https://g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10",
+          "sourceSha256": "db82f837fb765ea11de77398ddbe57ba66f6e8022b8140403e58c4130cfe3d92",
+          "officialType": "主动",
+          "officialProbability": "35%",
+          "officialTarget": "敌军群体（有效距离内3个目标）",
+          "officialLv1": "1回合准备，对敌军全体发动策略攻击（伤害率75.0%，受谋略属性影响），并使其陷入怯战状态，无法进行普通攻击，持续2回合",
+          "officialLv10": "1回合准备，对敌军全体发动策略攻击（伤害率150.0%，受谋略属性影响），并使其陷入怯战状态，无法进行普通攻击，持续2回合"
+        }
+      }
+    },
+    {
+      "cfgId": 920026,
+      "name": "樊渊泅囚",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 920026,
+        "name": "樊渊泅囚",
+        "des": "1回合准备，对敌军全体发动一次猛攻（伤害率%n%），并使其陷入犹豫状态（命中率%n%%），持续1回合",
+        "trigger": 1,
+        "target": 9,
+        "limit": 3,
+        "arms": [
+          3,
+          6,
+          9
+        ],
+        "include_effect": [
+          1,
+          2
+        ],
+        "levels": [
+          {
+            "probability": 40,
+            "effect_value": [
+              95,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              105.56,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              116.11,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              126.67,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              137.22,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              147.78,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              158.33,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              168.89,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              179.44,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 40,
+            "effect_value": [
+              190,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ],
+        "range": 5,
+        "rangeNote": "有效距离 5 · 3 人"
+      },
+      "kernel": {
+        "cfgId": 920026,
+        "name": "樊渊泅囚",
+        "skill_class": "主动",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_lv1": 95,
+        "rate_pct_lv10": 190,
+        "probability_init": 0.4,
+        "probability_max": 0.4,
+        "prepare": 1,
+        "target_type": "enemy_all",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 9200261,
+        "effects": [
+          {
+            "detail_id": 9200261,
+            "effect_type": "PHYSICAL_DAMAGE",
+            "rate_pct": 190,
+            "target_type": "enemy_all",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_probability": 0,
+            "control_state": null,
+            "bonus_terms": []
+          },
+          {
+            "detail_id": 9200262,
+            "effect_type": "CONTROL",
+            "rate_pct": 100,
+            "target_type": "enemy_all",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_probability": 1,
+            "control_state": "犹豫",
+            "bonus_terms": []
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "stzb-w0",
+        "source": "battle-kit/skill-library/source/raw/stzb_skill_extra.json",
+        "sourceId": 200769,
+        "sourceName": "樊渊泅囚",
+        "quality": "S",
+        "effectTags": [
+          "攻击伤害",
+          "犹豫"
+        ],
+        "signature": "主动|PHYSICAL_DAMAGE+CONTROL|group|犹豫",
+        "referenceIds": [
+          200769,
+          200905
+        ],
+        "rateSource": "adapted/full_mapping_stzb.json（20 档位钳位近似，非官网原文数值）",
+        "license": "参考用：战法名来自率土之滨官网公开名录，描述与数值为本游戏重写/内核档位近似；仅本地学习与内部对照，对外发布须换皮",
+        "evidence_level": "W0",
+        "mirror": {
+          "officialId": 200769,
+          "sourceUrl": "https://g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10",
+          "sourceSha256": "db82f837fb765ea11de77398ddbe57ba66f6e8022b8140403e58c4130cfe3d92",
+          "officialType": "主动",
+          "officialProbability": "40%",
+          "officialTarget": "敌军群体（有效距离内3个目标）",
+          "officialLv1": "1回合准备，对敌军全体发动一次猛攻（伤害率95.0%），并使其陷入犹豫状态，持续1回合",
+          "officialLv10": "1回合准备，对敌军全体发动一次猛攻（伤害率190.0%），并使其陷入犹豫状态，持续1回合"
+        }
+      }
+    },
+    {
+      "cfgId": 920061,
+      "name": "反计",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 920061,
+        "name": "反计",
+        "des": "使敌军单体陷入犹豫状态（命中率%n%%），持续2回合",
+        "trigger": 1,
+        "target": 6,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 25,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 26.11,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 27.22,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 28.33,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 29.44,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30.56,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 31.67,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 32.78,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 33.89,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ],
+        "range": 3,
+        "rangeNote": "有效距离 3 · 单体"
+      },
+      "kernel": {
+        "cfgId": 920061,
+        "name": "反计",
+        "skill_class": "主动",
+        "effect_type": "CONTROL",
+        "rate_pct_lv1": 100,
+        "rate_pct_lv10": 100,
+        "probability_init": 0.25,
+        "probability_max": 0.35,
+        "prepare": 0,
+        "target_type": "enemy_single",
+        "attack_type": "normal",
+        "control_state": "犹豫",
+        "control_probability": 1,
+        "bonus_terms": [],
+        "detail_id": 9200611,
+        "effects": [
+          {
+            "detail_id": 9200611,
+            "effect_type": "CONTROL",
+            "rate_pct": 100,
+            "target_type": "enemy_single",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_probability": 1,
+            "control_state": "犹豫",
+            "bonus_terms": []
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "stzb-w0",
+        "source": "battle-kit/skill-library/source/raw/stzb_skill_extra.json",
+        "sourceId": 200213,
+        "sourceName": "反计",
+        "quality": "C",
+        "effectTags": [
+          "犹豫"
+        ],
+        "signature": "主动|CONTROL|single|犹豫",
+        "referenceIds": [
+          200075,
+          200213
+        ],
+        "rateSource": "adapted/full_mapping_stzb.json（20 档位钳位近似，非官网原文数值）",
+        "license": "参考用：战法名来自率土之滨官网公开名录，描述与数值为本游戏重写/内核档位近似；仅本地学习与内部对照，对外发布须换皮",
+        "evidence_level": "W0",
+        "mirror": {
+          "officialId": 200213,
+          "sourceUrl": "https://g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10",
+          "sourceSha256": "db82f837fb765ea11de77398ddbe57ba66f6e8022b8140403e58c4130cfe3d92",
+          "officialType": "主动",
+          "officialProbability": "25%-35%",
+          "officialTarget": "敌军单体",
+          "officialLv1": "使敌军单体陷入犹豫状态，无法发动主动战法，持续2回合",
+          "officialLv10": "使敌军单体陷入犹豫状态，无法发动主动战法，持续2回合"
+        }
+      }
+    },
+    {
+      "cfgId": 920063,
+      "name": "佯攻",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 920063,
+        "name": "佯攻",
+        "des": "使敌军单体陷入怯战状态（命中率%n%%），持续2回合",
+        "trigger": 1,
+        "target": 6,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 25,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 26.11,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 27.22,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 28.33,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 29.44,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30.56,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 31.67,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 32.78,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 33.89,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              100
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ],
+        "range": 3,
+        "rangeNote": "有效距离 3 · 单体"
+      },
+      "kernel": {
+        "cfgId": 920063,
+        "name": "佯攻",
+        "skill_class": "主动",
+        "effect_type": "CONTROL",
+        "rate_pct_lv1": 100,
+        "rate_pct_lv10": 100,
+        "probability_init": 0.25,
+        "probability_max": 0.35,
+        "prepare": 0,
+        "target_type": "enemy_single",
+        "attack_type": "normal",
+        "control_state": "怯战",
+        "control_probability": 1,
+        "bonus_terms": [],
+        "detail_id": 9200631,
+        "effects": [
+          {
+            "detail_id": 9200631,
+            "effect_type": "CONTROL",
+            "rate_pct": 100,
+            "target_type": "enemy_single",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_probability": 1,
+            "control_state": "怯战",
+            "bonus_terms": []
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "stzb-w0",
+        "source": "battle-kit/skill-library/source/raw/stzb_skill_extra.json",
+        "sourceId": 200227,
+        "sourceName": "佯攻",
+        "quality": "C",
+        "effectTags": [
+          "怯战"
+        ],
+        "signature": "主动|CONTROL|single|怯战",
+        "referenceIds": [
+          200227
+        ],
+        "rateSource": "adapted/full_mapping_stzb.json（20 档位钳位近似，非官网原文数值）",
+        "license": "参考用：战法名来自率土之滨官网公开名录，描述与数值为本游戏重写/内核档位近似；仅本地学习与内部对照，对外发布须换皮",
+        "evidence_level": "W0",
+        "mirror": {
+          "officialId": 200227,
+          "sourceUrl": "https://g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10",
+          "sourceSha256": "db82f837fb765ea11de77398ddbe57ba66f6e8022b8140403e58c4130cfe3d92",
+          "officialType": "主动",
+          "officialProbability": "25%-35%",
+          "officialTarget": "敌军单体",
+          "officialLv1": "使敌军单体陷入怯战状态，无法进行普通攻击，持续2回合",
+          "officialLv10": "使敌军单体陷入怯战状态，无法进行普通攻击，持续2回合"
+        }
+      }
+    },
+    {
+      "cfgId": 920065,
+      "name": "锋矢",
+      "trigger": 4,
+      "dir": "zhihui",
+      "ui": {
+        "cfgId": 920065,
+        "name": "锋矢",
+        "des": "战斗中，使我军全体骑兵进行普通攻击的伤害降低%n%，发动主动战法的伤害提高%n%（受速度属性影响）",
+        "trigger": 4,
+        "target": 9,
+        "limit": 1,
+        "arms": [
+          3,
+          6,
+          9
+        ],
+        "include_effect": [
+          1,
+          2
+        ],
+        "levels": [
+          {
+            "probability": 100,
+            "effect_value": [
+              25,
+              9
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              25,
+              10
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              25,
+              11
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              25,
+              12
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              25,
+              13
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              25,
+              14
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              25,
+              15
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              25,
+              16
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              25,
+              17
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 100,
+            "effect_value": [
+              25,
+              18
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ],
+        "range": 3,
+        "rangeNote": "有效距离 3 · 单体"
+      },
+      "kernel": {
+        "cfgId": 920065,
+        "name": "锋矢",
+        "skill_class": "指挥",
+        "effect_type": "BUFF",
+        "rate_pct_lv1": 25,
+        "rate_pct_lv10": 25,
+        "probability_init": 1,
+        "probability_max": 1,
+        "prepare": 0,
+        "target_type": "self",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [
+          {
+            "name": "伤害降低",
+            "value": 25,
+            "op": 0
+          }
+        ],
+        "detail_id": 9200651,
+        "effects": [
+          {
+            "detail_id": 9200651,
+            "effect_type": "BUFF",
+            "rate_pct": 25,
+            "target_type": "self",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_probability": 0,
+            "control_state": null,
+            "bonus_terms": [
+              {
+                "name": "伤害降低",
+                "value": 25,
+                "op": 0
+              }
+            ]
+          },
+          {
+            "detail_id": 9200652,
+            "effect_type": "DEBUFF",
+            "rate_pct": 18,
+            "target_type": "self",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_probability": 0,
+            "control_state": null,
+            "bonus_terms": [
+              {
+                "name": "伤害提高",
+                "value": 9,
+                "op": 0
+              }
+            ]
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "stzb-w0",
+        "source": "battle-kit/skill-library/source/raw/stzb_skill_extra.json",
+        "sourceId": 200718,
+        "sourceName": "锋矢",
+        "quality": "B",
+        "effectTags": [
+          "主动战法伤害提高",
+          "普通攻击伤害降低"
+        ],
+        "signature": "指挥|DEBUFF|group|普通攻击伤害降低",
+        "referenceIds": [
+          200718,
+          200716
+        ],
+        "rateSource": "adapted/full_mapping_stzb.json（20 档位钳位近似，非官网原文数值）",
+        "license": "参考用：战法名来自率土之滨官网公开名录，描述与数值为本游戏重写/内核档位近似；仅本地学习与内部对照，对外发布须换皮",
+        "evidence_level": "W0",
+        "mirror": {
+          "officialId": 200718,
+          "sourceUrl": "https://g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10",
+          "sourceSha256": "db82f837fb765ea11de77398ddbe57ba66f6e8022b8140403e58c4130cfe3d92",
+          "officialType": "指挥",
+          "officialProbability": "--",
+          "officialTarget": "我军群体（有效距离内3个目标）",
+          "officialLv1": "战斗中，使我军全体骑兵进行普通攻击的伤害降低25.0%，发动主动战法的伤害提高9.0%（受速度属性影响）",
+          "officialLv10": "战斗中，使我军全体骑兵进行普通攻击的伤害降低25.0%，发动主动战法的伤害提高18.0%（受速度属性影响）"
+        }
+      }
+    },
+    {
+      "cfgId": 920074,
+      "name": "钝兵挫锐",
+      "trigger": 3,
+      "dir": "zhuiji",
+      "ui": {
+        "cfgId": 920074,
+        "name": "钝兵挫锐",
+        "des": "普通攻击后，对攻击目标再次发动猛攻（伤害率%n%），并使其陷入怯战状态（命中率%n%%），持续1回合",
+        "trigger": 3,
+        "target": 6,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1,
+          2
+        ],
+        "levels": [
+          {
+            "probability": 25,
+            "effect_value": [
+              100,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 25.56,
+            "effect_value": [
+              111.11,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 26.11,
+            "effect_value": [
+              122.22,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 26.67,
+            "effect_value": [
+              133.33,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 27.22,
+            "effect_value": [
+              144.44,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 27.78,
+            "effect_value": [
+              155.56,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 28.33,
+            "effect_value": [
+              166.67,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 28.89,
+            "effect_value": [
+              177.78,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 29.44,
+            "effect_value": [
+              188.89,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              200,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ],
+        "range": 9,
+        "rangeNote": "目标：普攻目标"
+      },
+      "kernel": {
+        "cfgId": 920074,
+        "name": "钝兵挫锐",
+        "skill_class": "追击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_lv1": 100,
+        "rate_pct_lv10": 200,
+        "probability_init": 0.25,
+        "probability_max": 0.3,
+        "prepare": 0,
+        "target_type": "enemy_single",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 9200741,
+        "effects": [
+          {
+            "detail_id": 9200741,
+            "effect_type": "PHYSICAL_DAMAGE",
+            "rate_pct": 200,
+            "target_type": "enemy_single",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_probability": 0,
+            "control_state": null,
+            "bonus_terms": []
+          },
+          {
+            "detail_id": 9200742,
+            "effect_type": "CONTROL",
+            "rate_pct": 100,
+            "target_type": "enemy_single",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_probability": 1,
+            "control_state": "怯战",
+            "bonus_terms": []
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "stzb-w0",
+        "source": "battle-kit/skill-library/source/raw/stzb_skill_extra.json",
+        "sourceId": 200658,
+        "sourceName": "钝兵挫锐",
+        "quality": "A",
+        "effectTags": [
+          "攻击伤害",
+          "怯战"
+        ],
+        "signature": "追击|PHYSICAL_DAMAGE+CONTROL|single|怯战",
+        "referenceIds": [
+          200658
+        ],
+        "rateSource": "adapted/full_mapping_stzb.json（20 档位钳位近似，非官网原文数值）",
+        "license": "参考用：战法名来自率土之滨官网公开名录，描述与数值为本游戏重写/内核档位近似；仅本地学习与内部对照，对外发布须换皮",
+        "evidence_level": "W0",
+        "mirror": {
+          "officialId": 200658,
+          "sourceUrl": "https://g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10",
+          "sourceSha256": "db82f837fb765ea11de77398ddbe57ba66f6e8022b8140403e58c4130cfe3d92",
+          "officialType": "追击",
+          "officialProbability": "25%-30%",
+          "officialTarget": "攻击目标",
+          "officialLv1": "普通攻击后，对攻击目标再次发动猛攻（伤害率100.0%），并使其无法进行普通攻击，持续1回合",
+          "officialLv10": "普通攻击后，对攻击目标再次发动猛攻（伤害率200.0%），并使其无法进行普通攻击，持续1回合"
+        }
+      }
+    },
+    {
+      "cfgId": 920075,
+      "name": "怯心夺志",
+      "trigger": 3,
+      "dir": "zhuiji",
+      "ui": {
+        "cfgId": 920075,
+        "name": "怯心夺志",
+        "des": "普通攻击后，对攻击目标再次发动猛攻（伤害率%n%），并使其陷入犹豫状态（命中率%n%%），持续1回合",
+        "trigger": 3,
+        "target": 6,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1,
+          2
+        ],
+        "levels": [
+          {
+            "probability": 25,
+            "effect_value": [
+              100,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 25.56,
+            "effect_value": [
+              111.11,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 26.11,
+            "effect_value": [
+              122.22,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 26.67,
+            "effect_value": [
+              133.33,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 27.22,
+            "effect_value": [
+              144.44,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 27.78,
+            "effect_value": [
+              155.56,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 28.33,
+            "effect_value": [
+              166.67,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 28.89,
+            "effect_value": [
+              177.78,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 29.44,
+            "effect_value": [
+              188.89,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              200,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ],
+        "range": 9,
+        "rangeNote": "目标：普攻目标"
+      },
+      "kernel": {
+        "cfgId": 920075,
+        "name": "怯心夺志",
+        "skill_class": "追击",
+        "effect_type": "PHYSICAL_DAMAGE",
+        "rate_pct_lv1": 100,
+        "rate_pct_lv10": 200,
+        "probability_init": 0.25,
+        "probability_max": 0.3,
+        "prepare": 0,
+        "target_type": "enemy_single",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 9200751,
+        "effects": [
+          {
+            "detail_id": 9200751,
+            "effect_type": "PHYSICAL_DAMAGE",
+            "rate_pct": 200,
+            "target_type": "enemy_single",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_probability": 0,
+            "control_state": null,
+            "bonus_terms": []
+          },
+          {
+            "detail_id": 9200752,
+            "effect_type": "CONTROL",
+            "rate_pct": 100,
+            "target_type": "enemy_single",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_probability": 1,
+            "control_state": "犹豫",
+            "bonus_terms": []
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "stzb-w0",
+        "source": "battle-kit/skill-library/source/raw/stzb_skill_extra.json",
+        "sourceId": 200659,
+        "sourceName": "怯心夺志",
+        "quality": "A",
+        "effectTags": [
+          "攻击伤害",
+          "犹豫"
+        ],
+        "signature": "追击|PHYSICAL_DAMAGE+CONTROL|single|犹豫",
+        "referenceIds": [
+          200659
+        ],
+        "rateSource": "adapted/full_mapping_stzb.json（20 档位钳位近似，非官网原文数值）",
+        "license": "参考用：战法名来自率土之滨官网公开名录，描述与数值为本游戏重写/内核档位近似；仅本地学习与内部对照，对外发布须换皮",
+        "evidence_level": "W0",
+        "mirror": {
+          "officialId": 200659,
+          "sourceUrl": "https://g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10",
+          "sourceSha256": "db82f837fb765ea11de77398ddbe57ba66f6e8022b8140403e58c4130cfe3d92",
+          "officialType": "追击",
+          "officialProbability": "25%-30%",
+          "officialTarget": "攻击目标",
+          "officialLv1": "普通攻击后，对攻击目标再次发动猛攻（伤害率100.0%），并使其无法发动主动战法，持续1回合",
+          "officialLv10": "普通攻击后，对攻击目标再次发动猛攻（伤害率200.0%），并使其无法发动主动战法，持续1回合"
+        }
+      }
+    },
+    {
+      "cfgId": 920084,
+      "name": "落雷",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 920084,
+        "name": "落雷",
+        "des": "对敌军单体发动策略攻击（伤害率%n%，受谋略属性影响），并使其陷入混乱状态（命中率%n%%），持续1回合",
+        "trigger": 1,
+        "target": 6,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1,
+          2
+        ],
+        "levels": [
+          {
+            "probability": 35,
+            "effect_value": [
+              74,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              82.22,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              90.44,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              98.67,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              106.89,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              115.11,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              123.33,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              131.56,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              139.78,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          },
+          {
+            "probability": 35,
+            "effect_value": [
+              148,
+              100
+            ],
+            "effect_round": [
+              0,
+              0
+            ]
+          }
+        ],
+        "range": 4,
+        "rangeNote": "有效距离 4 · 单体"
+      },
+      "kernel": {
+        "cfgId": 920084,
+        "name": "落雷",
+        "skill_class": "主动",
+        "effect_type": "STRATEGY_DAMAGE",
+        "rate_pct_lv1": 74,
+        "rate_pct_lv10": 148,
+        "probability_init": 0.35,
+        "probability_max": 0.35,
+        "prepare": 0,
+        "target_type": "enemy_single",
+        "attack_type": "chain",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [],
+        "detail_id": 9200841,
+        "effects": [
+          {
+            "detail_id": 9200841,
+            "effect_type": "STRATEGY_DAMAGE",
+            "rate_pct": 148,
+            "target_type": "enemy_single",
+            "attack_type": "chain",
+            "available_round": 0,
+            "control_probability": 0,
+            "control_state": null,
+            "bonus_terms": []
+          },
+          {
+            "detail_id": 9200842,
+            "effect_type": "CONTROL",
+            "rate_pct": 100,
+            "target_type": "enemy_single",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_probability": 1,
+            "control_state": "混乱",
+            "bonus_terms": []
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "stzb-w0",
+        "source": "battle-kit/skill-library/source/raw/stzb_skill_extra.json",
+        "sourceId": 200126,
+        "sourceName": "落雷",
+        "quality": "A",
+        "effectTags": [
+          "策略攻击伤害",
+          "混乱"
+        ],
+        "signature": "主动|STRATEGY_DAMAGE+CONTROL|single|混乱",
+        "referenceIds": [
+          200126
+        ],
+        "rateSource": "adapted/full_mapping_stzb.json（20 档位钳位近似，非官网原文数值）",
+        "license": "参考用：战法名来自率土之滨官网公开名录，描述与数值为本游戏重写/内核档位近似；仅本地学习与内部对照，对外发布须换皮",
+        "evidence_level": "W0",
+        "mirror": {
+          "officialId": 200126,
+          "sourceUrl": "https://g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10",
+          "sourceSha256": "db82f837fb765ea11de77398ddbe57ba66f6e8022b8140403e58c4130cfe3d92",
+          "officialType": "主动",
+          "officialProbability": "35%",
+          "officialTarget": "敌军单体",
+          "officialLv1": "对敌军单体发动策略攻击（伤害率74.0%，受谋略属性影响），并使其陷入混乱状态，持续1回合",
+          "officialLv10": "对敌军单体发动策略攻击（伤害率148.0%，受谋略属性影响），并使其陷入混乱状态，持续1回合"
+        }
+      }
+    },
+    {
+      "cfgId": 920094,
+      "name": "犒劳",
+      "trigger": 1,
+      "dir": "zhudong",
+      "ui": {
+        "cfgId": 920094,
+        "name": "犒劳",
+        "des": "使自身进行策略攻击时的伤害提高%n%，持续2回合",
+        "trigger": 1,
+        "target": 6,
+        "limit": 1,
+        "arms": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "include_effect": [
+          1
+        ],
+        "levels": [
+          {
+            "probability": 30,
+            "effect_value": [
+              17.5
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              19.44
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              21.39
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              23.33
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              25.28
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              27.22
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              29.17
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              31.11
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              33.06
+            ],
+            "effect_round": [
+              0
+            ]
+          },
+          {
+            "probability": 30,
+            "effect_value": [
+              35
+            ],
+            "effect_round": [
+              0
+            ]
+          }
+        ],
+        "range": 2,
+        "rangeNote": "无距离限制"
+      },
+      "kernel": {
+        "cfgId": 920094,
+        "name": "犒劳",
+        "skill_class": "主动",
+        "effect_type": "DEBUFF",
+        "rate_pct_lv1": 17.5,
+        "rate_pct_lv10": 35,
+        "probability_init": 0.3,
+        "probability_max": 0.3,
+        "prepare": 0,
+        "target_type": "self",
+        "attack_type": "normal",
+        "control_state": null,
+        "control_probability": 0,
+        "bonus_terms": [
+          {
+            "name": "伤害提高",
+            "value": 17.5,
+            "op": 0
+          }
+        ],
+        "detail_id": 9200941,
+        "effects": [
+          {
+            "detail_id": 9200941,
+            "effect_type": "DEBUFF",
+            "rate_pct": 35,
+            "target_type": "self",
+            "attack_type": "normal",
+            "available_round": 0,
+            "control_probability": 0,
+            "control_state": null,
+            "bonus_terms": [
+              {
+                "name": "伤害提高",
+                "value": 17.5,
+                "op": 0
+              }
+            ]
+          }
+        ]
+      },
+      "provenance": {
+        "pairing": "stzb-w0",
+        "source": "battle-kit/skill-library/source/raw/stzb_skill_extra.json",
+        "sourceId": 200197,
+        "sourceName": "犒劳",
+        "quality": "D",
+        "effectTags": [
+          "策略攻击伤害提高"
+        ],
+        "signature": "主动|BUFF|single|策略攻击伤害提高",
+        "referenceIds": [
+          200197
+        ],
+        "rateSource": "adapted/full_mapping_stzb.json（20 档位钳位近似，非官网原文数值）",
+        "license": "参考用：战法名来自率土之滨官网公开名录，描述与数值为本游戏重写/内核档位近似；仅本地学习与内部对照，对外发布须换皮",
+        "evidence_level": "W0",
+        "mirror": {
+          "officialId": 200197,
+          "sourceUrl": "https://g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10",
+          "sourceSha256": "db82f837fb765ea11de77398ddbe57ba66f6e8022b8140403e58c4130cfe3d92",
+          "officialType": "主动",
+          "officialProbability": "30%",
+          "officialTarget": "自己",
+          "officialLv1": "使自身进行策略攻击时的伤害提高17.5%，持续2回合",
+          "officialLv10": "使自身进行策略攻击时的伤害提高35.0%，持续2回合"
+        }
+      }
+    }
+  ],
+  "skipped": [
+    {
+      "cfgId": 10001,
+      "name": "击势",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 10002,
+      "name": "兵贵神速",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 10004,
+      "name": "三军齐出",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 10005,
+      "name": "侵掠如火",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 10006,
+      "name": "先声夺人",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 10007,
+      "name": "全军突击",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 10009,
+      "name": "万军取首",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 10010,
+      "name": "三术奇谋",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 10011,
+      "name": "凤仪施计",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 10012,
+      "name": "决绝",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 10013,
+      "name": "乱矢蓄川",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 10014,
+      "name": "乘间击隙",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 10015,
+      "name": "亡命一搏",
+      "reason": "描述无可忠实映射的百分比效果槽"
+    },
+    {
+      "cfgId": 10016,
+      "name": "兵无常势",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 10017,
+      "name": "乱击",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 10018,
+      "name": "中级扰乱",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 10020,
+      "name": "一雷惊蛰",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 10021,
+      "name": "乘胜追击",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 10022,
+      "name": "中宫追玺",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 10023,
+      "name": "先驱突击",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 10024,
+      "name": "伏波扬砂",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 10025,
+      "name": "反击",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 10026,
+      "name": "健卒不殆",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 10027,
+      "name": "混战",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 10028,
+      "name": "众叛亲离",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 10029,
+      "name": "轻骑冲阵",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 10030,
+      "name": "异士",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 10031,
+      "name": "义勇军",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 910000,
+      "name": "衔枚断后",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910001,
+      "name": "饮冰疾行",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910002,
+      "name": "穿云回响",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910003,
+      "name": "连弩之策",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910004,
+      "name": "霜刃固守",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910005,
+      "name": "偃旗锋芒",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910006,
+      "name": "横槊固守",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910007,
+      "name": "饮冰共鸣",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910008,
+      "name": "振旅破军",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910009,
+      "name": "虎踞锋芒",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910010,
+      "name": "横戈共鸣",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910011,
+      "name": "伏波奇谋",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910012,
+      "name": "云梯奇谋",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910013,
+      "name": "断流破军",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910014,
+      "name": "龙骧奇谋",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910015,
+      "name": "截辕锋芒",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910026,
+      "name": "横戈锋芒",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910030,
+      "name": "扫尘断后",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910042,
+      "name": "燎原回响",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910074,
+      "name": "飞炬断后",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910100,
+      "name": "奇佐危谋",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910101,
+      "name": "惊雷贯阵",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910102,
+      "name": "燎原秘策",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910103,
+      "name": "荡寇破阵",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910104,
+      "name": "破胆夺气",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910105,
+      "name": "缚龙锁澜",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910106,
+      "name": "悬壶济军",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910107,
+      "name": "仁心回春",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910108,
+      "name": "深谋远虑",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 910109,
+      "name": "天罗地网",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910110,
+      "name": "覆军杀将",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910111,
+      "name": "却敌固垒",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910112,
+      "name": "百炼成钢",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910113,
+      "name": "文武两全",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910114,
+      "name": "逆锋决胜",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910115,
+      "name": "长驱直入",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 910116,
+      "name": "火昭天罚",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910117,
+      "name": "坚甲利刃",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910118,
+      "name": "顺风扬刃",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910119,
+      "name": "饮血飞骑",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910120,
+      "name": "智取坚城",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910121,
+      "name": "追风逐电",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910122,
+      "name": "摧锋谋断",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910123,
+      "name": "虎贲督战",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910124,
+      "name": "玄襄谋阵",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910125,
+      "name": "沧海横流",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910126,
+      "name": "深沟高垒",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910127,
+      "name": "举燎合围",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 910128,
+      "name": "阵前擂鼓",
+      "reason": "无同名条目"
+    },
+    {
+      "cfgId": 920000,
+      "name": "辕门射戟",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920001,
+      "name": "酒池肉林",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920002,
+      "name": "密谋定蜀",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920003,
+      "name": "奇佐鬼谋",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 920004,
+      "name": "火势风威",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920005,
+      "name": "虎豹督军",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920006,
+      "name": "乱政",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920007,
+      "name": "魏武之世",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 920008,
+      "name": "白衣渡江",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920009,
+      "name": "洛水佳人",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920010,
+      "name": "节镇关东",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920011,
+      "name": "威震北疆",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 920013,
+      "name": "长坂之吼",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920014,
+      "name": "小霸王",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920015,
+      "name": "重斩",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 920016,
+      "name": "逆反毒杀",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920017,
+      "name": "傲将奇兵",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920018,
+      "name": "诸葛锦囊",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920019,
+      "name": "匠心不竭",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920020,
+      "name": "母仪浮梦",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920021,
+      "name": "帝临回光",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920022,
+      "name": "拔箭啖睛",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 920023,
+      "name": "奋不顾身",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920024,
+      "name": "饮鸩之怨",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920025,
+      "name": "银龙冲阵",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920027,
+      "name": "定军扬威",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920028,
+      "name": "其疾如风",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 920029,
+      "name": "血溅黄砂",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920030,
+      "name": "黄天当立",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920031,
+      "name": "苦肉计",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920032,
+      "name": "陷阵营",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 920033,
+      "name": "白毦亲兵",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920034,
+      "name": "虎步关右",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920035,
+      "name": "先登死士",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 920036,
+      "name": "上将潘凤",
+      "reason": "发动率无法解析或越界：80%"
+    },
+    {
+      "cfgId": 920037,
+      "name": "北疆白马",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 920038,
+      "name": "连环计",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920039,
+      "name": "闭月",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 920040,
+      "name": "桃园结义",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920041,
+      "name": "江东虎将XP",
+      "reason": "描述无可忠实映射的百分比效果槽"
+    },
+    {
+      "cfgId": 920042,
+      "name": "北地枪王",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920043,
+      "name": "南中平蛮",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920044,
+      "name": "花中秀",
+      "reason": "描述无可忠实映射的百分比效果槽"
+    },
+    {
+      "cfgId": 920045,
+      "name": "六宫无怨XP",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920046,
+      "name": "文德椒房",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920047,
+      "name": "双艳",
+      "reason": "描述无可忠实映射的百分比效果槽"
+    },
+    {
+      "cfgId": 920048,
+      "name": "愈战愈勇",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920049,
+      "name": "一夫当关",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920050,
+      "name": "甚陷不惧",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920051,
+      "name": "恃强淬锋",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920052,
+      "name": "衡轭",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 920053,
+      "name": "远攻强化",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 920054,
+      "name": "运筹帷幄",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 920055,
+      "name": "令无空悬",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920056,
+      "name": "势无虚动",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920057,
+      "name": "合纵连横",
+      "reason": "描述无可忠实映射的百分比效果槽"
+    },
+    {
+      "cfgId": 920058,
+      "name": "叫阵",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 920059,
+      "name": "反计之策",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920060,
+      "name": "战必断金",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920062,
+      "name": "疾风迅雷",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920064,
+      "name": "始计",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920066,
+      "name": "美人计",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920067,
+      "name": "白刃",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 920068,
+      "name": "敛众定气",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920069,
+      "name": "垒实迎击",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920070,
+      "name": "百战无怯",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920071,
+      "name": "以诱待来",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920072,
+      "name": "胜负先征",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920073,
+      "name": "疏数",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920076,
+      "name": "奇术折冲",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920077,
+      "name": "破魂",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920078,
+      "name": "飒沓如星",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920079,
+      "name": "扬威",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920080,
+      "name": "蓄盈待竭",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920081,
+      "name": "临危",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920082,
+      "name": "十面埋伏",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920083,
+      "name": "不攻",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920085,
+      "name": "迷阵",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920086,
+      "name": "勠力同心",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920087,
+      "name": "远攻秘策",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 920088,
+      "name": "胜兵求战",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920089,
+      "name": "鱼鳞",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 920090,
+      "name": "远攻之策",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 920091,
+      "name": "移花接木",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 920092,
+      "name": "速战兵法",
+      "reason": "存在非百分比属性点效果，内核无同名槽位"
+    },
+    {
+      "cfgId": 920093,
+      "name": "固阵",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920095,
+      "name": "谨言",
+      "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    }
+  ]
+}

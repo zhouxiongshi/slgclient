@@ -318,42 +318,59 @@
     '#slgPanelsWin .tabs button{background:#20221c;color:#bcb292;border:1px solid #4a4436;border-radius:4px;',
     '  padding:5px 13px;cursor:pointer;font:13px "Microsoft YaHei",sans-serif;}',
     '#slgPanelsWin .tabs button.on{background:#3a3325;border-color:#ba9a52;color:#ffe6a6;}',
-    '#slgPanelsWin .genlist{width:206px;flex:0 0 206px;max-height:100%;overflow-y:auto;border-right:1px solid #33302a;padding-right:8px;}',
+    '#slgPanelsWin .genlist{width:218px;flex:0 0 218px;max-height:100%;overflow-y:auto;border-right:1px solid #33302a;padding-right:9px;}',
     '#slgPanelsWin .genrow{display:block;width:100%;text-align:left;background:transparent;color:#c9bfa3;border:1px solid transparent;',
     '  border-radius:5px;padding:7px 9px;margin-bottom:3px;cursor:pointer;font:13px "Microsoft YaHei",sans-serif;}',
     '#slgPanelsWin .genrow:hover{background:#20221c;}#slgPanelsWin .genrow.on{background:#3a3325;border-color:#ba9a52;color:#ffe6a6;}',
-    '#slgPanelsWin .genrow small{color:#8f8676;display:block;font-size:11px;}',
+    '#slgPanelsWin .genrow small{color:#a49a84;display:block;font-size:11px;line-height:1.5;}',
     /* 人物卡：原版立绘主视觉 + 阵营色描边 + 史载五维条（不编造数值，取自 lore.historyStats） */
-    '#slgPanelsWin .genrow{min-height:46px;}',
-    '#slgPanelsWin .genrow .hcThumb{float:left;width:30px;height:40px;object-fit:cover;object-position:top;',
-    '  border:1px solid #6a624a;border-radius:3px;margin:0 8px 0 0;background:#12150f;}',
-    '#slgPanelsWin .genrow .hcThumbFallback{float:left;width:30px;height:40px;line-height:40px;text-align:center;',
-    '  border:1px solid #6a624a;border-radius:3px;margin:0 8px 0 0;background:#262a20;color:#e6dac0;font:16px "KaiTi",serif;}',
-    '#slgPanelsWin .hcCard{display:flex;gap:16px;background:linear-gradient(135deg,#23251a,#1a1c14);',
-    '  border:1px solid #5a5238;border-left:4px solid var(--hcc,#ba9a52);border-radius:9px;padding:14px 16px;margin-bottom:14px;}',
-    '#slgPanelsWin .hcArt{flex:0 0 158px;position:relative;border:1px solid var(--hcc,#ba9a52);border-radius:7px;',
-    '  overflow:hidden;background:#12150f;box-shadow:0 0 14px #0008 inset;}',
-    '#slgPanelsWin .hcArt img.hcPortrait{display:block;width:158px;height:216px;object-fit:cover;object-position:top center;}',
-    '#slgPanelsWin .hcArt .hcNoArt{width:158px;height:216px;display:flex;align-items:center;justify-content:center;',
-    '  font:700 72px "KaiTi",serif;color:#e8c670;background:radial-gradient(circle at 50% 30%,#3a3a24,#14160f);}',
-    '#slgPanelsWin .hcArt .hcRank{position:absolute;left:0;right:0;bottom:0;padding:4px 8px;',
-    '  background:linear-gradient(transparent,#0b0c08 42%);color:#ffe6a6;font:700 17px "KaiTi",serif;text-align:center;',
-    '  text-shadow:0 2px 4px #000;}',
+    '#slgPanelsWin .genrow{min-height:52px;}',
+    '#slgPanelsWin .genrow .hcThumb{float:left;width:35px;height:47px;object-fit:cover;object-position:top;',
+    '  border:1px solid #8a7a52;border-radius:4px;margin:1px 9px 0 0;background:#12150f;',
+    '  box-shadow:0 2px 7px #0009;}',
+    '#slgPanelsWin .genrow .hcThumbFallback{float:left;width:35px;height:47px;line-height:47px;text-align:center;',
+    '  border:1px solid #8a7a52;border-radius:4px;margin:1px 9px 0 0;background:linear-gradient(160deg,#3a3a24,#1b1d14);',
+    '  color:#f0d998;font:19px "KaiTi",serif;}',
+    '#slgPanelsWin .genrow.on .hcThumb,#slgPanelsWin .genrow.on .hcThumbFallback{border-color:#e8c670;}',
+    '#slgPanelsWin .hcCard{position:relative;display:flex;gap:18px;background:',
+    '  radial-gradient(circle at 12% 8%,rgba(232,198,112,.10),transparent 42%),linear-gradient(135deg,#25271d,#171a12 68%);',
+    '  border:1px solid #6a5f42;border-left:4px solid var(--hcc,#ba9a52);border-radius:10px;padding:15px 18px;margin-bottom:14px;',
+    '  box-shadow:0 8px 24px #0006,0 0 0 1px #0d0f0a inset;}',
+    '#slgPanelsWin .hcCard:before{content:"";position:absolute;right:10px;top:10px;width:58px;height:58px;',
+    '  border-top:1px solid rgba(232,198,112,.24);border-right:1px solid rgba(232,198,112,.24);pointer-events:none;}',
+    '#slgPanelsWin .hcArt{flex:0 0 176px;position:relative;border:1px solid var(--hcc,#ba9a52);border-radius:8px;',
+    '  overflow:hidden;background:#12150f;box-shadow:0 6px 18px #000a,0 0 0 3px #0e100b inset;}',
+    '#slgPanelsWin .hcArt img.hcPortrait{display:block;width:176px;height:246px;object-fit:cover;object-position:top center;}',
+    '#slgPanelsWin .hcArt .hcNoArt{width:176px;height:246px;display:flex;align-items:center;justify-content:center;',
+    '  font:700 82px "KaiTi",serif;color:#e8c670;background:radial-gradient(circle at 50% 30%,#494934,#14160f);}',
+    '#slgPanelsWin .hcArt .hcRank{position:absolute;left:0;right:0;bottom:0;padding:16px 8px 7px;',
+    '  background:linear-gradient(transparent,#0b0c08 54%);color:#ffe6a6;font:700 19px "KaiTi",serif;text-align:center;',
+    '  letter-spacing:3px;text-shadow:0 2px 5px #000;}',
+    '#slgPanelsWin .hcArt .hcSeal{position:absolute;left:7px;top:7px;padding:2px 7px;border:1px solid var(--hcc,#ba9a52);',
+    '  border-radius:3px;background:#0c0e0ad9;color:#f0d998;font:11px "KaiTi",serif;letter-spacing:2px;}',
     '#slgPanelsWin .hcMeta{flex:1;min-width:0;}',
-    '#slgPanelsWin .hcName{font:700 25px "KaiTi","Microsoft YaHei",serif;color:#ffe6a6;letter-spacing:2px;}',
-    '#slgPanelsWin .hcName .hcStar{color:#f0c14b;font:14px "Microsoft YaHei",sans-serif;letter-spacing:1px;margin-left:8px;}',
-    '#slgPanelsWin .hcLine{margin-top:3px;color:#b9ac8f;font-size:12px;}',
-    '#slgPanelsWin .hcLine .hcCamp{display:inline-block;padding:1px 8px;border:1px solid var(--hcc,#ba9a52);',
-    '  border-radius:9px;color:#f0d998;margin-right:8px;}',
-    '#slgPanelsWin .hcStars{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:11px;}',
-    '#slgPanelsWin .hcStars .hcS{background:#1b1d14;border:1px solid #3a3428;border-radius:5px;padding:5px 6px;}',
-    '#slgPanelsWin .hcStars .hcS .n{color:#9c9382;font-size:11px;}',
-    '#slgPanelsWin .hcStars .hcS .b{height:6px;background:#2b2d20;border-radius:3px;margin-top:4px;overflow:hidden;}',
-    '#slgPanelsWin .hcStars .hcS .b i{display:block;height:100%;background:linear-gradient(90deg,#7c6a37,#e8c670);}',
-    '#slgPanelsWin .hcStars .hcS .v{color:#f0e2b8;font:700 14px "Microsoft YaHei",sans-serif;text-align:right;}',
-    '#slgPanelsWin .hcBrief{margin-top:10px;color:#cfc4a6;font-size:12px;line-height:1.7;border-top:1px dashed #3a3428;padding-top:8px;}',
-    '#slgPanelsWin .hcTags{margin-top:8px;color:#8f8676;font-size:11px;}',
-    '#slgPanelsWin .hcTags b{color:#c9bfa3;font-weight:600;}',
+    '#slgPanelsWin .hcName{font:700 29px "KaiTi","Microsoft YaHei",serif;color:#ffe6a6;letter-spacing:3px;',
+    '  text-shadow:0 2px 8px #0008;}',
+    '#slgPanelsWin .hcName .hcStar{color:#f0c14b;font:14px "Microsoft YaHei",sans-serif;letter-spacing:1px;margin-left:10px;}',
+    '#slgPanelsWin .hcLine{margin-top:7px;color:#b9ac8f;font-size:12px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;}',
+    '#slgPanelsWin .hcLine .hcCamp{display:inline-block;padding:2px 9px;border:1px solid var(--hcc,#ba9a52);',
+    '  border-radius:9px;color:#f0d998;background:#2a2a1b;}',
+    '#slgPanelsWin .hcLine .hcChip{padding:2px 8px;border:1px solid #4b4636;border-radius:9px;background:#1b1e15;color:#cfc4a6;}',
+    '#slgPanelsWin .hcStars{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-top:13px;}',
+    '#slgPanelsWin .hcStars .hcS{background:linear-gradient(#20231a,#171912);border:1px solid #514935;border-radius:6px;',
+    '  padding:7px 8px;min-height:56px;}',
+    '#slgPanelsWin .hcStars .hcS .n{color:#a89e86;font-size:11px;letter-spacing:1px;}',
+    '#slgPanelsWin .hcStars .hcS .b{height:5px;background:#2b2d20;border-radius:3px;margin-top:7px;overflow:hidden;}',
+    '#slgPanelsWin .hcStars .hcS .b i{display:block;height:100%;background:linear-gradient(90deg,#8c6c31,#e8c670);}',
+    '#slgPanelsWin .hcStars .hcS .v{color:#f0e2b8;font:700 16px "Microsoft YaHei",sans-serif;text-align:right;',
+    '  margin-top:2px;}',
+    '#slgPanelsWin .hcStars .hcS .v.na{color:#7f7768;font-size:13px;}',
+    '#slgPanelsWin .hcBrief{margin-top:12px;color:#d9cba8;font-size:12px;line-height:1.75;',
+    '  border-top:1px solid #4a4331;padding-top:9px;}',
+    '#slgPanelsWin .hcBrief:before{content:"「";color:#e8c670;font:20px "KaiTi",serif;margin-right:2px;}',
+    '#slgPanelsWin .hcTags{margin-top:8px;color:#a99e84;font-size:11px;display:flex;gap:8px;flex-wrap:wrap;}',
+    '#slgPanelsWin .hcTags span{padding:2px 7px;background:#1d2017;border:1px solid #3d3a2c;border-radius:3px;}',
+    '#slgPanelsWin .hcTags b{color:#d8c9a5;font-weight:600;}',
     '#slgPanelsWin .cols{display:flex;gap:16px;align-items:flex-start;}#slgPanelsWin .cols>.right{flex:1;min-width:0;}',
     '#slgPanelsWin .src{border-left:2px solid #6a5a32;padding:4px 0 4px 11px;margin:8px 0;}',
     '#slgPanelsWin .src b{color:#e8c670;}#slgPanelsWin .src .muted{color:#9c9382;font-size:12px;}',
@@ -422,24 +439,30 @@
     var starsHtml = dims.map(function (d) {
       var v = lore ? Number((lore.historyStats || {})[d]) || 0 : 0;
       return '<div class="hcS"><div class="n">' + d + '</div>'
-        + '<div class="v">' + (lore ? v : '—') + '</div>'
-        + '<div class="b"><i style="width:' + Math.max(0, Math.min(100, v)) + '%"></i></div></div>';
+        + '<div class="v' + (lore ? '' : ' na') + '">' + (lore ? v : '—') + '</div>'
+        + '<div class="b"><i style="width:' + (lore ? Math.max(0, Math.min(100, v)) : 0) + '%"></i></div></div>';
     }).join('');
     var brief = lore && lore.brief ? esc(lore.brief)
-      : '本局穿越者，史无明载；立绘与本局画像由章节事件逐步写入。';
-    var meta = lore
-      ? '字 ' + esc(lore.zi || '—') + ' · 籍贯 ' + esc(lore.hometown || '—') + ' · ' + esc(lore.era || '')
-      : '本局设定人物';
+      : '本局穿越者，史无明载；立绘与形象由章节事件逐步写入，本局数值请看「属性」页。';
+    var tags = lore
+      ? ['字 ' + esc(lore.zi || '—'), '籍贯 ' + esc(lore.hometown || '—'), esc(lore.era || '')]
+      : ['本局设定人物', '无史载五维'];
+    if (g.cityName) tags.push('驻 ' + esc(g.cityName));
     return '<div class="hcCard" style="--hcc:' + color + '">'
       + '<div class="hcArt">' + art
+      + '<div class="hcSeal">' + (lore ? '史载' : '本局') + '</div>'
       + '<div class="hcRank">' + esc(g.name || '武将') + '</div></div>'
       + '<div class="hcMeta">'
       + '<div class="hcName">' + esc(g.name || '武将') + '<span class="hcStar">' + starTxt + '</span></div>'
       + '<div class="hcLine"><span class="hcCamp">' + (g.isProtagonist ? '主公' : (Number(g.camp) ? ('势力 ' + g.camp) : '在野')) + '</span>'
-      + 'Lv' + esc(g.level) + ' · ' + esc(g.careerName || '干才') + ' · ' + esc(g.state) + '</div>'
+      + '<span class="hcChip">Lv ' + esc(g.level) + '</span>'
+      + '<span class="hcChip">' + esc(g.careerName || '干才') + '</span>'
+      + '<span class="hcChip">' + esc(g.state) + '</span>'
+      + '<span class="hcChip">忠诚 ' + (g.loyal != null ? esc(g.loyal) : '—') + '</span></div>'
       + '<div class="hcStars">' + starsHtml + '</div>'
-      + '<div class="hcBrief">' + brief + '<div class="hcTags">' + meta
-      + (g.cityName ? ' · 驻 ' + esc(g.cityName) : '') + '</div></div>'
+      + '<div class="hcBrief">' + brief + '<div class="hcTags">'
+      + tags.map(function (t) { return '<span>' + t + '</span>'; }).join('')
+      + '</div></div>'
       + '</div></div>';
   }
 

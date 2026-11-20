@@ -15,6 +15,8 @@ import { SKILLS, skillById, kernelSkillAt, rangeOf } from '../server/skills.js';
 const ROOT = resolve(import.meta.dirname, '..');
 const read = (...p) => JSON.parse(readFileSync(resolve(ROOT, ...p), 'utf8'));
 const innate = read('conf', 'innate-skills.json');
+const mirror = read('conf', 'skill-mirror.json');
+const mirrored = new Map(mirror.skills.map((s) => [Number(s.cfgId), s]));
 const audit = read('conf', 'campaign', 'innate-skill-audit.json');
 const heroSkills = read('conf', 'campaign', 'hero-skills.json');
 const general = read('conf', 'json', 'general', 'general.json');
@@ -52,17 +54,20 @@ test('新增战法的描述占位、等级成长、目标与内核槽一一对�
   const oldNames = new Set(SKILLS.filter((s) => s.cfgId < 920000).map((s) => s.name));
   assert.ok(innate.skills.length >= 60, '代表战法过少，效果范式覆盖不足');
   for (const s of innate.skills) {
-    const ph = (s.ui.des.match(/%n%/g) || []).length;
-    assert.equal(ph, s.ui.levels[0].effect_value.length, `${s.name} 描述占位与结算槽不符`);
+    const m = mirrored.get(Number(s.cfgId));
+    const live = m || s;
+    const ph = (live.ui.des.match(/%n%/g) || []).length;
+    assert.equal(ph, live.ui.levels[0].effect_value.length, `${s.name} 描述占位与结算槽不符`);
     assert.equal(s.ui.levels.length, 10, `${s.name} 不是 10 级`);
-    assert.equal(s.kernel.effects.length, ph, `${s.name} kernel 槽数不符`);
+    assert.equal(s.kernel.effects.length, m ? (s.ui.des.match(/%n%/g) || []).length : ph,
+      `${s.name} kernel 槽数不符`);
     assert.equal(KTARGET_REV[s.kernel.effects[0].target_type], s.ui.target, `${s.name} 客户端目标类型与主槽不一致`);
-    s.ui.levels[0].effect_value.forEach((v, i) => {
+    if (!m) s.ui.levels[0].effect_value.forEach((v, i) => {
       assert.ok(Math.abs(s.ui.levels[9].effect_value[i] - v * 2) < 0.05,
         `${s.name} 第 ${i + 1} 槽 Lv10 不是 Lv1 的两倍`);
     });
     assert.equal(oldNames.has(s.name), false, `${s.name} 与包内原有战法重名`);
-    assert.equal(rangeOf(s), s.ui.range, `${s.name} 内核射程与描述里的有效距离不符`);
+    assert.equal(rangeOf(s), live.ui.range, `${s.name} 内核射程与描述里的有效距离不符`);
     const k1 = kernelSkillAt(s.cfgId, 1);
     const k10 = kernelSkillAt(s.cfgId, 10);
     assert.ok(k1 && k10, `${s.name} 无法转换成内核战法`);

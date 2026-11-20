@@ -26,6 +26,8 @@ const WEB = existsSync(resolve(import.meta.dirname, '..', 'web', 'index.html'))
   ? resolve(import.meta.dirname, '..', 'web')
   : resolve(import.meta.dirname, '..', '..', 'runtime', 'client-src', 'build', 'web-desktop');
 const CFG = JSON.parse(readFileSync(resolve(import.meta.dirname, '..', 'conf', 'skills.json'), 'utf8'));
+const MIRRORED = new Set(JSON.parse(readFileSync(resolve(import.meta.dirname, '..', 'conf', 'skill-mirror.json'), 'utf8'))
+  .skills.map((s) => Number(s.cfgId)));
 const BATTLE_KIT = JSON.parse(readFileSync(resolve(import.meta.dirname, '..', '..', 'battle-core', 'config', 'battle_config.json'), 'utf8'));
 
 function hero(id, skills) {
@@ -84,11 +86,11 @@ test('战法表：31 个 / 4 类 / 10 级真实数值成长 / 名称与伤害率
     assert.ok(
       BATTLE_KIT.skill_names.includes(s.name) || FRAGMENT_NAMES.has(s.name)
       || s.provenance?.pairing === 'authored' || s.provenance?.pairing === 'skill-library'
-      || s.provenance?.pairing === 'skill-library-extra',
+      || s.provenance?.pairing === 'skill-library-extra' || MIRRORED.has(Number(s.cfgId)),
       `${s.name} 不在 本作配置 名录`,
     );
     if (s.provenance?.pairing === 'authored' || s.provenance?.pairing === 'skill-library'
-      || s.provenance?.pairing === 'skill-library-extra') continue;
+      || s.provenance?.pairing === 'skill-library-extra' || MIRRORED.has(Number(s.cfgId))) continue;
     assert.ok(BATTLE_KIT.damage_rates_pct.includes(s.kernel.rate_pct_lv1), `${s.name} 伤害率不是包内样本`);
     const ui = s.ui;
     assert.equal(ui.levels.length, LEVEL_COUNT);
@@ -100,10 +102,11 @@ test('战法表：31 个 / 4 类 / 10 级真实数值成长 / 名称与伤害率
     const first = ui.levels[0], last = ui.levels.at(-1);
     const isFixed = s.kernel.rate_pct_lv1 === s.kernel.rate_pct_lv10;
     // 被动无条件生效（概率恒 100%），固定值战法无成长——均豁免
-    const noProbGrowth = isFixed || s.ui.trigger === 2;
+    /* 固定发动率的公开同名战法十级同值：这是来源事实，不是「清一色 70%」回退。 */
+    const noProbGrowth = isFixed || s.ui.trigger === 2 || MIRRORED.has(Number(s.cfgId));
     if (!noProbGrowth) assert.ok(last.probability > first.probability, `${s.name} 发动概率不成长`);
     first.effect_value.forEach((v, k) => {
-      if (!isFixed) assert.ok(last.effect_value[k] > v, `${s.name} 效果值不成长`);
+      if (!isFixed && !MIRRORED.has(Number(s.cfgId))) assert.ok(last.effect_value[k] > v, `${s.name} 效果值不成长`);
     });
     for (let i = 1; i < ui.levels.length; i += 1) {
       assert.ok(ui.levels[i].effect_value[0] >= ui.levels[i - 1].effect_value[0]);

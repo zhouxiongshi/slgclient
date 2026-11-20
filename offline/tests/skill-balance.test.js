@@ -13,7 +13,15 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { SKILLS } from '../server/skills.js';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const MIRROR = JSON.parse(readFileSync(join(ROOT, 'conf', 'skill-mirror.json'), 'utf8'));
+const MIRRORED = new Map(MIRROR.skills.map((s) => [Number(s.cfgId), s]));
+const mirrorOf = (s) => MIRRORED.get(Number(s.cfgId));
 
 const DMG = new Set(['PHYSICAL_DAMAGE', 'STRATEGY_DAMAGE']);
 const NON_ROLL = new Set(['指挥', '被动']);
@@ -58,6 +66,18 @@ const ACTIVE_DMG = ROWS.filter((r) => !NON_ROLL.has(r.cls) && r.rate > 0);
 test('主动/追击发动率：按伤害率反推的 32%~50% 区间，且逐级成长（不再清一色 70%）', () => {
   assert.ok(ACTIVE_DMG.length >= 70, `可结算的主动/追击战法应足够多（实测 ${ACTIVE_DMG.length}）`);
   for (const r of ACTIVE_DMG) {
+    const m = mirrorOf(r.s);
+    if (m) {
+      /* 镜像条目的发动率以官方公开战法库为准（区间战法 Lv1→Lv10 线性成长，
+         固定发动率战法十级同值）；这里核「与官方逐字一致」而不是本作自造的 32~50 带。 */
+      const raw = String(m.provenance.mirror.officialProbability || '');
+      const p = raw.match(/(\d+(?:\.\d+)?)%(?:-(\d+(?:\.\d+)?)%)?/);
+      assert.ok(p, `${r.name} 镜像缺官方发动率：${raw}`);
+      assert.equal(r.p1, Number(p[1]), `${r.name} Lv1 发动率应等于官方 ${raw}`);
+      assert.equal(r.p10, Number(p[2] || p[1]), `${r.name} Lv10 发动率应等于官方 ${raw}`);
+      assert.ok(r.p10 >= 20 && r.p10 <= 60, `${r.name} 官方发动率 ${r.p10}% 仍需在 20~60 安全区`);
+      continue;
+    }
     assert.ok(r.p10 >= 32 && r.p10 <= 50, `${r.name} Lv10 发动率 ${r.p10}% 越界（应在 32~50）`);
     assert.ok(r.p1 >= 30 && r.p1 <= 45, `${r.name} Lv1 发动率 ${r.p1}% 越界（应在 30~45）`);
     assert.ok(r.p10 > r.p1, `${r.name} 发动率无成长（${r.p1}%→${r.p10}%）`);
@@ -113,6 +133,9 @@ test('控制槽：命中率 ≤ 100% 且 Lv10 = Lv1×2（不会必中、也不�
       const b = Number(s.ui.levels[n - 1].effect_value[i]) || 0;
       assert.ok(b <= 100, `${s.name} 控制命中率 Lv10=${b}% 超过 100%（等于必中）`);
       assert.ok(b > 0, `${s.name} 控制命中率为 0，控制槽等于不存在`);
+      /* 官方「陷入 X 状态」不带命中率，等价于触发必中；镜像层记 100%→100%，
+         不适用本作自造战法的「Lv10 = Lv1×2」成长规则。 */
+      if (mirrorOf(s) && a === 100 && b === 100) return;
       assert.ok(Math.abs(b - a * 2) < 0.02, `${s.name} 控制命中率成长断裂 ${a}%→${b}%`);
     });
   }

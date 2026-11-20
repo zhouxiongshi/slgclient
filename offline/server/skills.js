@@ -58,6 +58,23 @@ if (existsSync(INNATE_PATH)) {
   }
   INNATE_SKILLS = innate.skills || [];
 }
+/* ★ 同名战法镜像层：只覆盖「官方公开战法库中逐字同名、且本作内核可忠实表达」的条目；
+   其余同名但含条件/叠加/多段机制者与原表未命中者一律原样保留。生成器见
+   tools/mirror-official-skills.mjs，skip 台账写在 conf/skill-mirror.json。
+   镜像必须在编辑器覆盖层之前装载，玩家手改（custom-skills.json）仍然是最终权威。 */
+const MIRROR_PATH = join(ROOT, 'conf', 'skill-mirror.json');
+let MIRROR_SKILLS = [];
+if (existsSync(MIRROR_PATH)) {
+  try {
+    const mirror = JSON.parse(readFileSync(MIRROR_PATH, 'utf8'));
+    MIRROR_SKILLS = mirror.skills || [];
+    for (const s of MIRROR_SKILLS) {
+      const i = TABLE.skills.findIndex((x) => Number(x.cfgId) === Number(s.cfgId));
+      if (i >= 0) TABLE.skills[i] = s;
+      else TABLE.skills.push(s);
+    }
+  } catch { /* 镜像损坏不阻塞启动，按无镜像处理 */ }
+}
 /* ★ 2026-11-17 初始数据编辑器（用户：「技能和属性要提供新增和编辑功能……我要自己来
    修改和创建」）：conf/campaign/custom-skills.json 覆盖层，最后装载 → 同 cfgId/同名
    覆盖任何来源的战法。编辑器（server/domain/skill-editor.js）是唯一写入口；五张原表
@@ -125,6 +142,10 @@ const RANGE_OVERRIDE = new Map(
 /* 全武将初始战法的有效距离取官网 distance（构建器写进 ui.range），不走
    「效果类型 × 单/群体」的通用推导，保证描述里的「有效距离 N」= 内核射程。 */
 for (const s of INNATE_SKILLS) {
+  if (Number(s.ui?.range) > 0) RANGE_OVERRIDE.set(Number(s.cfgId), Number(s.ui.range));
+}
+/* 镜像条目的射程取官方 effective distance，不能让通用推导覆盖回去。 */
+for (const s of MIRROR_SKILLS) {
   if (Number(s.ui?.range) > 0) RANGE_OVERRIDE.set(Number(s.cfgId), Number(s.ui.range));
 }
 

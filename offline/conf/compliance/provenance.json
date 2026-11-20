@@ -98,6 +98,24 @@
       "count": 1582,
       "action_before_release": "**最高优先**：画面与 UI 资源必须整体替换或取得授权；当前仅用于原型验证，不可直接商业发行",
       "confidence": "高"
+    },
+    {
+      "path": "offline/conf/skill-mirror.json",
+      "kind": "同名战法镜像（仅伤害/治疗/控制/增减益可忠实落地者）",
+      "status": "derived_unlicensed",
+      "origin": "官方公开战法库快照 skill-library-official-20261120.json（SHA256 db82f837…），由 tools/mirror-official-skills.mjs 生成",
+      "count": 12,
+      "action_before_release": "商业发行前需取得公开战法描述的引用授权，或整体换名换文案；生成器与 skip 台账保留作为证据链",
+      "confidence": "高"
+    },
+    {
+      "path": "skill-library-official-20261120.json",
+      "kind": "官方公开战法库快照（648 条，仅用于镜像复现）",
+      "status": "derived_unlicensed",
+      "origin": "官方公开配置端点 g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10，2026-11-20 抓取",
+      "count": 648,
+      "action_before_release": "不随发行包分发；仅作生成/审计证据，商业发行前需确认引用许可",
+      "confidence": "高"
     }
   ]
 }
