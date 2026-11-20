@@ -7,6 +7,44 @@ import { knobGet } from './knobs.js';
 
 const STOCK = ['wood', 'iron', 'stone', 'grain', 'gold'];
 
+/* ★ 2026-11-20 欠饷逃兵（用户裁决补闭环）：全局粮池见底时旧实现 `pay = min(grain, cost)`
+   只少扣粮、兵力一分不掉，形成「打不动也饿不死」的僵尸大军（400 旬探针里 14998 兵冻结
+   150 旬）。这里只补逻辑、不改军粮 0.1 参数：连续欠饷满 3 旬后驻军每旬逃散 2%，与行军
+   断粮同口径。粮足即止、兵力自然收敛到城产养得起的规模。 */
+const ARREARS_START_DAYS = 30;   // 连续欠饷满 3 旬才开始逃散（给玩家缓冲）
+const ARREARS_TICK_DAYS = 10;    // 之后每旬逃散一次
+const ARREARS_DESERT_RATE = 0.02;
+
+/** 事件簿追加（与 strategy.recordEvent 同形状）。本模块不 import strategy，防止成环。 */
+function recordArrearsEvent(state, text) {
+  const st = state?.strategy;
+  if (!st) return;
+  if (!Array.isArray(st.events)) st.events = [];
+  st.events.push({ turn: st.turn, text, day: state.clock?.day ?? 0 });
+  while (st.events.length > 480) st.events.shift();
+}
+
+function arrearsNotice(state, ctx, text) {
+  recordArrearsEvent(state, text);
+  ctx?.push?.('chat.push', { rid: 0, nickName: '系统', type: 0, msg: `【军饷】${text}`, time: Date.now() });
+}
+
+/** 驻城军逃散：按槽位比例扣，跳过行军中的队伍（那部分由 armySupplyTick 的城库链管）。 */
+function desertGarrison(state) {
+  let lost = 0;
+  for (const a of state.armys || []) {
+    if (a.marchId || !Array.isArray(a.soldiers)) continue;
+    a.soldiers = a.soldiers.map((v) => {
+      const n = Math.max(0, Number(v) || 0);
+      if (n <= 0) return 0;
+      const next = Math.floor(n * (1 - ARREARS_DESERT_RATE));
+      lost += n - next;
+      return next;
+    });
+  }
+  return lost;
+}
+
 export function countSoldiers(state) {
   let n = 0;
   for (const army of state.armys || []) {
@@ -43,8 +81,11 @@ export function recordRes(state, res, delta, reason, day) {
   if (state.resLedger.length > 240) state.resLedger.splice(0, state.resLedger.length - 240);
 }
 
-export function applyDays(state, cfg, days, rules) {
-  if (days <= 0) return { days: 0, upkeepPaid: 0, soldiers: countSoldiers(state) };
+export function applyDays(state, cfg, days, rules, ctx) {
+  if (days <= 0) return {
+    days: 0, upkeepPaid: 0, soldiers: countSoldiers(state),
+    arrearsDays: Math.max(0, Math.floor(Number(state.roleRes?.grainArrearsDays) || 0)), deserters: 0,
+  };
   const r = state.roleRes;
   const cap = r.depot_capacity || 1000000;
   const limit = cfg.basic.role?.decree_limit ?? 20;
@@ -55,10 +96,15 @@ export function applyDays(state, cfg, days, rules) {
   const perSoldier = ownsCity
     ? (Number(knobGet(state, 'grainPerSoldierDay')) || 0.1)
     : (rules.upkeepPerSoldier ?? 0);
-  const cost = Math.floor(
-    countSoldiers(state) * perSoldier
-    * (1 + (Number(rules.upkeepPct) || 0) / 100),
-  );
+  const upkeepMul = 1 + (Number(rules.upkeepPct) || 0) / 100;
+  let cost = Math.floor(countSoldiers(state) * perSoldier * upkeepMul);
+  let arrearsDays = Math.max(0, Math.floor(Number(r.grainArrearsDays) || 0));
+  const arrearsBefore = arrearsDays;
+  let deserters = 0;
+  let warnFirst = false;
+  let desertFirst = false;
+  let desertPeriodic = false;
+  let recovered = false;
   const startDay = Math.floor(Number(state.clock?.day) || 1);
   // ★ P1：委任岗位真实生效——resBonus[k] 为该资源产量加成百分比（panels.js 计算，红线 ≤30%）
   const resBonus = rules.resBonus || {};
@@ -85,6 +131,25 @@ export function applyDays(state, cfg, days, rules) {
     const pay = Math.min(r.grain || 0, cost);
     r.grain -= pay;
     upkeepPaid += pay;
+    if (pay < cost) {
+      if (arrearsDays === 0) warnFirst = true;
+      arrearsDays += 1;
+      /* 连续欠饷满 3 旬起，每旬逃散 2%。逃兵后重算 cost——兵少了需求同步下降，
+         自然收敛到「城产粮养得起的规模」，不会无限逃到 0，也不会永远卡在僵尸大军。 */
+      if (arrearsDays >= ARREARS_START_DAYS
+          && (arrearsDays - ARREARS_START_DAYS) % ARREARS_TICK_DAYS === 0) {
+        const lost = desertGarrison(state);
+        if (lost > 0) {
+          deserters += lost;
+          if (arrearsDays === ARREARS_START_DAYS) desertFirst = true;
+          else if ((arrearsDays - ARREARS_START_DAYS) % (ARREARS_TICK_DAYS * 10) === 0) desertPeriodic = true;
+          cost = Math.floor(countSoldiers(state) * perSoldier * upkeepMul);
+        }
+      }
+    } else if (arrearsDays > 0) {
+      recovered = true;
+      arrearsDays = 0;
+    }
     const sal = Math.min(r.gold || 0, salaryPerDay);
     r.gold -= sal;
     salaryPaid += sal;
@@ -127,7 +192,20 @@ export function applyDays(state, cfg, days, rules) {
   if (salaryPaid) recordRes(state, 'gold', -salaryPaid, '委任俸禄', startDay + days - 1);
   if (maintainPaid) recordRes(state, 'gold', -maintainPaid, '城防俸饷', startDay + days - 1);
   if (hoardTaxPaid) recordRes(state, 'gold', -hoardTaxPaid, '国库沉淀税', startDay + days - 1);
-  return { days, upkeepPaid, salaryPaid, maintainPaid, hoardTaxPaid, soldiers: countSoldiers(state) };
+  r.grainArrearsDays = arrearsDays;
+  if (warnFirst) {
+    arrearsNotice(state, ctx, '国库粮尽，军饷欠付。连续 3 旬无粮，驻军将逃散；请减兵、运粮或扩城。');
+  }
+  if (desertFirst) {
+    arrearsNotice(state, ctx, `军饷欠付满 3 旬，驻军逃散 ${deserters} 人。粮足即止。`);
+  } else if (desertPeriodic) {
+    arrearsNotice(state, ctx, `军饷欠付已 ${Math.floor(arrearsDays / 10)} 旬，驻军再逃散 ${deserters} 人。`);
+  }
+  if (recovered) arrearsNotice(state, ctx, '粮仓复足，军饷恢复正常，逃散已止。');
+  return {
+    days, upkeepPaid, salaryPaid, maintainPaid, hoardTaxPaid,
+    soldiers: countSoldiers(state), arrearsDays, arrearsBefore, deserters,
+  };
 }
 
 /** 曲辕犁：磨坊（加成类型 19）的产量额外 +20%。其他设施不加。 */

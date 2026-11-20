@@ -33,6 +33,7 @@
 |---|---|---|---|---|---|
 | 粮道连通/跳数/里程 | `supply.js supplyMap(state).byCity[id]`（视图 `city.supply`）。★ 2026-11-20：里程沿 path 逐段累加 `detail.json.march.edges[].km`（125 条边全带真实里程），旧版 `routeKm` 用「跳数×100」兜底，出征面板「约 X 里」是假数据（实测一跳真实 206 里却显示 100）；无路网 km 表时仍退回旧兜底 | bool/跳/里 | 整数 | ❌ | 粮道透镜、出征面板、概览 |
 | 军级补给线 | `supply.js supplyLineForArmy()`（玩家/NPC 同函数）：补给节点 = 己方城且 `cityEcon[id].store >= 该部队一旬口粮 need`（`grainForTurn = 兵力×0.1×10`）。★ 2026-11-20 收紧：旧版只看 `store>0`，实测节点仅 1 粮、部队需 1000 粮/旬时仍判 `supplyOk=true`，连续 6 旬零逃兵（只扣 6 粮），与「第 3 旬起逃兵 2%」文案矛盾。现在 BFS 跳过不够粮的城找够粮节点，全找不到才走断粮链；第 1 旬警告、第 3 旬起逃兵 2%/旬在 `armySupplyTick()` | 粮/旬 | 整数 | ❌ | 军情推送「补给不足」、行军补给状态 |
+| 驻军欠饷逃兵 | ★ 2026-11-20（用户裁决补闭环）：`economy.js applyDays()` 日结算，实付 `pay = min(grain, cost) < cost` 即累计 `roleRes.grainArrearsDays`；**连续欠饷满 30 日（3 旬）起，驻城军（`!army.marchId`）每 10 日逃散 2%**，逃兵后重算 cost，兵力自然收敛到城产粮养得起的规模；粮足即 `arrearsDays=0`、逃兵停止（恢复出口）。旧版粮不够只少扣粮、兵力一分不掉，实测 400 旬长局 14998 兵冻结 150 旬的「僵尸大军」。行军军走 `armySupplyTick` 的城库链，**不受全局池逃兵影响**（避免双重惩罚）。军粮参数 0.1 不变 | 日/%/兵 | 整数 | ❌ 唯一源 `applyDays` | 军饷欠付播报（首次警告/首次逃兵/每 10 旬/恢复）、事件簿留痕、府库军饷流水 |
 | 出征耗粮 | `supply.js marchSupplyEstimate()` | 斛/日 | 0.1 | ❌ 必须调同一函数 | 出征面板补给行 |
 | 行军总粮耗 | `strategy.js marchGrainCost(state, deploy, days, terrain)` = 实出兵 × 0.1 × 行程日（冬季走河路再乘 `crossRiverWinterCost`）。★ 2026-11-20：`previewAssault` 下发权威 `grainCost` 给界面，推演后定点回填；旧版 `skills.js` 前端自算 `Math.ceil(deploy*0.1)` 漏乘行程天数，实测 20 日行程显示 1000、实扣 20000。未推演时只显示「N 兵 × M 日 × 0.1」规则、不显示假数字 | 斛 | 整数 | ❌ 只能显示（禁前端复算） | 出征概览、确认框、推演卡、出征 toast |
 | 行军 ETA | `strategy.js marchPlan()`（`arriveDay`） | 日 | 整数 | ❌ | 队列页、地图箭头 |

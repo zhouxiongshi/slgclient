@@ -64,6 +64,7 @@ function makeRoleRes(cfg) {
     gold_yield: r.gold_yield ?? 1000,
     depot_capacity: r.depot_capacity ?? 1000000,
     jungong: 0,
+    grainArrearsDays: 0,   // 连续欠饷天数（applyDays 结算驻军逃兵）
   };
 }
 

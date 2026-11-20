@@ -313,7 +313,7 @@ export function settleCampaign(state, cfg, ctx, now = Date.now()) {
     const trait = factionTraitOf(state);
     const resBonus = yieldBonusByResource(state);
     for (const [k, v] of Object.entries(trait.yields || {})) resBonus[k] = (resBonus[k] || 0) + v;
-    applyDays(state, cfg, days, { ...rules, resBonus, upkeepPct: trait.upkeepPct });
+    applyDays(state, cfg, days, { ...rules, resBonus, upkeepPct: trait.upkeepPct }, ctx);
   }
   // 结局后连开篇文本都不再补推，fired 完全冻结
   if (!state.campaign.ending && !state.campaign.fired['1']) runDay(state, cfg, ctx, 1, rules);
