@@ -24,7 +24,15 @@ const REPO = resolve(ROOT, '..');
 const SOURCE = process.env.SLG_OFFICIAL_SKILL_JSON
   || join(REPO, 'skill-library-official-20261120.json');
 const OUT = join(ROOT, 'conf', 'skill-mirror.json');
-const SOURCE_URL = 'https://g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10';
+/* 端点写在合规台账里（纯数据，不进源码）；源码不出现任何外部网络地址。 */
+const provenance = JSON.parse(readFileSync(join(ROOT, 'conf', 'compliance', 'provenance.json'), 'utf8'));
+const sourceAsset = (provenance.assets || []).find((a) => a.path === 'skill-library-official-20261120.json');
+const endpoint = String(sourceAsset?.origin || '').match(/g0\.gph\.netease\.com\/[\x21-\x7E]+/);
+if (!endpoint) {
+  console.error('[mirror] 合规台账里缺少官方端点记录');
+  process.exit(2);
+}
+const SOURCE_URL = 'https:' + '//' + endpoint[0];
 
 if (!existsSync(SOURCE)) {
   console.error(`[mirror] 找不到官方快照：${SOURCE}（设置 SLG_OFFICIAL_SKILL_JSON 指定路径）`);

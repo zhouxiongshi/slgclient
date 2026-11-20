@@ -457,7 +457,7 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
   check(`${label}地图主界面真正渲染就绪（原 UI 文案可见）`,
     r?.mapReady?.ready === true, JSON.stringify(r?.mapReady));
   check(`${label}客户端加载全部新战法、数值成长符合真实数据、无旧占位技能`,
-    (r?.skills?.count ?? 0) >= 24 && (r?.skills?.grown ?? 0) >= (r?.skills?.count ?? 0) - fixedCount &&
+    (r?.skills?.count ?? 0) >= 24 && (r?.skills?.grown ?? 0) + (r?.skills?.fixed ?? fixedCount) === (r?.skills?.count ?? 0) &&
     Array.isArray(r?.skills?.legacy) && r.skills.legacy.length === 0 &&
     (r?.skills?.minCfgId ?? 0) >= 10001, JSON.stringify(r?.skills)?.slice(0, 240));
   check(`${label}战报详情显示新战法名、无旧占位技能名`,
