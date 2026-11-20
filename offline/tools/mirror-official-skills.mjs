@@ -23,7 +23,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const REPO = resolve(ROOT, '..');
 const SOURCE = process.env.SLG_OFFICIAL_SKILL_JSON
   || join(REPO, 'skill-library-official-20261120.json');
-const OUT = join(ROOT, 'conf', 'skill-mirror.json');
+const OUT = process.env.SLG_MIRROR_OUT || join(ROOT, 'conf', 'skill-mirror.json');
 /* 端点写在合规台账里（纯数据，不进源码）；源码不出现任何外部网络地址。 */
 const provenance = JSON.parse(readFileSync(join(ROOT, 'conf', 'compliance', 'provenance.json'), 'utf8'));
 const sourceAsset = (provenance.assets || []).find((a) => a.path === 'skill-library-official-20261120.json');

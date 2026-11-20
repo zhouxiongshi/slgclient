@@ -9,7 +9,8 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, unlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -89,10 +90,12 @@ test('未镜像条目保持原表：runtime 里没有镜像留痕', () => {
   }
 });
 
-test('生成脚本可复跑：同一快照产出同一 JSON', () => {
+test('生成脚本可复跑：同一快照产出同一 JSON（写临时文件，不动出厂产物 mtime）', () => {
   const before = readFileSync(MIRROR_PATH, 'utf8');
+  const out = join(tmpdir(), `slg-mirror-check-${process.pid}.json`);
   execFileSync(process.execPath, [join(ROOT, 'tools', 'mirror-official-skills.mjs')], {
-    cwd: ROOT, env: { ...process.env }, stdio: 'ignore',
+    cwd: ROOT, env: { ...process.env, SLG_MIRROR_OUT: out }, stdio: 'ignore',
   });
-  assert.equal(readFileSync(MIRROR_PATH, 'utf8'), before, '再次生成结果漂移');
+  assert.equal(readFileSync(out, 'utf8'), before, '再次生成结果漂移');
+  unlinkSync(out);
 });
