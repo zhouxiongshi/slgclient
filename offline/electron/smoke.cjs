@@ -152,6 +152,13 @@ const SKILL_PROBE = `(async function(){
         var a = c.levels[0].effect_value || [], b = c.levels[9].effect_value || [];
         return b.some(function(v, i){ return Number(v) > Number(a[i]); });
       }).length,
+      /* 固定值战法（原表固定 + 官方同名镜像的固定发动率/必中控制）由运行时表自报，
+         不再拿 conf/skills.json 的单表静态数去推全表，避免镜像层加入后假红。 */
+      fixed: confs.filter(function(c){
+        if(!c.levels || c.levels.length !== 10) return false;
+        var a = c.levels[0].effect_value || [], b = c.levels[9].effect_value || [];
+        return b.every(function(v, i){ return Number(v) === Number(a[i]); });
+      }).length,
       minCfgId: Math.min.apply(null, confs.map(function(c){ return c.cfgId; })),
       maxCfgId: Math.max.apply(null, confs.map(function(c){ return c.cfgId; })),
     };
@@ -397,10 +404,6 @@ async function runSmoke(win, server, app) {
     report.mapReady = mapReady;
     check('原地图主界面真正渲染就绪（原 UI 文案可见）', !!mapReady?.ready, mapReady);
 
-    // 固定值战法（原文无 {0} 成长标记）不参与成长计数
-    const fixedCount = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'conf', 'skills.json'), 'utf8'))
-      .skills.filter((x) => x.kernel.rate_pct_lv1 === x.kernel.rate_pct_lv10).length;
-
     // ★ 新战斗系统：原客户端 resources 里必须已经是全部新战法
     const skills = await wc.executeJavaScript(SKILL_PROBE, true);
     report.skills = skills;
@@ -410,7 +413,8 @@ async function runSmoke(win, server, app) {
       skills.ok && skills.legacy.length === 0 && skills.minCfgId >= 10001,
       { legacy: skills.legacy, minCfgId: skills.minCfgId });
     check('技能 10 级数值在客户端真实成长',
-      skills.ok && skills.grown >= skills.count - fixedCount, { grown: skills.grown, count: skills.count, fixedCount });
+      skills.ok && skills.grown + skills.fixed === skills.count,
+      { grown: skills.grown, fixed: skills.fixed, count: skills.count });
 
     // 打开原版技能面板并截图（新战法名 / 等级数值由原 UI 渲染）
     const skillPanel = await wc.executeJavaScript(SKILL_PANEL, true);
