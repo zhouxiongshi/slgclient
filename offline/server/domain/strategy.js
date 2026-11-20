@@ -43,6 +43,9 @@ import {
   cityYield, armsApt, armsCounter, ARMS_NAMES, devLevel, cityDevTick, storeCapOf,
 } from './city-econ.js';
 import { SKILLS, LEVEL_COUNT, skillById } from '../skills.js';
+/* ★ 2026-11-20：边境威胁视图抽为零环叶子，六府与沙盘共用同一份映射/常量 */
+import { threatRows, SIEGE_GRACE_DAYS, SIEGE_MAX_DAYS } from './threat-view.js';
+export { SIEGE_GRACE_DAYS, SIEGE_MAX_DAYS };
 /* ★ M4-13：守将按城池确定性分配，不再复用 npc_army 写死的 6 个 cfgId */
 import { garrisonCfgIds, garrisonLabel } from './garrison.js';
 /* ★ P16：诸侯势力持久武将名册（学战法/升级/招募/俘虏/挖角/求援），零环叶子 */
@@ -1276,8 +1279,8 @@ export function stageGoalTick(state, cfg, ctx) {
  *     · 治安：−1/旬，治安崩会连带流寇事件。
  *   于是「放着不管」≈ 100~140 日丢城，玩家有明确的解围窗口。
  */
-export const SIEGE_GRACE_DAYS = 40;
-export const SIEGE_MAX_DAYS = 180;
+/* 常量与威胁映射已迁至 threat-view.js（本文件顶部 import 并 re-export），
+   见 17.22 / FIELD-CONTRACT：六府与沙盘必须同源，否则六府页看不到围城预警。 */
 export const SIEGE_GATE_OPEN_MORALE = 20;
 
 function playerCityRows(st) {
@@ -2898,6 +2901,10 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
     ok: true,
     target: { id: to, name: target.name, level, owner: tstate.owner, ownerName: tstate.ownerName || '' },
     from, km, speed, days, arriveDay, today,
+    /* ★ 2026-11-20：出征粮耗由服务端唯一公式下发，界面只显示不计算。
+       旧版 skills.js 自己写 Math.ceil(deploy*0.1) 漏乘行程天数，实测 20 日行程
+       显示 1000、实扣 20000（低估 20 倍）。 */
+    grainCost: marchGrainCost(state, aTotal, days, target.terrain),
     commit, deploy: aTotal, aTotal, dTotal, dStart: dStartMain, aLoss, dLoss, remain, dRemain: dRemain.slice(),
     counter, atkArms, defArms, counterNote,
     /* ★ M3-4 宿命组合：预览面板显示同队加成（与正式结算同一函数） */
@@ -3348,28 +3355,9 @@ export function strategyViewState(state, cfg = null) {
   /* ★ 2026-11-20：补三项玩家必须看得见的围城信息——打哪座城、还剩多少日撤围、
      那座城现在的民心。旧版只给「兵力/坐标」，玩家无法判断该不该出兵。 */
   const today0 = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
-  const cityNameById = (id) => strategyMap().cities.find((c) => c.id === Number(id))?.name || '';
-  const threats = (state.garrisons || [])
-    .filter((g) => !g.cleared)
-    .map((g) => {
-      const tid = Number(g.targetCity) || 0;
-      const row = tid ? st.cities[tid] : null;
-      const econ = tid ? st.cityEcon?.[tid] : null;
-      const spawnDay = Math.max(1, Math.floor(Number(g.spawnDay) || today0));
-      return {
-        id: g.id, x: g.x, y: g.y, name: g.name,
-        soldiers: Math.max(0, Math.round(Number(g.soldiers) || 0)),
-        faction: g.faction || '', patrol: !!g.patrol,
-        targetCity: tid,
-        targetName: tid ? cityNameById(tid) : '',
-        /* 距离围城开始还有几天（已围则为 0，用 besieging 判断状态——不要用负值当状态码）；
-           到 SIEGE_MAX_DAYS 粮尽自退。 */
-        daysToSiege: Math.max(0, Math.round(SIEGE_GRACE_DAYS - (today0 - spawnDay))),
-        daysToWithdraw: Math.max(0, Math.round(SIEGE_MAX_DAYS - (today0 - spawnDay))),
-        besieging: !!(row && row.besieged),
-        targetMorale: econ ? Math.round(Number(econ.morale) || 0) : null,
-      };
-    });
+  /* ★ 2026-11-20：与六府 panelState 共用 threat-view.js 的唯一映射，
+     沙盘与六府不再各算一份围城预警（旧版六府页丢失围城字段）。 */
+  const threats = threatRows(state, st, today0);
   return {
     turn: st.turn,
     // ★ 口径统一（2026-11-16 日志排查）：第 N 月 = turn N，与天下日志 chronicle、

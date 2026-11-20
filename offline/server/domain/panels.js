@@ -38,6 +38,7 @@ import { xiangxingOf, yiliOf, relationSummary, talentRecruitRate } from './relat
 import { recordRes } from './economy.js';
 /* ★ P11：六府与城池内页显示同一份兵役台账（修测试报告 P3-01 的信息不对称） */
 import { levyView } from './levy.js';
+import { threatRows } from './threat-view.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const load = (p) => JSON.parse(readFileSync(resolve(ROOT, p), 'utf8'));
@@ -548,13 +549,11 @@ export function panelState(state, cfg) {
     .map((f) => [String(f.id), f.name]));
   const nameOfFaction = (id) => factionNames[String(id)]
     || (id === 'player' ? '我军' : PANEL_CONF.factions?.neutral?.name || id);
-  const threats = (Array.isArray(state.garrisons) ? state.garrisons : [])
-    .filter((g) => !g.cleared)
-    .map((g) => ({
-      id: g.id, name: g.name || '来犯军',
-      soldiers: Math.max(0, Math.round(Number(g.soldiers) || 0)),
-      faction: g.faction || '', patrol: !!g.patrol,
-    }));
+  /* ★ 2026-11-20：与沙盘共用威胁视图（含围城目标 / 剩余天数 / 目标民心）。
+     旧版这里只留 5 个字段，panels-ui.js 的 t.besieging / t.daysToSiege 分支恒 false，
+     敌人已经在围城、即将开城时六府页仍毫无预警。 */
+  const threats = threatRows(state, st, Math.max(1, Math.floor(Number(state.clock?.day) || 1)))
+    .map((g) => ({ ...g, name: g.name || '来犯军' }));
   const events = (Array.isArray(st.events) ? st.events : []).slice(-8).reverse()
     .map((e) => ({ ...e, month: Math.max(1, e.turn || 0) }));
   const cityBrief = mapCities.map((c) => {

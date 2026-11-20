@@ -4200,7 +4200,12 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     var total = warTroops(army);
     var deploy = Math.max(1, Math.round(total * war.frac));
     var days = warDays(route.km, army.speed);
-    var grain = Math.ceil(deploy * 0.1);
+    /* ★ 2026-11-20：不再前端自算 Math.ceil(deploy*0.1)——漏乘行程天数，实测
+       20 日行程显示 1000、实扣 20000。真实粮耗由服务端 previewAssault 下发
+       （war.grainCost），未推演时只显示规则、不显示误导数字。 */
+    var grainTxt = war.grainCost != null
+      ? fmt(war.grainCost) + ' 斛（本机核算）'
+      : '按 ' + fmt(deploy) + ' 兵 × ' + days + ' 日 × 0.1 粮/兵/日结算（推演可查实数）';
     var sum = el('div', 'card', '<h4 style="margin-top:0">出兵概览</h4>');
 
     sum.appendChild(el('div', 'cost',
@@ -4212,7 +4217,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       var b = document.createElement('button');
       b.textContent = m[1];
       if (Math.abs(war.frac - m[2]) < 0.001) b.className = 'on';
-      b.onclick = function () { war.frac = m[2]; renderWar(cache); };
+      b.onclick = function () { war.frac = m[2]; war.grainCost = null; renderWar(cache); };
       seg.appendChild(b);
     });
     var segRow = el('div', 'row', '<span>出兵比例</span>');
@@ -4222,7 +4227,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     sum.appendChild(el('div', 'cost',
       '行军：程 <b style="color:#f0d998">' + fmt(route.km) + '</b> 里 · 队速 ' + Math.round(army.speed)
       + ' · 预计 <b style="color:#f0d998">' + days + '</b> 日抵达（约第 ' + (s.day + days) + ' 日）'
-      + ' · 行军粮 ' + fmt(grain)
+      + ' · 行军粮 <span id="slgWarGrain">' + grainTxt + '</span>'
       + (days >= 10 ? '　<span class="cost">长途：途中需 ' + Math.floor(days / 10) + ' 次休整</span>' : '')));
     var theirs = Number(target.troops) || 0;
     sum.appendChild(el('div', 'cost',
@@ -4267,6 +4272,15 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         frac: war.frac, fromCityId: fromCity.id,
       }).then(function (rs) {
         btn.disabled = false; btn.textContent = '再推演一次';
+        /* ★ 2026-11-20：推演回包带服务端权威 grainCost，缓存给概览/确认框显示，
+           避免前端自算漏乘行程天数。改出兵比例时会清空。 */
+        if (rs && rs.ok && rs.grainCost != null) {
+          war.grainCost = rs.grainCost;
+          /* 只定点改概览那一行，不能 renderWar 重建 DOM——否则会把正在写入的
+             推演结果容器 out 一起销毁，玩家看不到推演结论。 */
+          var gnode = document.getElementById('slgWarGrain');
+          if (gnode) gnode.textContent = fmt(rs.grainCost) + ' 斛（本机核算）';
+        }
         out.innerHTML = rs && rs.ok
           ? warPreviewHtml(rs)
           : '<div class="cost" style="color:#ff9d6b">推演失败：' + esc(warReason(rs && rs.reason)) + '</div>';
@@ -4305,6 +4319,11 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     ]).map(function (row) {
       return '<div class="warpv-row"><span class="k">' + esc(row.k) + '</span><span class="v">' + esc(row.v) + '</span></div>';
     }).join('') + '</div>';
+    /* ★ 2026-11-20：粮耗取服务端 marchGrainCost 下发值，与正式出征实扣同源。 */
+    if (r.grainCost != null) {
+      html += '<div class="warpv-row"><span class="k">行军粮耗</span><span class="v">'
+        + fmt(r.grainCost) + ' 斛（' + fmt(r.days) + ' 日行程）</span></div>';
+    }
 
     if ((n.tips || []).length) {
       html += '<div class="warpv-tips"><b>该怎么打</b>'
@@ -4369,7 +4388,9 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       '队伍：<b>#' + army.order + '</b>　' + warGenLine(army),
       '规模：' + label + '，实出 <b>' + fmt(deploy) + '</b> 人（该队共 ' + fmt(total) + '）',
       '行军：程 ' + fmt(route.km) + ' 里 · 队速 ' + Math.round(army.speed) + ' · 预计第 ' + (s.day + days)
-        + ' 日抵达 · 耗粮 ' + fmt(Math.ceil(deploy * 0.1)),
+        + ' 日抵达 · 耗粮 ' + (war.grainCost != null
+          ? fmt(war.grainCost) + ' 斛（本机核算）'
+          : '按 ' + fmt(deploy) + ' 兵 × ' + days + ' 日 × 0.1 粮/兵/日结算'),
       '<span class="cost">抵达城下先进入「遭遇」待决，须主公确认开战或临阵收兵；战败折损、溃兵归营。行军途中可在「行军队列」页撤回。</span>',
     ], '出征', '取消', function () {
       postJSON('/__slg/strategy/action', {

@@ -13,7 +13,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { canMarchBetween } from './march.js';
+import { canMarchBetween, marchGraph } from './march.js';
 /* ★ M2-3：粮耗口径走全局参数表（knobs.js 零依赖，无环） */
 import { knobGet } from './knobs.js';
 
@@ -63,16 +63,27 @@ function ownedAdjacency(state, factionId = 'player') {
       const b = owned[j];
       const r = canMarchBetween(a, b);
       if (r.ok) {
-        adj.get(a).push({ to: b, km: routeKm(r.path), via: r.via || [] });
-        adj.get(b).push({ to: a, km: routeKm(r.path), via: (r.via || []).slice().reverse() });
+        adj.get(a).push({ to: b, km: routeKm(r.path, r.edges), via: r.via || [] });
+        adj.get(b).push({ to: a, km: routeKm(r.path, r.edges), via: (r.via || []).slice().reverse() });
       }
     }
   }
   return { adj, owned };
 }
 
-/** 路径里程估算：无 km 表时按每段 100 里兜底（只用于展示，不参与结算）。 */
-function routeKm(path) {
+/** 路径里程（只用于展示，不参与结算）。★ 2026-11-20：优先累加 detail.json
+ *  路网边的真实 km（canMarchBetween 返回的 edges）；旧版固定「每段 100 里」兜底，
+ *  而配置里 125 条边全带 km，导致出征面板「约 X 里」是跳数×100 的假数据。 */
+function routeKm(path, edges) {
+  if (Array.isArray(edges) && edges.length) {
+    const g = marchGraph();
+    if (g) {
+      let km = 0;
+      for (const id of edges) km += Number(g.edges?.get(id)?.km) || 0;
+      if (km > 0) return Math.round(km);
+    }
+  }
+  // 无路网 km 表时的兜底（旧口径）
   if (!Array.isArray(path) || path.length < 2) return 0;
   return (path.length - 1) * 100;
 }
@@ -156,7 +167,11 @@ export function marchSupplyEstimate(state, fromCityId, soldiers, days = 1) {
  * ★ M2 粮道 L2：军级补给线（本作设计，玩家与 NPC 共用同一函数——§9.4 同函数判据）。
  *
  * 口径（写死，与城级 L1 一致的确定性判定）：
- *  - 补给节点 = 己方城（cityEcon.store > 0）。本沙盘关隘不可占领（gateStatus 只有
+ *  - 补给节点 = 己方城（cityEcon.store >= 该部队一旬口粮 need）。★ 2026-11-20 收紧：
+ *    旧版只要 store>0 就算「通畅」，实测补给节点仅 1 粮、部队需 1000 粮/旬时仍判
+ *    supplyOk=true、连续 6 旬零逃兵（只扣 6 粮）——「有粮」不等于「够吃」。现在
+ *    BFS 跳过不够一旬口粮的城继续找够粮节点，全找不到才走断粮惩罚链，与模块开头
+ *    「第 3 旬起逃兵 2%」的文案承诺同源。本沙盘关隘不可占领（gateStatus 只有
  *    通行/封锁，无归属字段），「路径未被敌方控制」由己方图 BFS 天然保证：
  *    ownedAdjacency 只在己方城之间连边，敌城/封锁关隘根本进不了图。
  *  - 部队锚点 = 行军行的出发城（march.from）。锚点失守 → 补给断。
@@ -172,11 +187,11 @@ export function supplyLineForArmy(state, factionId, march) {
   const econ = st.cityEcon || {};
   const storeOf = (id) => Math.max(0, Math.floor(Number(econ[id]?.store) || 0));
   const need = grainForTurn(state, march?.troops);
-  if (storeOf(anchor) > 0) {
+  if (storeOf(anchor) >= need) {
     return { connected: true, nodeId: anchor, hops: 0, store: storeOf(anchor), need, anchor };
   }
   const { adj } = ownedAdjacency(state, fid);
-  // BFS：最近的 store>0 己方城即补给节点（先到先得，同跳数按邻接顺序，确定性）
+  // BFS：最近的「存粮够一旬口粮」己方城即补给节点（先到先得，同跳数按邻接顺序，确定性）
   const dist = new Map([[anchor, { hops: 0, path: [anchor] }]]);
   const queue = [anchor];
   while (queue.length) {
@@ -186,13 +201,13 @@ export function supplyLineForArmy(state, factionId, march) {
       const prev = dist.get(cur);
       const d = { hops: prev.hops + 1, path: [...prev.path, e.to] };
       dist.set(e.to, d);
-      if (storeOf(e.to) > 0) {
+      if (storeOf(e.to) >= need) {
         return { connected: true, nodeId: e.to, hops: d.hops, store: storeOf(e.to), path: d.path, need, anchor };
       }
       queue.push(e.to);
     }
   }
-  return { connected: false, reason: 'no_supply_node', anchor };
+  return { connected: false, reason: 'no_supply_node', anchor, need };
 }
 
 /**
@@ -235,7 +250,8 @@ export function armySupplyTick(state, ctx) {
     }
     const sideName = mm.side === 'player' ? '我军' : `${mm.factionName || '诸侯'}军`;
     if (mm.supplyCutDays === 10) {
-      const msg = `【粮道】${sideName}自${cityName(mm.from)}出征${cityName(mm.to)}的部队补给线断绝。`
+      const msg = `【粮道】${sideName}自${cityName(mm.from)}出征${cityName(mm.to)}的部队补给不足`
+        + '（通路断绝，或沿线城库存粮不够一旬口粮）。'
         + '应对：派运输队送粮续命，或撤军回城——第 3 旬起士卒开始逃散。';
       recordEvent(state, msg);
       ctx?.push?.('chat.push', { rid: 0, nickName: '系统', type: 0, msg, time: Date.now() });

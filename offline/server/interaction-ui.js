@@ -1057,7 +1057,8 @@
     var box = document.getElementById('slgIxQueue'); if (!box) return;
     var d = S.data || {}, tp = d.turnPreview || {};
     var ms = d.marches || [];
-    var parts = ['<span class="qi"><b>第 ' + (d.turn || 0) + ' 回合</b> · 第 ' + (d.day || 1) + ' 日 · ' + esc(d.season || '') + '</span>'];
+    /* ★ 2026-11-20：与回合报告、六府统一 turn 0 兜底第 1 月口径 */
+    var parts = ['<span class="qi"><b>第 ' + (d.month || Math.max(1, d.turn || 0)) + ' 回合</b> · 第 ' + (d.day || 1) + ' 日 · ' + esc(d.season || '') + '</span>'];
     parts.push('<span class="qi">金 ' + fmt((d.treasury || {}).gold) + ' · 粮 ' + fmt((d.treasury || {}).grain) + '</span>');
     parts.push('<span class="qi">俸禄 ' + fmt((d.salary || {}).total) + ' 金 · 覆盖 ' + ((d.salary || {}).coveragePct) + '%</span>');
     parts.push('<span class="qi">在途 ' + ms.length + ' 队</span>');
@@ -1085,7 +1086,10 @@
     var d = S.data || {}, tp = d.turnPreview || {};
     var mask = el('div', '', ''); mask.className = 'slgIx-modal';
     var box = el('div', '', ''); box.className = 'box';
-    box.innerHTML = '<h3>回合报告 · 第 ' + (d.turn || 0) + ' 回合 / 第 ' + (d.day || 1) + ' 日</h3>'
+    /* ★ 2026-11-20：开局 turn=0，六府/沙盘统一显示「第 1 月」，回合报告旧版显示
+       「第 0 回合」与全界面口径冲突。month 由 interaction.state 聚合下发，缺省回退到
+       max(1, turn)，与 FIELD-CONTRACT「第 N 月 = turn N（turn 0 兜底第 1 月）」同源。 */
+    box.innerHTML = '<h3>回合报告 · 第 ' + (d.month || Math.max(1, d.turn || 0)) + ' 回合 / 第 ' + (d.day || 1) + ' 日</h3>'
       + '<div class="muted" style="font-size:11px">按城 / 按武将归因，可折叠；告警置顶但不阻塞（6.10）。</div>'
       + '<div style="margin-top:10px">' + (tp.willHappen || []).map(function (x) {
         return '<div class="delta">' + esc(x) + '</div>';

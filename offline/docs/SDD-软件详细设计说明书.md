@@ -2285,6 +2285,25 @@ build/SLG-Offline-win32-x64/
 **验证**：单测 678/678（新增 `tests/p24-selfiteration4.test.js` 5 条）。纪律不变：`settleWorld` 唯一世界推进、`web/` 零改动、未动伤害公式/战报哈希/军粮参数。
 
 
+### 17.22 自迭代第五轮：军级补给量 / 粮道里程真实源（2026-11-20）
+
+定向探针（`_probe/p46` 补给量不足、`p47` 跨城 BFS、`p48` 里程核对）+ FIELD-CONTRACT 常量审计交叉验证。常量审计（城墙、内政工期、编制/储备上限、主公战法、忠诚、围城、里程碑收益）全部与代码一致，无文档漂移；以下两条为实测确认的真缺陷。
+
+| 编号 | 缺陷 / 实测证据 | 修法（落点） |
+|---|---|---|
+| `ITER5-01` | `supplyLineForArmy` 只要求补给节点 `cityEcon.store>0` 就判粮道通畅。实测节点仅 1 粮、部队需 1000 粮/旬时仍 `supplyOk=true`，连续 6 旬零逃兵（实际只扣 6 粮，应扣 6000），与 supply.js 自己承诺的「断粮第 3 旬起逃兵 2%」直接矛盾 | 补给节点收紧为 `store >= 一旬口粮 need`（`grainForTurn = 兵力×0.1×10`）；BFS 跳过不够粮的城继续找够粮节点，全找不到才走既有断粮惩罚链。警告文案改为「补给不足（通路断绝，或沿线城库存粮不够一旬口粮）」（`supply.js`） |
+| `ITER5-02` | `routeKm` 用「路径节点数×100」兜底算粮道里程，而 `detail.json.march.edges` 的 125 条边全带真实 `km`；出征面板「约 X 里」是假数据（实测一跳真实 206 里却显示 100） | `routeKm(path, edges)` 优先累加 `canMarchBetween` 返回边 id 对应的真实 `km`（`marchGraph().edges`），无路网 km 表时才退回旧兜底；逐段取整，纯展示不参与结算（`supply.js`） |
+| `ITER5-03` | 整编弹窗下拉由 `sel(slot-1)` 生成 `gen0/gen1/gen2`，提交却查 `gen1/gen2/gen3`：`gen3` 为 null → `.value` 抛 TypeError，「确认整编」完全失效且弹窗关不掉（兵力输入反而是 1-based `troop1/2/3`） | 下拉与兵力输入统一 0-based 遍历： generals 用 `[0,1,2]` 查 `genN`，soldiers 用 `[0,1,2]` 查 `troop(N+1)`（`panels-ui.js`） |
+| `ITER5-04` | 城池经营表「运粮」按钮渲染 `data-city`，分发却读 `data-id` → `Number(null)===0`，`openTransport` 永不调用，按钮完全无反应 | 按钮改渲染 `data-id`（`panels-ui.js`） |
+| `ITER5-05` | 六府 `panelState.threats` 只保留 5 个字段，丢弃 `targetName/daysToSiege/targetMorale/besieging`；`panels-ui.js` 的围城预警分支恒 false——敌人已在围城、即将开城时六府页毫无提示。沙盘那份映射是对的，两套口径并存 | 新建零环叶子 `domain/threat-view.js` 作为唯一源（常量 40/180 与映射同置），`strategy.js` 与 `panels.js` 共用；因 `strategy → campaign → panels` 不能反向 import，抽叶子是唯一无环解法 |
+| `ITER5-06` | `skills.js` 前端自算 `Math.ceil(deploy*0.1)` 显示行军粮，漏乘行程天数与冬季河路乘数；实测 20 日行程显示 1000、实扣 20000（低估 20 倍），与出征成功 toast 的 `rs.grainCost` 自相矛盾（违反 FIELD-CONTRACT「界面只显示不计算」） | `previewAssault` 下发服务端 `marchGrainCost(state, deploy, days, terrain)` 的 `grainCost`；推演后定点回填概览/确认框，未推演只显示「N 兵 × M 日 × 0.1」规则不显示假数字；改出兵比例清缓存。文案按单机口径写「本机核算」 |
+| `ITER5-07` | 整编帮助文案「三公 7700」是旧口径（现含等级加成，满级三公 9500）；回合报告与队列栏开局显示「第 0 回合」，与六府「第 1 月」冲突 | 文案改为「基础 5000 + 官阶×300 +（等级−1）×200」；两处回合显示统一 `d.month || max(1, d.turn)`（`panels-ui.js` / `interaction-ui.js`） |
+
+**边界**：前两条修复在 `supply.js` 内，不改军粮 0.1 参数、不改全局粮池 `applyDays` 口径、不触碰第四轮留给用户裁决的「僵尸大军」与 16 个 knob。ITER5-01 只让「行军部队」在节点存粮不足时兑现本模块既有惩罚，驻城部队的全局池问题仍属裁决项。后五条只动运行时注入层与只读视图映射，不改协议格式、不动 `web/` 磁盘产物。
+
+**验证**：单测 686/686（新增 `tests/p25-selfiteration5.test.js` 8 条，含 UI 静态闸；另同步 `m2-army-supply.test.js` 头部口径注释）。静态闸现强制：运粮按钮必须带 `data-id`、整编 0-based 下标、带兵文案 9500、回合 0 兜底 1、注入层禁前端自算粮耗且文案禁出现「服务端」。
+
+
 ---
 
 ## 18. 需求 → 设计 → 实现 → 验证 全链路追溯

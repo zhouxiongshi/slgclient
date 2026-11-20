@@ -179,7 +179,7 @@
     };
     mask.innerHTML = '<div style="background:#1d1a12;border:1px solid #ba9a52;border-radius:8px;padding:18px 22px;min-width:420px;color:#e8e0cc;font:13px \'Microsoft YaHei\',sans-serif">'
       + '<h3 style="margin:0 0 6px;color:#ffdf9a">整编队伍#' + army.order + '</h3>'
-      + '<div class="muted" style="margin-bottom:10px">三槽各对应一个兵种：盾步克弓、弓克骑、骑克盾（战前折算守军兵力 ±15%）。武将适性按五维×兵种折算 100%~115%，同源乘进该将攻防；槽位同时是战位（一=前锋/二=中军/三=大营），决定普攻与战法能打到谁。兵力只在该队现有 ' + fmt(army.soldiers.reduce(function (s, v) { return s + v; }, 0)) + ' 内重分。每槽带兵上限随该槽武将官阶提升（白身 5000，每升一阶 +300，三公 7700）。</div>'
+      + '<div class="muted" style="margin-bottom:10px">三槽各对应一个兵种：盾步克弓、弓克骑、骑克盾（战前折算守军兵力 ±15%）。武将适性按五维×兵种折算 100%~115%，同源乘进该将攻防；槽位同时是战位（一=前锋/二=中军/三=大营），决定普攻与战法能打到谁。兵力只在该队现有 ' + fmt(army.soldiers.reduce(function (s, v) { return s + v; }, 0)) + ' 内重分。每槽带兵上限随该槽武将官阶与等级提升（基础 5000 + 官阶×300 +（等级−1）×200，满级三公 9500）。</div>'
       + [1, 2, 3].map(function (slot) {
         var cur = army.generals[slot - 1];
         var captain = cur ? genById[cur.id] : null;
@@ -201,8 +201,11 @@
       var k = t.getAttribute('data-fup');
       if (k === 'cancel') { mask.remove(); return; }
       if (k === 'ok') {
-        var generals = [1, 2, 3].map(function (slot) { return Number(mask.querySelector('[data-fup="gen' + slot + '"]').value) || 0; });
-        var soldiers = [1, 2, 3].map(function (slot) { return Math.max(0, Math.floor(Number(mask.querySelector('[data-fup="troop' + slot + '"]').value) || 0)); });
+        /* ★ 2026-11-20：下拉是 sel(slot-1) 生成的 gen0/gen1/gen2，兵力输入才是
+           troop1/troop2/troop3。旧版两套下标混用：gen3 为 null → .value 抛 TypeError，
+           确认整编整个按钮失效；即便补出 gen3 也会整体错槽。 */
+        var generals = [0, 1, 2].map(function (slot) { return Number(mask.querySelector('[data-fup="gen' + slot + '"]').value) || 0; });
+        var soldiers = [0, 1, 2].map(function (slot) { return Math.max(0, Math.floor(Number(mask.querySelector('[data-fup="troop' + (slot + 1) + '"]').value) || 0)); });
         strategyAction({ action: 'formup', armyId: army.id, generals: generals, soldiers: soldiers });
         mask.remove();
       }
@@ -784,7 +787,7 @@
           return '<tr><td>' + esc(c.name) + '</td><td class="v">' + fmt(c.pop || 0) + '</td>'
             + '<td>+' + fmt(c.yieldGrain || 0) + '</td><td>+' + fmt(c.yieldGold || 0) + '</td>'
             + '<td class="v">' + fmt(c.store || 0) + '</td><td>' + status + '</td>'
-            + '<td><button class="btn" data-act="transport" data-city="' + c.id + '">运粮</button></td></tr>';
+            + '<td><button class="btn" data-act="transport" data-id="' + c.id + '">运粮</button></td></tr>';
         }).join('') + '</tbody></table>'
         + '<div class="muted">★ 行军粮优先从出发城城库扣（前线囤粮可省 25% 损耗）；蝗灾会蚀耗城库存粮——灾前把粮运走是保命操作。兵役按「一户一丁」计，每征 1 丁人口基数 −4，每旬只征一次；人口每 30 日自然增长。</div></div>';
     }

@@ -31,13 +31,15 @@
 
 | 数值 | 权威源 | 单位 | 精度 | 界面可否复算 | 消费方 |
 |---|---|---|---|---|---|
-| 粮道连通/跳数/里程 | `supply.js supplyMap(state).byCity[id]`（视图 `city.supply`） | bool/跳/里 | 整数 | ❌ | 粮道透镜、出征面板、概览 |
+| 粮道连通/跳数/里程 | `supply.js supplyMap(state).byCity[id]`（视图 `city.supply`）。★ 2026-11-20：里程沿 path 逐段累加 `detail.json.march.edges[].km`（125 条边全带真实里程），旧版 `routeKm` 用「跳数×100」兜底，出征面板「约 X 里」是假数据（实测一跳真实 206 里却显示 100）；无路网 km 表时仍退回旧兜底 | bool/跳/里 | 整数 | ❌ | 粮道透镜、出征面板、概览 |
+| 军级补给线 | `supply.js supplyLineForArmy()`（玩家/NPC 同函数）：补给节点 = 己方城且 `cityEcon[id].store >= 该部队一旬口粮 need`（`grainForTurn = 兵力×0.1×10`）。★ 2026-11-20 收紧：旧版只看 `store>0`，实测节点仅 1 粮、部队需 1000 粮/旬时仍判 `supplyOk=true`，连续 6 旬零逃兵（只扣 6 粮），与「第 3 旬起逃兵 2%」文案矛盾。现在 BFS 跳过不够粮的城找够粮节点，全找不到才走断粮链；第 1 旬警告、第 3 旬起逃兵 2%/旬在 `armySupplyTick()` | 粮/旬 | 整数 | ❌ | 军情推送「补给不足」、行军补给状态 |
 | 出征耗粮 | `supply.js marchSupplyEstimate()` | 斛/日 | 0.1 | ❌ 必须调同一函数 | 出征面板补给行 |
+| 行军总粮耗 | `strategy.js marchGrainCost(state, deploy, days, terrain)` = 实出兵 × 0.1 × 行程日（冬季走河路再乘 `crossRiverWinterCost`）。★ 2026-11-20：`previewAssault` 下发权威 `grainCost` 给界面，推演后定点回填；旧版 `skills.js` 前端自算 `Math.ceil(deploy*0.1)` 漏乘行程天数，实测 20 日行程显示 1000、实扣 20000。未推演时只显示「N 兵 × M 日 × 0.1」规则、不显示假数字 | 斛 | 整数 | ❌ 只能显示（禁前端复算） | 出征概览、确认框、推演卡、出征 toast |
 | 行军 ETA | `strategy.js marchPlan()`（`arriveDay`） | 日 | 整数 | ❌ | 队列页、地图箭头 |
 | 推演结论 | `strategy.js previewAssault()`（只读沙盒） | — | — | ❌ | 出征面板推演卡 |
 | 战斗种子 | `battle.js battleSeedFor(armyId, x, y, arriveDay)` | uint32 | — | ❌ 只有一个公式 | 结算与推演共用 |
 | 诸侯守将/名册等级 | `domain/ai-roster.js`（`state.strategy.rosters[fid]`；★ P16 名册优先于旧 hash，`defenseFor` 在 level≥2 城取真实等级/战法，1 级城保留 hash 守 P0-3） | 级 | 整数 | ❌ 只读显示 | 战报守将、遭遇页、天下日志（学战法/升级/招降/挖角/求援文案） |
-| 来犯军围城 | `domain/strategy.js assaultEscalationTick()`（★ 2026-11-19 立，★ 2026-11-20 强化）：来犯军出现 **40 日**不清剿 → 目标城 `besieged`（产出减半）。围城每旬：守军按 `clamp(3% + 6%×围攻方兵力占比, 3%, 9%)` 逃散、**民心 −4**（另叠加 `cityDevTick` 的被围 −3，实际约 −7/旬）、治安 −1。**城破两条线**：守军归零，或民心 ≤ 20（城内开门）。**180 日**仍不破则客军粮尽自退；解围补民心 +8。同势力场上至多 2 支。目标城记在 `garrison.targetCity`（★ 2026-11-20：旧版按坐标取最近城，相邻城常围错） | 日/% | 整数 | ❌ | 城卡「被围」标、军情推送（含剩几日围城 / 目标民心）、围城条 |
+| 来犯军围城 | `domain/strategy.js assaultEscalationTick()`（★ 2026-11-19 立，★ 2026-11-20 强化）：来犯军出现 **40 日**不清剿 → 目标城 `besieged`（产出减半）。围城每旬：守军按 `clamp(3% + 6%×围攻方兵力占比, 3%, 9%)` 逃散、**民心 −4**（另叠加 `cityDevTick` 的被围 −3，实际约 −7/旬）、治安 −1。**城破两条线**：守军归零，或民心 ≤ 20（城内开门）。**180 日**仍不破则客军粮尽自退；解围补民心 +8。同势力场上至多 2 支。目标城记在 `garrison.targetCity`（★ 2026-11-20：旧版按坐标取最近城，相邻城常围错）。威胁视图唯一源 `domain/threat-view.js threatRows()`（★ 2026-11-20：六府 `panelState.threats` 与沙盘 `strategyViewState.threats` 共用，含 `besieging/daysToSiege/daysToWithdraw/targetName/targetMorale`；旧版六府只留 5 字段致围城预警分支恒 false） | 日/% | 整数 | ❌ | 城卡「被围」标、军情推送（含剩几日围城 / 目标民心）、围城条、六府「边境威胁」 |
 | 都城失陷迁都 | `domain/strategy.js rebindCapitalIfLost()`（★ 2026-11-20）：`strategy.playerCity` 一被攻破立即迁到「守军最多的己方城」，并播报；无己方城时不迁（亡国交 failstate）。旧版只在城墙编号失效时重绑，都城丢了 `playerCity` 一直指着敌城 | — | — | ❌ | 迁都推送、天下沙盘「本城」、新武将落城 |
 | 部队驻地回收 | `domain/strategy.js rebindArmiesIfStranded()`（★ 2026-11-20）：`army.cityId` 指向的城一旦不再属于玩家，立即把该队（含武将 `cityId`）退回「都城（若在）或守军最多的己方城」并播报。**行军中（有 `marchId`）跳过**——抵达分支自会归位。无己方城时不动（亡国交 failstate）。旧版 `army.cityId` 只在行军抵达的四个分支里赋值，城破后悬空 → 之后每次出征都返回 `not_own_city`，属**永久软锁**（实测主动出征 150 旬、95 次请求全部被拒） | — | — | ❌ | 军情推送「残部退守 X 集结」、出征出发城校验 |
 | 沙盘分段目标 | `domain/stage-goals.js STAGE_GOALS`（★ 2026-11-20 从 strategy.js 抽出为叶子，面板与结算同源）：**6 城「立足」/ 10 城「割据」/ 18 城「争雄」/ 22 城「封王」**。达成即发**实际收益**：金 3000/6000/12000/24000、名望 +2/+3/+5/+8、后两档另加帐下编制 +2/+4（`strategy.bonusSeats`）；`strategy.stages[id] = 达成日`。★ 2026-11-20 第三轮：末档原为 30 城，实测任何玩法 400 旬峰值只有 24 城，改为 22 城 | 城 | 整数 | ❌ | 战略页「霸业进程」进度条、里程碑推送、大事记 |

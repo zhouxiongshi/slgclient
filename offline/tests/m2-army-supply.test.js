@@ -1,9 +1,11 @@
 /**
  * M2-2 粮道 L2：军级补给线（本作设计）。
  *
- * 口径：补给节点 = 己方城（cityEcon.store > 0）；部队锚点 = 行军行出发城；
- * 通畅每旬就地取粮 0.1 粮/兵 扣补给节点城库；断绝第 1 旬警告（带两个应对），
- * 第 3 旬起逃兵 2%/旬。玩家与 NPC 共用 supplyLineForArmy / armySupplyTick（§9.4 同函数）。
+ * 口径：补给节点 = 己方城且 store >= 一旬口粮 need（★ 2026-11-20 收紧，旧版只要求
+ * store>0，导致 1 粮撑 1000 兵一旬、零逃兵；p25-selfiteration5 锁新口径）；
+ * 部队锚点 = 行军行出发城；通畅每旬就地取粮 0.1 粮/兵 扣补给节点城库；断绝第 1 旬
+ * 警告（带两个应对），第 3 旬起逃兵 2%/旬。玩家与 NPC 共用 supplyLineForArmy /
+ * armySupplyTick（§9.4 同函数）。
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
