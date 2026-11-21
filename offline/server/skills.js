@@ -247,6 +247,27 @@ function targetNote(skill) {
   return '';
 }
 /**
+ * ★ 2026-11-21：目标人数以内核主效果为准，ui.target 只作兜底。
+ * 旧 ui.target 是原客户端元数据，少数战法与内核 effect.target_type 不一致，
+ * 曾造成「万箭齐发写 2 人、内核打 3 人」这类误导。此处只改展示，不改结算。
+ */
+function kernelTargetNote(skill) {
+  const k = skill?.kernel || {};
+  const effects = Array.isArray(k.effects) && k.effects.length ? k.effects : [k];
+  const tt = String(effects.find((e) => /^(enemy|ally)_/.test(String(e?.target_type || '')))?.target_type || '');
+  if (!tt) return '';
+  if (tt.endsWith('single') || tt.endsWith('_one')) return '单体';
+  if (tt.endsWith('_12')) return '2 人';
+  if (tt.endsWith('_13') || tt.endsWith('all') || tt.endsWith('group')) return '3 人';
+  return '';
+}
+/** 准备回合也以内核为准，避免只在「特性」标签里写「准备」而没有实际回合数。 */
+function prepareNote(skill) {
+  const n = Number(skill?.kernel?.prepare || 0);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  return `${n}回合准备，`;
+}
+/**
  * 把射程写进单条战法的 ui（幂等）。skills.js 自身表在模块加载时全部过一遍；
  * panels.js 的独立技能表（mainSkills+libSkills 原始 JSON）也用同一函数补齐，
  * 保证「原客户端技能面板 / 六府战法摘要 / 内核」三处描述与计算同源。
@@ -256,15 +277,33 @@ export function applyRangeNote(skill) {
   if (!skill?.ui) return skill;
   const r = rangeOf(skill);
   skill.ui = { ...skill.ui, range: r };
-  if (skill.trigger === 3) {
-    if (!/普攻目标/.test(skill.ui.des || '')) skill.ui.des = `${skill.ui.des || ''}（目标：普攻目标）`;
+  let des = String(skill.ui.des || '');
+  /* 准备回合：官方镜像文案可能自带；本作自造战法只在内核 prepare 里写，补到描述最前面。 */
+  const prep = prepareNote(skill);
+  if (prep && !/\d+\s*回合准备/.test(des)) des = prep + des;
+  /* 目标人数：已有距离备注时只纠正人数，不重复追加整段。 */
+  const note = kernelTargetNote(skill) || targetNote(skill);
+  const tail = des.match(/有效距离\s*\d+\s*·\s*[^）]*?(?:）|$)/);
+  if (tail) {
+    const prefix = tail[0].match(/^(有效距离\s*\d+\s*·\s*)/);
+    if (prefix && note) {
+      const old = tail[0].slice(prefix[1].length).replace(/）$/, '').trim();
+      if (old !== note) {
+        const close = tail[0].endsWith('）') ? '）' : '';
+        des = des.slice(0, tail.index) + prefix[1] + note + close + des.slice(tail.index + tail[0].length);
+      }
+    }
+    skill.ui.des = des;
     return skill;
   }
-  if (r >= 9) return skill;               // 我方/治疗/增益：不写射程，避免噪音
-  if (/射程|有效距离/.test(skill.ui.des || '')) return skill;
-  const n = targetNote(skill);
-  const body = RANGE_NOTE[r] ? `有效距离 ${r}` : `有效距离 ${r}`;
-  skill.ui.des = `${skill.ui.des || ''}（${body}${n ? ` · ${n}` : ''}）`;
+  if (skill.trigger === 3) {
+    if (!/普攻目标/.test(des)) des += '（目标：普攻目标）';
+    skill.ui.des = des;
+    return skill;
+  }
+  if (r >= 9) { skill.ui.des = des; return skill; }   // 我方/治疗/增益：不写射程，避免噪音
+  if (/射程|有效距离/.test(des)) { skill.ui.des = des; return skill; }
+  skill.ui.des = `${des}（有效距离 ${r}${note ? ` · ${note}` : ''}）`;
   return skill;
 }
 // 一次性把射程写进 UI 描述与 ui.range 字段：原客户端技能面板、六府战法摘要、内核三处同源

@@ -229,7 +229,8 @@ function mirrorOne(local, off) {
     const queue = queues.get(part);
     const slot = queue && queue.shift();
     if (!slot) return part;
-    if (slot._placeholder) return part.replace(/(\d+(?:\.\d+)?)%/g, () => { n += 1; return '%n%'; });
+    /* 渲染层会把 %n% 替换成裸数值；写法必须是 %n%% 才能留下一个真实百分号。 */
+    if (slot._placeholder) return part.replace(/(\d+(?:\.\d+)?)%/g, () => { n += 1; return '%n%%'; });
     n += 1;
     return part + '（命中率%n%%）';
   }).join('');
