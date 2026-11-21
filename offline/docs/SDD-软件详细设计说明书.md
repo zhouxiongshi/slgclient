@@ -2340,6 +2340,20 @@ build/SLG-Offline-win32-x64/
 
 **验证**：新增 `tests/p27-battle-replay-visual.test.js` 2 条，锁住「data 层守军 troops>0 / remain=0 / 命中带 loss」与「注入层无 `cur:u.remain`、首帧重播共用 `makeUnitState`、逐击写 `lastLoss`/`sideHitLoss`、像素密度按 ratio 收缩」；连同 `battle-anim.test.js` 定向 5/5 通过。
 
+### 17.25 事件卡陈旧态：推演后仍点旧事件（2026-11-21 用户截图反馈）
+
+用户截图：事件卡仍显示「阶下之囚」，右下角「未决事件 2」，点选却弹「事件点选未生效：no_pending」。存档时序证实这不是效果未落账：两条事件在第 11 旬触发、第 15 旬推演时被 §17 逾期兜底结案并清出 `pendingEvents`，同一旬又生成新事件；交互层仍展示 20 秒前的只读投影。
+
+| 项 | 权威口径 |
+|---|---|
+| 根因 | `/__slg/strategy/tick` 会同步改变 `pendingEvents`，但 `interaction-ui.js` 只每 20 秒 `loadState()`；玩家拿着过期卡片点选，服务端保守拒绝 `no_pending` |
+| 推演后刷新 | `wrapFetch()` 识别 POST `/__slg/strategy/tick`，成功后立即 `loadState()`；卡片与「未决事件 N」徽标同源更新，不靠轮询兜底 |
+| 点选前复核 | `buildEventCards()` 在 POST `eventChoice` 前先 `fetchJSON(API)`，按 `String(id)` 确认事件仍在最新 `pendingEvents`；过期则直接换卡并给中文说明，**不产生陈旧 POST** |
+| 并发兜底 | GET 与 POST 之间恰逢推演结案时，服务端仍返 `no_pending`；交互层识别后换卡刷新并把 `no_pending`/`unknown_event` 翻成中文，其他 reason 也经 `eventReasonText()` 映射，不再直出英文码 |
+| 边界 | 服务端 `strategyEventChoice()` 对陈旧 id 的拒绝不变；不改逾期 4 旬策略、事件效果词、冷却与存档格式、协议字段、冻结 `web/` |
+
+**验证**：新增 `tests/p28-event-staleness.test.js` 4 条：推演成功刷新、点选前字符串口径复核、英文 reason 中文降级、逾期结案后投影去掉旧 id 且旧点击得 `no_pending`；连同 `m3-event-ui`、`p11-ui-integrity` 定向通过。
+
 
 ---
 

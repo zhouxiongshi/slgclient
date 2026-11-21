@@ -613,6 +613,14 @@
                     : ('局势变化 ' + signed(a.delta));
     }).join('、');
   }
+  /* 事件拒绝原因只作内部判据，玩家侧一律中文；旧版直接把 no_pending 弹出，
+     玩家看到的是「事件点选未生效：no_pending」这种英文错误码。 */
+  function eventReasonText(reason) {
+    if (reason === 'bad_action') return '指令未识别，请重试';
+    if (reason === 'unknown_event') return '事件定义不存在';
+    if (reason === 'bad_choice') return '该选项已不可选';
+    return '该事件已结案，请按刷新后的事务处理';
+  }
   function buildEventCards(d) {
     var list = d && Array.isArray(d.pendingEvents) ? d.pendingEvents : [];
     S.eventPending = list.length;
@@ -654,16 +662,38 @@
       if (!b || b.disabled) return;
       var btns = box.querySelectorAll('[data-evt-choice]');
       btns.forEach(function (x) { x.disabled = true; });
-      fetch(ACT, {
-        method: 'POST', cache: 'no-store',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ act: 'eventChoice', id: want.id, choice: b.dataset.evtChoice }),
+      /* ★ 2026-11-21：推演成功后世界可能因「逾期保守结案」清掉旧事件，
+         而本卡仍是 20 秒前的只读投影。点选前先核一次最新 pendingEvents，
+         不把过期事件 POST 出去，也就不会收到 no_pending。 */
+      Promise.resolve(fetchJSON(API)).then(function (latest) {
+        var stillPending = latest && Array.isArray(latest.pendingEvents)
+          && latest.pendingEvents.some(function (e) { return e && String(e.id) === String(want.id); });
+        if (!stillPending) {
+          mask.remove(); var li = S.layers.indexOf(mask); if (li >= 0) S.layers.splice(li, 1);
+          loadState();
+          toast('该事件已在本旬结案或已被新局势替换，已刷新为当前事务', 'info');
+          return null;
+        }
+        return fetch(ACT, {
+          method: 'POST', cache: 'no-store',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ act: 'eventChoice', id: want.id, choice: b.dataset.evtChoice }),
+        });
       }).then(function (r) {
+        if (!r) return null;
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
       }).then(function (res) {
+        if (!res) return;
         if (res && res.ok === false) {
-          toast('事件点选未生效：' + (res.reason || res.detail || '未知'), 'fail');
+          /* GET 与 POST 之间仍可能刚好被推旬结案；此时换卡刷新，不再让玩家重试一个已消失的事件。 */
+          if (res.reason === 'no_pending' || res.reason === 'unknown_event') {
+            mask.remove(); var si = S.layers.indexOf(mask); if (si >= 0) S.layers.splice(si, 1);
+            loadState();
+            toast(eventReasonText(res.reason), 'info');
+            return;
+          }
+          toast('事件点选未生效：' + eventReasonText(res.reason), 'fail');
           btns.forEach(function (x) { x.disabled = false; });
           return;
         }
@@ -895,10 +925,15 @@
     var orig = window.fetch;
     window.fetch = function (input, init) {
       var url = typeof input === 'string' ? input : (input && input.url) || '';
-      var isAct = /\/__slg\/.*(action|tick|choose|restart|slot|import)/.test(url) && (!init || init.method === 'POST');
+      var isPost = !init || init.method === 'POST';
+      var isAct = /\/__slg\/.*(action|tick|choose|restart|slot|import)/.test(url) && isPost;
+      /* ★ 2026-11-21：推演会触发事件逾期结案并生成新事件，旧投影最长滞后 20 秒，
+         玩家于是拿着已结案的事件卡去点选，收到 no_pending。推演成功后立即重取交互态。 */
+      var isTick = /\/__slg\/strategy\/tick(?:\?|$)/.test(url) && isPost;
       if (isAct) phase('处理中：' + url.split('?')[0], 'busy');
       return orig.apply(this, arguments).then(function (r) {
         if (isAct) phase(r.ok ? '成功：' + url.split('?')[0] : '失败：HTTP ' + r.status, r.ok ? 'ok' : 'fail');
+        if (isTick && r.ok) loadState();
         return r;
       }).catch(function (e) {
         if (isAct) phase('失败：' + e.message + '（可重试）', 'fail');
