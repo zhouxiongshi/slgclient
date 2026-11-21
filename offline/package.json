@@ -7,7 +7,7 @@
   "main": "electron/main.cjs",
   "scripts": {
     "serve": "node server/standalone.js",
-    "test": "node --test --test-concurrency=4 --test-timeout=60000 tests/*.test.js",
+    "test": "node tools/run-tests.mjs",
     "smoke": "node tools/smoke.js",
     "check": "node tools/check-release.js",
     "pack": "node tools/pack.js"
