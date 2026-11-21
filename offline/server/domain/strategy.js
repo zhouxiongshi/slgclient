@@ -3218,6 +3218,28 @@ export function strategyEventTick(state) {
   return { pending: st.pendingEvents.length, deferred: deferred.length };
 }
 
+/**
+ * 把事件效果词翻译成玩家能读懂的一句话。
+ * 旧版把 flag / attitude:sili 这类内部枚举直接写进日志和 toast，玩家看到的是
+ * 「立flag」「attitude +15」；这里统一成「立下约定」「对曹操态度 +15」。
+ * 只做展示映射，不参与任何结算；结算仍由 applyEffects 唯一落账。
+ */
+function describeEventEffects(applied, state) {
+  const signed = (v) => `${Number(v) > 0 ? '+' : ''}${Math.round(Number(v) || 0)}`;
+  return (applied || []).filter((a) => a?.kind !== 'nothing').map((a) => {
+    switch (a.kind) {
+      case 'flag': return `立下约定【${a.name}】`;
+      case 'flag-': return `解除约定【${a.name}】`;
+      case 'gold': return `金 ${signed(a.delta)}`;
+      case 'morale': return `民心 ${signed(a.delta)}`;
+      case 'loyalty': return `${a.target || '军中'}忠诚 ${signed(a.delta)}`;
+      case 'attitude': return `对${otherName(state, a.target)}态度 ${signed(a.delta)}`;
+      case 'fame': return `名望 ${signed(a.delta)}`;
+      default: return `局势变化 ${signed(a.delta)}`;
+    }
+  }).join('、');
+}
+
 /** 玩家点选事件（index.js 路由 strategy/action eventChoice）。效果词白名单落账。 */
 export function strategyEventChoice(state, cfg, ctx, { id, choice, quiet } = {}) {
   const st = ensureStrategy(state);
@@ -3272,16 +3294,7 @@ export function strategyEventChoice(state, cfg, ctx, { id, choice, quiet } = {})
   } catch (err) {
     return { ok: false, reason: 'bad_choice', detail: String(err && err.message || err) };
   }
-  const appliedText = applied
-    .filter((a) => a.kind !== 'nothing')
-    .map((a) => (a.kind === 'flag' ? `立flag「${a.name}」`
-      : a.kind === 'flag-' ? `清flag「${a.name}」`
-        : a.kind === 'gold' ? `金 ${a.delta > 0 ? '+' : ''}${a.delta}`
-          : a.kind === 'morale' ? `民心 ${a.delta > 0 ? '+' : ''}${a.delta}`
-            : a.kind === 'loyalty' ? `${a.target}忠诚 ${a.delta > 0 ? '+' : ''}${a.delta}`
-              : a.kind === 'attitude' ? `${a.target}态度 ${a.delta > 0 ? '+' : ''}${a.delta}`
-                : `名声 ${a.delta > 0 ? '+' : ''}${a.delta}`))
-    .join('、');
+  const appliedText = describeEventEffects(applied, state);
   /* ★ 2026-11-20：逾期兜底走 quiet——效果照落、流水照记，但不再写一行「事件·抉择」。
      否则一次未决事件产生「触发 / 抉择 / 逾期」三行，实测占事件日志的 2/3。 */
   if (!quiet) recordEvent(state, `【事件·抉择】${ev.title}：${(ev.choices || []).find((c) => c.id === choice)?.label || choice}`
@@ -3292,7 +3305,8 @@ export function strategyEventChoice(state, cfg, ctx, { id, choice, quiet } = {})
     time: Date.now(),
   });
   st.pendingEvents.splice(idx, 1);
-  return { ok: true, id, choice, applied };
+  /* appliedText 与日志同源下发，交互层直接显示，不再自己解析英文 kind。 */
+  return { ok: true, id, choice, applied, appliedText, title: ev.title };
 }
 
 /**

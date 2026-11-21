@@ -631,12 +631,18 @@ export function panelState(state, cfg) {
     // ★ P6 俘虏名册：六府「武将」页招降入口（政治判定在 strategy.recruitCaptive，这里只展示）
     // 修 U08：降率与「成功率构成条」走 captive-rules.js 唯一公式，
     // 旧实现缺 rate 字段，界面显示「降率约 undefined%」。
-    captives: (state.captives || []).map((c, i) => ({
-      idx: i, name: c.name, from: c.from, loyal: c.loyal, days: c.days,
-      star: cfg.generalByCfg.get(Number(c.cfgId))?.star ?? 0,
-      rate: Math.round(captiveRecruitRate(state, c) * 100),
-      rateParts: captiveRateParts(state, c),
-    })),
+    captives: (state.captives || []).map((c, i) => {
+      const career = careerOf({ cfgId: c.cfgId });
+      return {
+        idx: i, cfgId: Number(c.cfgId), name: c.name,
+        /* from 是「被俘地点」，战报没有原属势力字段；不编造敌主。 */
+        from: c.from, loyal: c.loyal, days: c.days, day: c.day,
+        star: cfg.generalByCfg.get(Number(c.cfgId))?.star ?? 0,
+        careerName: CAREER_NAMES[career.career], top: career.top,
+        rate: Math.round(captiveRecruitRate(state, c) * 100),
+        rateParts: captiveRateParts(state, c),
+      };
+    }),
     prospects,
     items,
     scrolls: scrollCount(state),

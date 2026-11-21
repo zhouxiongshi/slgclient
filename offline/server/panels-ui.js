@@ -12,7 +12,7 @@
   var API_ROOT = API.replace(/\/panels$/, '');   // '/__slg'
   var data = null;
   var ui = {
-    tab: 'general', genId: 0, genTab: 'attr',
+    tab: 'general', genId: 0, genTab: 'skill',
     itemFilter: 'all', skillFilter: 'all', skillQuery: '', openSkill: 0, skillLimit: 24,
     selectedCity: 0, dockOpen: false, // 默认折叠：战略层已有左上按钮坞，六府只留右上角一枚小按钮，不割裂分层地图
   };
@@ -27,6 +27,8 @@
       UI_KEEP.forEach(function (k) {
         if (v[k] != null && typeof v[k] === typeof ui[k]) ui[k] = v[k];
       });
+      /* 属性页已并入人物卡；老存档里残留的 attr 归一到战法页，避免空白。 */
+      if (ui.genTab === 'attr') ui.genTab = 'skill';
     } catch (e) { /* 隐私模式静默降级 */ }
   })();
   function persistUI() {
@@ -48,6 +50,21 @@
   function n(v) { var x = Number(v); return Number.isFinite(x) ? x : 0; }
   function fmt(v) { return n(v).toLocaleString('zh-CN'); }
   function pct(a, b) { return b > 0 ? (n(a) / n(b) * 100).toFixed(1) + '%' : '—'; }
+  /* 兵刃面板：把配置对象的键翻成中文，禁止把 JSON 报文直接甩给用户。 */
+  var COST_LABELS = { gold: '金', grain: '粮', wood: '木', iron: '铁', stone: '石', jungong: '军工', labor: '人力' };
+  function statBonusText(o) {
+    var keys = o ? Object.keys(o) : [];
+    if (!keys.length) return '无属性加成';
+    return keys.map(function (k) {
+      var label = (data && data.statLabels && data.statLabels[k]) || k;
+      return label + ' +' + n(o[k]) + '%';
+    }).join('、');
+  }
+  function costText(o) {
+    var keys = o ? Object.keys(o) : [];
+    if (!keys.length) return '无需材料';
+    return keys.map(function (k) { return (COST_LABELS[k] || k) + ' ' + fmt(o[k]); }).join(' · ');
+  }
   function toast(msg, bad) {
     if (!toastEl) return;
     toastEl.textContent = msg;
@@ -156,7 +173,8 @@
       if (cb) cb(r);
     }).catch(function (e) { toast('操作失败：' + e.message, true); });
   }
-  /* ★ P0 编队弹窗：三槽=盾步/弓兵/骑兵，换将 + 重分兵力 */
+  /* ★ 2026-11-21 队伍整编重做：统一 0 基下标、实时合计/余兵反馈、一键平分。
+     上限一律用服务端随 allGenerals 下发的 slotCap，不在前端重写功勋/等级公式。 */
   function formupBox(army) {
     var mask = document.createElement('div');
     mask.id = 'slgFormup';
@@ -164,52 +182,99 @@
     var gens = data.strategy.allGenerals || [];
     var genById = {};
     gens.forEach(function (g) { genById[g.id] = g; });
-    /* 带兵上限：基础 5000，官阶每阶 +300；空槽无将统辖按基础值。 */
     var slotCapOfGen = function (g) { return g ? (Number(g.slotCap) || 5000) : 5000; };
+    var total = (army.soldiers || []).reduce(function (s, v) { return s + (Number(v) || 0); }, 0);
     var sel = function (slot, curId) {
-      return '<select data-fup="gen' + slot + '"><option value="0">（空）</option>'
+      return '<select data-fup="gen' + slot + '" style="flex:1;min-width:150px;background:#2a2617;border:1px solid #ba9a52;color:#e8e0cc;padding:5px;border-radius:4px">'
+        + '<option value="0">（空槽）</option>'
         + gens.map(function (g) {
           var inThis = (army.generals || [])[slot] && army.generals[slot].id === g.id;
           var busy = (data.strategy.armies || []).some(function (a) {
             return a.id !== army.id && (a.generals || []).some(function (gg) { return gg && gg.id === g.id; });
           });
           return '<option value="' + g.id + '"' + (inThis ? ' selected' : '') + (busy && !inThis ? ' disabled' : '') + '>'
-            + esc(g.name) + (busy && !inThis ? '（在编）' : '') + '</option>';
+            + esc(g.name) + (g.cityName ? '（' + esc(g.cityName) + '）' : '')
+            + (g.rank ? ' · ' + esc(g.rank) : '') + (busy && !inThis ? ' · 在编' : '') + '</option>';
         }).join('') + '</select>';
     };
-    mask.innerHTML = '<div style="background:#1d1a12;border:1px solid #ba9a52;border-radius:8px;padding:18px 22px;min-width:420px;color:#e8e0cc;font:13px \'Microsoft YaHei\',sans-serif">'
+    mask.innerHTML = '<div style="background:#1d1a12;border:1px solid #ba9a52;border-radius:8px;padding:18px 22px;min-width:620px;max-width:92vw;color:#e8e0cc;font:13px \'Microsoft YaHei\',sans-serif">'
       + '<h3 style="margin:0 0 6px;color:#ffdf9a">整编队伍#' + army.order + '</h3>'
-      + '<div class="muted" style="margin-bottom:10px">三槽各对应一个兵种：盾步克弓、弓克骑、骑克盾（战前折算守军兵力 ±15%）。武将适性按五维×兵种折算 100%~115%，同源乘进该将攻防；槽位同时是战位（一=前锋/二=中军/三=大营），决定普攻与战法能打到谁。兵力只在该队现有 ' + fmt(army.soldiers.reduce(function (s, v) { return s + v; }, 0)) + ' 内重分。每槽带兵上限随该槽武将官阶与等级提升（基础 5000 + 官阶×300 +（等级−1）×200，满级三公 9500）。</div>'
+      + '<div class="muted" style="margin-bottom:10px;line-height:1.7">三槽同时是战位：一前锋 / 二中军 / 三大营，也对应盾步、弓兵、骑兵。'
+      + '兵力只在这支队伍现有 ' + fmt(total) + ' 人内重分，少填的会退回驻城，不会凭空消失。'
+      + '每槽上限取本机按该槽武将官阶与等级算出的真实值（基础 5000 + 官阶×300 +（等级−1）×200，满级三公 9500），换将后会自动刷新。</div>'
+      + '<div id="slgFormupSummary" style="background:#242820;border:1px solid #6a5f42;border-radius:5px;padding:8px 10px;margin-bottom:10px;color:#f0d998"></div>'
       + [1, 2, 3].map(function (slot) {
-        var cur = army.generals[slot - 1];
+        var s = slot - 1;
+        var cur = army.generals[s];
         var captain = cur ? genById[cur.id] : null;
         var cap = slotCapOfGen(captain);
         return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">'
-          + '<span style="width:46px;color:#ffdf9a">' + (army.armsNames || ['盾步', '弓兵', '骑兵'])[slot - 1] + '</span>'
-          + sel(slot - 1, cur && cur.id)
-          + '<input type="number" min="0" max="' + cap + '" value="' + (army.soldiers[slot - 1] || 0) + '" data-fup="troop' + slot + '" style="width:90px;background:#2a2617;border:1px solid #ba9a52;color:#fff;padding:4px 6px;border-radius:4px">'
-          + '<span class="muted" style="white-space:nowrap">上限 ' + fmt(cap) + (captain && captain.rank ? '（' + captain.rank + '阶）' : '') + '</span>'
-          + (cur ? '<span class="muted">适性 ' + cur.apt + '% · 忠' + cur.loyal + '</span>' : '<span class="muted">空槽</span>')
+          + '<span style="width:96px;color:#ffdf9a">第 ' + (slot + 1) + ' 槽 · ' + esc((army.armsNames || ['盾步', '弓兵', '骑兵'])[s]) + '</span>'
+          + sel(s, cur && cur.id)
+          + '<input type="number" min="0" max="' + cap + '" value="' + (army.soldiers[s] || 0) + '" data-fup="troop' + s + '" style="width:88px;background:#2a2617;border:1px solid #ba9a52;color:#fff;padding:4px 6px;border-radius:4px">'
+          + '<span class="muted" style="width:132px;white-space:nowrap" data-fup="cap' + s + '">上限 ' + fmt(cap) + (captain && captain.rank ? '（' + captain.rank + '阶）' : '') + '</span>'
+          + '<span class="muted" style="width:92px;white-space:nowrap" data-fup="apt' + s + '">' + (cur ? ('适性 ' + cur.apt + '% · 忠' + cur.loyal) : '空槽') + '</span>'
           + '</div>';
       }).join('')
-      + '<div style="margin-top:10px;text-align:right"><button data-fup="cancel" style="background:none;border:1px solid #777;color:#ccc;padding:5px 14px;border-radius:4px;cursor:pointer">取消</button> '
+      + '<div style="margin-top:12px;display:flex;justify-content:flex-end;gap:8px;align-items:center">'
+      + '<button data-fup="even" style="background:#2c2f22;border:1px solid #7a6a42;color:#e8d7a8;padding:5px 12px;border-radius:4px;cursor:pointer">按现兵平分（仅填表）</button>'
+      + '<button data-fup="cancel" style="background:none;border:1px solid #777;color:#ccc;padding:5px 14px;border-radius:4px;cursor:pointer">取消</button> '
       + '<button data-fup="ok" style="background:#7a5c1e;border:1px solid #ba9a52;color:#ffe9b0;padding:5px 18px;border-radius:4px;cursor:pointer">确认整编</button></div></div>';
+    var readSlots = function () {
+      var ids = [0, 1, 2].map(function (slot) { return Number(mask.querySelector('[data-fup="gen' + slot + '"]').value) || 0; });
+      var vals = [0, 1, 2].map(function (slot) { return Math.max(0, Math.floor(Number(mask.querySelector('[data-fup="troop' + slot + '"]').value) || 0)); });
+      return { ids: ids, vals: vals };
+    };
+    var refresh = function () {
+      var cur = readSlots();
+      var caps = cur.ids.map(function (id) { return slotCapOfGen(genById[id]); });
+      cur.vals.forEach(function (v, i) {
+        var input = mask.querySelector('[data-fup="troop' + i + '"]');
+        input.max = caps[i];
+        var capEl = mask.querySelector('[data-fup="cap' + i + '"]');
+        if (capEl) capEl.textContent = '上限 ' + fmt(caps[i]) + (genById[cur.ids[i]] && genById[cur.ids[i]].rank ? '（' + genById[cur.ids[i]].rank + '阶）' : '');
+      });
+      var sum = cur.vals.reduce(function (a, b) { return a + b; }, 0);
+      var diff = total - sum;
+      var summary = mask.querySelector('#slgFormupSummary');
+      var bad = diff < 0 || cur.vals.some(function (v, i) { return v > caps[i]; });
+      summary.style.color = bad ? '#f0a389' : '#f0d998';
+      summary.textContent = '本队现兵 ' + fmt(total) + ' · 已分配 ' + fmt(sum)
+        + (diff >= 0 ? ' · 余 ' + fmt(diff) + ' 将退回驻城' : ' · 超出 ' + fmt(-diff) + ' 人，确认会被拒绝')
+        + (cur.vals.some(function (v, i) { return v > caps[i]; }) ? ' · 有槽位超过带兵上限' : '');
+    };
     document.body.appendChild(mask);
+    mask.addEventListener('input', function (e) {
+      if (e.target && e.target.getAttribute && /^troop[012]$/.test(e.target.getAttribute('data-fup') || '')) refresh();
+    });
+    mask.addEventListener('change', function (e) {
+      if (e.target && e.target.getAttribute && /^gen[012]$/.test(e.target.getAttribute('data-fup') || '')) refresh();
+    });
     mask.addEventListener('click', function (e) {
       var t = e.target.closest('[data-fup]');
       if (!t) return;
       var k = t.getAttribute('data-fup');
       if (k === 'cancel') { mask.remove(); return; }
+      if (k === 'even') {
+        var picked = readSlots();
+        var caps = picked.ids.map(function (id) { return slotCapOfGen(genById[id]); });
+        var left = total, vals = [0, 0, 0];
+        for (var i = 0; i < 3; i++) { vals[i] = Math.min(caps[i], Math.floor(left / (3 - i))); left -= vals[i]; }
+        for (var j = 0; j < 3 && left > 0; j++) { var room = caps[j] - vals[j]; var add = Math.min(room, left); vals[j] += add; left -= add; }
+        vals.forEach(function (v, i2) { mask.querySelector('[data-fup="troop' + i2 + '"]').value = v; });
+        refresh();
+        return;
+      }
       if (k === 'ok') {
-        /* ★ 2026-11-20：下拉是 sel(slot-1) 生成的 gen0/gen1/gen2，兵力输入才是
-           troop1/troop2/troop3。旧版两套下标混用：gen3 为 null → .value 抛 TypeError，
-           确认整编整个按钮失效；即便补出 gen3 也会整体错槽。 */
+        /* 下拉 gen0/gen1/gen2 与兵力输入 troop0/troop1/troop2 现在共用同一套 0 基下标，
+           旧版 troop1~3 与 gen0~2 混用会让确认按钮整体失效。 */
         var generals = [0, 1, 2].map(function (slot) { return Number(mask.querySelector('[data-fup="gen' + slot + '"]').value) || 0; });
-        var soldiers = [0, 1, 2].map(function (slot) { return Math.max(0, Math.floor(Number(mask.querySelector('[data-fup="troop' + (slot + 1) + '"]').value) || 0)); });
+        var soldiers = [0, 1, 2].map(function (slot) { return Math.max(0, Math.floor(Number(mask.querySelector('[data-fup="troop' + slot + '"]').value) || 0)); });
         strategyAction({ action: 'formup', armyId: army.id, generals: generals, soldiers: soldiers });
         mask.remove();
       }
     });
+    refresh();
   }
 
   /* ★ 修 bug-13：运输起点可选 —— 旧实现 from 写死首都，只能从首都一条线调粮。
@@ -307,6 +372,9 @@
     '#slgPanelsWin .capbtn.danger{border-color:#a8664c;color:#f0b39b;}',
     '#slgPanelsWin .capbtn.danger:hover{background:#4a2b24;color:#ffd0bb;}',
     '#slgPanelsWin .caprow .genrow small{color:#b3a88f;}',
+    '#slgPanelsWin .capPanel{border-left:3px solid #9c6b3f;}',
+    '#slgPanelsWin .capPanel td{vertical-align:middle;}',
+    '#slgPanelsWin .capPanel .rate{display:inline-block;min-width:44px;color:#f0d998;font-weight:600;}',
     '#slgPanelsWin table{width:100%;border-collapse:collapse;font-size:13px;}',
     '#slgPanelsWin th,#slgPanelsWin td{border-bottom:1px solid #33302a;padding:7px 9px;text-align:left;}',
     '#slgPanelsWin th{color:#c2ac74;font-weight:600;background:#20221600;}',
@@ -371,6 +439,10 @@
     '#slgPanelsWin .hcTags{margin-top:8px;color:#a99e84;font-size:11px;display:flex;gap:8px;flex-wrap:wrap;}',
     '#slgPanelsWin .hcTags span{padding:2px 7px;background:#1d2017;border:1px solid #3d3a2c;border-radius:3px;}',
     '#slgPanelsWin .hcTags b{color:#d8c9a5;font-weight:600;}',
+    '#slgPanelsWin .hcState{margin-top:12px;}',
+    '#slgPanelsWin .hcState>.card{margin-top:9px;}',
+    '#slgPanelsWin .hcNote{margin-top:10px;padding:8px 10px;border-left:2px solid #ba9a52;',
+    '  background:#202318;color:#c7ba98;font-size:12px;line-height:1.7;}',
     '#slgPanelsWin .cols{display:flex;gap:16px;align-items:flex-start;}#slgPanelsWin .cols>.right{flex:1;min-width:0;}',
     '#slgPanelsWin .src{border-left:2px solid #6a5a32;padding:4px 0 4px 11px;margin:8px 0;}',
     '#slgPanelsWin .src b{color:#e8c670;}#slgPanelsWin .src .muted{color:#9c9382;font-size:12px;}',
@@ -423,9 +495,12 @@
     return '<span class="hcThumbFallback" data-slgcid="' + esc(g.cfgId) + '">'
       + esc(String(g.name || '将').slice(0, 1)) + '</span>';
   }
-  /* 人物卡大图：立绘主视觉 + 阵营描边 + 星级 + 史载五维条 + 生平。
-     五维只展示 lore.historyStats（0~100 史载同源），不展示任何编造数值；
-     主角无史载时明确标注「本局穿越者，史无明载」，本局战斗数值仍可在「属性」页查。 */
+  /* 人物卡大图：立绘主视觉 + 阵营描边 + 星级 + 唯一一套五维 + 本局状态。
+     ★ 2026-11-21：删掉旧的「属性 · 武将」表格页（基础/装备/增量/最终四列），
+       保留图片右边这五格作为唯一属性展示：有史载取 lore.historyStats，
+       无史载（主角 / 编辑器新武将）取本局 g.final，绝不编造史载值。
+       原属性页里有价值的「本局状态 / 调防 / 赏赐 / 关系」全部平移进人物卡。 */
+  var CARD_STAT_KEYS = { 统率: 'defense', 武力: 'force', 智力: 'strategy', 政治: 'politics' };
   function heroCardHtml(g) {
     var color = campColor(g.camp);
     var url = portraitUrl(g.cfgId);
@@ -436,21 +511,34 @@
     var starTxt = '★'.repeat(Math.max(0, Math.min(5, star))) + '☆'.repeat(Math.max(0, 5 - star));
     var lore = g.lore;
     var dims = ['统率', '武力', '智力', '政治', '魅力'];
+    var loreStats = (lore && lore.historyStats) || null;
+    var hasLoreStats = !!loreStats && dims.some(function (d) { return Number(loreStats[d]) > 0; });
+    var localStats = (g.final && Object.keys(g.final).length) ? g.final : g.base;
+    var hasLocalStats = !!localStats && Object.keys(CARD_STAT_KEYS).some(function (d) {
+      return Number(localStats[CARD_STAT_KEYS[d]]) > 0;
+    });
     var starsHtml = dims.map(function (d) {
-      var v = lore ? Number((lore.historyStats || {})[d]) || 0 : 0;
+      var raw = hasLoreStats ? loreStats[d]
+        : (CARD_STAT_KEYS[d] ? (localStats || {})[CARD_STAT_KEYS[d]] : (loreStats || {})[d]);
+      var known = raw != null && Number(raw) > 0;
+      var v = known ? Math.max(0, Math.min(100, Math.round(Number(raw)))) : 0;
       return '<div class="hcS"><div class="n">' + d + '</div>'
-        + '<div class="v' + (lore ? '' : ' na') + '">' + (lore ? v : '—') + '</div>'
-        + '<div class="b"><i style="width:' + (lore ? Math.max(0, Math.min(100, v)) : 0) + '%"></i></div></div>';
+        + '<div class="v' + (known ? '' : ' na') + '">' + (known ? v : '未设') + '</div>'
+        + '<div class="b"><i style="width:' + (known ? v : 0) + '%"></i></div></div>';
     }).join('');
+    var sourceName = hasLoreStats ? '史料档案 · 史载五维（0~100）' : '本局档案 · 设定五维（0~100）';
+    var note = sourceName + '：本局战斗数值 0~100，上方五格是唯一属性口径；史载值直接作为本局基础值，'
+      + '装备与军功加成并入战斗结算，不再另列基础/装备/增量表。'
+      + (hasLoreStats ? '' : ' 本局人物没有史载魅力值时显示「未设」，不编造。');
     var brief = lore && lore.brief ? esc(lore.brief)
-      : '本局穿越者，史无明载；立绘与形象由章节事件逐步写入，本局数值请看「属性」页。';
+      : '本局设定人物，史无明载；五维取本局设定值，与史载五维同为 0~100 口径。';
     var tags = lore
       ? ['字 ' + esc(lore.zi || '—'), '籍贯 ' + esc(lore.hometown || '—'), esc(lore.era || '')]
-      : ['本局设定人物', '无史载五维'];
+      : ['本局设定人物', hasLocalStats ? '本局属性已入卡' : '属性待设定'];
     if (g.cityName) tags.push('驻 ' + esc(g.cityName));
     return '<div class="hcCard" style="--hcc:' + color + '">'
       + '<div class="hcArt">' + art
-      + '<div class="hcSeal">' + (lore ? '史载' : '本局') + '</div>'
+      + '<div class="hcSeal">' + (hasLoreStats ? '史载' : '本局') + '</div>'
       + '<div class="hcRank">' + esc(g.name || '武将') + '</div></div>'
       + '<div class="hcMeta">'
       + '<div class="hcName">' + esc(g.name || '武将') + '<span class="hcStar">' + starTxt + '</span></div>'
@@ -460,10 +548,35 @@
       + '<span class="hcChip">' + esc(g.state) + '</span>'
       + '<span class="hcChip">忠诚 ' + (g.loyal != null ? esc(g.loyal) : '—') + '</span></div>'
       + '<div class="hcStars">' + starsHtml + '</div>'
+      + '<div class="hcNote">' + esc(note) + '</div>'
       + '<div class="hcBrief">' + brief + '<div class="hcTags">'
       + tags.map(function (t) { return '<span>' + t + '</span>'; }).join('')
       + '</div></div>'
-      + '</div></div>';
+      + '</div></div>'
+      + heroStateHtml(g);
+  }
+
+  /* 原「属性·」页的状态信息平移到人物卡下方；不再重复五维表。 */
+  function heroStateHtml(g) {
+    if (!g || g.id == null || !g.base) return '';
+    var progress = g.progress || {};
+    return '<div class="hcState"><div class="card"><h3>本局状态</h3>'
+      + '<div class="grid">'
+      + '<div><span class="k">所在城</span> <b class="v">' + esc(g.cityName || '—') + '</b>　' + cityPickHtml(g) + '</div>'
+      + '<div><span class="k">体力 / 等级</span> <b class="v">' + esc(g.physical) + ' / Lv' + esc(g.level) + '</b></div>'
+      + '<div><span class="k">经验</span> <b class="v">' + (progress.capped ? '已满 10 级'
+        : fmt(progress.exp != null ? progress.exp : g.exp) + '/' + fmt(progress.need || 0)) + '</b>'
+      + (progress.next ? '<div class="muted">' + esc(progress.next) + '</div>' : '') + '</div>'
+      + '<div><span class="k">在编岗位</span> <b class="v">' + (g.appointed && g.appointed.length ? esc(g.appointed.join('、')) : '无') + '</b></div>'
+      + '<div><span class="k">状态</span> <b class="v">' + esc(g.state) + '</b></div>'
+      + '<div><span class="k">忠诚 / 旬俸</span> <b class="v" style="color:'
+        + (g.loyal >= 80 ? '#9ec97f' : g.loyal >= 55 ? '#d8b45a' : '#e07a5f') + '">'
+        + (g.loyal != null ? esc(g.loyal) : '—') + '</b>'
+        + ' / ' + fmt(g.salaryPerXun || 20 * (g.star || 3)) + ' 金'
+        + '<button class="btn" data-act="reward" data-id="' + g.id + '">赏赐</button></div>'
+      + '</div>'
+      + '<div class="muted" style="margin-top:8px">委任 +0.6/旬；闲置回落到基线 70 后不再下降；欠饷 −5、民心崩额外 −1；低于 55 预警，低于 40 才有出走风险。出征中的武将内政收益减半。</div>'
+      + '</div>' + relationCardHtml(g) + '</div>';
   }
 
   function genListHtml() {
@@ -482,69 +595,21 @@
         + esc(p.name) + '<small>' + esc(p.zi === '史无明载' ? '' : '字' + p.zi) + ' · ' + esc(p.faction)
         + ' · 史载统率 ' + esc(p.historyStats.统率) + '</small></button>';
     });
-    /* ★ M4-13 俘虏名册：招降 + 放归 + 处斩三个出口同屏可达。
-       过去只有招降，且整个区块藏在六府二级页里，玩家占城后根本看不到。 */
+    /* ★ 2026-11-21：俘虏不再挤在 218px 左栏里直接放三个按钮。
+       左栏只留索引，点「查看处置」滚到右侧完整的「阵前俘虏」表格。 */
     if ((data.captives || []).length) {
-      out += '<h4>阵前被俘（招降 / 放归 / 处斩）</h4>';
+      out += '<h4>阵前俘虏（' + data.captives.length + ' 人）</h4>';
       data.captives.forEach(function (c) {
-        out += '<div class="card caprow" style="display:flex;gap:10px;align-items:center;padding:9px 10px;margin-bottom:7px">'
-          + '<button class="genrow" style="flex:1;text-align:left;margin:0" data-act="captive" data-i="' + c.idx + '">'
-          + esc(c.name) + '<small>押 ' + c.days + ' 旬 · 忠 ' + c.loyal + ' · 降率约 ' + c.rate + '%</small></button>'
-          + '<button class="capbtn" data-act="captiveRelease" data-i="' + c.idx + '">放归</button>'
-          + '<button class="capbtn danger" data-act="captiveExecute" data-i="' + c.idx + '">处斩</button>'
+        out += '<div class="card caprow" style="padding:7px 9px;margin-bottom:6px">'
+          + '<button class="genrow" style="margin:0" data-act="captiveFocus" data-id="' + c.idx + '">'
+          + esc(c.name) + '<small>押 ' + c.days + ' 旬 · 忠 ' + c.loyal + ' · 把握 ' + c.rate + '% · 查看处置</small></button>'
           + '</div>';
       });
     }
     return out + '</div>';
   }
 
-  function genAttrHtml(g) {
-    var rows = '';
-    Object.keys(data.statLabels).forEach(function (k) {
-      var b = g.base[k] || 0, a = g.added[k] || 0, eb = g.equipBonus[k] || 0;
-      rows += '<tr><td>' + esc(data.statLabels[k]) + '</td><td class="v">' + fmt(b) + '</td>'
-        + '<td class="' + (eb > 0 ? 'up' : '') + '">+' + fmt(eb) + '</td>'
-        + '<td class="muted">+' + fmt(a) + '</td><td class="v"><b>' + fmt(g.final[k]) + '</b></td>'
-        + '<td class="muted">' + pct(a, b) + '</td></tr>';
-    });
-    var lore = g.lore;
-    var loreHtml = lore ? '<div class="card"><h3>史料档案 · 史载五维（0~100）</h3><div class="grid">'
-      + ['统率', '武力', '智力', '政治', '魅力'].map(function (s) {
-        return '<div><span class="k">' + s + '</span> <span class="v">' + esc(lore.historyStats[s]) + '</span></div>';
-      }).join('')
-      + '</div><div style="margin-top:8px" class="muted">字 ' + esc(lore.zi) + ' · 籍贯 ' + esc(lore.hometown)
-      + ' · 势力 ' + esc(lore.faction) + ' · 分期 ' + esc(lore.era) + '</div>'
-      + '<div style="margin-top:6px">' + esc(lore.brief) + '</div>'
-      + '<div style="margin-top:6px" class="muted">史载五维与本局战斗数值采用同一口径（0~100），'
-      + '武力 72 就是武力 72，可以直接比较。</div></div>'
-      : '<div class="card muted">主公为本局穿越者，史无明载；上方五维是本局设定值，'
-      + '与史载五维同为 0~100 口径。</div>';
-    return '<h3>属性 · ' + esc(g.name)
-      + ' <span class="tag mid">' + esc(g.careerName || '干才') + '</span>'
-      + '<span class="muted" style="font-weight:normal;font-size:12px;margin-left:8px">'
-      + esc(g.careerNote || '') + '</span>'
-      + '<span class="muted" style="font-weight:normal;font-size:11px;margin-left:8px">本局战斗数值 0~100</span>'
-      + '</h3><div class="card"><table><thead><tr>'
-      + '<th>维度</th><th>基础</th><th>＋装备</th><th>＋增量合计</th><th>最终</th><th>增幅</th>'
-      + '</tr></thead><tbody>' + rows + '</tbody></table>'
-      + '<div class="muted" style="margin-top:8px">装备单件 ≤8%、全套 ≤25%（当前武力增幅 '
-      + pct(g.added.force, g.base.force) + '）。不显示单一「战力」数值，保留搭配讨论空间。</div>'
-      + '<div class="muted" style="margin-top:5px">本表为战斗结算用的本局数值（0~100，与史载五维同尺度）；'
-      + '下方史料档案的史载五维同为 0~100，可以直接比较。</div></div>'
-      + loreHtml
-      + '<div class="card"><h3>本局状态</h3>所在城 <b class="v">' + esc(g.cityName || '—') + '</b>'
-      + '　' + cityPickHtml(g) + '<div style="margin-top:6px">体力 ' + esc(g.physical)
-      + ' · Lv' + esc(g.level)
-      + (g.progress && g.progress.capped ? ' · 已满 10 级'
-        : (' · 经验 ' + fmt(g.progress ? g.progress.exp : g.exp) + '/' + fmt(g.progress ? g.progress.need : 0)))
-      + (g.progress && g.progress.next ? (' · ' + esc(g.progress.next)) : '')
-      + ' · 状态 ' + esc(g.state) + ' · 在编岗位 ' + (g.appointed.length ? esc(g.appointed.join('、')) : '无')
-      + (g.loyal != null ? ' · 忠诚 <b class="v" style="color:' + (g.loyal >= 80 ? '#9ec97f' : g.loyal >= 55 ? '#d8b45a' : '#e07a5f') + '">' + g.loyal + '</b>（旬俸 ' + fmt(g.salaryPerXun || 20 * (g.star || 3)) + ' 金/旬）'
-        + '<button class="btn" data-act="reward" data-id="' + g.id + '">赏赐</button>'
-        + '<div class="muted">委任岗位 +0.6/旬；闲置回落到基线 70 后不再下降；欠饷 −5、全境民心崩额外 −1；低于 55 会预警，低于 40 才有出走风险。赏赐可快速回稳。</div>' : '')
-      + '<div class="muted" style="margin-top:6px">出征中的武将内政收益减半（明写规则，不做隐藏惩罚）。</div></div></div>'
-      + relationCardHtml(g);
-  }
+  /* 旧 genAttrHtml 已删除：五维只在人物卡显示，原状态信息由 heroStateHtml 承接。 */
 
   /* ★ U15 相性与关系网：相性/义理是「本作设定」派生值，关系逐条标演义回目。
      不用纯列表：亲爱/君臣/敌对分组 + 连线感的色带，悬停看注。 */
@@ -628,7 +693,7 @@
       out += '<div class="card"><span class="tag">' + esc(sl.name) + '</span>';
       if (worn) {
         out += '<b class="v">' + esc(worn.name) + '</b><div class="muted" style="margin:5px 0">特性：' + esc(worn.trait) + '</div>'
-          + '<div class="muted">典故：' + esc(worn.set) + ' · 加成 ' + esc(JSON.stringify(worn.bonusPct)) + '</div>'
+          + '<div class="muted">典故：' + esc(worn.set) + ' · 加成 ' + esc(statBonusText(worn.bonusPct)) + '</div>'
           + '<button class="btn warn" data-act="unequip" data-gid="' + g.id + '" data-slot="' + sl.id + '">卸下（无消耗）</button>';
       } else out += '<span class="muted">未佩戴</span>';
       var candidates = data.items.filter(function (i) { return i.slot === sl.id && !i.ownerGeneralId; });
@@ -654,7 +719,7 @@
       (data.forgeCatalog || []).forEach(function (i) {
         out += '<div style="margin-bottom:6px"><b class="v">' + esc(i.name) + '</b> <span class="muted">'
           + esc(i.slotName) + ' · ' + esc(i.trait) + '</span><br><span class="muted">'
-          + esc(JSON.stringify(i.forge.cost)) + '</span> <button class="btn" data-act="forge" data-cfg="'
+          + esc(costText(i.forge.cost)) + '</span> <button class="btn" data-act="forge" data-cfg="'
           + i.id + '">锻造</button></div>';
       });
       out += '</div></div>';
@@ -680,6 +745,39 @@
       out += '<div class="card muted">本局穿越者，史无明载；本局画像由章节事件逐步写入。</div>';
     }
     return out;
+  }
+
+  /* ★ 2026-11-21 阵前俘虏重做：独立表格 + 三个明确出口。
+     旧版把按钮塞在 218px 左栏，且按钮只带 data-i（点击处理器读 data-id），
+     于是多个俘虏时全部作用在索引 0——这就是「点谁都像在同一个人身上操作」的失真源。 */
+  function captivePanelHtml() {
+    var list = data.captives || [];
+    if (!list.length) return '';
+    var rateText = function (c) {
+      var parts = (c.rateParts && c.rateParts.parts || []).map(function (p) {
+        return p.label + ' ' + p.value + '%';
+      }).join('，');
+      return '<span class="rate">' + c.rate + '%</span>'
+        + '<div class="muted" style="font-size:11px">' + esc(parts || '按关押旬数与君主政治结算') + '</div>';
+    };
+    return '<div class="card capPanel" id="slgCaptivePanel"><h3>阵前俘虏 · 处置（' + list.length + ' 人）</h3>'
+      + '<div class="muted" style="margin-bottom:8px">这里只列战报确认擒获的守将。战报没有记录原属势力，界面不猜测；'
+      + '「被俘地点」是实际发生战斗的位置。招降花 300 金，失败忠诚 −10（降到 0 以下会越狱）；放归与处斩会影响名望和诸势力态度。</div>'
+      + '<table><thead><tr><th>俘虏</th><th>被俘地点</th><th>关押</th><th>忠诚</th><th>招降把握</th><th>处置</th></tr></thead><tbody>'
+      + list.map(function (c) {
+        var loyalColor = c.loyal >= 70 ? '#9ec97f' : c.loyal >= 40 ? '#d8b45a' : '#e07a5f';
+        return '<tr><td><b class="v">' + esc(c.name) + '</b>'
+          + '<div class="muted" style="font-size:11px">' + esc('★'.repeat(Math.max(0, Math.min(5, Number(c.star) || 0))))
+          + ' ' + esc(c.careerName || '干才') + (c.top ? ' · 长于' + esc(c.top) : '') + '</div></td>'
+          + '<td>' + esc(c.from || '战报未记') + '</td>'
+          + '<td>' + esc(c.days) + ' 旬<div class="muted" style="font-size:11px">第 ' + esc(c.day || '—') + ' 日入押</div></td>'
+          + '<td><b style="color:' + loyalColor + '">' + esc(c.loyal) + '</b></td>'
+          + '<td>' + rateText(c) + '</td>'
+          + '<td><button class="btn" data-act="captive" data-id="' + c.idx + '">招降（300 金）</button>'
+          + '<button class="capbtn" data-act="captiveRelease" data-id="' + c.idx + '">放归</button> '
+          + '<button class="capbtn danger" data-act="captiveExecute" data-id="' + c.idx + '">处斩</button></td></tr>';
+      }).join('')
+      + '</tbody></table></div>';
   }
 
   function viewGeneral() {
@@ -714,13 +812,14 @@
     } else {
       var g = currentGeneral();
       if (!g) return '<div class="muted">暂无武将</div>';
-      var tabs = [['attr', '属性'], ['skill', '战法'], ['equip', '兵刃'], ['story', '经历']];
+      var tabs = [['skill', '战法'], ['equip', '兵刃'], ['story', '经历']];
+      if (!tabs.some(function (t) { return t[0] === ui.genTab; })) ui.genTab = 'skill';
       body = heroCardHtml(g)
+        + captivePanelHtml()
         + '<div class="tabs">' + tabs.map(function (t) {
         return '<button class="' + (ui.genTab === t[0] ? 'on' : '') + '" data-act="gtab" data-id="' + t[0] + '">' + t[1] + '</button>';
       }).join('') + '</div>';
-      if (ui.genTab === 'attr') body += genAttrHtml(g);
-      else if (ui.genTab === 'skill') body += genSkillHtml(g);
+      if (ui.genTab === 'skill') body += genSkillHtml(g);
       else if (ui.genTab === 'equip') body += equipSlotsHtml(g, false);
       else body += genStoryHtml(g);
     }
@@ -1300,12 +1399,19 @@
       });
       return;
     }
+    if (act === 'captiveFocus') {
+      var box0 = document.getElementById('slgCaptivePanel');
+      if (box0 && box0.scrollIntoView) box0.scrollIntoView({ block: 'nearest' });
+      else toast('阵前俘虏表格已在武将页上方');
+      return;
+    }
     if (act === 'captiveRelease' || act === 'captiveExecute') {
       var cx = (data.captives || []).find(function (x) { return x.idx === Number(id); });
-      if (!cx) return;
+      if (!cx) return toast('找不到该俘虏，请刷新后再试', true);
       var kill = act === 'captiveExecute';
       confirmBox((kill ? '处斩「' : '放归「') + cx.name + '」？ '
-        + (kill ? '此人将不再可用，并记一笔恶名。' : '不消耗金钱，纵其返回故主。'), function () {
+        + (kill ? '此人将不再可用，主公恶名上升；除董卓外诸势力态度下降。'
+          : '不消耗金钱，主公名望上升，诸势力态度改善；此人回到战场后可能再度为敌。'), function () {
         strategyAction({ action: act, idx: cx.idx }, function (r) {
           if (r.ok) toast((kill ? '已处斩 ' : '已放归 ') + cx.name, true);
         });
@@ -1314,9 +1420,12 @@
     }
     if (act === 'captive') {
       var c0 = (data.captives || []).find(function (x) { return x.idx === Number(id); });
-      if (!c0) return;
-      confirmBox('招降「' + c0.name + '」？ 费用 300 金，成功率约 ' + c0.rate + '%。'
-        + '失败：忠诚 -10（降到 0 以下会越狱逃走）。', function () {
+      if (!c0) return toast('找不到该俘虏，请刷新后再试', true);
+      var parts = (c0.rateParts && c0.rateParts.parts || []).map(function (p) {
+        return p.label + ' ' + p.value + '%';
+      }).join('，');
+      confirmBox('招降「' + c0.name + '」？费用 300 金，当前把握 ' + c0.rate + '%（' + (parts || '按规则结算') + '）。'
+        + '失败：忠诚 −10，降到 0 以下会越狱逃走。', function () {
         strategyAction({ action: 'captive', idx: c0.idx });
       });
       return;

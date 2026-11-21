@@ -598,6 +598,21 @@
     updateEventBadge();
     toast('事件已收起：右下「未决事件」可随时处理');
   }
+  /* 兼容旧响应：服务端已下发 appliedText 时直接用；否则也只输出中文，
+     不再把 flag / attitude / 英文势力 id 漏给用户。 */
+  function fallbackEffectText(applied) {
+    var signed = function (v) { return (Number(v) > 0 ? '+' : '') + (Math.round(Number(v) || 0)); };
+    return (applied || []).filter(function (a) { return a && a.kind !== 'nothing'; }).map(function (a) {
+      return a.kind === 'flag' ? '立下约定【' + a.name + '】'
+        : a.kind === 'flag-' ? '解除约定【' + a.name + '】'
+          : a.kind === 'gold' ? '金 ' + signed(a.delta)
+            : a.kind === 'morale' ? '民心 ' + signed(a.delta)
+              : a.kind === 'loyalty' ? ((a.target || '军中') + '忠诚 ' + signed(a.delta))
+                : a.kind === 'attitude' ? ('对某势力态度 ' + signed(a.delta))
+                  : a.kind === 'fame' ? ('名望 ' + signed(a.delta))
+                    : ('局势变化 ' + signed(a.delta));
+    }).join('、');
+  }
   function buildEventCards(d) {
     var list = d && Array.isArray(d.pendingEvents) ? d.pendingEvents : [];
     S.eventPending = list.length;
@@ -652,11 +667,9 @@
           btns.forEach(function (x) { x.disabled = false; });
           return;
         }
-        var eff = (res && Array.isArray(res.applied) ? res.applied : [])
-          .filter(function (a) { return a.kind !== 'nothing'; })
-          .map(function (a) { return (a.kind === 'flag' ? '立flag「' + a.name + '」' : a.target ? a.target + (a.delta > 0 ? '+' : '') + a.delta : a.kind + ' ' + (a.delta > 0 ? '+' : '') + a.delta); })
-          .join('、');
-        toast('抉择已记录' + (eff ? '：' + eff : ''));
+        var eff = res && res.appliedText ? res.appliedText
+          : fallbackEffectText(res && Array.isArray(res.applied) ? res.applied : []);
+        toast('【' + (want.title || '事件') + '】已抉择' + (eff ? '：' + eff : '：局势已记录'));
         mask.remove(); var i = S.layers.indexOf(mask); if (i >= 0) S.layers.splice(i, 1);
         loadState();
       }).catch(function (err) {
@@ -692,7 +705,15 @@
     if (el0.closest && el0.closest('#slgCityNav, #slgPanelsDock, .tabs, [data-citytab], [data-nav-only]')) return null;
     var txt = (el0.textContent || '').trim().slice(0, 30);
     if (!txt) return null;
-    for (var i = 0; i < COST_WORDS.length; i++) if (COST_WORDS[i].re.test(txt)) return COST_WORDS[i];
+    for (var i = 0; i < COST_WORDS.length; i++) {
+      if (COST_WORDS[i].re.test(txt)) {
+        /* 招降按钮的 data-id 就是俘虏索引，预览必须指向被点的那个人。 */
+        var hit = Object.assign({}, COST_WORDS[i]);
+        var rawId = el0.dataset.id != null ? el0.dataset.id : el0.dataset.i;
+        if (/招降/.test(hit.title) && /^\d+$/.test(String(rawId))) hit.captiveIdx = Number(rawId);
+        return hit;
+      }
+    }
     return null;
   }
   function previewFor(m, el0, proceed) {
@@ -717,7 +738,11 @@
       parts.push({ k: '尚需日数', v: (tp.need || 0) + ' 日 → 下一回合日 ' + (tp.nextTurnDay || '—') });
     }
     if (/招降/.test(m.title) && d.captives && d.captives.length) {
-      var c = d.captives[0];
+      /* 旧版恒取 [0]，多俘虏时预览对象错位；按钮 data-id 与建言 captive:N 都支持。 */
+      var mi = String(m.id || '').match(/^captive:(\d+)$/);
+      var ci = m.captiveIdx != null ? Number(m.captiveIdx) : (mi ? Number(mi[1]) : 0);
+      var c = d.captives[ci] || d.captives[0];
+      parts.push({ k: '招降对象', v: c.name + '（押 ' + c.days + ' 旬 · 忠 ' + c.loyal + '）' });
       (c.parts && c.parts.parts || []).forEach(function (p) {
         parts.push({ k: p.label, v: (p.value > 0 ? '+' : '') + p.value + '%' });
       });
@@ -937,7 +962,11 @@
       else if (kind === 'general' && window.__slgPanels) window.__slgPanels.open('general');
       else if (window.__slgPanels) window.__slgPanels.open('strategy');
       if (kind !== 'tavern') openDrawer(kind, id);
-      toast(kind === 'tavern' ? '已打开酒馆：可在此探索登庸在野贤才' : '已跳转到目标对象；地图视口与选中态未丢失（P4）');
+      /* 旧文案把视口/选中态写成无条件断言，还夹带内部编号，既没校验也不解决玩家疑问；
+         玩家实际要判断的是「我怎么回去」——改成明确去向 + 返回方式。 */
+      var where = { tavern: '酒馆', city: '城池', war: '出征窗', general: '武将面板',
+        captive: '俘虏处置', strategy: '决策台' }[kind] || '目标面板';
+      toast('已打开' + where + '；沙盘位置保持不变，按 Esc 或点右上角收起当前窗口');
     } catch (err) { toast('跳转失败：' + err.message, 'fail'); }
   }
 
