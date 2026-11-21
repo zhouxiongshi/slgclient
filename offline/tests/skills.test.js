@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { SKILLS, SKILL_BY_ID, LEVEL_COUNT, skillById, kernelSkillAt, reportSkillFields, LEGACY_UUIDS, createSkillAssets } from '../server/skills.js';
+import { SKILLS, SKILL_BY_ID, LEVEL_COUNT, GROWTH_DIRECTION, skillById, kernelSkillAt, reportSkillFields, LEGACY_UUIDS, createSkillAssets } from '../server/skills.js';
 import { runBattle } from '../kernel/index.js';
 import { battleConfig, resolveBattle } from '../server/battle.js';
 import { loadConfig } from '../server/config.js';
@@ -103,7 +103,9 @@ test('战法表：31 个 / 4 类 / 10 级真实数值成长 / 名称与伤害率
     const isFixed = s.kernel.rate_pct_lv1 === s.kernel.rate_pct_lv10;
     // 被动无条件生效（概率恒 100%），固定值战法无成长——均豁免
     /* 固定发动率的公开同名战法十级同值：这是来源事实，不是「清一色 70%」回退。 */
-    const noProbGrowth = isFixed || s.ui.trigger === 2 || MIRRORED.has(Number(s.cfgId));
+    const growth = (GROWTH_DIRECTION?.entries || []).find((g) => Number(g.cfgId) === Number(s.cfgId));
+    const officialFixedProb = !!growth?.changes.some((c) => c.field === 'probability');
+    const noProbGrowth = isFixed || s.ui.trigger === 2 || MIRRORED.has(Number(s.cfgId)) || officialFixedProb;
     if (!noProbGrowth) assert.ok(last.probability > first.probability, `${s.name} 发动概率不成长`);
     first.effect_value.forEach((v, k) => {
       if (!isFixed && !MIRRORED.has(Number(s.cfgId))) assert.ok(last.effect_value[k] > v, `${s.name} 效果值不成长`);

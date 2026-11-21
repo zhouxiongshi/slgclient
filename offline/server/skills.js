@@ -75,6 +75,50 @@ if (existsSync(MIRROR_PATH)) {
     }
   } catch { /* 镜像损坏不阻塞启动，按无镜像处理 */ }
 }
+/* ★ 同名战法「成长方向」对齐层：官方战法库只给 Lv1/Lv10 两端，生成器按两端升降方向
+   调整本作曲线形状，但保留 Lv10 终点与全部内核机制（不做假照搬）。
+   装载顺序：五张原表 → 同名镜像 → 本层 → 玩家覆盖层；玩家手改仍为最终权威。 */
+const GROWTH_PATH = join(ROOT, 'conf', 'skill-growth-direction.json');
+export let GROWTH_DIRECTION = null;
+if (existsSync(GROWTH_PATH)) {
+  try {
+    GROWTH_DIRECTION = JSON.parse(readFileSync(GROWTH_PATH, 'utf8'));
+    for (const g of GROWTH_DIRECTION.entries || []) {
+      const i = TABLE.skills.findIndex((x) => Number(x.cfgId) === Number(g.cfgId));
+      if (i < 0) continue;
+      const s = TABLE.skills[i];
+      s.ui.levels = g.levels.map((lv) => ({
+        probability: Number(lv.probability),
+        effect_value: lv.effect_value.map(Number),
+        effect_round: Array.isArray(lv.effect_round) ? lv.effect_round.map(Number) : [],
+      }));
+      const k = s.kernel;
+      if (!k) continue;
+      const first = s.ui.levels[0], last = s.ui.levels[9];
+      k.probability_init = first.probability / 100;
+      k.probability_max = last.probability / 100;
+      /* rate_pct_lv1/lv10 是原表元数据，不在这里重写：内核结算走 ui.levels，
+         改写元数据会让「固定值战法」判定漂移，且对实际伤害没有影响。 */
+      if (Array.isArray(k.effects)) {
+        k.effects.forEach((e, n) => {
+          e.rate_pct = first.effect_value[n] ?? e.rate_pct;
+          if (e.effect_type === 'CONTROL') e.control_probability = (first.effect_value[n] || 0) / 100;
+          /* op=1 走小数（0.75=75%），op=0 走百分数（75→0.75）；保留原单位。 */
+          (e.bonus_terms || []).forEach((b) => {
+            const v = first.effect_value[n] || 0;
+            b.value = b.op !== 0 ? v / 100 : v;
+          });
+        });
+      } else {
+        if (k.effect_type === 'CONTROL') k.control_probability = (first.effect_value[0] || 0) / 100;
+        (k.bonus_terms || []).forEach((b) => {
+          const v = first.effect_value[0] || 0;
+          b.value = b.op !== 0 ? v / 100 : v;
+        });
+      }
+    }
+  } catch { /* 成长层损坏不阻塞启动，按无成长覆盖处理 */ }
+}
 /* ★ 2026-11-17 初始数据编辑器（用户：「技能和属性要提供新增和编辑功能……我要自己来
    修改和创建」）：conf/campaign/custom-skills.json 覆盖层，最后装载 → 同 cfgId/同名
    覆盖任何来源的战法。编辑器（server/domain/skill-editor.js）是唯一写入口；五张原表

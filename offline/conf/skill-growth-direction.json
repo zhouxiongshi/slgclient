@@ -1,0 +1,5855 @@
+{
+  "sourceUrl": "https://g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10",
+  "sourceSha256": "db82f837fb765ea11de77398ddbe57ba66f6e8022b8140403e58c4130cfe3d92",
+  "generatedBy": "tools/sync-growth-direction.mjs",
+  "note": "同名战法 Lv1→Lv10 成长方向按官方两端文案对齐；只改方向，保留原 Lv10 终点与内核机制。已镜像战法不重复处理。",
+  "count": 43,
+  "skippedCount": 53,
+  "entries": [
+    {
+      "cfgId": 10007,
+      "name": "全军突击",
+      "skillClass": "主动",
+      "officialProbability": "35%",
+      "officialLv1": "移除我军全体骑兵及步兵的有害效果，对敌军单体发动一次攻击（伤害率72.5%），并使我军全体骑兵及步兵接下来2次攻击的伤害提高14.0%（受谋略属性影响）",
+      "officialLv10": "移除我军全体骑兵及步兵的有害效果，对敌军单体发动一次攻击（伤害率145.0%），并使我军全体骑兵及步兵接下来2次攻击的伤害提高28.0%（受谋略属性影响）",
+      "baselineLv1": {
+        "probability": 30,
+        "effect_value": [
+          100
+        ]
+      },
+      "baselineLv10": {
+        "probability": 32,
+        "effect_value": [
+          200
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "30→32",
+          "to": "32→32",
+          "official": "35→35"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 32,
+          "effect_value": [
+            100
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            111.11
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            122.22
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            133.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            144.44
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            155.56
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            166.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            177.78
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            188.89
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            200
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 10009,
+      "name": "万军取首",
+      "skillClass": "主动",
+      "officialProbability": "40%",
+      "officialLv1": "普通攻击后，对攻击目标再次发动猛烈攻击（伤害率80.0%），第四回合起，会额外对5距离内敌军单体发动一次攻击（伤害率50.0%），同时有50.0%几率额外对敌方大营再发动一次猛烈攻击（伤害率80.0%）",
+      "officialLv10": "普通攻击后，对攻击目标再次发动猛烈攻击（伤害率160.0%），第四回合起，会额外对5距离内敌军单体发动一次攻击（伤害率100.0%），同时有50.0%几率额外对敌方大营再发动一次猛烈攻击（伤害率160.0%）",
+      "baselineLv1": {
+        "probability": 30,
+        "effect_value": [
+          150
+        ]
+      },
+      "baselineLv10": {
+        "probability": 32,
+        "effect_value": [
+          300
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "30→32",
+          "to": "32→32",
+          "official": "40→40"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 32,
+          "effect_value": [
+            150
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            166.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            183.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            200
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            216.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            233.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            250
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            266.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            283.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            300
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 10010,
+      "name": "三术奇谋",
+      "skillClass": "主动",
+      "officialProbability": "50%",
+      "officialLv1": "1回合准备，对敌军单体发动3次策略攻击（伤害率89.0%，受谋略属性影响），并依次使目标的攻击属性、防御属性、谋略属性下降9.0（受谋略属性影响），持续2回合，每次目标独立判定",
+      "officialLv10": "1回合准备，对敌军单体发动3次策略攻击（伤害率178.0%，受谋略属性影响），并依次使目标的攻击属性、防御属性、谋略属性下降18.0（受谋略属性影响），持续2回合，每次目标独立判定",
+      "baselineLv1": {
+        "probability": 30,
+        "effect_value": [
+          120
+        ]
+      },
+      "baselineLv10": {
+        "probability": 32,
+        "effect_value": [
+          240
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "30→32",
+          "to": "32→32",
+          "official": "50→50"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 32,
+          "effect_value": [
+            120
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            133.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            146.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            160
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            173.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            186.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            200
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            213.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            226.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            240
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 10012,
+      "name": "决绝",
+      "skillClass": "主动",
+      "officialProbability": "35%",
+      "officialLv1": "使敌军单体陷入犹豫状态，无法发动主动战法，并使其受到策略攻击时的伤害提高14.0%（受谋略属性影响），持续2回合",
+      "officialLv10": "使敌军单体陷入犹豫状态，无法发动主动战法，并使其受到策略攻击时的伤害提高28.0%（受谋略属性影响），持续2回合",
+      "baselineLv1": {
+        "probability": 30,
+        "effect_value": [
+          75
+        ]
+      },
+      "baselineLv10": {
+        "probability": 32,
+        "effect_value": [
+          150
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "30→32",
+          "to": "32→32",
+          "official": "35→35"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 32,
+          "effect_value": [
+            75
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            83.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            91.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            100
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            108.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            116.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            125
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            133.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            141.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            150
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 10015,
+      "name": "亡命一搏",
+      "skillClass": "主动",
+      "officialProbability": "25%",
+      "officialLv1": "对敌军群体发动一次猛击（伤害率80.0%），当自身兵力低于初始兵力25%时，伤害率变为230.0%",
+      "officialLv10": "对敌军群体发动一次猛击（伤害率160.0%），当自身兵力低于初始兵力25%时，伤害率变为460.0%",
+      "baselineLv1": {
+        "probability": 42,
+        "effect_value": [
+          70
+        ]
+      },
+      "baselineLv10": {
+        "probability": 50,
+        "effect_value": [
+          140
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "42→50",
+          "to": "50→50",
+          "official": "25→25"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 50,
+          "effect_value": [
+            70
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            77.78
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            85.56
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            93.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            101.11
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            108.89
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            116.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            124.44
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            132.22
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            140
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 10017,
+      "name": "乱击",
+      "skillClass": "主动",
+      "officialProbability": "35%",
+      "officialLv1": "1回合准备，对敌军群体发动一次攻击（伤害率60.0%），并使其防御属性降低7.5，持续2回合",
+      "officialLv10": "1回合准备，对敌军群体发动一次攻击（伤害率120.0%），并使其防御属性降低15.0，持续2回合",
+      "baselineLv1": {
+        "probability": 32,
+        "effect_value": [
+          40,
+          80,
+          80
+        ]
+      },
+      "baselineLv10": {
+        "probability": 40,
+        "effect_value": [
+          80,
+          80,
+          80
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "32→40",
+          "to": "40→40",
+          "official": "35→35"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 40,
+          "effect_value": [
+            40,
+            80,
+            80
+          ],
+          "effect_round": [
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            44.44,
+            80,
+            80
+          ],
+          "effect_round": [
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            48.89,
+            80,
+            80
+          ],
+          "effect_round": [
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            53.33,
+            80,
+            80
+          ],
+          "effect_round": [
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            57.78,
+            80,
+            80
+          ],
+          "effect_round": [
+            2,
+            2,
+            2
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            62.22,
+            80,
+            80
+          ],
+          "effect_round": [
+            2,
+            2,
+            2
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            66.67,
+            80,
+            80
+          ],
+          "effect_round": [
+            2,
+            2,
+            2
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            71.11,
+            80,
+            80
+          ],
+          "effect_round": [
+            2,
+            2,
+            2
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            75.56,
+            80,
+            80
+          ],
+          "effect_round": [
+            3,
+            3,
+            3
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            80,
+            80,
+            80
+          ],
+          "effect_round": [
+            3,
+            3,
+            3
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 10025,
+      "name": "反击",
+      "skillClass": "被动",
+      "officialProbability": "25%-30%",
+      "officialLv1": "使自身受到普通攻击时能进行反击（伤害率37.5%），持续2回合",
+      "officialLv10": "使自身受到普通攻击时能进行反击（伤害率75.0%），持续2回合",
+      "baselineLv1": {
+        "probability": 100,
+        "effect_value": [
+          75
+        ]
+      },
+      "baselineLv10": {
+        "probability": 100,
+        "effect_value": [
+          75
+        ]
+      },
+      "changes": [
+        {
+          "field": "槽 1",
+          "from": "75→75",
+          "to": "37.5→75",
+          "official": "37.5→75"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 100,
+          "effect_value": [
+            37.5
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            41.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            45.83
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            50
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            54.17
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            58.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            62.5
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            66.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            70.83
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            75
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 10031,
+      "name": "义勇军",
+      "skillClass": "指挥",
+      "officialProbability": "35%",
+      "officialLv1": "恢复我军群体一定兵力（恢复率57.5%，受谋略属性影响），并使其防御属性提高11.5（受谋略属性影响），持续1回合",
+      "officialLv10": "恢复我军群体一定兵力（恢复率115.0%，受谋略属性影响），并使其防御属性提高23.0（受谋略属性影响），持续1回合",
+      "baselineLv1": {
+        "probability": 100,
+        "effect_value": [
+          32.5
+        ]
+      },
+      "baselineLv10": {
+        "probability": 100,
+        "effect_value": [
+          32.5
+        ]
+      },
+      "changes": [
+        {
+          "field": "槽 1",
+          "from": "32.5→32.5",
+          "to": "16.25→32.5",
+          "official": "57.5→115"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 100,
+          "effect_value": [
+            16.25
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            18.06
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            19.86
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            21.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            23.47
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            25.28
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            27.08
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            28.89
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            30.69
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            32.5
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920000,
+      "name": "辕门射戟",
+      "skillClass": "主动",
+      "officialProbability": "35%",
+      "officialLv1": "对敌军群体发动二次无视兵种相克的攻击（伤害率70.0%），并使第一次受击的敌军进行攻击的伤害大幅度降低，持续1回合，每次攻击的目标独立选择",
+      "officialLv10": "对敌军群体发动二次无视兵种相克的攻击（伤害率140.0%），并使第一次受击的敌军进行攻击的伤害大幅度降低，持续1回合，每次攻击的目标独立选择",
+      "baselineLv1": {
+        "probability": 30,
+        "effect_value": [
+          70
+        ]
+      },
+      "baselineLv10": {
+        "probability": 32,
+        "effect_value": [
+          140
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "30→32",
+          "to": "32→32",
+          "official": "35→35"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 32,
+          "effect_value": [
+            70
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            77.78
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            85.56
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            93.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            101.11
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            108.89
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            116.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            124.44
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            132.22
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            140
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920002,
+      "name": "密谋定蜀",
+      "skillClass": "主动",
+      "officialProbability": "35%",
+      "officialLv1": "使敌军群体进行攻击和策略攻击的伤害降低15.0%（受谋略属性影响），并陷入恐慌（伤害率71.5%，受谋略属性影响），每当其试图发动追击战法将额外受到妖术诅咒（伤害率66.5%，受谋略属性影响），持续2回合；每次发动后，自身造成策略攻击伤害提升2.5%（受谋略属性影响），可叠加，持续到战斗结束",
+      "officialLv10": "使敌军群体进行攻击和策略攻击的伤害降低30.0%（受谋略属性影响），并陷入恐慌（伤害率143.0%，受谋略属性影响），每当其试图发动追击战法将额外受到妖术诅咒（伤害率133.0%，受谋略属性影响），持续2回合；每次发动后，自身造成策略攻击伤害提升5.0%（受谋略属性影响），可叠加，持续到战斗结束",
+      "baselineLv1": {
+        "probability": 30,
+        "effect_value": [
+          71.5,
+          40
+        ]
+      },
+      "baselineLv10": {
+        "probability": 32,
+        "effect_value": [
+          143,
+          80
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "30→32",
+          "to": "32→32",
+          "official": "35→35"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 32,
+          "effect_value": [
+            71.5,
+            40
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            79.44,
+            44.44
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            87.39,
+            48.89
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            95.33,
+            53.33
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            103.28,
+            57.78
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            111.22,
+            62.22
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            119.17,
+            66.67
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            127.11,
+            71.11
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            135.06,
+            75.56
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            143,
+            80
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920003,
+      "name": "奇佐鬼谋",
+      "skillClass": "主动",
+      "officialProbability": "35%",
+      "officialLv1": "使自身和友军单体谋略属性提高11.0%，并使敌军群体随机陷入混乱、暴走、怯战、犹豫状态中的1种，持续2回合",
+      "officialLv10": "使自身和友军单体谋略属性提高22.0%，并使敌军群体随机陷入混乱、暴走、怯战、犹豫状态中的1种，持续2回合",
+      "baselineLv1": {
+        "probability": 32,
+        "effect_value": [
+          40
+        ]
+      },
+      "baselineLv10": {
+        "probability": 40,
+        "effect_value": [
+          80
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "32→40",
+          "to": "40→40",
+          "official": "35→35"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 40,
+          "effect_value": [
+            40
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            44.44
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            48.89
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            53.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            57.78
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            62.22
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            66.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            71.11
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            75.56
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            80
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920004,
+      "name": "火势风威",
+      "skillClass": "主动",
+      "officialProbability": "40%",
+      "officialLv1": "1回合准备，对敌军全体发动策略攻击（伤害率55.5%，受谋略属性影响），并使其在受到下一次伤害时，会额外引发一次燃烧（伤害率110.5%，受谋略属性影响）",
+      "officialLv10": "1回合准备，对敌军全体发动策略攻击（伤害率111.0%，受谋略属性影响），并使其在受到下一次伤害时，会额外引发一次燃烧（伤害率221.0%，受谋略属性影响）",
+      "baselineLv1": {
+        "probability": 42,
+        "effect_value": [
+          55.5,
+          40
+        ]
+      },
+      "baselineLv10": {
+        "probability": 50,
+        "effect_value": [
+          111,
+          80
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "42→50",
+          "to": "50→50",
+          "official": "40→40"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 50,
+          "effect_value": [
+            55.5,
+            40
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            61.67,
+            44.44
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            67.83,
+            48.89
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            74,
+            53.33
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            80.17,
+            57.78
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            86.33,
+            62.22
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            92.5,
+            66.67
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            98.67,
+            71.11
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            104.83,
+            75.56
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            111,
+            80
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920006,
+      "name": "乱政",
+      "skillClass": "主动",
+      "officialProbability": "120%",
+      "officialLv1": "使敌军单体获得如下10个负面效果中的1个：动摇、恐慌、燃烧、妖术、混乱、犹豫、暴走、怯战、挑衅、围困，持续2回合，该效果执行3次，每次的目标和效果独立判定。其中动摇、恐慌、燃烧、妖术的伤害率随战法等级提升",
+      "officialLv10": "使敌军单体获得如下10个负面效果中的1个：动摇、恐慌、燃烧、妖术、混乱、犹豫、暴走、怯战、挑衅、围困，持续2回合，该效果执行3次，每次的目标和效果独立判定。其中动摇、恐慌、燃烧、妖术的伤害率随战法等级提升",
+      "baselineLv1": {
+        "probability": 32,
+        "effect_value": [
+          40
+        ]
+      },
+      "baselineLv10": {
+        "probability": 40,
+        "effect_value": [
+          80
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "32→40",
+          "to": "40→40",
+          "official": "120→120"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 40,
+          "effect_value": [
+            40
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            44.44
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            48.89
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            53.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            57.78
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            62.22
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            66.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            71.11
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            75.56
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            80
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920011,
+      "name": "威震北疆",
+      "skillClass": "主动",
+      "officialProbability": "35%",
+      "officialLv1": "使敌军群体陷入恐慌状态，每回合损失一定兵力（伤害率32.0%，受谋略属性影响），同时谋略属性下降10.0，持续2回合",
+      "officialLv10": "使敌军群体陷入恐慌状态，每回合损失一定兵力（伤害率64.0%，受谋略属性影响），同时谋略属性下降20.0，持续2回合",
+      "baselineLv1": {
+        "probability": 38,
+        "effect_value": [
+          32,
+          40
+        ]
+      },
+      "baselineLv10": {
+        "probability": 46,
+        "effect_value": [
+          64,
+          80
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "38→46",
+          "to": "46→46",
+          "official": "35→35"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 46,
+          "effect_value": [
+            32,
+            40
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 46,
+          "effect_value": [
+            35.56,
+            44.44
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 46,
+          "effect_value": [
+            39.11,
+            48.89
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 46,
+          "effect_value": [
+            42.67,
+            53.33
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 46,
+          "effect_value": [
+            46.22,
+            57.78
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 46,
+          "effect_value": [
+            49.78,
+            62.22
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 46,
+          "effect_value": [
+            53.33,
+            66.67
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 46,
+          "effect_value": [
+            56.89,
+            71.11
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 46,
+          "effect_value": [
+            60.44,
+            75.56
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 46,
+          "effect_value": [
+            64,
+            80
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920013,
+      "name": "长坂之吼",
+      "skillClass": "主动",
+      "officialProbability": "75%",
+      "officialLv1": "2回合准备，对敌军群体2-3目标发动一次无视兵种相克的猛烈攻击（伤害率225.0%）2回合准备，对敌军单体发动三次无视兵种相克的猛烈攻击（伤害率166.5%），每次攻击的目标独立选择",
+      "officialLv10": "2回合准备，对敌军群体2-3目标发动一次无视兵种相克的猛烈攻击（伤害率450.0%）2回合准备，对敌军单体发动三次无视兵种相克的猛烈攻击（伤害率333.0%），每次攻击的目标独立选择",
+      "baselineLv1": {
+        "probability": 30,
+        "effect_value": [
+          225
+        ]
+      },
+      "baselineLv10": {
+        "probability": 32,
+        "effect_value": [
+          450
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "30→32",
+          "to": "32→32",
+          "official": "75→75"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 32,
+          "effect_value": [
+            225
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            250
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            275
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            300
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            325
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            350
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            375
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            400
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            425
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            450
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920014,
+      "name": "小霸王",
+      "skillClass": "主动",
+      "officialProbability": "25%",
+      "officialLv1": "以一定兵力为代价，对敌军群体发动一次攻击（伤害率67.5%），并有40.0%的几率再次发动猛攻（伤害率100.0%）",
+      "officialLv10": "以一定兵力为代价，对敌军群体发动一次攻击（伤害率135.0%），并有40.0%的几率再次发动猛攻（伤害率200.0%）",
+      "baselineLv1": {
+        "probability": 30,
+        "effect_value": [
+          67.5
+        ]
+      },
+      "baselineLv10": {
+        "probability": 32,
+        "effect_value": [
+          135
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "30→32",
+          "to": "32→32",
+          "official": "25→25"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 32,
+          "effect_value": [
+            67.5
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            75
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            82.5
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            90
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            97.5
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            105
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            112.5
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            120
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            127.5
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            135
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920015,
+      "name": "重斩",
+      "skillClass": "追击",
+      "officialProbability": "35%",
+      "officialLv1": "普通攻击后，对攻击目标再次发动攻击（伤害率75.0%），并使其攻击属性降低12.5，持续2回合",
+      "officialLv10": "普通攻击后，对攻击目标再次发动攻击（伤害率150.0%），并使其攻击属性降低25.0，持续2回合",
+      "baselineLv1": {
+        "probability": 42,
+        "effect_value": [
+          75
+        ]
+      },
+      "baselineLv10": {
+        "probability": 50,
+        "effect_value": [
+          150
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "42→50",
+          "to": "50→50",
+          "official": "35→35"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 50,
+          "effect_value": [
+            75
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            83.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            91.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            100
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            108.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            116.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            125
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            133.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            141.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            150
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920016,
+      "name": "逆反毒杀",
+      "skillClass": "主动",
+      "officialProbability": "35%",
+      "officialLv1": "使敌军群体陷入恐慌及怯战状态，每回合损失一定兵力（伤害率41.5%，受谋略属性影响），并且无法发动普通攻击，持续2回合",
+      "officialLv10": "使敌军群体陷入恐慌及怯战状态，每回合损失一定兵力（伤害率83.0%，受谋略属性影响），并且无法发动普通攻击，持续2回合",
+      "baselineLv1": {
+        "probability": 30,
+        "effect_value": [
+          41.5,
+          40
+        ]
+      },
+      "baselineLv10": {
+        "probability": 35,
+        "effect_value": [
+          83,
+          80
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "30→35",
+          "to": "35→35",
+          "official": "35→35"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 35,
+          "effect_value": [
+            41.5,
+            40
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 35,
+          "effect_value": [
+            46.11,
+            44.44
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 35,
+          "effect_value": [
+            50.72,
+            48.89
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 35,
+          "effect_value": [
+            55.33,
+            53.33
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 35,
+          "effect_value": [
+            59.94,
+            57.78
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 35,
+          "effect_value": [
+            64.56,
+            62.22
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 35,
+          "effect_value": [
+            69.17,
+            66.67
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 35,
+          "effect_value": [
+            73.78,
+            71.11
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 35,
+          "effect_value": [
+            78.39,
+            75.56
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 35,
+          "effect_value": [
+            83,
+            80
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920017,
+      "name": "傲将奇兵",
+      "skillClass": "追击",
+      "officialProbability": "30%",
+      "officialLv1": "普通攻击后，对攻击目标再次发动猛攻（伤害率115.0%），此攻击有几率会引起自身一定兵力的损耗",
+      "officialLv10": "普通攻击后，对攻击目标再次发动猛攻（伤害率230.0%），此攻击有几率会引起自身一定兵力的损耗",
+      "baselineLv1": {
+        "probability": 30,
+        "effect_value": [
+          115
+        ]
+      },
+      "baselineLv10": {
+        "probability": 38,
+        "effect_value": [
+          230
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "30→38",
+          "to": "38→38",
+          "official": "30→30"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 38,
+          "effect_value": [
+            115
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 38,
+          "effect_value": [
+            127.78
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 38,
+          "effect_value": [
+            140.56
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 38,
+          "effect_value": [
+            153.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 38,
+          "effect_value": [
+            166.11
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 38,
+          "effect_value": [
+            178.89
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 38,
+          "effect_value": [
+            191.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 38,
+          "effect_value": [
+            204.44
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 38,
+          "effect_value": [
+            217.22
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 38,
+          "effect_value": [
+            230
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920018,
+      "name": "诸葛锦囊",
+      "skillClass": "主动",
+      "officialProbability": "40%",
+      "officialLv1": "使我军全体受到策略攻击时的伤害降低17.5%（受谋略属性影响），并使其进行攻击和策略攻击时的伤害提高7.0%（受谋略属性影响），且自身获得先手，持续2回合。若发动时目标已有诸葛锦囊效果，则额外恢复目标一定兵力（恢复率75.0%）使我军全体受到攻击和策略攻击时的伤害降低17.5%（受谋略属性影响），并使其进行攻击和策略攻击时的伤害提高7.0%（受谋略属性影响），且自身获得先手，持续2回合。若发动时目标已有诸葛锦囊效果，则额外恢复目标一定兵力（恢复率75.0%）",
+      "officialLv10": "使我军全体受到策略攻击时的伤害降低35.0%（受谋略属性影响），并使其进行攻击和策略攻击时的伤害提高14.0%（受谋略属性影响），且自身获得先手，持续2回合。若发动时目标已有诸葛锦囊效果，则额外恢复目标一定兵力（恢复率150.0%）使我军全体受到攻击和策略攻击时的伤害降低35.0%（受谋略属性影响），并使其进行攻击和策略攻击时的伤害提高14.0%（受谋略属性影响），且自身获得先手，持续2回合。若发动时目标已有诸葛锦囊效果，则额外恢复目标一定兵力（恢复率150.0%）",
+      "baselineLv1": {
+        "probability": 30,
+        "effect_value": [
+          75,
+          7
+        ]
+      },
+      "baselineLv10": {
+        "probability": 32,
+        "effect_value": [
+          150,
+          14
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "30→32",
+          "to": "32→32",
+          "official": "40→40"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 32,
+          "effect_value": [
+            75,
+            7
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            83.33,
+            7.78
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            91.67,
+            8.56
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            100,
+            9.33
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            108.33,
+            10.11
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            116.67,
+            10.89
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            125,
+            11.67
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            133.33,
+            12.44
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            141.67,
+            13.22
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            150,
+            14
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920023,
+      "name": "奋不顾身",
+      "skillClass": "主动",
+      "officialProbability": "30%",
+      "officialLv1": "援护友军单体，为其抵挡普通攻击，并使自身进入休整状态，每回合恢复一定兵力（恢复率100.0%），持续3回合",
+      "officialLv10": "援护友军单体，为其抵挡普通攻击，并使自身进入休整状态，每回合恢复一定兵力（恢复率200.0%），持续3回合",
+      "baselineLv1": {
+        "probability": 30,
+        "effect_value": [
+          100
+        ]
+      },
+      "baselineLv10": {
+        "probability": 32,
+        "effect_value": [
+          200
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "30→32",
+          "to": "32→32",
+          "official": "30→30"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 32,
+          "effect_value": [
+            100
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            111.11
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            122.22
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            133.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            144.44
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            155.56
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            166.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            177.78
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            188.89
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            200
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920024,
+      "name": "饮鸩之怨",
+      "skillClass": "主动",
+      "officialProbability": "40%",
+      "officialLv1": "对敌军单体发动策略攻击（伤害率88.5%，受谋略属性影响），并阻止其恢复兵力，持续2回合",
+      "officialLv10": "对敌军单体发动策略攻击（伤害率177.0%，受谋略属性影响），并阻止其恢复兵力，持续2回合",
+      "baselineLv1": {
+        "probability": 41,
+        "effect_value": [
+          88.5
+        ]
+      },
+      "baselineLv10": {
+        "probability": 49,
+        "effect_value": [
+          177
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "41→49",
+          "to": "49→49",
+          "official": "40→40"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 49,
+          "effect_value": [
+            88.5
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 49,
+          "effect_value": [
+            98.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 49,
+          "effect_value": [
+            108.17
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 49,
+          "effect_value": [
+            118
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 49,
+          "effect_value": [
+            127.83
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 49,
+          "effect_value": [
+            137.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 49,
+          "effect_value": [
+            147.5
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 49,
+          "effect_value": [
+            157.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 49,
+          "effect_value": [
+            167.17
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 49,
+          "effect_value": [
+            177
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920025,
+      "name": "银龙冲阵",
+      "skillClass": "主动",
+      "officialProbability": "50%",
+      "officialLv1": "随机对敌军单体发动2次攻击（伤害率75.0%），每次目标独立判断，并使首次受到攻击的敌军单体受到攻击和策略攻击时的伤害提高10.0%（受攻击属性影响），持续至战斗结束，最多可叠加3次",
+      "officialLv10": "随机对敌军单体发动2次攻击（伤害率150.0%），每次目标独立判断，并使首次受到攻击的敌军单体受到攻击和策略攻击时的伤害提高20.0%（受攻击属性影响），持续至战斗结束，最多可叠加3次",
+      "baselineLv1": {
+        "probability": 42,
+        "effect_value": [
+          75
+        ]
+      },
+      "baselineLv10": {
+        "probability": 50,
+        "effect_value": [
+          150
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "42→50",
+          "to": "50→50",
+          "official": "50→50"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 50,
+          "effect_value": [
+            75
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            83.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            91.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            100
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            108.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            116.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            125
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            133.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            141.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            150
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920027,
+      "name": "定军扬威",
+      "skillClass": "主动",
+      "officialProbability": "120%",
+      "officialLv1": "对敌军群体发动一次攻击（伤害率60.0%）并进行挑衅，同时使自身受到攻击的伤害降低12.5%（受防御属性影响）战法距离提升至4，对敌军群体发动一次攻击（伤害率60.0%）并进行挑衅，同时使自身受到攻击和策略攻击时的伤害降低12.5%（受防御属性影响）",
+      "officialLv10": "对敌军群体发动一次攻击（伤害率120.0%）并进行挑衅，同时使自身受到攻击的伤害降低25.0%（受防御属性影响）战法距离提升至4，对敌军群体发动一次攻击（伤害率120.0%）并进行挑衅，同时使自身受到攻击和策略攻击时的伤害降低25.0%（受防御属性影响）",
+      "baselineLv1": {
+        "probability": 30,
+        "effect_value": [
+          60,
+          40
+        ]
+      },
+      "baselineLv10": {
+        "probability": 32,
+        "effect_value": [
+          120,
+          80
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "30→32",
+          "to": "32→32",
+          "official": "120→120"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 32,
+          "effect_value": [
+            60,
+            40
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            66.67,
+            44.44
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            73.33,
+            48.89
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            80,
+            53.33
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            86.67,
+            57.78
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            93.33,
+            62.22
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            100,
+            66.67
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            106.67,
+            71.11
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            113.33,
+            75.56
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            120,
+            80
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920030,
+      "name": "黄天当立",
+      "skillClass": "主动",
+      "officialProbability": "35%",
+      "officialLv1": "1回合准备，使敌军全体陷入妖术诅咒，每回合损失一定兵力（伤害率90.0%，受谋略属性影响），持续2回合；敌军受到该战法的妖术伤害时，张角恢复一定兵力（恢复率30.0%，受谋略属性影响）",
+      "officialLv10": "1回合准备，使敌军全体陷入妖术诅咒，每回合损失一定兵力（伤害率180.0%，受谋略属性影响），持续2回合；敌军受到该战法的妖术伤害时，张角恢复一定兵力（恢复率60.0%，受谋略属性影响）",
+      "baselineLv1": {
+        "probability": 42,
+        "effect_value": [
+          30,
+          40
+        ]
+      },
+      "baselineLv10": {
+        "probability": 50,
+        "effect_value": [
+          60,
+          80
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "42→50",
+          "to": "50→50",
+          "official": "35→35"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 50,
+          "effect_value": [
+            30,
+            40
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            33.33,
+            44.44
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            36.67,
+            48.89
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            40,
+            53.33
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            43.33,
+            57.78
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            46.67,
+            62.22
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            50,
+            66.67
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            53.33,
+            71.11
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            56.67,
+            75.56
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            60,
+            80
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920034,
+      "name": "虎步关右",
+      "skillClass": "主动",
+      "officialProbability": "120%",
+      "officialLv1": "使自身首次造成的攻击伤害提高35.0%（受速度属性影响）使自身首次造成的主动战法伤害提高35.0%（受速度属性影响），此效果最多叠加2次",
+      "officialLv10": "使自身首次造成的攻击伤害提高70.0%（受速度属性影响）使自身首次造成的主动战法伤害提高70.0%（受速度属性影响），此效果最多叠加2次",
+      "baselineLv1": {
+        "probability": 32,
+        "effect_value": [
+          35
+        ]
+      },
+      "baselineLv10": {
+        "probability": 40,
+        "effect_value": [
+          70
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "32→40",
+          "to": "40→40",
+          "official": "120→120"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 40,
+          "effect_value": [
+            35
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            38.89
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            42.78
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            46.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            50.56
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            54.44
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            58.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            62.22
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            66.11
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            70
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920035,
+      "name": "先登死士",
+      "skillClass": "主动",
+      "officialProbability": "40%",
+      "officialLv1": "使自身谋略属性降低30.0，进入洞察状态，免疫怯战、犹豫、混乱、暴走、挑衅，受到攻击可以进行反击（伤害率87.5%），持续2回合",
+      "officialLv10": "使自身谋略属性降低30.0，进入洞察状态，免疫怯战、犹豫、混乱、暴走、挑衅，受到攻击可以进行反击（伤害率175.0%），持续2回合",
+      "baselineLv1": {
+        "probability": 42,
+        "effect_value": [
+          87.5
+        ]
+      },
+      "baselineLv10": {
+        "probability": 50,
+        "effect_value": [
+          175
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "42→50",
+          "to": "50→50",
+          "official": "40→40"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 50,
+          "effect_value": [
+            87.5
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            97.22
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            106.94
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            116.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            126.39
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            136.11
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            145.83
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            155.56
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            165.28
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            175
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920036,
+      "name": "上将潘凤",
+      "skillClass": "主动",
+      "officialProbability": "80%",
+      "officialLv1": "对敌军单体发动一次猛攻（伤害率177.5%），下一回合内，自身将会陷入混乱",
+      "officialLv10": "对敌军单体发动一次猛攻（伤害率355.0%），下一回合内，自身将会陷入混乱",
+      "baselineLv1": {
+        "probability": 30,
+        "effect_value": [
+          177.5,
+          40
+        ]
+      },
+      "baselineLv10": {
+        "probability": 32,
+        "effect_value": [
+          355,
+          80
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "30→32",
+          "to": "32→32",
+          "official": "80→80"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 32,
+          "effect_value": [
+            177.5,
+            40
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            197.22,
+            44.44
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            216.94,
+            48.89
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            236.67,
+            53.33
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            256.39,
+            57.78
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            276.11,
+            62.22
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            295.83,
+            66.67
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            315.56,
+            71.11
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            335.28,
+            75.56
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            355,
+            80
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920039,
+      "name": "闭月",
+      "skillClass": "主动",
+      "officialProbability": "40%",
+      "officialLv1": "1回合准备，使敌军群体陷入暴走状态，进行无差别攻击，并使其防御属性降低14.5（受谋略属性影响），持续3回合1回合准备，使敌军群体陷入暴走状态，进行无差别攻击，并使其防御属性降低14.5（受谋略属性影响），持续4回合",
+      "officialLv10": "1回合准备，使敌军群体陷入暴走状态，进行无差别攻击，并使其防御属性降低29.0（受谋略属性影响），持续3回合1回合准备，使敌军群体陷入暴走状态，进行无差别攻击，并使其防御属性降低29.0（受谋略属性影响），持续4回合",
+      "baselineLv1": {
+        "probability": 32,
+        "effect_value": [
+          40
+        ]
+      },
+      "baselineLv10": {
+        "probability": 40,
+        "effect_value": [
+          80
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "32→40",
+          "to": "40→40",
+          "official": "40→40"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 40,
+          "effect_value": [
+            40
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            44.44
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            48.89
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            53.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            57.78
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            62.22
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            66.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            71.11
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            75.56
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            80
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920042,
+      "name": "北地枪王",
+      "skillClass": "追击",
+      "officialProbability": "120%",
+      "officialLv1": "普通攻击后，对攻击目标再次发动攻击（伤害率30.0%），并有30.0%的几率使其陷入动摇状态，每回合产生逃兵（伤害率30.0%），持续2回合",
+      "officialLv10": "普通攻击后，对攻击目标再次发动攻击（伤害率60.0%），并有30.0%的几率使其陷入动摇状态，每回合产生逃兵（伤害率60.0%），持续2回合",
+      "baselineLv1": {
+        "probability": 42,
+        "effect_value": [
+          37.5,
+          30
+        ]
+      },
+      "baselineLv10": {
+        "probability": 50,
+        "effect_value": [
+          75,
+          60
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "42→50",
+          "to": "50→50",
+          "official": "120→120"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 50,
+          "effect_value": [
+            37.5,
+            30
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            41.66,
+            33.33
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            45.84,
+            36.67
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            50,
+            40
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            54.16,
+            43.33
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            58.34,
+            46.67
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            62.5,
+            50
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            66.66,
+            53.33
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            70.84,
+            56.67
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            75,
+            60
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920043,
+      "name": "南中平蛮",
+      "skillClass": "主动",
+      "officialProbability": "30%",
+      "officialLv1": "对敌军单体发动攻击使其动摇，每回合产生逃兵（伤害率67.5%），持续2回合，在此期间，其防御会下降12.5",
+      "officialLv10": "对敌军单体发动攻击使其动摇，每回合产生逃兵（伤害率135.0%），持续2回合，在此期间，其防御会下降25.0",
+      "baselineLv1": {
+        "probability": 42,
+        "effect_value": [
+          67.5,
+          40
+        ]
+      },
+      "baselineLv10": {
+        "probability": 50,
+        "effect_value": [
+          135,
+          80
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "42→50",
+          "to": "50→50",
+          "official": "30→30"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 50,
+          "effect_value": [
+            67.5,
+            40
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            75,
+            44.44
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            82.5,
+            48.89
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            90,
+            53.33
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            97.5,
+            57.78
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            105,
+            62.22
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            112.5,
+            66.67
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            120,
+            71.11
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            127.5,
+            75.56
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            135,
+            80
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920044,
+      "name": "花中秀",
+      "skillClass": "主动",
+      "officialProbability": "35%",
+      "officialLv1": "对敌军单体发动攻击（伤害率127.5%），并使其攻击、谋略降低22.5%（受攻击属性影响），持续2回合",
+      "officialLv10": "对敌军单体发动攻击（伤害率255.0%），并使其攻击、谋略降低45.0%（受攻击属性影响），持续2回合",
+      "baselineLv1": {
+        "probability": 30,
+        "effect_value": [
+          127.5
+        ]
+      },
+      "baselineLv10": {
+        "probability": 34,
+        "effect_value": [
+          255
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "30→34",
+          "to": "34→34",
+          "official": "35→35"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 34,
+          "effect_value": [
+            127.5
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 34,
+          "effect_value": [
+            141.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 34,
+          "effect_value": [
+            155.83
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 34,
+          "effect_value": [
+            170
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 34,
+          "effect_value": [
+            184.17
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 34,
+          "effect_value": [
+            198.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 34,
+          "effect_value": [
+            212.5
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 34,
+          "effect_value": [
+            226.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 34,
+          "effect_value": [
+            240.83
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 34,
+          "effect_value": [
+            255
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920068,
+      "name": "敛众定气",
+      "skillClass": "主动",
+      "officialProbability": "40%",
+      "officialLv1": "移除我军全体的有害效果，立即为其恢复一定兵力（恢复率42.5%，受谋略属性影响），并有50%几率使其免疫围困效果，持续2回合",
+      "officialLv10": "移除我军全体的有害效果，立即为其恢复一定兵力（恢复率85.0%，受谋略属性影响），并有50%几率使其免疫围困效果，持续2回合",
+      "baselineLv1": {
+        "probability": 30,
+        "effect_value": [
+          42.5
+        ]
+      },
+      "baselineLv10": {
+        "probability": 34,
+        "effect_value": [
+          85
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "30→34",
+          "to": "34→34",
+          "official": "40→40"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 34,
+          "effect_value": [
+            42.5
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 34,
+          "effect_value": [
+            47.22
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 34,
+          "effect_value": [
+            51.94
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 34,
+          "effect_value": [
+            56.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 34,
+          "effect_value": [
+            61.39
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 34,
+          "effect_value": [
+            66.11
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 34,
+          "effect_value": [
+            70.83
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 34,
+          "effect_value": [
+            75.56
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 34,
+          "effect_value": [
+            80.28
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 34,
+          "effect_value": [
+            85
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920076,
+      "name": "奇术折冲",
+      "skillClass": "主动",
+      "officialProbability": "40%",
+      "officialLv1": "1回合准备，使敌军群体陷入妖术状态，每回合损失一定兵力（伤害率58.0%，受谋略属性影响），并使其造成的普通攻击伤害降低10.0%（受谋略属性影响），持续2回合",
+      "officialLv10": "1回合准备，使敌军群体陷入妖术状态，每回合损失一定兵力（伤害率116.0%，受谋略属性影响），并使其造成的普通攻击伤害降低20.0%（受谋略属性影响），持续2回合",
+      "baselineLv1": {
+        "probability": 42,
+        "effect_value": [
+          58,
+          40
+        ]
+      },
+      "baselineLv10": {
+        "probability": 50,
+        "effect_value": [
+          116,
+          80
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "42→50",
+          "to": "50→50",
+          "official": "40→40"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 50,
+          "effect_value": [
+            58,
+            40
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            64.44,
+            44.44
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            70.89,
+            48.89
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            77.33,
+            53.33
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            83.78,
+            57.78
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            90.22,
+            62.22
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            96.67,
+            66.67
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            103.11,
+            71.11
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            109.56,
+            75.56
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            116,
+            80
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920077,
+      "name": "破魂",
+      "skillClass": "主动",
+      "officialProbability": "25%",
+      "officialLv1": "对敌军单体发动一次攻击（伤害率90.0%），并使其陷入暴走状态，进行无差别攻击，持续1回合",
+      "officialLv10": "对敌军单体发动一次攻击（伤害率180.0%），并使其陷入暴走状态，进行无差别攻击，持续1回合",
+      "baselineLv1": {
+        "probability": 41,
+        "effect_value": [
+          90,
+          40
+        ]
+      },
+      "baselineLv10": {
+        "probability": 49,
+        "effect_value": [
+          180,
+          80
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "41→49",
+          "to": "49→49",
+          "official": "25→25"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 49,
+          "effect_value": [
+            90,
+            40
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 49,
+          "effect_value": [
+            100,
+            44.44
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 49,
+          "effect_value": [
+            110,
+            48.89
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 49,
+          "effect_value": [
+            120,
+            53.33
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 49,
+          "effect_value": [
+            130,
+            57.78
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 49,
+          "effect_value": [
+            140,
+            62.22
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 49,
+          "effect_value": [
+            150,
+            66.67
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 49,
+          "effect_value": [
+            160,
+            71.11
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 49,
+          "effect_value": [
+            170,
+            75.56
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 49,
+          "effect_value": [
+            180,
+            80
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920078,
+      "name": "飒沓如星",
+      "skillClass": "主动",
+      "officialProbability": "40%",
+      "officialLv1": "使我军群体骑兵造成的普通攻击伤害提升18.0%（受谋略属性影响），持续2回合，并使其下2次普通攻击进入分兵状态（伤害率27.5%）",
+      "officialLv10": "使我军群体骑兵造成的普通攻击伤害提升36.0%（受谋略属性影响），持续2回合，并使其下2次普通攻击进入分兵状态（伤害率55.0%）",
+      "baselineLv1": {
+        "probability": 42,
+        "effect_value": [
+          37.5,
+          20
+        ]
+      },
+      "baselineLv10": {
+        "probability": 50,
+        "effect_value": [
+          75,
+          40
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "42→50",
+          "to": "50→50",
+          "official": "40→40"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 50,
+          "effect_value": [
+            37.5,
+            20
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            41.67,
+            22.22
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            45.83,
+            24.44
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            50,
+            26.67
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            54.16,
+            28.89
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            58.34,
+            31.11
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            62.5,
+            33.33
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            66.67,
+            35.56
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            70.83,
+            37.78
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            75,
+            40
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920079,
+      "name": "扬威",
+      "skillClass": "追击",
+      "officialProbability": "35%",
+      "officialLv1": "普通攻击后，对目标再次发动猛攻（伤害率80.0%），并使自身下1次攻击伤害提升10.0%",
+      "officialLv10": "普通攻击后，对目标再次发动猛攻（伤害率160.0%），并使自身下1次攻击伤害提升20.0%",
+      "baselineLv1": {
+        "probability": 42,
+        "effect_value": [
+          80,
+          20
+        ]
+      },
+      "baselineLv10": {
+        "probability": 50,
+        "effect_value": [
+          160,
+          40
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "42→50",
+          "to": "50→50",
+          "official": "35→35"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 50,
+          "effect_value": [
+            80,
+            20
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            88.89,
+            22.22
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            97.78,
+            24.44
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            106.67,
+            26.67
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            115.56,
+            28.89
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            124.44,
+            31.11
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            133.33,
+            33.33
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            142.22,
+            35.56
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            151.11,
+            37.78
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            160,
+            40
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920080,
+      "name": "蓄盈待竭",
+      "skillClass": "主动",
+      "officialProbability": "35%",
+      "officialLv1": "选择随机敌军单体，其士气值低于自身时，对该敌军发动一次攻击（伤害率100.0%），否则提升自身攻击、防御、谋略属性30.0，持续2回合",
+      "officialLv10": "选择随机敌军单体，其士气值低于自身时，对该敌军发动一次攻击（伤害率200.0%），否则提升自身攻击、防御、谋略属性60.0，持续2回合",
+      "baselineLv1": {
+        "probability": 36,
+        "effect_value": [
+          100,
+          20
+        ]
+      },
+      "baselineLv10": {
+        "probability": 44,
+        "effect_value": [
+          200,
+          40
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "36→44",
+          "to": "44→44",
+          "official": "35→35"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 44,
+          "effect_value": [
+            100,
+            20
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 44,
+          "effect_value": [
+            111.11,
+            22.22
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 44,
+          "effect_value": [
+            122.22,
+            24.44
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 44,
+          "effect_value": [
+            133.33,
+            26.67
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 44,
+          "effect_value": [
+            144.44,
+            28.89
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 44,
+          "effect_value": [
+            155.56,
+            31.11
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 44,
+          "effect_value": [
+            166.67,
+            33.33
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 44,
+          "effect_value": [
+            177.78,
+            35.56
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 44,
+          "effect_value": [
+            188.89,
+            37.78
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 44,
+          "effect_value": [
+            200,
+            40
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920081,
+      "name": "临危",
+      "skillClass": "主动",
+      "officialProbability": "30%",
+      "officialLv1": "以一定兵力为代价，使自身在1回合内受到的所有伤害降低12.5%，并对敌军群体发动一次猛攻（伤害率67.5%）",
+      "officialLv10": "以一定兵力为代价，使自身在1回合内受到的所有伤害降低25.0%，并对敌军群体发动一次猛攻（伤害率135.0%）",
+      "baselineLv1": {
+        "probability": 30,
+        "effect_value": [
+          67.5,
+          20
+        ]
+      },
+      "baselineLv10": {
+        "probability": 32,
+        "effect_value": [
+          135,
+          40
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "30→32",
+          "to": "32→32",
+          "official": "30→30"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 32,
+          "effect_value": [
+            67.5,
+            20
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            75,
+            22.22
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            82.5,
+            24.44
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            90,
+            26.67
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            97.5,
+            28.89
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            105,
+            31.11
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            112.5,
+            33.33
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            120,
+            35.56
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            127.5,
+            37.78
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            135,
+            40
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920082,
+      "name": "十面埋伏",
+      "skillClass": "主动",
+      "officialProbability": "40%",
+      "officialLv1": "1回合准备，对敌军全体发动一次策略攻击（伤害率65.0%，受谋略属性影响），并随机使敌军群体1-2目标造成的所有伤害大幅度降低，持续1回合",
+      "officialLv10": "1回合准备，对敌军全体发动一次策略攻击（伤害率130.0%，受谋略属性影响），并随机使敌军群体1-2目标造成的所有伤害大幅度降低，持续1回合",
+      "baselineLv1": {
+        "probability": 37,
+        "effect_value": [
+          65
+        ]
+      },
+      "baselineLv10": {
+        "probability": 45,
+        "effect_value": [
+          130
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "37→45",
+          "to": "45→45",
+          "official": "40→40"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 45,
+          "effect_value": [
+            65
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 45,
+          "effect_value": [
+            72.22
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 45,
+          "effect_value": [
+            79.44
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 45,
+          "effect_value": [
+            86.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 45,
+          "effect_value": [
+            93.89
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 45,
+          "effect_value": [
+            101.11
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 45,
+          "effect_value": [
+            108.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 45,
+          "effect_value": [
+            115.56
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 45,
+          "effect_value": [
+            122.78
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 45,
+          "effect_value": [
+            130
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920085,
+      "name": "迷阵",
+      "skillClass": "主动",
+      "officialProbability": "35%",
+      "officialLv1": "对敌军单体发动策略攻击（伤害率77.5%，受谋略属性影响），并使其陷入暴走状态，进行无差别攻击，持续1回合",
+      "officialLv10": "对敌军单体发动策略攻击（伤害率155.0%，受谋略属性影响），并使其陷入暴走状态，进行无差别攻击，持续1回合",
+      "baselineLv1": {
+        "probability": 42,
+        "effect_value": [
+          77.5,
+          40
+        ]
+      },
+      "baselineLv10": {
+        "probability": 50,
+        "effect_value": [
+          155,
+          80
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "42→50",
+          "to": "50→50",
+          "official": "35→35"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 50,
+          "effect_value": [
+            77.5,
+            40
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            86.11,
+            44.44
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            94.72,
+            48.89
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            103.33,
+            53.33
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            111.94,
+            57.78
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            120.56,
+            62.22
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            129.17,
+            66.67
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            137.78,
+            71.11
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            146.39,
+            75.56
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            155,
+            80
+          ],
+          "effect_round": [
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920093,
+      "name": "固阵",
+      "skillClass": "主动",
+      "officialProbability": "30%",
+      "officialLv1": "使自身受到策略攻击的伤害降低17.5%，持续2回合",
+      "officialLv10": "使自身受到策略攻击的伤害降低35.0%，持续2回合",
+      "baselineLv1": {
+        "probability": 32,
+        "effect_value": [
+          20
+        ]
+      },
+      "baselineLv10": {
+        "probability": 40,
+        "effect_value": [
+          40
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "32→40",
+          "to": "40→40",
+          "official": "30→30"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 40,
+          "effect_value": [
+            20
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            22.22
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            24.44
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            26.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            28.89
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            31.11
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            33.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            35.56
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            37.78
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            40
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 920095,
+      "name": "谨言",
+      "skillClass": "主动",
+      "officialProbability": "30%",
+      "officialLv1": "使友军全体受到策略攻击的伤害降低8.0%（受谋略属性影响），持续2回合",
+      "officialLv10": "使友军全体受到策略攻击的伤害降低16.0%（受谋略属性影响），持续2回合",
+      "baselineLv1": {
+        "probability": 32,
+        "effect_value": [
+          20
+        ]
+      },
+      "baselineLv10": {
+        "probability": 40,
+        "effect_value": [
+          40
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "32→40",
+          "to": "40→40",
+          "official": "30→30"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 40,
+          "effect_value": [
+            20
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            22.22
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            24.44
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            26.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            28.89
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            31.11
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            33.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            35.56
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            37.78
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            40
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    }
+  ],
+  "skipped": [
+    {
+      "cfgId": 10011,
+      "name": "凤仪施计",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 10018,
+      "name": "中级扰乱",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 10020,
+      "name": "一雷惊蛰",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 10027,
+      "name": "混战",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 10029,
+      "name": "轻骑冲阵",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 10030,
+      "name": "异士",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910000,
+      "name": "衔枚断后",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910001,
+      "name": "饮冰疾行",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910002,
+      "name": "穿云回响",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910003,
+      "name": "连弩之策",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910004,
+      "name": "霜刃固守",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910005,
+      "name": "偃旗锋芒",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910006,
+      "name": "横槊固守",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910007,
+      "name": "饮冰共鸣",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910008,
+      "name": "振旅破军",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910009,
+      "name": "虎踞锋芒",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910010,
+      "name": "横戈共鸣",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910011,
+      "name": "伏波奇谋",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910012,
+      "name": "云梯奇谋",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910013,
+      "name": "断流破军",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910014,
+      "name": "龙骧奇谋",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910015,
+      "name": "截辕锋芒",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910026,
+      "name": "横戈锋芒",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910030,
+      "name": "扫尘断后",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910042,
+      "name": "燎原回响",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910074,
+      "name": "飞炬断后",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910100,
+      "name": "奇佐危谋",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910101,
+      "name": "惊雷贯阵",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910102,
+      "name": "燎原秘策",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910103,
+      "name": "荡寇破阵",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910104,
+      "name": "破胆夺气",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910105,
+      "name": "缚龙锁澜",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910106,
+      "name": "悬壶济军",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910107,
+      "name": "仁心回春",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910109,
+      "name": "天罗地网",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910110,
+      "name": "覆军杀将",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910111,
+      "name": "却敌固垒",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910112,
+      "name": "百炼成钢",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910113,
+      "name": "文武两全",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910114,
+      "name": "逆锋决胜",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910116,
+      "name": "火昭天罚",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910117,
+      "name": "坚甲利刃",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910118,
+      "name": "顺风扬刃",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910119,
+      "name": "饮血飞骑",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910120,
+      "name": "智取坚城",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910121,
+      "name": "追风逐电",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910122,
+      "name": "摧锋谋断",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910123,
+      "name": "虎贲督战",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910124,
+      "name": "玄襄谋阵",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910125,
+      "name": "沧海横流",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910126,
+      "name": "深沟高垒",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910127,
+      "name": "举燎合围",
+      "reason": "无同名官方战法"
+    },
+    {
+      "cfgId": 910128,
+      "name": "阵前擂鼓",
+      "reason": "无同名官方战法"
+    }
+  ]
+}

@@ -109,6 +109,15 @@
       "confidence": "高"
     },
     {
+      "path": "offline/conf/skill-growth-direction.json",
+      "kind": "同名战法 Lv1→Lv10 成长方向对齐层",
+      "status": "derived_unlicensed",
+      "origin": "官方公开战法库快照两端描述，由 tools/sync-growth-direction.mjs 生成；只取升降方向、保留原 Lv10 终点",
+      "count": 43,
+      "action_before_release": "与镜像层同口径：商业发行前取得引用授权或整体换名换文案；生成器与 skip 台账保留作为证据链",
+      "confidence": "高"
+    },
+    {
       "path": "skill-library-official-20261120.json",
       "kind": "官方公开战法库快照（648 条，仅用于镜像复现）",
       "status": "derived_unlicensed",

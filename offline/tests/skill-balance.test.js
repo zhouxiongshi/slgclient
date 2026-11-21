@@ -16,12 +16,15 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SKILLS } from '../server/skills.js';
+import { SKILLS, GROWTH_DIRECTION } from '../server/skills.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const MIRROR = JSON.parse(readFileSync(join(ROOT, 'conf', 'skill-mirror.json'), 'utf8'));
 const MIRRORED = new Map(MIRROR.skills.map((s) => [Number(s.cfgId), s]));
 const mirrorOf = (s) => MIRRORED.get(Number(s.cfgId));
+const GROWTH = new Map((GROWTH_DIRECTION?.entries || []).map((g) => [Number(g.cfgId), g]));
+const growthOf = (s) => GROWTH.get(Number(s.cfgId));
+const dir = (d) => (d > 0.005 ? '+' : d < -0.005 ? '-' : '0');
 
 const DMG = new Set(['PHYSICAL_DAMAGE', 'STRATEGY_DAMAGE']);
 const NON_ROLL = new Set(['指挥', '被动']);
@@ -78,9 +81,20 @@ test('主动/追击发动率：按伤害率反推的 32%~50% 区间，且逐级�
       assert.ok(r.p10 >= 20 && r.p10 <= 60, `${r.name} 官方发动率 ${r.p10}% 仍需在 20~60 安全区`);
       continue;
     }
-    assert.ok(r.p10 >= 32 && r.p10 <= 50, `${r.name} Lv10 发动率 ${r.p10}% 越界（应在 32~50）`);
-    assert.ok(r.p1 >= 30 && r.p1 <= 45, `${r.name} Lv1 发动率 ${r.p1}% 越界（应在 30~45）`);
-    assert.ok(r.p10 > r.p1, `${r.name} 发动率无成长（${r.p1}%→${r.p10}%）`);
+    const g = growthOf(r.s);
+    const officialProb = g?.changes.some((c) => c.field === 'probability')
+      ? String(g.officialProbability || '').match(/(\d+(?:\.\d+)?)%(?:-(\d+(?:\.\d+)?)%)?/)
+      : null;
+    if (officialProb) {
+      /* 官方固定发动率：十级同值是来源事实；本作只保留 Lv10 终点，不改满级平衡。 */
+      const want = dir(Number(officialProb[2] || officialProb[1]) - Number(officialProb[1]));
+      assert.equal(dir(r.p10 - r.p1), want, `${r.name} 发动率成长方向未对齐官方 ${g.officialProbability}`);
+      assert.equal(r.p10, g.baselineLv10.probability, `${r.name} Lv10 终点被成长层改写`);
+    } else {
+      assert.ok(r.p10 >= 32 && r.p10 <= 50, `${r.name} Lv10 发动率 ${r.p10}% 越界（应在 32~50）`);
+      assert.ok(r.p1 >= 30 && r.p1 <= 45, `${r.name} Lv1 发动率 ${r.p1}% 越界（应在 30~45）`);
+      assert.ok(r.p10 > r.p1, `${r.name} 发动率无成长（${r.p1}%→${r.p10}%）`);
+    }
   }
   const distinct = new Set(ACTIVE_DMG.map((r) => r.p10));
   assert.ok(distinct.size >= 4, `发动率档位过少（${[...distinct].join('/')}），说明又被写成了统一值`);
