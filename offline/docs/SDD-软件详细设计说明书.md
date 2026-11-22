@@ -2370,6 +2370,19 @@ build/SLG-Offline-win32-x64/
 
 **验证**：新增 `tests/p34-facility-upgrade-and-war-ui.test.js` 5 条：粮池为 0 也能升集市/伐木场、按游戏日满工期才升级、老档不跳级、拒绝原因中文与秒级文案清零、遭遇/推演双卡对齐；`building.test.js` 同步改为派生成本与游戏日时间旅行。实机推演截图 `reports/probe-preview-p34c.png` 显示双方卡片左右对齐。
 
+### 17.27 招降失败提示暴露内部码（2026-11-22 用户实机反馈）
+
+用户反馈招降失败弹框出现代码。实机返回体为 `{ok:false, reason:'refused', ...}`，六府 `strategyAction()` 旧兜底会拼 `'失败：' + r.reason`，于是玩家看到「失败：refused」。判定与效果本身无错，修的是玩家可见文案的来源。
+
+| 项 | 权威口径 |
+|---|---|
+| 同源文案 | `strategy.js recruitCaptive()` 四个失败分支各自下发中文 `text`：俘虏已不在营中、府库不足 300 金、拒绝归降（含新忠诚与本次把握）、宁死不降越狱；均写明未扣金 |
+| 协议兼容 | `reason`（`no_captive/no_gold/refused/escaped`）与 `name/loyal/rate/gold/charged` 字段一律保留，只新增 `text`；不改掷骰、忠诚 −10、越狱、扣金与名册同步 |
+| UI 呈现 | `panels-ui.js strategyAction()` 优先 `r.text` → `r.hint` → 中文 `ACTION_REASON_TEXT[r.reason]`，未知原因显示「操作未生效，请刷新后再试」，**不再把 reason 拼进玩家提示** |
+| 边界 | 不改冻结 `web/`、协议字段语义、招降率公式；英文 reason 继续留在服务端日志/测试断言中，只禁止渲染 |
+
+**验证**：新增 `tests/p35-captive-failure-text.test.js` 4 条：拒绝/越狱/无俘虏/金不足四类失败的中文 text、内部码零漏出、未扣金与忠诚/出册行为不变、UI 文案优先级与兜底映射；连同 `p33-ui-clarity`、`ui-presentation-hygiene` 定向通过。
+
 
 ---
 

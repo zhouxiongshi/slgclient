@@ -80,6 +80,7 @@
 | 武将战法三槽 | `general-editor.js SKILL_SLOT_KEYS` = `skillCfgId / skillCfgId2 / skillCfgId3`（★ 2026-11-19）：三槽都可编辑，写 `overrides.generals`，同步 `skills[0..2]`；**只改被编辑的那个槽**（未动的槽保留原等级），新开局 `world.innateSlots()` 生效 | — | — | ❌ | 初始数据编辑器（武将页签「战法装配」）、武将详情 |
 | 内政经验 | `interior-task.js advanceInteriorTasks()`：每旬 **5 点**给执行武将（`applyGeneralExp`；lv1→2 需 40 点，约 8 旬一级）（★ 2026-11-19：此前经验只来自战斗，纯内政武将永远 1 级） | 点/旬 | 整数 | ❌ | 武将面板经验条、成长推送 |
 | 招降率 | `captive-rules.js`（单一公式） | % | 整数 | ❌ | 俘虏面板 |
+| 招降失败提示（★ 2026-11-22） | `strategy.js recruitCaptive()` 在 `no_captive/no_gold/refused/escaped` 四个失败分支下发同源中文 `text`（写明姓名、忠诚/越狱、把握、未扣金）；`reason` 仍是内部协议码，不渲染。`panels-ui.js strategyAction()` 优先 `r.text`/`r.hint`，`ACTION_REASON_TEXT` 兜底覆盖四个码，未知原因中文降级，禁止再拼 `'失败：' + reason` | 文 | 中文文本 | ❌ 只展示 | 六府武将页「招降」后的提示 |
 | 放归名望 | `captives.js releaseCaptive()`：`state.strategy.fame += FAME_PER_RELEASE(2)`（★ 2026-11-16，取事件系统既有 +1~+4 中位；处斩 −2） | 点 | 整数 | ❌ | 放归 toast、名望显示；消费见下行 |
 | 名望→来投率 | `captive-reputation.js defectRate(base,baseFame,releaseFame)`：`rate = min(0.45, 0.03 + baseFame/700 + min(40,releaseFame)/700)`（★ 2026-11-20 修：版图/实力名望 `baseFame = 城数×8 + 帐下武将×2(封顶10) + 魅力/100` **不封顶**；只封顶放归名望 40 点防刷。旧实现把两者相加后一起截断到 40，导致占 5 城就来投率恒 8.71%、扩张零正反馈；实测现为 1城5.39%→5城10.25%→24城31.96%）。旧 `defectRateWithFame(base,fame)` 保留为「仅放归名望」兼容包装 | 小数 | — | ❌ | `strategy.js defectTick()` 在野慕名来投判定 |
 | 处斩恶名 | `state.role.infamy += INFAMY_PER_EXECUTE(1)`（★ 2026-11-16，旧实现只写不读；现同步对外态度，见下行） | 笔 | 整数 | ❌ | 处斩 toast |

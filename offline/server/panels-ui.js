@@ -160,6 +160,18 @@
      修 U01：旧写法 fetch(API + '/strategy/action') 会拼成
      /__slg/panels/strategy/action（服务端无此路由，404）。改用 API_ROOT。
      这条路径与 skills.js 的出征面板一致，必须用绝对根路径。 */
+  /* ★ 2026-11-22：动作失败一律中文，reason 只是内部协议码，禁止拼进玩家提示。
+     领域层已在失败返回体里带同源 text（如招降拒绝/越狱），这里再做一层兜底映射。 */
+  var ACTION_REASON_TEXT = {
+    no_army: '没有这支队伍', marching: '队伍行军中，不可整编',
+    dup_general: '同一武将不能重复上阵', in_other_army: '该武将已在别的队伍',
+    too_many_troops: '兵力分配超出该队现有兵力', not_own_city: '只能运输到己方城池',
+    bad_amount: '数量不合法', no_grain: '粮草不足', no_gold: '金钱不足',
+    no_general: '找不到该武将', same_city: '该武将已在此城', no_city: '目标城不存在',
+    no_captive: '该俘虏已不在营中，请刷新名单后再试',
+    refused: '对方拒绝归降，忠诚下降；本次未扣金',
+    escaped: '对方宁死不降，趁夜越狱；本次未扣金',
+  };
   function strategyAction(body, cb) {
     fetch(API_ROOT + '/strategy/action', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -168,7 +180,8 @@
       var overCapMsg = r.reason === 'over_cap'
         ? ('第 ' + (r.slot + 1) + ' 槽带兵上限 ' + fmt(r.cap) + '（该槽武将官阶越高上限越高），现填 ' + fmt(r.have))
         : null;
-      toast(overCapMsg || r.text || r.hint || (r.reason ? ({ no_army: '没有这支队伍', marching: '队伍行军中，不可整编', dup_general: '同一武将不能重复上阵', in_other_army: '该武将已在别的队伍', too_many_troops: '兵力分配超出该队现有兵力', not_own_city: '只能运输到己方城池', bad_amount: '数量不合法', no_grain: '粮草不足', no_gold: '金钱不足', no_general: '找不到该武将', same_city: '该武将已在此城', no_city: '目标城不存在' }[r.reason] || ('失败：' + r.reason)) : (r.ok ? '完成' : '失败')), !r.ok);
+      var failText = r.text || r.hint || ACTION_REASON_TEXT[r.reason] || '操作未生效，请刷新后再试';
+      toast(overCapMsg || (r.ok && !r.text && !r.hint ? '完成' : failText), !r.ok);
       if (r.ok) fetchState();
       if (cb) cb(r);
     }).catch(function (e) { toast('操作失败：' + e.message, true); });

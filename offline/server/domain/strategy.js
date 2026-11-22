@@ -2955,12 +2955,17 @@ export function recruitCaptive(state, cfg, ctx, { idx }) {
   const i = Number(idx);
   state.captives = Array.isArray(state.captives) ? state.captives : [];
   const cap = state.captives[i];
-  if (!cap) return { ok: false, reason: 'no_captive' };
+  /* ★ 2026-11-22：失败提示的中文文案与判定同源下发，reason 仍保留给协议/测试，
+     但玩家界面一律读 text，不得把 refused / escaped / no_gold 这类内部码直出。 */
+  if (!cap) return { ok: false, reason: 'no_captive', text: '该俘虏已不在营中，请刷新名单后再试。' };
   const cost = CAPTIVE_COST;
   const r = state.roleRes;
-  if ((Number(r.gold) || 0) < cost) return { ok: false, reason: 'no_gold', cost };
+  if ((Number(r.gold) || 0) < cost) {
+    return { ok: false, reason: 'no_gold', cost, text: `招降需要 ${cost} 金，当前府库不足；未扣费。` };
+  }
   const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
   const rate = captiveRecruitRate(state, cap);
+  const ratePct = Math.round(rate * 100);
   const success = rngFor(state.seed ?? 20261110, st.turn ?? day, `captive:${i}:${cap.cfgId}`).random() < rate;
   if (!success) {
     cap.loyal = (cap.loyal ?? 50) - 10;
@@ -2968,9 +2973,11 @@ export function recruitCaptive(state, cfg, ctx, { idx }) {
     if (cap.loyal < 0) {
       state.captives.splice(i, 1);
       recordEvent(state, `敌将「${cap.name}」拒绝招降，趁夜越狱逃走。`);
-      return { ok: false, reason: 'escaped', name: cap.name, rate: Math.round(rate * 100), gold: Math.floor(r.gold), charged: 0 };
+      return { ok: false, reason: 'escaped', name: cap.name, rate: ratePct, gold: Math.floor(r.gold), charged: 0,
+        text: `「${cap.name}」宁死不降，趁夜越狱逃走（本次把握 ${ratePct}%）；未扣金。` };
     }
-    return { ok: false, reason: 'refused', name: cap.name, loyal: cap.loyal, rate: Math.round(rate * 100), gold: Math.floor(r.gold), charged: 0 };
+    return { ok: false, reason: 'refused', name: cap.name, loyal: cap.loyal, rate: ratePct, gold: Math.floor(r.gold), charged: 0,
+      text: `「${cap.name}」拒绝归降，忠诚降至 ${cap.loyal}（本次把握 ${ratePct}%）；未扣金。` };
   }
   r.gold -= cost;
   recordRes(state, 'gold', -cost, `招降·${cap.name}`, day);
