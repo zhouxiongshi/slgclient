@@ -761,7 +761,7 @@
       out += '<div class="card"><h3>履历</h3>' + esc(l.brief)
         + '<div class="muted" style="margin-top:8px">' + esc(l.deeds) + '</div></div>'
         + '<div class="card"><h3>演义形象</h3>' + esc(l.romance) + '</div>'
-        + '<div class="card"><h3>关系</h3><span class="muted">并肩／结怨将在 P3 接入宿命链；当前不影响数值。</span></div>';
+        + '<div class="card"><h3>关系</h3><span class="muted">并肩／结怨关系见演义既有网络；当前不影响数值。</span></div>';
     } else {
       out += '<div class="card muted">本局穿越者，史无明载；本局画像由章节事件逐步写入。</div>';
     }
@@ -1644,16 +1644,19 @@
     });
   }
 
+  function reportDots() {
+    /* ★ P42：六府入口并入沙盘横向菜单后，旧 dock 被隐藏，红点必须同步到
+       可见的横向「战报」chip，否则玩家再也看不到未读提醒。 */
+    return [document.getElementById('slgRepDot'), document.getElementById('slgRepDotTop')];
+  }
   function pollReports() {
     fetchReportsHead(function (v) {
-      var dot = document.getElementById('slgRepDot');
-      if (dot && v) dot.style.display = v.unread > 0 ? 'block' : 'none';
+      reportDots().forEach(function (dot) { if (dot && v) dot.style.display = v.unread > 0 ? 'block' : 'none'; });
     });
   }
   function markReportsSeen() {
     // 点开战报窗即视为已读（原版 war.read 在战报详情内逐条触发；红点只做提醒）
-    var dot = document.getElementById('slgRepDot');
-    if (dot) dot.style.display = 'none';
+    reportDots().forEach(function (dot) { if (dot) dot.style.display = 'none'; });
     fetchReportsHead(function (v) {
       if (v && typeof v.latest === 'number') {
         try { localStorage.setItem('slgLastReportSeen', String(v.latest)); } catch (_) {}

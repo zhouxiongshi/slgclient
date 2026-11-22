@@ -147,7 +147,11 @@ export function beginMaterialTask(state, cfg, ctx, { actionId, officerId, cityId
   const action = materialGuide(state).actions.find((a) => a.id === aid);
   if (!action) return { ok: false, message: '没有这项物资任务' };
   const cid = Number(cityId) || Number(state?.strategy?.playerCity) || 0;
-  const busy = materialTasks(state).find((t) => t.status === 'active' && t.actionId === aid && Number(t.cityId) === cid);
+  /* ★ P42：造军工/折石/粜粮这类动作不带 cityId，只是从当前城内页点进去。
+     旧版把「从哪座城点的」写进任务并参与去重，切城即可绕过「同一件事完工前
+     不能重复委派」。非 needsCity 动作统一归一到 0 再判重与落库。 */
+  const keyCity = action.needsCity ? cid : 0;
+  const busy = materialTasks(state).find((t) => t.status === 'active' && t.actionId === aid && Number(t.cityId) === keyCity);
   if (busy) return { ok: false, message: `「${action.label}」已有一件在办，完工后再派` };
   const oid = Number(officerId) || 0;
   let officer = null;
@@ -165,7 +169,7 @@ export function beginMaterialTask(state, cfg, ctx, { actionId, officerId, cityId
     id: `mt${seq}`, actionId: aid, actionLabel: action.label,
     body: { ...(action.body || {}), ...(action.needsCity ? { cityId: cid } : {}) },
     officerId: oid, officerName: officer?.name || '太守亲办', officerStat: stat,
-    cityId: cid, startDay: dayOf(state), ticks, ticksDone: 0,
+    cityId: keyCity, startDay: dayOf(state), ticks, ticksDone: 0,
     status: 'active', reason: '玩家委派', cancelable: true,
   };
   materialTasks(state).push(task);

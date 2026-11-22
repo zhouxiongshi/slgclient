@@ -99,7 +99,7 @@
 | 势力动态 | `strategy.recordEvent(state, text, {quiet:true})` → `strategy.dynamics`（上限 120 条，★ 2026-11-20）。NPC 官阶晋升／习得战法／积功升级／登庸／按兵／招降／挖角（非玩家）等**背景音**走此通道，不再挤占 `strategy.events`（上限 480 条）的玩家军情流 | — | — | ❌ | 战略页「势力动态」栏（近 8 条）、天下沙盘月报 |
 | 战法槽位规则 | `slots.js slotBlock()`：自带不可替换；**学习槽 Lv5 开**；觉醒槽 Lv10 且自带 10 级 | 级 | 整数 | ❌ | 武将战法页、六府装配 |
 | 战法装配上限 | `conf/skills.json` 原表 `ui.limit`（可研习 80 条分布 **1~6 人**）；协议层 `general.upSkill` 与六府 `learn` 同读此值 | 人 | 整数 | ❌ | 六府装配按钮、limit_reached 回执 |
-| 武将升级经验 | `general-progress.js expToAdvance()`：`40 × 当前等级`，经验来自出征折损（`battle.js` 每槽损失 × 0.5）与 AI 月度人事（`ai-roster.js` 攻城/守城/内政按功勋发 exp）；玩家与 AI 同口径 | 点 | 整数 | ❌ | 武将卡「经验 x/y」 |
+| 武将升级经验 | `general-progress.js expToAdvance()`：`40 × 当前等级`，经验来自出征折损（`general-progress.js BATTLE_EXP_PER_LOSS = 0.8`，经 `battle.js grantBattleExp()` 入账）与 AI 月度人事（`ai-roster.js` 攻城/守城/内政按功勋发 exp）；玩家与 AI 同口径 | 点 | 整数 | ❌ | 武将卡「经验 x/y」 |
 | 武将政治属性 | 第 6 项基础属性，键 `politics`／史载 `five.zheng`，0~100 百分制；`config.js` 归一化写入 `generalByCfg`，取数走 `gameStatOf(cfg,g,'politics')`；所有武将（含主公、官员、AI 名册）初始化即带 | 点 | 整数 | ❌ | 武将卡「政治」、内政官员政治加成、登庸、官职能力 |
 | 官职能力加成 | `domain/official-rank.js`：功勋 `state.generals[].merit` 与 AI 名册 `generals[].merit` 同源累积，官阶 0~9 由功勋唯一决定；武将官阶越高统帅（defense，即统兵能力）越高，谋臣/政治家官阶越高政治越高；经 `general-stat.js effectiveStatOf` 叠加、封顶 100（不改史载原表） | 级/点 | 整数 | ❌ | 武将卡官阶、统帅/政治有效值、AI 名册 |
 | 单槽带兵上限 | `official-rank.js slotCapOf(officer) = 5000 + 官阶×300 + 等级×200`（★ 2026-11-18 扩为「等级+官职」双因子：用户诉求「武将等级和官职决定可配备兵量」；`官阶 = rankOfMerit(merit)` 封顶 9、`等级 = clamp(1..10)`、每级 +200（Lv1 不加）；白身 Lv1=5000、三公 Lv10=9500）；`slotCapForRank(rank)` 保留为「不含等级」的兼容口径（0 阶 5000→9 阶 7700）。`strategyFormup`、出征裁剪、征兵 `army.conscript` 各按该槽武将 `slotCapOf` 取上限，空槽按基础 5000，超出退回驻城 | 兵/槽 | 整数 | ❌ | 编队弹窗逐槽上限、over_cap 动态提示、征兵上限提示 |

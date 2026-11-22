@@ -2205,7 +2205,7 @@ build/SLG-Offline-win32-x64/
 | `GAME-06` | 向导 `GUIDE` 把「编队出征」排在「征兵」之前，默认 800 兵撞 1750 守军必全灭，且战败不提示下一步 | 顺序改为 征兵(g4) → 粮道(g5) → 出征(g6)；战败 summary 在守军 >1.2 倍时加「先征兵补足」 |
 | `GAME-07` | 武将编辑器只有「自带战法」一个下拉，第 2/3 槽无入口，12 槽只装 4 条 | `SKILL_SLOT_KEYS` 三槽可编辑；`editorSave` 只同步被编辑的槽；编辑器表单只提交「改动过」的字段（`data-orig`），避免改武力把战法清空 |
 | `GAME-08` | 存档 `skills` 含半残对象（`{id:0}`、字符串、lv>10），下游 `.map(s=>s.name)` 抛 `TypeError`（ai-roster 同源） | `normalizeWorld` 统一清成 `null` 或 `{id,lv,cfgId}`，lv 钳到 1~10 |
-| `GAME-09` | 诸侯来犯只是家门口摆一支野战军，玩家不理也没有任何后果——挂机 130 旬 5 城不失，世界零压力 | 新增 `assaultEscalationTick()`：40 日不清剿即围城（`besieged`，产出减半），每旬守军 −2%/民心 −3；守军归零则城陷；120 日粮尽自退；同势力场上限 2 支 |
+| `GAME-09` | 诸侯来犯只是家门口摆一支野战军，玩家不理也没有任何后果——挂机 130 旬 5 城不失，世界零压力 | 新增 `assaultEscalationTick()`：40 日不清剿即围城（`besieged`，产出减半），每旬守军 −2%/民心 −3；守军归零则城陷；180 日粮尽自退；同势力场上限 2 支 |
 | `GAME-10` | AI 讨伐玩家门槛为「城数 ≥3 或占比 ≥25%」，5 城时永远进不了池子，AI 全程只互殴 | `strategy-brain.playerOption` 门槛降为「≥2 城」，仍受「打得过」与 6 旬冷却约束 |
 | `GAME-11` | 八幕仅序章可玩，沙盘期无目标锚点；`scenarioGoal` 恒 null，偏安结局不可达 | 新增 `STAGE_GOALS`（6/10/18 城）与 `stageGoalTick()`，跨阈值记里程碑并发军情 |
 | `GAME-12` | 纯内政武将永不成长（经验只来自战斗，`exp` 恒 0）；`loyal` 只是 UI 数字 | 内政每旬 +5 经验；`makeUnit` 按 `loyal<80` 折攻（最低 0.88） |
@@ -2504,6 +2504,15 @@ build/SLG-Offline-win32-x64/
 5. **AI 行军静态化**：`draw()` 中 `side !== 'player'` 走独立分支——完整红色实线、固定位置兵力徽章、方向箭头与「势力 → 目标城 · 第 N 日抵达」，无插值/流光/呼吸/`Date.now()`；rAF 只对玩家行军驱动，AI 实体仍由 `strategy.js` 生成并对视图可见。页脚补「诸侯动向 N 支」图例。
 6. **物资去处任务化**：新增零环叶子 `server/domain/material-task.js`。委派只登记任务、不扣物资；到期由 `strategyTick()` 调用 `advanceMaterialTasks()`，执行原 `craftJungong/smeltStone/investDev/sellGrain`，数值/reserve/cap 一律不动。工期按统一属性阈值（≥85 一旬、≥68 基准、低于 68 加一旬、无人亲办 ×1.5），用 `ticksDone + status` 保证同日重复推进不二次执行；失败与撤销均不扣物资且给中文原因。UI 默认只给「选任务 → 选武将 → 委派」与任务队列，原 11 个即时按钮收进「全部物资动作（应急用）」，代价仍可见。
 7. **测试与测量环境**：新增 `p41-one-click-appoint` / `p42-depot-clarity` / `p43-menu-integration` / `p44-ai-static-march` / `p45-material-task` 共 21 项；全量 763/763。`tools/run-tests.mjs` 改为**两个进程**：性能基准单独先跑，其余单文件串行；`tools/check-release.js` 汇总所有 `# pass/# fail` 摘要行，避免双进程输出被误读成「只有 2 项」。50ms 预算未放宽。双态冒烟 33×2、UI 71×2、真鼠标 54×2、布局硬问题 0，`byteIdentical=true`。
+
+### 17.31 P41 后续审计残留修复 P46（2026-11-22）
+
+1. **中文失败原因不再被吞**：`errText()` 只认 `reason`，领域层写在 `message`/`hint` 的中文（「已有一件在办」「材料不够」）被统一替换成「操作未生效」。现先直通含中文的 `message`/`hint`，纯英文内部码仍走 `REASON_TEXT` 翻译表；任一注入层字符串不得回显英文 reason。
+2. **已结算诸侯军立刻撤标**：`draw()` 中 `side !== 'player'` 且 `mm.resolved` 直接跳过——存档保留 3 日的 resolved 行军不再以红色静态标记误导玩家；页脚图例本就按 `!resolved` 计数，两处口径归一。玩家军渲染窗口不动。
+3. **横向菜单战报红点**：六府 dock 收起后 `slgRepDot` 随父容器隐藏，未读提醒等于丢失。新增可见 chip 内 `#slgRepDotTop`，`reportDots()` 轮询与已读同步新旧两个点，点击仍转发旧按钮，不复制业务逻辑。
+4. **非城池物资任务跨城去重**：`craft10/craftDrain/smelt10/smeltDrain/sell` 本不依赖城池，旧版把「从哪座城内页点进去」写进 `cityId` 并参与 busy 判据，切城即可绕过「同一件事完工前不重复委派」。现统一归一 `cityId=0` 再判重与落库，`needsCity` 动作仍按城独立；物资数值与 reserve/cap 不变。
+5. **文案与合规台账**：武将履历删裸 `P3` 里程碑；GM 页「服务端拒绝」改「写入失败」。审计发现 `conf/innate-skills.json` 96 条第三方战法既未进台账也不在 `DERIVED_GLOBS`（合规报告 `ok:true` 属假阴性），现补登为 `derived_unlicensed`，未授权项由 7 如实变为 8；战法审计报告 3.1 计数 84→68、3.9~3.11 空表标注归档；FIELD-CONTRACT 经验系数 0.5→0.8、SDD GAME-09 撤围 120→180 日。
+6. **验收与留痕**：新增 `tests/p46-residual-fixes.test.js` 7 项闸；全量 768/768，双态冒烟 33×2、UI 71×2、真鼠标 54×2、布局硬问题 0，重打包 `byteIdentical=true`。PF-01 冷启动 8.3~8.4s 仍属原版 Cocos 首场景存量漂移，非本轮引入、非发布硬闸，预算未放宽。**需用户裁决**项见本轮交付报告：8 项未授权派生素材的授权/换皮、战法描述 159 项差异的机制层二选一、史料分层展示闸优先级、手动委任是否强制一人一岗。
 
 **红线速查（改前必看）**：INV-01~INV-10（§1.4）、ADR-01/04/07/08/13/14（§1.2）、§7.15 键空间警告、§9.3 z-index 阶梯（含回放层 100700）、§10 确定性、§14.7 报告归属、§16.4 内核改法、§17 偏差登记。
 

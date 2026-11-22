@@ -1458,7 +1458,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       + '<button class="chip" data-slgpanel="depot" data-id="depot">府库</button>'
       + '<button class="chip" data-slgpanel="equip" data-id="equip">兵刃</button>'
       + '<button class="chip" data-slgpanel="library" data-id="library">战法库</button>'
-      + '<button class="chip" data-slgpanel="__reports">战报</button>'
+      + '<button class="chip" data-slgpanel="__reports">战报<span class="rdot" id="slgRepDotTop"></span></button>'
       + '<i class="sep"></i>'
       + '<button id="slgBtnLog">天下日志</button>';
     Array.prototype.forEach.call(dock.querySelectorAll('button'), function (b) {
@@ -2530,6 +2530,10 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
         if (!a || !b) return;
         /* ★ U12：诸侯行军同样画在地图上，但用敌红区分；玩家军仍是金色 */
         var isFoe = !!mm.side && mm.side !== 'player';
+        /* ★ P42：诸侯军抵达后 resolved 仍要在存档里留 3 日，静态标记必须立刻撤下，
+           否则情报误导（页脚「诸侯动向」已按 !resolved 计数）。玩家 resolved 军
+           仍保留原有渲染窗口，不动战报回放。 */
+        if (isFoe && mm.resolved) return;
         var cWalk = isFoe ? 'rgba(225,92,72,.95)' : 'rgba(232,198,112,.9)';
         var cRest = isFoe ? 'rgba(225,92,72,.45)' : 'rgba(232,198,112,.45)';
         var cFlag = isFoe ? '#e15c48' : '#e8c670';
@@ -3706,6 +3710,10 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     'padding:0 7px;font-size:11px;margin:1px 3px 1px 0;color:#c8b88a;}',
     '#slgUIv2 .cost{font-size:11px;color:#c8b88a;opacity:.95;}',
     '#slgUIv2 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle;}',
+    /* ★ P42：可见横向菜单里的战报未读红点；旧 dock 的点保留兼容但已隐藏 */
+    '#slgUIv2 [data-slgpanel="__reports"]{position:relative;}',
+    '#slgUIv2 .rdot{position:absolute;right:2px;top:1px;width:7px;height:7px;border-radius:50%;',
+    'background:#e04a3a;box-shadow:0 0 4px rgba(224,74,58,.8);display:none;}',
     '#slgUIv2 .star5{color:#ffd766;}#slgUIv2 .star4{color:#c8a2ff;}#slgUIv2 .star3{color:#9fd0ff;}',
     '#slgUIv2 .winTag{color:#a89f86;}',
     /* ★ P11：.win 必须高于交互层浮窗（队列 100110 / 议程 100100 / 提示条 100240），
@@ -3905,6 +3913,11 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     /* ★ 2026-11-22：原版 WS 回执把 reason 放在 msg 里，/strategy/action 是平铺字段；
        两处都要翻成中文，禁止把 busy/no_gold 这类内部码直接弹给玩家。 */
     var reason = rsp && ((rsp.msg && rsp.msg.reason) || rsp.reason);
+    /* ★ P42：领域层把可读原因写在 message/hint（如「已有一件在办」「材料不够」），
+       旧版只认 reason，中文原因被吞成通用话术。仅直通含中文的文案；纯英文内部码
+       仍走下方翻译表，不给玩家看 busy/no_gold。 */
+    var direct = rsp && (rsp.message || rsp.hint);
+    if (typeof direct === 'string' && /[一-龥]/.test(direct)) return direct;
     if (reason) return REASON_TEXT[reason] || ERR_TEXT[rsp && rsp.code] || '操作未生效，请稍后重试';
     return ERR_TEXT[rsp && rsp.code] || '操作未生效，请稍后重试';
   }

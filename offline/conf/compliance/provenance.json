@@ -28,6 +28,16 @@
       "confidence": "高"
     },
     {
+      "path": "offline/conf/innate-skills.json",
+      "kind": "先天战法 96 条（cfgId 920000~ 系列，含 Lv1~Lv10 十级档位）",
+      "status": "derived_unlicensed",
+      "origin": "battle-kit/skill-library 率土之滨 W0 战法表 + adapted/full_mapping_stzb.json；文件内每条 provenance.source 逐条标注原始导出，与 skills.json 同批来源",
+      "count": 96,
+      "evidence": "conf/innate-skills.json 顶部 source/sourceSha256/license；tools/build-innate-skills.mjs",
+      "action_before_release": "与 skills.json 同口径：整体换名换文案或取得授权；换皮后需复核 920xxx cfgId 与内核档位映射",
+      "confidence": "高"
+    },
+    {
       "path": "offline/conf/skills-range.json",
       "kind": "战法有效距离 / 普攻攻击距离",
       "status": "own",

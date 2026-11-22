@@ -26,6 +26,7 @@ const OUT_DIR = join(ROOT, 'reports');
 const DERIVED_GLOBS = [
   'offline/conf/skills.json',
   'offline/conf/library-skills.json',
+  'offline/conf/innate-skills.json',
   'offline/conf/skills-range.json',
   'offline/conf/relations.json',
   'offline/conf/interaction/terms.json',
