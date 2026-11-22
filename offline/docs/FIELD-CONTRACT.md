@@ -139,6 +139,11 @@
 | 劝降兵力比 | `domain/diplomacy.js totalTroops()`（★ 2026-11-20 第三轮）：玩家 = **城池守军 + 在编部队**（`state.armys[].soldiers`），与界面「在编兵力」同源；NPC 仍只算城守军（用 garrisons，无 armys）。旧实现只算城守军，实测带 2 万大军仍判不出 3:1，400 旬劝降 0 次 | 兵 | 整数 | ❌ | 外交面板「我/彼 兵力比」、劝降门槛 |
 | 事件冷却 | `domain/event-engine.js selectEvents()`（★ 2026-11-20）：**选中即写 `state.events.cooldown[id]`**——有 `cooldown` 配置按配置（如「流民就食」8 旬），非 `once` 且未配置走默认 **6 旬**；`eventCooldownTick()` 每旬递减。旧实现只在 exclusive 挤掉时写 1 旬冷却，`events.json` 里的 `cooldown` 是死配置，条件长期成立的事件每 4~5 旬重刷（实测 150 旬同一条刷 33 次、连播三行，占 418 条事件流的 96 条） | 旬 | 整数 | ❌ | 事件触发频率、天下日志事件流 |
 
+| 围城损耗幂等键（★ 2026-11-22 P40） | `domain/strategy.js assaultEscalationTick()` 的 `garrison.lastSiegeDrainStep = floor((day - spawnDay) / 10)`：世界定时器每 500ms 调 `settleWorld`，同一天只允许扣一旬兵力/民心；跨步才推进。旧 `day % 10 === 0` 会一天扣 120 次 | 旬步 | 整数（内部） | ❌ | 围城压力、民心、城池归属 |
+| 集市兑换流水（★ P40） | `handlers.js interior.transform()`：正负两侧逐条 `recordRes(..., '集市兑换')`，与税赋/招降/缴获同一本 `state.resLedger` | 金/粮/木/铁/石 | 整数 | ✅ 读写 | 府库「钱粮去哪了」 |
+| 玩家可见 reason 兜底（★ P40） | `skills.js REASON_TEXT/reasonText()/warReason()`：自立、存档导入读取、出征/撤回未知码一律中文；英文 reason 只留协议与日志。解甲二次确认，征兵 <1 人中文拒绝 | 文案 | 字符串 | ❌ 只展示 | toast / 推演失败卡 |
+| 布局双态硬闸（★ P40） | `check-release.js` 7.7.5 + 7.8b：`layout-original.json` 与 `layout-packaged.json` 都要求报告不早于出厂源码与生成工具，且五档分辨率零裁切/零硬问题/零页面异常 | 报告 | JSON | ❌ 只展示 | 发布检查 `release-check.json` |
+
 ## 历史教训（写死，防回归）
 
 1. **逐城经济只能取 `state.strategy.cityEcon`**：`state.cityEcon` 是空的历史对象，

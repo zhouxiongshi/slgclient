@@ -3799,7 +3799,19 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     bad_pos: '位置无效', bad_general: '武将不可用', no_population: '此城无人口',
     busy: '这项还在办理', cooldown: '本旬已办过，下一旬再来',
     no_gold: '库金不足', no_disaster: '本城眼下无灾可赈',
+    /* ★ P40：自立与存档端点也会回英文 reason，一律在同一张中文表里兜底。 */
+    already_founded: '已经自立过，不可重复建国',
+    oath_pending: '须先举义择主，再图自立',
+    not_enough_cities: '占据的城池还不够',
+    empty_name: '国号不能为空',
+    bad_request: '请求内容不对，请重试',
+    not_a_save: '这不是本作存档文件',
+    bad_save: '存档内容不完整，无法读取',
+    io_error: '本机读写存档失败，请稍后重试',
   };
+  function reasonText(reason) {
+    return REASON_TEXT[reason] || '操作未生效，请稍后重试';
+  }
   function errText(rsp) {
     /* ★ 2026-11-22：原版 WS 回执把 reason 放在 msg 里，/strategy/action 是平铺字段；
        两处都要翻成中文，禁止把 busy/no_gold 这类内部码直接弹给玩家。 */
@@ -4038,7 +4050,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     bad_action: '未知操作', res_not_enough: '资源不足',
     cooldown: '冷却中', no_gold: '金不足', no_disaster: '眼下无灾可赈',
   };
-  function warReason(rs) { return WAR_REASON[rs] || rs || '未知原因'; }
+  /* ★ P40：未知 reason 绝不直出给玩家（英文码只留协议/日志），中文兜底。 */
+  function warReason(rs) { return WAR_REASON[rs] || REASON_TEXT[rs] || '操作未生效，请稍后重试'; }
   function warTroops(a) {
     return (a && a.soldiers || []).reduce(function (n, v) { return n + Math.max(0, Number(v) || 0); }, 0);
   }
@@ -4670,7 +4683,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
             if (rsp.code === 0) {
               toast('自立为「' + ((rsp.msg && rsp.msg.founded && rsp.msg.founded.name) || name) + '」', true);
               fetchState().then(function (s2) { cache = s2; renderWar(cache); });
-            } else { toast('自立失败：' + ((rsp.msg && rsp.msg.reason) || errText(rsp)), false); }
+            } else { toast('自立失败：' + reasonText((rsp.msg && rsp.msg.reason) || rsp.reason), false); }
           });
           });
         });
@@ -5844,7 +5857,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
               '导入', '取消', function () {
                 postJSON('/__slg/save/import', data).then(function (r) {
                   if (r.ok) { toast('已导入，正在重载', true); setTimeout(function () { location.reload(); }, 600); }
-                  else toast('导入失败：' + (r.reason || '格式不对'), false);
+                  else toast('导入失败：' + reasonText(r.reason), false);
                 });
               });
           };
@@ -5878,7 +5891,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
                   ['会覆盖当前进度（旧档会自动备份）。'], '读取', '取消', function () {
                     postJSON('/__slg/save/slot', { slot: s.slot, action: 'load' }).then(function (r) {
                       if (r.ok) { toast('已读取，正在重载', true); setTimeout(function () { location.reload(); }, 600); }
-                      else toast('读档失败：' + (r.reason || ''), false);
+                      else toast('读档失败：' + reasonText(r.reason), false);
                     });
                   });
               }));
@@ -6183,14 +6196,20 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
                解决「征兵满了没法解甲归田」以及「剔除武将后残留兵力」两个问题。 */
             if (soldiers > 0 && a.id) {
               var disbandBtn = mkBtn('解甲', 'ghost', function () {
-                var counts = [0, 0, 0];
-                counts[pos] = soldiers;
-                send('army.disarm', { armyId: a.id, counts: counts }).then(function (rsp) {
-                  if (rsp.code === 0) {
-                    toast('解甲归田 ' + (rsp.msg && rsp.msg.disbanded || soldiers) + ' 兵，返还 '
-                      + ((rsp.msg && rsp.msg.refund) || 0) + ' 金', true);
-                    tabArmy(body, c);
-                  } else { toast('解甲失败：' + errText(rsp), false); }
+                /* ★ P40：解甲不可撤销且在途征兵会作废，先写明后果再让玩家确认。 */
+                confirmBox('解甲归田', [
+                  '将「' + esc(armsNames[pos]) + '」现有 ' + fmt(soldiers) + ' 兵遣散回驻城，按 30% 兵值返还金。',
+                  '该槽在途征兵会一并作废，此操作不可撤销。',
+                ], '确认解甲', '取消', function () {
+                  var counts = [0, 0, 0];
+                  counts[pos] = soldiers;
+                  send('army.disarm', { armyId: a.id, counts: counts }).then(function (rsp) {
+                    if (rsp.code === 0) {
+                      toast('解甲归田 ' + (rsp.msg && rsp.msg.disbanded || soldiers) + ' 兵，返还 '
+                        + ((rsp.msg && rsp.msg.refund) || 0) + ' 金', true);
+                      tabArmy(body, c);
+                    } else { toast('解甲失败：' + errText(rsp), false); }
+                  });
                 });
               });
               disbandBtn.title = '遣散该兵种全部兵力，退回驻城并返还 30% 兵值金';
@@ -6208,7 +6227,9 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
               input.min = 1;
               input.style.width = '66px';
               var go = mkBtn('征兵', '', function () {
-                var n = Math.max(0, Number(input.value) || 0);
+                var want = Math.floor(Number(input.value) || 0);
+                if (!(want >= 1)) { toast('请先填写 1 以上的征兵人数', false); return; }
+                var n = want;
                 var cnts = [0, 0, 0];
                 cnts[pos] = n;
                 send('army.conscript', { armyId: a.id, cnts: cnts }).then(function (rsp) {

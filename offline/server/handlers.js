@@ -991,7 +991,12 @@ export function handleRequest(ctx, req) {
         rsp.msg = { reason: 'res_not_enough', need: ret };
         break;
       }
-      for (let i = 0; i < 4; i += 1) r[RES_KEYS[i]] = (r[RES_KEYS[i]] || 0) + ret[i];
+      for (let i = 0; i < 4; i += 1) {
+        if (!ret[i]) continue;
+        r[RES_KEYS[i]] = (r[RES_KEYS[i]] || 0) + ret[i];
+        /* ★ P40：集市兑换与征兵/缴获一样进府库流水，否则「钱粮去哪了」在账本里查不到。 */
+        recordRes(state, RES_KEYS[i], ret[i], '集市兑换');
+      }
       ctx.push('roleRes.push', roleResOf(state));
       ctx.save();
       rsp.msg = {};

@@ -1344,8 +1344,15 @@ export function assaultEscalationTick(state, cfg, ctx) {
       });
       out.push({ kind: 'besiege', cityId: hit.id, city: nm, faction: g.faction });
     }
-    /* 围城损耗按旬结算（避免按日重复扣） */
-    if (today % 10 === 0) {
+    /* ★ P40：围城损耗每 10 游戏日只扣一次。
+       旧判据 `today % 10 === 0` 只在「每旬调一次」时成立；真实 settleWorld 由
+       index.js 每 500ms 调用，同一天会连扣 120 次（民心 −480、守军瞬间归零），
+       这是挂机探针里城池莫名速崩的根因。改用每支来犯军自己的旬步数作幂等键：
+       同一步内重复调用不再重复扣，跨步才推进一次。 */
+    const drainStep = Math.floor(Math.max(0, today - Number(g.spawnDay)) / 10);
+    const lastStep = Math.max(0, Math.floor(Number(g.lastSiegeDrainStep) || 0));
+    if (drainStep > lastStep) {
+      g.lastSiegeDrainStep = drainStep;
       const defenders = Math.max(0, Number(city.troops) || 0);
       const attackers = Math.max(1, Number(g.soldiers) || 0);
       /* 围攻方兵力占比：兵越多逃散越快，3%~9%/旬封顶（不会一旬秒城） */

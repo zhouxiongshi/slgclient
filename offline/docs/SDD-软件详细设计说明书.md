@@ -2399,6 +2399,19 @@ build/SLG-Offline-win32-x64/
 **验证**：新增 `tests/p20`（三槽重载）、`p36-growth-speed`、`p37-ai-initiative`、`p38-animation-tempo`、`p39-interior-ux`，并扩充 `p10-interior-task`；`p27`/`p33`/`p34`/`ui-presentation-hygiene` 静态闸保持通过。开局 AI 目标从 1/8 家扩张提升到 7/8 家，汉城驰援在确定性种子下实测可触发。
 
 
+### 17.29 围城幂等 / 兑换流水 / 文案兜底 / 双态布局闸（2026-11-22 第十轮自迭代）
+
+独立审查发现三处「约定与真实调用频率/口径不一致」，另有两处玩家文案与发布闸漏网：
+
+| 项 | 权威口径 |
+|---|---|
+| 围城损耗幂等 | `strategy.js assaultEscalationTick()`：`settleWorld` 实为每 500ms 调用一次，旧的 `today % 10 === 0` 会让同一游戏日扣 120 次民心与守军。改以来犯军 `g.lastSiegeDrainStep = floor((today - spawnDay)/10)` 为幂等键，同一步重复调用不扣，跨步再扣一次；40 日宽限、3%~9% 兵力占比、民心滚动、180 日撤围与开城判定都不动 |
+| 集市兑换流水 | `handlers.js interior.transform()` 与征兵/缴获同口径：每次正负两侧都经 `recordRes(state, RES_KEYS[i], delta, '集市兑换')` 入府库流水；总量不增、不同槽、资源足额三条拒绝条件不变 |
+| 玩家文案 | `skills.js REASON_TEXT` 扩自立/存档码，`reasonText()` 统一中文兜底；`warReason()` 不再把未知 reason 原样回显；解甲加不可逆二次确认，征兵人数 <1 直接中文拒绝 |
+| 发布闸 | `check-release.js` 7.7.5 把 `layout-packaged.json` 纳入新鲜度目标，7.8b 对源码态/打包态布局报告同时断言五档分辨率、零裁切、零硬问题、零页面异常；此前打包态报告过期也能全绿 |
+
+**验证**：新增 `tests/p40-siege-idempotency-and-ledger.test.js`（4 条）：同日 120 次推进只扣一旬、跨旬再扣一次；兑换两侧流水；英文 reason 静态闸；布局双态闸静态检查。
+
 ---
 
 ## 18. 需求 → 设计 → 实现 → 验证 全链路追溯

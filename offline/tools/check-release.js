@@ -412,7 +412,8 @@ function reportStale(path, toolRel) {
     ['源码态真鼠标', 'mouse-playtest-original.json'],
     ['打包态真鼠标', 'mouse-playtest-packaged.json'],
     ['性能探针', 'perf-original.json'],
-    ['布局美观审计', 'layout-original.json'],
+    ['布局美观审计（源码态）', 'layout-original.json', 'layout-audit.js'],
+    ['布局美观审计（打包态）', 'layout-packaged.json', 'layout-audit.js'],
     ['配色对比度', 'contrast.json'],
     ['战法术语表', 'terms.json'],
     ['合规台账', 'compliance.json'],
@@ -421,11 +422,15 @@ function reportStale(path, toolRel) {
     ['武将平衡审查', 'hero-balance.json'],
   ];
   const bad = [];
-  for (const [, file] of TARGETS) {
+  for (const [, file, toolRel] of TARGETS) {
     const p = join(REPORTS, file);
     if (!existsSync(p)) { bad.push(file + '（未生成）'); continue; }
     const at = statSync(p).mtimeMs;
     if (at < newestAt) bad.push(file + '（报告 ' + fmt(at) + ' 早于源码 ' + fmt(newestAt) + '）');
+    if (toolRel) {
+      const tp = join(ROOT, 'tools', toolRel);
+      if (existsSync(tp) && at < statSync(tp).mtimeMs) bad.push(file + '（早于生成工具）');
+    }
   }
   check('全部验收报告不早于最后一次出厂源码改动（最新源码：'
     + (newestFile ? relative(ROOT, newestFile) + ' @ ' + fmt(newestAt) : '—') + '）',
@@ -466,6 +471,24 @@ for (const [label, file] of [['源码目录态', 'smoke-original.json'], ['打�
   check(`${label}内核战斗事件指纹可复核`,
     /^[0-9a-f]{16}$/.test(r?.battle?.event_fingerprint ?? '') && (r?.battle?.events ?? 0) > 0,
     JSON.stringify(r?.battle));
+}
+
+/* ---------------- 7.8b 布局美观审计：源码态与打包态都必须是本次实测绿 ----------------
+ * 7.7.5 原来只盯 layout-original.json，打包态报告即使没跑/过期也不影响发布结论。
+ * 这里把两态一起纳入硬闸：五档分辨率、零裁切、零硬问题、零页面异常。 */
+for (const [label, file] of [['源码态', 'layout-original.json'], ['打包态', 'layout-packaged.json']]) {
+  const r = readJson(join(REPORTS, file));
+  const viewports = Array.isArray(r?.viewports) ? r.viewports : [];
+  const badVp = viewports.filter((v) => !v || (v.req?.w || 0) < 1280 || (v.req?.h || 0) < 720);
+  check(`${label}布局五档分辨率零裁切 / 零硬问题 / 零页面异常`,
+    r?.passed === true && viewports.length >= 5 && badVp.length === 0
+      && Number(r?.clippedTotal ?? -1) === 0
+      && Array.isArray(r?.issues) && r.issues.length === 0
+      && Array.isArray(r?.pageErrors) && r.pageErrors.length === 0
+      && Array.isArray(r?.consoleErrors) && r.consoleErrors.length === 0,
+    JSON.stringify({ passed: r?.passed, viewports: viewports.length,
+      badVp: badVp.length, clipped: r?.clippedTotal,
+      issues: r?.issues?.length, page: r?.pageErrors?.length, console: r?.consoleErrors?.length }));
 }
 
 /* ---------------- 7.9 合规台账（U26） ---------------- */
