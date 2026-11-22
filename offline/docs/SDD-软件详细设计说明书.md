@@ -2354,6 +2354,22 @@ build/SLG-Offline-win32-x64/
 
 **验证**：新增 `tests/p28-event-staleness.test.js` 4 条：推演成功刷新、点选前字符串口径复核、英文 reason 中文降级、逾期结案后投影去掉旧 id 且旧点击得 `no_pending`；连同 `m3-event-ui`、`p11-ui-integrity` 定向通过。
 
+### 17.26 设施升级死锁 / 工期单位 / 遭遇对阵对齐（2026-11-21 用户实机反馈）
+
+用户反馈「集市、伐木等所有设施升级都会报错；升级工期应按旬或日，不该用秒；出征/遭遇页的守军与我军要对齐」。实机存档复现：全局粮池为 0，而 `facility_*.json` 给每种设施统一配「木/铁/石/粮各 lv×1000」，于是连「先建集市→资源兑换换粮」的自救链都被粮门槛锁死；同时 UI 把原始 `time=10/20/30` 直接显示成 `10s/20s/30s`。
+
+| 项 | 权威口径 |
+|---|---|
+| 成本派生层 | `config.js facilityUpgradeNeed()`：原始配置表逐字不动，派生层只删除 `grain`，木/铁/石/政令沿用原表。`city.upFacility` 只消费派生成本，`city.facilities` 也只下发派生成本；原 `facilityNeed()` 保留给配置一致性测试 |
+| 游戏日工期 | `facilityUpgradeDays()` 把原表 `time` 按游戏日解读（10/20/30…）；`handlers.js facilityProgress()` 用 `up_day + 工期` 判完成，`up_time` 仅保留旧协议「升级中」语义 |
+| 老档迁移 | 老存档只有秒级 `up_time`，首次读取时把 `up_day` 设为当前游戏日，既不瞬间跳级也不永久卡住；新升级同时写 `up_time` 与 `up_day` |
+| 下发与展示 | `city.facilities` 下发 `nextDays/upgradeDays/upgradeRemainDays/upgradeStartDay`；两处设施 UI 显示「工期 10 日（1 旬）」「升级中 · 还需 N 日」，成功 toast 也报工期 |
+| 拒绝文案 | `skills.js REASON_TEXT` 把 `res_not_enough/upgrading/max_level/not_own_city` 等内部 reason 翻成中文，不再出现「升级失败：res_not_enough」 |
+| 对阵对齐 | `warSideHtml()` + `.war-faceoff/.war-side`：遭遇页与推演结果均为左右等宽双卡，攻守异色、数字同字号同基线；窄屏单列。只改注入层表现，不改协议与结算 |
+| 边界 | 不改 `web/` 字节、协议字段语义、冻结原表；不改变军粮 0.1、不把设施成本改成免费，`res_not_enough` 仍能拦真缺料 |
+
+**验证**：新增 `tests/p34-facility-upgrade-and-war-ui.test.js` 5 条：粮池为 0 也能升集市/伐木场、按游戏日满工期才升级、老档不跳级、拒绝原因中文与秒级文案清零、遭遇/推演双卡对齐；`building.test.js` 同步改为派生成本与游戏日时间旅行。实机推演截图 `reports/probe-preview-p34c.png` 显示双方卡片左右对齐。
+
 
 ---
 

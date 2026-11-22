@@ -53,14 +53,15 @@ test('city.upFacility 按真实 need 扣资源并进入工期，升级中拒绝�
   const before = { wood: res.wood, iron: res.iron, stone: res.stone, grain: res.grain };
   const r1 = handleRequest(ctx, req('city.upFacility', { cityId: 1, fType: 19 }));
   assert.equal(r1.code, 0);
-  const need = cfg.facilityNeed(19, 1);
+  const need = cfg.facilityUpgradeNeed(19, 1);
   assert.equal(res.wood, before.wood - need.wood);
   assert.equal(res.iron, before.iron - need.iron);
   assert.equal(res.stone, before.stone - need.stone);
-  assert.equal(res.grain, before.grain - need.grain);
+  assert.equal(res.grain, before.grain, '派生成本不再吃粮，避免全局粮池见底时设施全锁死');
   const f = state.facilities[1].find((x) => x.type === 19);
   assert.equal(f.level, 0);            // 升级中，等级未变
-  assert.ok(f.up_time > 0);            // 进入工期
+  assert.ok(f.up_time > 0);            // 进入工期（旧协议兼容字段）
+  assert.equal(f.up_day, state.clock.day, '真正工期按游戏日起算');
   assert.equal(handleRequest(ctx, req('city.upFacility', { cityId: 1, fType: 19 })).code, 12);
 });
 
@@ -73,8 +74,7 @@ test('设施到点被动完成，产量加成生效（磨坊→粮食、仓库�
   const f25 = state.facilities[1].find((x) => x.type === 25);
   const grain0 = state.roleRes.grain_yield;
   const cap0 = state.roleRes.depot_capacity;
-  f19.up_time = nowSec() - 3600;       // 时间旅行：工期已过
-  f25.up_time = nowSec() - 3600;
+  state.clock.day += cfg.facilityUpgradeDays(19, 1); // 工期按游戏日推进，不再按真实秒
   tick(ctx);
   assert.equal(f19.level, 1);
   assert.equal(f25.level, 1);
@@ -129,7 +129,7 @@ test('interior.transform：无集市拒绝(58)，有集市按 from/to 跨资源�
   state.roleRes.wood += 100000;
   handleRequest(ctx, req('city.upFacility', { cityId: 1, fType: 15 })); // 集市
   const market = state.facilities[1].find((x) => x.type === 15);
-  market.up_time = nowSec() - 3600;
+  state.clock.day += cfg.facilityUpgradeDays(15, 1);
   tick(ctx);
   assert.ok(market.level >= 1);
   const w0 = state.roleRes.wood;

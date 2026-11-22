@@ -285,7 +285,18 @@ export function loadConfig(confDir = defaultConfDir()) {
     buildCustomByType,
     facilityMaxLevel: (t) => facilityByType.get(t)?.levels?.length ?? 0,
     facilityNeed: (t, lv) => facilityByType.get(t)?.levels?.[lv - 1]?.need ?? null,
+    /* ★ P34：原版所有设施统一吃「木铁石粮各 lv×1000」，全局粮池被驻军吃空后，
+       连「建集市→兑换粮食」这条自救链都点不动。原表逐字不动，这里只加派生层：
+       设施升级不再吃粮，木/铁/石/政令沿用原表；工期原值改按游戏日解读。 */
+    facilityUpgradeNeed: (t, lv) => {
+      const raw = facilityByType.get(t)?.levels?.[lv - 1]?.need;
+      if (!raw) return null;
+      const need = { ...raw };
+      delete need.grain;
+      return need;
+    },
     facilityTime: (t, lv) => facilityByType.get(t)?.levels?.[lv - 1]?.time ?? 0,
+    facilityUpgradeDays: (t, lv) => facilityByType.get(t)?.levels?.[lv - 1]?.time ?? 0,
     facilityValues: (t, lv) => facilityByType.get(t)?.levels?.[lv - 1]?.values ?? [],
     facilityAdditions: (t) => facilityByType.get(t)?.additions ?? [],
     buildCustomCfg: (t, lv) => buildCustomByType.get(t)?.levels?.find((l) => l.level === lv) ?? null,

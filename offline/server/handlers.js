@@ -147,13 +147,32 @@ const CODE = {
   NotHasJiShi: 58,
 };
 
-/** 设施被动升级（复刻 model.Facility.GetLevel：升级到点后在读取时自动完成）。 */
-function facilityGetLevel(cfg, f) {
-  if (f.up_time > 0) {
-    const t = cfg.facilityTime(f.type, f.level + 1);
-    if (t > 0 && nowSec() >= f.up_time + t) {
+/**
+ * 设施升级进度（★ P34：工期按游戏日，不再按真实秒）。
+ * up_day 记开工的游戏日；老存档只有秒级 up_time，首次读取时以当前日为起点，
+ * 保证旧档不会瞬间跳级，也不会永远卡在升级中。
+ */
+function facilityProgress(state, cfg, f) {
+  const days = Math.max(0, Math.round(Number(cfg.facilityUpgradeDays?.(f.type, f.level + 1)
+    ?? cfg.facilityTime(f.type, f.level + 1)) || 0));
+  const active = Number(f.up_time) > 0;
+  let startDay = Number(f.up_day) || 0;
+  if (active && !startDay) {
+    startDay = Number(f.up_time) > 1e9 ? Number(state.clock?.day) || 1 : Number(f.up_time);
+    f.up_day = startDay;
+  }
+  const passed = active ? Math.max(0, (Number(state.clock?.day) || 1) - startDay) : 0;
+  return { days, active, startDay, passed, remain: active ? Math.max(0, days - passed) : 0 };
+}
+
+/** 设施被动升级（到点后在读取时自动完成；完成判据是游戏日，不是墙上时钟）。 */
+function facilityGetLevel(state, cfg, f) {
+  if (Number(f.up_time) > 0) {
+    const p = facilityProgress(state, cfg, f);
+    if (p.days > 0 && p.passed >= p.days) {
       f.level += 1;
       f.up_time = 0;
+      f.up_day = 0;
     }
   }
   return f.level;
@@ -162,7 +181,7 @@ function facilityGetLevel(cfg, f) {
 /** 所有城池设施被动升级（每次请求前调用）。 */
 function tickFacilities(state, cfg) {
   for (const list of Object.values(state.facilities || {})) {
-    for (const f of list) facilityGetLevel(cfg, f);
+    for (const f of list) facilityGetLevel(state, cfg, f);
   }
 }
 
@@ -231,7 +250,7 @@ function facilityAdditions(state, cfg) {
     const localPrologue = cid === localId && state.oath?.done !== true;
     if (cityRow?.owner && cityRow.owner !== 'player' && !localPrologue) continue;
     for (const f of list || []) {
-      const lv = facilityGetLevel(cfg, f);
+      const lv = facilityGetLevel(state, cfg, f);
       if (lv <= 0) continue;
       const values = cfg.facilityValues(f.type, lv);
       cfg.facilityAdditions(f.type).forEach((aType, i) => {
@@ -769,12 +788,20 @@ export function handleRequest(ctx, req) {
       const clientCid = (state.citys || []).some((x) => Number(x.cityId) === cityId)
         ? cityId : (Number(mainCity(state)?.cityId) || 1);
       const list = ownFacilityList(state, cfg, realCid);
-      const rawFacilities = (list || []).map((f) => ({
-        ...clone(f),
-        maxLevel: cfg.facilityMaxLevel(f.type),
-        nextNeed: cfg.facilityNeed(f.type, f.level + 1),
-        nextTime: cfg.facilityTime(f.type, f.level + 1),
-      }));
+      const rawFacilities = (list || []).map((f) => {
+        const p = facilityProgress(state, cfg, f);
+        return {
+          ...clone(f),
+          maxLevel: cfg.facilityMaxLevel(f.type),
+          nextNeed: cfg.facilityUpgradeNeed(f.type, f.level + 1),
+          /* nextDays 是玩家可见工期（游戏日）；nextTime 保留兼容字段但不再显示秒。 */
+          nextDays: p.days,
+          nextTime: p.days,
+          upgradeDays: p.days,
+          upgradeRemainDays: p.remain,
+          upgradeStartDay: p.startDay,
+        };
+      });
       /* ★ M4-12：两处设施 UI（本城/城池内页）与六府内政都只读这一份结果。
          默认隐藏 20 项「未参与结算」的原版占位设施；GM 可用
          SLG_LEGACY_FACILITIES=1 取回全量做对照（逐项带 active 标记）。 */
@@ -786,8 +813,8 @@ export function handleRequest(ctx, req) {
       break;
     }
     case 'city.upFacility': {
-      // 原版语义：校验 maxLevel / 未在升级中 / 按 facility_*.json 的 need 扣资源；
-      // 升级有工期（up_time），到点后由 facilityGetLevel 被动完成
+      // 原版语义：校验 maxLevel / 未在升级中 / 按派生 need 扣资源；
+      // 工期按游戏日（up_day + facilityUpgradeDays），到点后由 facilityGetLevel 被动完成
       /* ★ 客户端 qryCityFacilities 不传参时 cityId=0，用 ?? 会让 0 漏过去，
          结果回一个不存在的城、客户端 getMyCityById(0) 拿到 null 直接崩。0 视作未指定。 */
       const cityId = Number(m.cityId) || mainCity(state)?.cityId || 1;
@@ -836,7 +863,8 @@ export function handleRequest(ctx, req) {
         rsp.msg = { reason: 'upgrading', fType, level: f.level };
         break;
       } // 正在升级中
-      const need = cfg.facilityNeed(fType, f.level + 1);
+      /* 派生成本：原表吃粮会让全局粮池见底时所有设施（含集市）永久锁死，这里只去粮。 */
+      const need = cfg.facilityUpgradeNeed(fType, f.level + 1);
       if (!need) {
         rsp.code = CODE.UpError;
         rsp.msg = { reason: 'no_cost_table', fType, nextLevel: f.level + 1 };
@@ -848,7 +876,9 @@ export function handleRequest(ctx, req) {
         rsp.msg = { reason: 'res_not_enough', need, cost: need };
         break;
       }
+      /* up_time 保留给旧协议/存档识别「升级中」，真正完成判据是 up_day + 游戏日工期。 */
       f.up_time = nowSec();
+      f.up_day = Number(state.clock?.day) || 1;
       ctx.push('roleRes.push', roleResOf(state));
       ctx.save();
       rsp.msg = { cityId, realCityId: realCid, facility: clone(f), role_res: roleResOf(state) };
@@ -931,7 +961,7 @@ export function handleRequest(ctx, req) {
       const city = mainCity(state);
       const facilities = state.facilities[city?.cityId ?? 1] || [];
       const market = facilities.find((f) => f.type === 15);
-      if (!market || facilityGetLevel(cfg, market) <= 0) {
+      if (!market || facilityGetLevel(state, cfg, market) <= 0) {
         // ★ 修 bug-10：以前只回 code 58，没有 msg，客户端只能弹通用错误
         rsp.code = CODE.NotHasJiShi;
         rsp.msg = { reason: 'no_market', hint: '需要先在本城建造并升级「集市」' };

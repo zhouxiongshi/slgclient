@@ -3635,10 +3635,21 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     '#slgUIv2 .warpv-force .fg{margin-bottom:7px;}',
     '#slgUIv2 .warpv-force .fg b{color:#f0d998;font-size:12.5px;}',
     '#slgUIv2 .warpv-force .fs{font-size:11px;color:#b6ab92;line-height:1.7;}',
+    /* ★ P34：遭遇/推演的双方对阵卡，左右等宽、数字基线一致，不再一行文字挤在一起 */
+    '#slgUIv2 .war-faceoff{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0 10px;}',
+    '#slgUIv2 .war-side{border:1px solid rgba(186,154,82,.24);border-radius:6px;'
+      + 'background:rgba(255,255,255,.03);padding:9px 12px;text-align:center;min-width:0;}',
+    '#slgUIv2 .war-side.mine{border-color:rgba(192,57,43,.5);background:rgba(192,57,43,.07);}',
+    '#slgUIv2 .war-side.theirs{border-color:rgba(44,95,138,.5);background:rgba(44,95,138,.07);}',
+    '#slgUIv2 .war-side .wt{font-size:11px;letter-spacing:2px;color:#c8b88a;}',
+    '#slgUIv2 .war-side .wn{font-size:19px;font-weight:700;line-height:1.5;color:#f0d998;'
+      + 'font-variant-numeric:tabular-nums;}',
+    '#slgUIv2 .war-side .wm{font-size:11px;color:#b6ab92;line-height:1.6;word-break:break-all;}',
+    '#slgUIv2 .war-side .wl{margin-top:3px;font-size:11px;color:#e0c56a;}',
     '#slgUIv2 .warpv-detail{margin-top:6px;font-size:11px;color:#9c9382;}',
     '#slgUIv2 .warpv-detail summary{cursor:pointer;color:#c8b88a;font-size:11.5px;padding:3px 0;}',
     '#slgUIv2 .warpv-detail div{padding:2px 0;line-height:1.7;word-break:break-word;}',
-    '@media (max-width:760px){#slgUIv2 .warpv-rows,#slgUIv2 .warpv-forces{grid-template-columns:1fr}}',
+    '@media (max-width:760px){#slgUIv2 .warpv-rows,#slgUIv2 .warpv-forces,#slgUIv2 .war-faceoff{grid-template-columns:1fr}}',
     '#slgUIv2 h4{color:#c8b88a;font-size:12px;margin:10px 0 6px;letter-spacing:2px;}',
     /* ★ P11 城市内部页：点地图城池即「进城」，整屏一页，不再叠浮窗 */
     '#slgUIv2 .citypage{position:fixed;inset:0;z-index:100420;display:flex;flex-direction:column;'
@@ -3736,6 +3747,12 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
   window.__slgToast = toast;
 
   function fmt(n) { n = Math.floor(Number(n) || 0); return n >= 10000 ? (n / 10000).toFixed(1) + '万' : String(n); }
+  /* 工期一律按游戏日/旬展示（★ P34），原始配置里的秒数只当「游戏日数」解读。 */
+  function dayText(n) {
+    var d = Math.max(0, Math.floor(Number(n) || 0));
+    if (!d) return '即时完成';
+    return d + ' 日' + (d % 10 === 0 ? '（' + (d / 10) + ' 旬）' : '');
+  }
   /* ★ 本 IIFE 原先没有 esc —— 城池面板里一堆 esc(...) 会抛 ReferenceError，
      整个页签渲染中断（概览页的出征块因此干脆不出现，看着就像「没有出征入口」）。 */
   function esc(s) {
@@ -3744,9 +3761,21 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     });
   }
   var ERR_TEXT = { 1: '资源不足', 12: '已达最高等级', 16: '资源不足', 53: '此处不可操作', 55: '今日次数已用完', 56: '冷却中', 58: '需要先建集市' };
+  /* ★ P34：拒绝原因只作内部判据，玩家侧一律中文；旧版把 res_not_enough
+     直接弹成「升级失败：res_not_enough」，看起来像所有设施都坏了。 */
+  var REASON_TEXT = {
+    res_not_enough: '资源不足', max_level: '已达最高等级', upgrading: '该设施正在升级中',
+    not_own_city: '只能在己方城办理', no_city: '城池不存在', no_such_facility: '没有这项设施',
+    facility_disabled: '该设施未参与本版本结算', no_cost_table: '缺少该等级的费用配置',
+    bad_action: '未知操作', no_pending: '事务已结案', unknown_event: '事件已变化',
+    bad_choice: '该选项已不可选', no_army: '没有可用部队', zero: '数量不能为零',
+    empty_slot: '槽位为空', marching: '部队正在行军', bad_order: '指令无效',
+    bad_pos: '位置无效', bad_general: '武将不可用', no_population: '此城无人口',
+  };
   function errText(rsp) {
-    if (rsp && rsp.msg && rsp.msg.reason) return String(rsp.msg.reason);
-    return ERR_TEXT[rsp && rsp.code] || ('失败（' + ((rsp && rsp.code) || '?') + '）');
+    var reason = rsp && rsp.msg && rsp.msg.reason;
+    if (reason) return REASON_TEXT[reason] || ERR_TEXT[rsp && rsp.code] || '操作未生效，请稍后重试';
+    return ERR_TEXT[rsp && rsp.code] || '操作未生效，请稍后重试';
   }
   // silent：启动早期（客户端模块尚未执行完，__slgSend 还没挂上）的预取不要弹提示，
   // 否则每次打开都会在登录页闪一条「尚未连上游戏」，看着像断线。
@@ -3775,6 +3804,15 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     return e;
   }
   function kv(k, v) { return '<div class="kv"><span>' + k + '</span><span>' + v + '</span></div>'; }
+  /* 双方对阵卡：相同结构、相同宽度、相同数字字号，只换阵营色，方便一眼对照。 */
+  function warSideHtml(side, title, where, troops, loss) {
+    return '<div class="war-side ' + (side === 'a' ? 'mine' : 'theirs') + '">'
+      + '<div class="wt">' + esc(title) + '</div>'
+      + '<div class="wn">' + fmt(troops) + ' 兵</div>'
+      + '<div class="wm">' + esc(where || '') + '</div>'
+      + (loss != null ? '<div class="wl">本波折损 ' + fmt(loss) + '</div>' : '')
+      + '</div>';
+  }
 
   /* ★ 2026-11-17 城防：城墙耐久是「攻城属性打、城防属性撑」的那条真实数值，
      面板必须把它显出来，否则玩家还是看不出攻城/城防有什么用。 */
@@ -4094,10 +4132,12 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     pending.forEach(function (p) {
       var card = el('div', 'card',
         '<h4 style="margin-top:0">⚔ ' + esc(p.fromName) + ' → ' + esc(p.toName) + ' · 两军对阵</h4>'
+        + '<div class="war-faceoff">'
+        + warSideHtml('a', '我军', p.fromName, p.troops, null)
+        + warSideHtml('d', '守军约', p.toName, p.enemyTroops, null)
+        + '</div>'
         + '<div class="grid">'
         + kv('抵达', '第 ' + p.arriveDay + ' 日')
-        + kv('我军', fmt(p.troops) + ' 兵')
-        + kv('守军约', fmt(p.enemyTroops) + ' 兵')
         + kv('已耗军粮', fmt(p.grainCost))
         + '</div>'
         + '<div class="cost" style="margin-top:6px">此战不可逆：确认后才走正式结算并写战报；撤军退还一半军粮，部队回出发城。</div>');
@@ -4470,10 +4510,14 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       + '<div class="warpv-verdict" style="color:' + tone + '">' + esc(n.verdict || '推演完成') + '</div>'
       + '<div class="warpv-line">' + esc(n.headline || r.attribution || '') + '</div></div>';
 
-    html += '<div class="warpv-rows">' + (n.rows || [
-      { k: '投入兵力', v: '我军 ' + fmt(r.aTotal) + ' / 守军 ' + fmt(r.dTotal) },
-      { k: '预计折损', v: '我军 −' + fmt(r.aLoss) + ' / 歼敌 ' + fmt(r.dLoss) },
-    ]).map(function (row) {
+    /* ★ P34：推演结果顶部也按左右两栏对照，兵力/折损不再塞在同一行文字里。 */
+    html += '<div class="war-faceoff">'
+      + warSideHtml('a', '我军 · 投入 / 折损', n.myWhere || '出征部队', r.aTotal, r.aLoss)
+      + warSideHtml('d', '守军 · 城防 / 歼敌', (r.target && r.target.name) || n.defWhere || '目标城', r.dTotal, r.dLoss)
+      + '</div>';
+    html += '<div class="warpv-rows">' + (n.rows || []).filter(function (row) {
+      return !/投入兵力|预计折损/.test(String(row.k || ''));
+    }).map(function (row) {
       return '<div class="warpv-row"><span class="k">' + esc(row.k) + '</span><span class="v">' + esc(row.v) + '</span></div>';
     }).join('') + '</div>';
     /* ★ 2026-11-20：粮耗取服务端 marchGrainCost 下发值，与正式出征实扣同源。 */
@@ -5085,19 +5129,19 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
           return f.nextNeed && f.nextNeed[k[0]];
         }).map(function (k) {
           return k[1] + ' ' + fmt(f.nextNeed[k[0]]);
-        }).join(' · ') + (f.nextTime ? '　工期 ' + f.nextTime + 's' : '');
+        }).join(' · ') + (f.nextDays ? '　工期 ' + dayText(f.nextDays) : '');
         row.innerHTML = '<span><b style="color:#f0d998">' + esc(f.name) + '</b> '
           + '<span class="winTag">Lv' + f.level + '/' + f.maxLevel + '</span>'
           + '<div class="cost">' + esc(f.effectText || '') + '</div>'
           + '<div class="cost">' + chips + '</div></span>';
         if (f.up_time > 0) {
-          row.appendChild(el('span', 'cost', '升级中…'));
+          row.appendChild(el('span', 'cost', '升级中 · 还需 ' + dayText(f.upgradeRemainDays)));
         } else if (f.level >= f.maxLevel) {
           row.appendChild(el('span', 'cost', '—'));
         } else {
           row.appendChild(mkBtn('升级', '', function () {
             send('city.upFacility', { cityId: clientCityId(), realCityId: c.id, fType: f.type }).then(function (r2) {
-              if (r2.code === 0) toast(f.name + ' 开始升级', true);
+              if (r2.code === 0) toast(f.name + ' 开始升级，工期 ' + dayText(f.nextDays), true);
               else toast('升级失败：' + errText(r2), false);
               /* 只刷这张卡：等级/「升级中…」立刻更新，滚动位置与其它卡片原样不动 */
               mountFacilitiesCard(card, c);
@@ -5606,17 +5650,17 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
               + k[1] + ' ' + fmt(cost[k[0]]) + '</span>';
           }
         });
-      if (f.nextTime) chips += '<span class="chip">工期 ' + f.nextTime + 's</span>';
+      if (f.nextDays) chips += '<span class="chip">工期 ' + dayText(f.nextDays) + '</span>';
       left.innerHTML += '<div class="cost">' + (f.level >= f.maxLevel ? '已满级' : chips) + '</div>';
       row.appendChild(left);
       if (f.up_time && f.up_time > 0) {
-        row.appendChild(el('span', 'cost', '升级中…'));
+        row.appendChild(el('span', 'cost', '升级中 · 还需 ' + dayText(f.upgradeRemainDays)));
       } else if (f.level >= f.maxLevel) {
         row.appendChild(el('span', 'cost', '—'));
       } else {
         row.appendChild(mkBtn('升级', '', function () {
           send('city.upFacility', { cityId: clientCityId(), realCityId: cid, fType: f.type }).then(function (rsp) {
-            if (rsp.code === 0) toast(f.name + ' 开始升级', true);
+            if (rsp.code === 0) toast(f.name + ' 开始升级，工期 ' + dayText(f.nextDays), true);
             else toast('升级失败：' + errText(rsp), false);
             if (onAfterUpgrade) onAfterUpgrade();
           });
