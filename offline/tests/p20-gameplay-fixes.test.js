@@ -129,6 +129,24 @@ test('武将编辑器：写入第二战法后当前存档立即同步，且不�
   editorSave(cfg, state, { cfgId: g.cfgId, skillCfgId2: 0 });
 });
 
+test('武将编辑器：重载配置后第二/第三槽不丢失，后续编辑不清空存档槽', () => {
+  const { state } = freshState(false);
+  const g = state.generals[0];
+  g.skills = [{ id: 19001, lv: 4, cfgId: 19001 }, null, null];
+  assert.equal(editorSave(cfg, state, {
+    cfgId: g.cfgId, skillCfgId2: 10001, skillCfgId3: 10002,
+  }).ok, true);
+  const reloaded = loadConfig();
+  const row = reloaded.generalByCfg.get(Number(g.cfgId));
+  assert.equal(row.skillCfgId2, 10001, '重载后第二槽必须仍在配置行里');
+  assert.equal(row.skillCfgId3, 10002, '重载后第三槽必须仍在配置行里');
+  assert.equal(editorSave(reloaded, state, { cfgId: g.cfgId, force: 51 }).ok, true);
+  assert.equal(g.skills[1].cfgId, 10001, '改属性不得清空第二槽');
+  assert.equal(g.skills[2].cfgId, 10002, '改属性不得清空第三槽');
+  assert.equal(g.skills[0].lv, 4, '第一槽等级保留');
+  editorSave(reloaded, state, { cfgId: g.cfgId, skillCfgId2: 0, skillCfgId3: 0 });
+});
+
 test('存档归一化：半残技能槽被清成 null，不再让下游 map 崩', () => {
   const { state } = freshState(false);
   state.generals[0].skills = [{ id: 0 }, 'oops', { cfgId: 19001, lv: 99 }];

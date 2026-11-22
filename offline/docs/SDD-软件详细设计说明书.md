@@ -608,7 +608,7 @@ heroes-240 与原表交集 → 史载五维覆盖主属性；非交集生成派�
 | `fate.js` | 45 | 宿命链状态机，只回答「这一站写谁的名字」 | `chainDef`；`ensureFates`；`fateState`；`transitionFate`；`actorName` | `campaign.js`、`dossier.js`、`world.js` |
 | `garrison.js` | 78 | 城池守将确定性分配（FNV-1a，同城恒定跨城不重） | `garrisonPool(cfg,{preferNames,exclude})`；`garrisonCfgIds(cfg,{cityId,owner,level,exclude,preferNames})→number[]`；`garrisonLabel` | `battle.js`、`strategy.js` |
 | `general-editor.js` | 184 | 武将编辑器领域层，只写覆盖层 | `EDIT_RANGES / EDIT_KEYS`；`sanitizeGeneralEdit`；`editorList(cfg)→{ok,total,rows,ranges}`；`editorSave(cfg,state,input)`；`editorReset`；`editorRowOf`；`overridesFreshStamp` | `index.js` |
-| `general-progress.js` | 69 | 武将等级：经验只来自出征折损，上限 10 | `GENERAL_LEVEL_CAP=10`；`expToAdvance(lv)=40*lv`；`applyGeneralExp`；`generalProgress`；`grantBattleExp`；`levelUpSentence` | `handlers.js`、`panels.js`、`strategy.js`、`world.js` |
+| `general-progress.js` | 72 | 武将等级：经验来自内政与出征，上限 10 | `GENERAL_LEVEL_CAP=10`；`expToAdvance(lv)=40*lv`；`INTERIOR_EXP_PER_TICK=12`；`BATTLE_EXP_PER_LOSS=0.8`；`BATTLE_EXP_PARTICIPATION=20`；`applyGeneralExp`；`generalProgress`；`grantBattleExp`；`levelUpSentence` | `handlers.js`、`battle.js`、`interior-task.js`、`panels.js`、`strategy.js`、`world.js` |
 | `general-stat.js` | 90 | 0~100 百分制守门人（零依赖叶子） | `clampFive`；`toGameStat`；`toPercentFromRaw`；`toGameGrow`；`toDestroyStat`；`toCostStat`；`gameStatOf(cfg,g,key,fallback=60)`；`charmStatOf` | `config.js`、`city-econ/diplomacy/interior-task/panels/strategy` |
 | `interaction.js` | 279 | 交互增强层只读聚合（单一事实源） | `interactionState(state,cfg)→{ok,day,turn,month,undo,season,treasury,salary,cities,generals,captives,marches,alerts,agenda,turnPreview,fieldGaps,pendingEvents}` | `index.js` |
 | `interior-task.js` | 337 | 内政任务状：工期与每旬增量唯一口径 | `TICK_DAYS=10`；`KINDS`；`interiorTasks`；`officerStat`；`pickOfficer`；`planTicks(kind,stat)→{ticks,perTick}`；`taskView`；`interiorTaskView`；`beginInteriorTask`；`advanceInteriorTasks`；`cancelInteriorTask` | `appointment/city-econ/interaction/strategy` |
@@ -2382,6 +2382,21 @@ build/SLG-Offline-win32-x64/
 | 边界 | 不改冻结 `web/`、协议字段语义、招降率公式；英文 reason 继续留在服务端日志/测试断言中，只禁止渲染 |
 
 **验证**：新增 `tests/p35-captive-failure-text.test.js` 4 条：拒绝/越狱/无俘虏/金不足四类失败的中文 text、内部码零漏出、未扣金与忠诚/出册行为不变、UI 文案优先级与兜底映射；连同 `p33-ui-clarity`、`ui-presentation-hygiene` 定向通过。
+
+### 17.28 成长/AI/演出/内政交互五项体验修复（2026-11-22 用户反馈）
+
+用户反馈「第二技能学不了、升级太慢；AI 不占空城也不支援；战斗动画太快且打击感弱；内政界面复杂」。逐项定位后确认：第二槽是配置回读丢槽造成存档不同步，升级慢是经验收入过低，AI 不扩张是汉廷城与有主城同门槛，看不到支援是驰援只扫玩家攻诸侯城，动画快是 cue 走倍速而特效走真实时钟的双轨问题。
+
+| 项 | 权威口径 |
+|---|---|
+| 第二槽持久化 | `config.js loadConfig()` 三槽一起回读，自定义武将构造也带三槽；`general-editor.js` 仍只改本次编辑的槽，不碰 19001 `ui.levels` 与 mechanics |
+| 成长提速 | `general-progress.js` 唯一常量 `INTERIOR_EXP_PER_TICK=12`、`BATTLE_EXP_PARTICIPATION=20`、`BATTLE_EXP_PER_LOSS=0.8`；阈值 `40×lv` 与 10 级上限不动，`applyGeneralExp`/`grantBattleExp` 仍是唯一写入口 |
+| AI 扩张 | `strategy-brain.js workable()` 对汉城门槛 ×0.28、派兵 ×1.6、下限 250，`capitalThreat()` 忽略汉城；`difficultyAi` 首次接入决策脑，只缩放扩张门槛不改伤害 |
+| AI 支援 | `strategy.js factionReliefTick()` 对汉城按种子确定性挑争夺者，驰援下限 350、邻城 ≥590、`wantEach` 乘 `difficultyAi`；援军仍是可见行军实体，到达并兵入守 |
+| 回放节奏 | `skills.js BATTLE_ANIM_SOURCE` 引入 `TIME_SCALE=0.7` + `nowMs()`，cue/特效/暂停/进度同钟；命中火花加密到 12 束并加交叉刀光，突进加残影，纯绘制不改 `act.loss` |
+| 内政减负 | `tabInteriorView()` 增「当前推荐一步」+「全部任务」折叠，跳转链接集中；`errText()` 兼容 `/strategy/action` 平铺 reason，拒绝原因统一中文 |
+
+**验证**：新增 `tests/p20`（三槽重载）、`p36-growth-speed`、`p37-ai-initiative`、`p38-animation-tempo`、`p39-interior-ux`，并扩充 `p10-interior-task`；`p27`/`p33`/`p34`/`ui-presentation-hygiene` 静态闸保持通过。开局 AI 目标从 1/8 家扩张提升到 7/8 家，汉城驰援在确定性种子下实测可触发。
 
 
 ---

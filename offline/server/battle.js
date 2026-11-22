@@ -24,6 +24,8 @@ import { armsApt } from './domain/aptitude.js';
 import { garrisonCfgIds } from './domain/garrison.js';
 /* ★ 2026-11-16：官阶反哺统兵能力——统帅(defense)按官阶加成，史载原表不动 */
 import { effectiveStatOf } from './domain/general-stat.js';
+/* ★ 2026-11-22：出征经验定量统一在 general-progress.js，低折损仗也有参战底数 */
+import { BATTLE_EXP_PER_LOSS, BATTLE_EXP_PARTICIPATION } from './domain/general-progress.js';
 
 /** 本作设计：一方兵力降到开战时的这个比例及以下，算溃败。 */
 export const ROUT_RATIO = 0.1;
@@ -740,7 +742,10 @@ export function resolveBattle({
   const begA = attackers.map(({ g }) => generalToArray(g));
   const expByGeneral = {};
   const endA = attackers.map(({ slot, g }) => {
-    const exp = Math.max(0, Math.round((beginSoldiers[slot] - attackRemain[slot]) * 0.5));
+    /* 参战底数 + 折损经验：即便几乎无损，出征也能让武将成长；
+       折损系数从 0.5 提到 0.8，仍只经 grantBattleExp 单入口入账。 */
+    const loss = Math.max(0, beginSoldiers[slot] - attackRemain[slot]);
+    const exp = BATTLE_EXP_PARTICIPATION + Math.round(loss * BATTLE_EXP_PER_LOSS);
     expByGeneral[g.id] = exp;
     return generalToArray({ ...g, exp: g.exp + exp });
   });

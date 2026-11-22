@@ -2750,6 +2750,11 @@ const BATTLE_ANIM_SOURCE = `;(function () {
   var SIDE_COLOR = { a: '#c0392b', d: '#2c5f8a' };
   var SIDE_NAME = { a: '我军', d: '守军' };
   var DUR = { banner: 650, prepare: 450, skill: 950, hit: 620, control: 550, heal: 550, down: 800, result: 1500 };
+  /* ★ 2026-11-22：整体放慢 30%——cue 调度与粒子/震屏/飘字共用一条虚拟时钟。
+     旧实现 cue 走 speed、特效走真实时钟，只改一处会出现「动作慢了、火花一闪而过」。 */
+  var _perfNow = performance.now.bind(performance);
+  var TIME_SCALE = 0.7;
+  function nowMs() { return _perfNow() * TIME_SCALE; }
 
   /* ★ 2026-11-19 战场视觉：冻结 web/ 里的原版战场底图 / 武将立绘 / 技能图标。
      只从本地 HTTP 静态路径读，不下载、不改磁盘文件。 */
@@ -2897,7 +2902,7 @@ const BATTLE_ANIM_SOURCE = `;(function () {
             if (!unit) return;
             var remain = Math.max(0, Math.round(Number(u.remain) || 0));
             unit.cur = remain;
-            if (remain <= 0 && !unit.dead) { unit.dead = true; unit.fallT = performance.now(); }
+            if (remain <= 0 && !unit.dead) { unit.dead = true; unit.fallT = nowMs(); }
             if (remain > 0 && unit.dead) { unit.dead = false; unit.fallT = -1; }
           });
         });
@@ -2928,14 +2933,14 @@ const BATTLE_ANIM_SOURCE = `;(function () {
     }
 
     function applyAct(ctx, act) {
-      var now = performance.now();
+      var now = nowMs();
       var f = state.units[unitKey(act.f)];
       var to = state.units[unitKey(act.to || act.unit)];
       /* 字幕：服务端已经写好的人话；没有再退回「谁 发动了什么」 */
       var line = act.text || ((act.fName || '') + ' ' + (act.skill || ''));
       if (act.t === 'skill' && act.effect) line = (act.fName || '') + ' 发动「' + act.skill + '」— ' + act.effect;
       ctx.subText = line;
-      ctx.subUntil = performance.now() + Math.max(900, (DUR[act.t] || 500) * 1.2);
+      ctx.subUntil = nowMs() + Math.max(900, (DUR[act.t] || 500) * 1.2);
       if (act.t === 'hit' && f && to && !f.dead) {
         var loss = Math.max(0, Math.round(Number(act.loss) || 0));
         f.lungeT = now;
@@ -2982,11 +2987,11 @@ const BATTLE_ANIM_SOURCE = `;(function () {
     function damage(u, loss) {
       if (!u || u.dead) return;
       u.cur = Math.max(0, u.cur - loss);
-      if (u.cur <= 0) { u.dead = true; u.fallT = performance.now(); }
+      if (u.cur <= 0) { u.dead = true; u.fallT = nowMs(); }
     }
 
     function mkText(text, x, y, color) {
-      return { text: text, x: x, y: y, t0: performance.now(), color: color };
+      return { text: text, x: x, y: y, t0: nowMs(), color: color };
     }
 
     /* ---- 绘制 ---- */
@@ -3063,6 +3068,18 @@ const BATTLE_ANIM_SOURCE = `;(function () {
       var perRow = big ? 16 : 10;
       var gap = (big ? 7.2 : 5.4) * sc;
       var count = Math.min(rows * perRow, Math.ceil(ratio * (big ? 96 : 48)));
+
+      /* ★ 2026-11-22 打击感：突进时留两道半透明残影，突出冲锋方向。 */
+      if (Math.abs(lunge) > 6) {
+        g.save();
+        g.globalAlpha = 0.16;
+        g.fillStyle = side;
+        for (var ghost = 1; ghost <= 2; ghost += 1) {
+          g.fillRect(x - dir * ghost * 12 - gap * perRow * 0.3,
+            y - 12, gap * perRow * 0.6, rows * 9);
+        }
+        g.restore();
+      }
 
       /* 军阵底影 + 方阵：大屏一支队伍最多 96 个可视兵（1 兵代表数十~上百人），
          双方三军合计最多 576 个，Canvas2D 仍可稳 60fps。 */
@@ -3214,12 +3231,21 @@ const BATTLE_ANIM_SOURCE = `;(function () {
           g.strokeStyle = 'rgba(255,236,196,' + (0.9 * (1 - h)).toFixed(3) + ')';
           g.lineWidth = 3;
           g.beginPath(); g.arc(e.tx, e.ty, 10 + h * 22, -1.1, 1.2); g.stroke();
-          for (var i = 0; i < 8; i += 1) {
-            var a = i * 0.785 + h;
-            var rr = 8 + h * (22 + i * 2);
-            g.fillStyle = 'rgba(255,186,110,' + (0.8 * (1 - h)).toFixed(3) + ')';
-            g.beginPath(); g.arc(e.tx + Math.cos(a) * rr, e.ty + Math.sin(a) * rr, 2.2, 0, 6.2832); g.fill();
+          for (var i = 0; i < 12; i += 1) {
+            var a = i * 0.524 + h;
+            var rr = 8 + h * (26 + i * 2);
+            g.fillStyle = 'rgba(255,186,110,' + (0.85 * (1 - h)).toFixed(3) + ')';
+            g.beginPath(); g.arc(e.tx + Math.cos(a) * rr, e.ty + Math.sin(a) * rr, 2.4, 0, 6.2832); g.fill();
           }
+          /* ★ 2026-11-22 打击感：交叉刀光 + 命中白心，纯绘制不改 act.loss */
+          g.strokeStyle = 'rgba(255,246,214,' + (0.92 * (1 - h)).toFixed(3) + ')';
+          g.lineWidth = 2;
+          g.beginPath(); g.moveTo(e.tx - 18 - h * 12, e.ty - 18 - h * 12);
+          g.lineTo(e.tx + 18 + h * 12, e.ty + 18 + h * 12); g.stroke();
+          g.beginPath(); g.moveTo(e.tx + 18 + h * 12, e.ty - 18 - h * 12);
+          g.lineTo(e.tx - 18 - h * 12, e.ty + 18 + h * 12); g.stroke();
+          g.fillStyle = 'rgba(255,255,240,' + (0.8 * (1 - h)).toFixed(3) + ')';
+          g.beginPath(); g.arc(e.tx, e.ty, 3 + (1 - h) * 6, 0, 6.2832); g.fill();
           return;
         }
         if (e.kind === 'control') {
@@ -3348,7 +3374,7 @@ const BATTLE_ANIM_SOURCE = `;(function () {
 
     function tick() {
       if (state.paused) { state.raf = null; return; }
-      var now = performance.now();
+      var now = nowMs();
       var elapsed = (now - state.t0) * state.speed;
       if (elapsed >= state.total) state.finished = true;
       state.cues.forEach(function (c) {
@@ -3399,14 +3425,14 @@ const BATTLE_ANIM_SOURCE = `;(function () {
       bPlay.textContent = state.paused ? '▶ 继续' : '⏸ 暂停';
       bSpeed.textContent = '速度 ×' + state.speed;
       var pctDone = state.total
-        ? Math.min(100, Math.round(((performance.now() - state.t0) * state.speed) / state.total * 100))
+        ? Math.min(100, Math.round(((nowMs() - state.t0) * state.speed) / state.total * 100))
         : 0;
       progEl.textContent = (state.roundNow > 0
         ? '第 ' + state.roundNow + ' / ' + state.roundTotal + ' 回合' : '列阵') + '　' + pctDone + '%';
     }
 
     function reset() {
-      state.t0 = performance.now();
+      state.t0 = nowMs();
       state.finished = false;
       state.paused = false;
       state.particles = [];
@@ -3436,7 +3462,7 @@ const BATTLE_ANIM_SOURCE = `;(function () {
     function pause() {
       if (state.paused) return;
       state.paused = true;
-      state.pausedAt = performance.now();
+      state.pausedAt = nowMs();
       if (state.raf) cancelAnimationFrame(state.raf);
       state.raf = null;
       renderBar();
@@ -3445,7 +3471,7 @@ const BATTLE_ANIM_SOURCE = `;(function () {
       if (!state.paused) return;
       state.paused = false;
       /* 暂停 N 毫秒就把起点后移 N 毫秒，恢复后进度不会「跳一大段」 */
-      var gap = performance.now() - (state.pausedAt || performance.now());
+      var gap = nowMs() - (state.pausedAt || nowMs());
       state.t0 += gap;
       state.subUntil += gap;
       state.roundUntil += gap;
@@ -3456,7 +3482,7 @@ const BATTLE_ANIM_SOURCE = `;(function () {
 
     host.style.height = opt.height || '300px';
     renderBar();
-    if (opt.autoPlay !== false) play(); else { draw(performance.now()); }
+    if (opt.autoPlay !== false) play(); else { draw(nowMs()); }
     return { el: host, play: play, pause: pause, destroy: destroy, anim: anim };
   }
 
@@ -3771,9 +3797,13 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     bad_choice: '该选项已不可选', no_army: '没有可用部队', zero: '数量不能为零',
     empty_slot: '槽位为空', marching: '部队正在行军', bad_order: '指令无效',
     bad_pos: '位置无效', bad_general: '武将不可用', no_population: '此城无人口',
+    busy: '这项还在办理', cooldown: '本旬已办过，下一旬再来',
+    no_gold: '库金不足', no_disaster: '本城眼下无灾可赈',
   };
   function errText(rsp) {
-    var reason = rsp && rsp.msg && rsp.msg.reason;
+    /* ★ 2026-11-22：原版 WS 回执把 reason 放在 msg 里，/strategy/action 是平铺字段；
+       两处都要翻成中文，禁止把 busy/no_gold 这类内部码直接弹给玩家。 */
+    var reason = rsp && ((rsp.msg && rsp.msg.reason) || rsp.reason);
     if (reason) return REASON_TEXT[reason] || ERR_TEXT[rsp && rsp.code] || '操作未生效，请稍后重试';
     return ERR_TEXT[rsp && rsp.code] || '操作未生效，请稍后重试';
   }
@@ -5262,7 +5292,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
                 body: JSON.stringify({ action: 'cancelInvest', taskId: t.id }),
               }).then(function (r2) { return r2.json(); }).then(function (rs) {
                 if (rs.ok) toast(rs.refund > 0 ? ('任务已撤销，退回 ' + rs.refund + ' 金') : '任务已撤销（已投入的金不退，已到账的增量保留）', true);
-                else toast('无法撤销：' + (rs.reason || '未知'), false);
+                else toast('无法撤销：' + errText(rs), false);
                 fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
               });
             }));
@@ -5284,7 +5314,6 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       sink.style.cssText = 'display:flex;gap:6px;margin:6px 0';
       sink.appendChild(mkBtn('去征兵', 'ghost', function () { window.__slgCityInterior(c.id, 'army'); }));
       sink.appendChild(mkBtn('去府库升级设施', 'ghost', function () { window.__slgCityInterior(c.id, 'home'); }));
-      invCard.appendChild(sink);
       var mkInv = function (label, kind, cost, note) {
         /* ★ 修 bug-12：按项冷却 —— 只置灰刚办过的那一项，并写明哪天可再办 */
         var today = Number((cache && cache.day) || 0);
@@ -5309,7 +5338,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
               else if (rs.reason === 'cooldown') toast('这项内政本旬办过了，第 ' + rs.nextDay + ' 日可再办', false);
               else if (rs.reason === 'no_gold') toast('金不足（需 ' + rs.cost + '）', false);
               else if (rs.reason === 'no_disaster') toast('本城眼下无灾可赈', false);
-              else toast('无法办理：' + (rs.reason || '未知'), false);
+              else toast('无法办理：' + errText(rs), false);
             });
           });
         b.style.margin = '0';
@@ -5325,7 +5354,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       mkInv('募兵整编', 'barracks', 350, '兵营 +3 → 征兵更快，民心 +1');
       mkInv('修筑城防', 'defense', 400, '城防 +2、治安 +2，守军 +150');
       if (c.disaster || c.modUntil) mkInv('开仓赈灾', 'relief', 500, '解除减产，民心 +6、治安 +3');
-      body.appendChild(invCard);
+      /* ★ 2026-11-22：六项委派收进「全部任务」，主视口只留一个推荐动作。 */
+      invCard.style.display = 'none';
 
       /* ★ M2-4 委任对象化（本作设计）：「我不用管，但我知道它在干什么」——
          每旬自动派一条真实内政任务（与手动同源同价同工期）；缺金置顶暂停、金到位续办、失城中止。 */
@@ -5343,7 +5373,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
             if (rs.ok) toast(label + '委任已设：' + note, true);
             else if (rs.reason === 'busy') toast('该城已有同目标委任在办', false);
             else if (rs.reason === 'no_gold') toast('库金不足，本旬暂缓（下一旬自动重试）', false);
-            else toast('无法委任：' + (rs.reason || '未知'), false);
+            else toast('无法委任：' + errText(rs), false);
             fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
           });
         });
@@ -5371,7 +5401,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
               body: JSON.stringify({ action: 'cancelAppoint', apptId: a.id }),
             }).then(function (r2) { return r2.json(); }).then(function (rs) {
               if (rs.ok) toast('委任已取消（在施任务照常推进）', true);
-              else toast('无法取消：' + (rs.reason || '未知'), false);
+              else toast('无法取消：' + errText(rs), false);
               fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
             });
           }));
@@ -5388,6 +5418,62 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       var facCard = el('div', 'card', '');
       body.appendChild(facCard);
       mountFacilitiesCard(facCard, c);
+
+      /* ★ 2026-11-22 内政减负：主视口只给「当前推荐一步」，其余收进折叠区。
+         推荐按发育短板选，不掷骰、不替玩家决策，点「全部任务」仍可逐项办理。 */
+      var pickList = [
+        { kind: 'agri', label: '开垦农田', cost: 300, note: '农田 +3 → 粮产上升', v: Number(c.devAgri) || 0 },
+        { kind: 'trade', label: '招商兴市', cost: 300, note: '市集 +3 → 金产上升', v: Number(c.devTrade) || 0 },
+        { kind: 'barracks', label: '募兵整编', cost: 350, note: '兵营 +3 → 征兵更快', v: Number(c.devArms) || 0 },
+        { kind: 'defense', label: '修筑城防', cost: 400, note: '城防 +2、治安 +2', v: Number(c.devDef) || 0 },
+        { kind: 'populate', label: '劝课生息', cost: 400, note: '人口 +8% → 兵源', v: (Number(c.pop) || 0) / 10000 },
+      ];
+      if (c.disaster || c.modUntil) {
+        pickList.unshift({ kind: 'relief', label: '开仓赈灾', cost: 500,
+          note: '解除减产，民心 +6、治安 +3', v: -1 });
+      }
+      pickList.sort(function (x, y) { return x.v - y.v || x.kind.localeCompare(y.kind); });
+      var rec = pickList[0];
+      var recommend = el('div', 'card', '<h4 style="margin-top:0">当前推荐一步</h4>'
+        + '<div class="cost">先办「' + esc(rec.label) + '」（' + rec.cost + ' 金）：' + esc(rec.note)
+        + '。委派后按执行武将能力 1~3 旬完工，不必盯屏；其余五项和长驻委任都可展开。</div>');
+      var recRow = el('div', 'row', '<span><b style="color:#f0d998">' + esc(rec.label) + '</b>'
+        + '<span class="cost">　主推 · ' + rec.cost + ' 金</span></span>');
+      recRow.appendChild(mkBtn('一键委派', '', function () {
+        fetch('/__slg/strategy/action', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'invest', cityId: c.id, kind: rec.kind }),
+        }).then(function (r2) { return r2.json(); }).then(function (rs) {
+          if (rs.ok) {
+            var tk = rs.task || {};
+            toast(rs.instant ? (rec.label + '已完成：' + (rs.effectText || ''))
+              : (rec.label + '已委派给 ' + (tk.officer || '无专员') + '，第 ' + tk.endDay + ' 日完工'), true);
+          } else if (rs.reason === 'busy' || rs.reason === 'cooldown') {
+            toast('这项在办或本旬已办，第 ' + rs.nextDay + ' 日再试', false);
+          } else toast('无法办理：' + errText(rs), false);
+          fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
+        });
+      }));
+      recRow.appendChild(mkBtn('全部任务', 'ghost', function () {
+        invCard.style.display = invCard.style.display === 'none' ? '' : 'none';
+      }));
+      recommend.appendChild(recRow);
+      /* 人口是兵源根，保留一个常驻快捷入口（真鼠标验收也钉住了这条闭环）。 */
+      var popRow = el('div', 'row', '<span>劝课生息<span class="cost">　人口 +8% → 兵源</span></span>');
+      popRow.appendChild(mkBtn('劝课生息·快速办理', '', function () {
+        fetch('/__slg/strategy/action', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'invest', cityId: c.id, kind: 'populate' }),
+        }).then(function (r2) { return r2.json(); }).then(function (rs) {
+          if (rs.ok) toast('劝课生息已委派，第 ' + ((rs.task || {}).endDay || '—') + ' 日完工', true);
+          else toast('无法办理：' + errText(rs), false);
+          fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
+        });
+      }));
+      recommend.appendChild(popRow);
+      recommend.appendChild(sink);
+      body.insertBefore(recommend, taskCard);
+      body.insertBefore(invCard, taskCard);
       return;
     }
     body.appendChild(el('div', 'card', '<h4 style="margin-top:0">' + c.name + ' · 内政</h4><div class="grid">'

@@ -21,7 +21,7 @@ import { loreStat } from './oath.js';
 import { gameStatOf, charmStatOf, effectiveStatOf } from './general-stat.js';
 /* ★ 2026-11-19 武将养成：内政岗位也给经验。旧版经验只来自打仗，
    纯内政流武将永远停在 1 级，exp 恒 0。general-progress 是叶子模块，不成环。 */
-import { applyGeneralExp } from './general-progress.js';
+import { applyGeneralExp, INTERIOR_EXP_PER_TICK } from './general-progress.js';
 /* ★ 2026-11-16：官阶反哺治政——谋臣/政治家政治随官阶提升（零依赖叶子） */
 import { careerTagOf } from './official-rank.js';
 
@@ -325,10 +325,10 @@ export function advanceInteriorTasks(state, cfg, ctx) {
       const label = K?.note || K?.label || t.kind;
       ticked.push({ taskId: t.id, cityId: t.cityId, city: t.cityName, kind: t.kind, gain, label, tick: shouldTicks });
       recordEvent(state, `${t.cityName}${label} +${gain}（${t.officerName}${t.officerStat ? `·${t.officerStat}` : ''}）`);
-      /* 内政经验：每旬 5 点（lv1→2 需 40 点，约 8 旬一级），让委任也有成长。 */
+      /* 内政经验：唯一口径在 general-progress.js，每旬 12 点（原 5 点，8 旬一级 → 约 3~4 旬一级）。 */
       const off = (state.generals || []).find((g) => Number(g.id) === Number(t.officerId));
       if (off) {
-        const up = applyGeneralExp(off, 5 * steps);
+        const up = applyGeneralExp(off, INTERIOR_EXP_PER_TICK * steps);
         if (up.to > up.from) {
           ctx?.push?.('chat.push', {
             rid: 0, nickName: '系统', type: 0,

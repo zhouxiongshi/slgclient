@@ -1488,16 +1488,29 @@ export function rebindCapitalIfLost(state, ctx) {
  * 行军实体 side:'faction' 玩家可见，可在遭遇/推演里看到援军动向并应对。
  * 人格轴决定谁肯救：defense 过低（吕布）见死不救。 */
 
-const RELIEF_MIN_SEND = 500;
+const RELIEF_MIN_SEND = 350;
 
-function reliefResponders(state, st, owner) {
-  if (!owner || owner === 'player' || owner === 'han') return [];
+/** ★ 2026-11-22：汉廷城也被邻近诸侯争夺——玩家打"空城"时不再一路无人过问。
+ *  争夺者按种子+抵达日确定性挑选，复用同一条 dispatchRelief 驰援管线。 */
+function reliefResponders(state, st, owner, targetId, incoming) {
+  if (!owner || owner === 'player') return [];
   const conf = factionConfFor(state);
-  const out = [owner];
-  for (const f of conf.factions) {
-    if (f.id !== owner && isAllied(st, f.id, owner)) out.push(f.id);
+  if (owner !== 'han') {
+    const out = [owner];
+    for (const f of conf.factions) {
+      if (f.id !== owner && isAllied(st, f.id, owner)) out.push(f.id);
+    }
+    return out;
   }
-  return out;
+  const adj = marchableNeighbors(targetId, Object.keys(st.cities).map(Number)).map(Number);
+  const candidates = [...new Set(adj
+    .map((id) => st.cities[id]?.owner)
+    .filter((id) => id && id !== 'player' && id !== 'han'))];
+  if (!candidates.length) return [];
+  const roll = rngFor(state.seed ?? 20261110, incoming?.arriveDay || 1,
+    `contest:${targetId}:${incoming?.id || 0}`).random();
+  const pick = candidates[Math.min(candidates.length - 1, Math.floor(roll * candidates.length))];
+  return conf.factions.some((f) => f.id === pick) ? [pick] : [];
 }
 
 /** 每个结算日扫描来犯军：有玩家大军在途、且目标城是某诸侯（或其盟友）的城，
@@ -1520,7 +1533,7 @@ export function factionReliefTick(state, cfg, ctx) {
     const daysLeft = mm.arriveDay - today;
     if (daysLeft < 1) continue;
     mm.reliefBy = mm.reliefBy || {};
-    for (const fid of reliefResponders(state, st, tstate.owner)) {
+    for (const fid of reliefResponders(state, st, tstate.owner, targetId, mm)) {
       if (mm.reliefBy[fid]) continue;
       const faction = conf.factions.find((f) => f.id === fid);
       if (!faction) continue;
@@ -1550,14 +1563,16 @@ function dispatchRelief(state, ctx, faction, targetId, incoming, target, tstate,
     const row = st.cities[id];
     if (!row || row.owner !== faction.id) continue;
     const troops = Math.round(Number(row.troops) || 0);
-    if (troops >= RELIEF_MIN_SEND + 320) {
+    if (troops >= RELIEF_MIN_SEND + 240) {
       sources.push({ id, troops, arms: map.cities.find((c) => c.id === id)?.arms || '' });
     }
   }
   sources.sort((a, b) => b.troops - a.troops || a.id - b.id);
   if (!sources.length) return 0;
   // 每城拟发：压得动来犯军，又不把出发城抽空；至多两城合援
-  const wantEach = Math.max(RELIEF_MIN_SEND, Math.round((Number(incoming.troops) || 0) * (0.55 + axes.defense * 0.45) / Math.min(2, sources.length)));
+  const aiMul = Math.max(0.8, Math.min(1.4, Number(knobGet(state, 'difficultyAi')) || 1));
+  const wantEach = Math.max(RELIEF_MIN_SEND, Math.round((Number(incoming.troops) || 0)
+    * (0.55 + axes.defense * 0.45) / Math.min(2, sources.length) * aiMul));
   let totalSend = 0;
   for (const src of sources.slice(0, 2)) {
     const reserve = Math.max(320, Math.round(src.troops * (0.30 + axes.defense * 0.10)));

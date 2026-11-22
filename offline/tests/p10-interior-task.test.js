@@ -138,6 +138,18 @@ test('进度与完工：只在旬界加产，完工后状态转 done 并留归�
   assert.equal(Number(econ.devAgri || 0), snap);
 });
 
+test('内政经验：执行武将每旬拿到 12 点（唯一常量口径），不再 5 点龟速', () => {
+  const { state, cid } = oathWorld();
+  state.roleRes.gold = 50000;
+  const r = strategyInvest(state, cfg, { push() {} }, { cityId: cid, kind: 'agri' });
+  const off = state.generals.find((g) => Number(g.id) === Number(r.task.officerId));
+  assert.ok(off, '任务必须带上真实执行武将');
+  off.level = 9; off.exp = 0;               // 不触发升级，直接看每旬增量
+  state.clock.day = state.clock.day + TICK_DAYS;
+  advanceInteriorTasks(state, cfg, {});
+  assert.equal(off.exp, 12, '每旬经验取自 general-progress.js 的唯一常量');
+});
+
 /* 3 ─────────────────────────────────────────────────────────────────────── */
 
 test('撤销：状态转 cancelled、不再加产、已到账增量保留', () => {

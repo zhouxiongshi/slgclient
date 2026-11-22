@@ -1,5 +1,5 @@
 /**
- * 武将等级。经验只来自出征折损，攒满一档就升级。
+ * 武将等级。经验来自内政历练与出征参战/折损，攒满一档就升级。
  *
  * 上限 10：内核五维按 (100 − 基础) / 9 配到第 10 级封顶，再往上会破表。
  * 学习槽 5 级开；觉醒槽 10 级，并且自带战法要到 10 级。
@@ -9,6 +9,11 @@
 import { grantMerit, MERIT_GAIN } from './official-rank.js';
 
 export const GENERAL_LEVEL_CAP = 10;
+/* ★ 2026-11-22：成长入口统一在这里定量，UI/战报只读不重算。
+   内政由 5 点/旬提到 12 点/旬；出征增加参战底数，低折损仗也有成长。 */
+export const INTERIOR_EXP_PER_TICK = 12;
+export const BATTLE_EXP_PER_LOSS = 0.8;
+export const BATTLE_EXP_PARTICIPATION = 20;
 
 /** 从当前等级升到下一级需要的经验。1→2 为 40，9→10 为 360。 */
 export function expToAdvance(level) {

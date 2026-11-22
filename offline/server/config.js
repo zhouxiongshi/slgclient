@@ -234,6 +234,10 @@ export function loadConfig(confDir = defaultConfDir()) {
             speed_grow: patchRaw.speed_grow ?? 30,
             destroy_grow: patchRaw.destroy_grow ?? 30,
             skillCfgId: patchRaw.skillCfgId || 0,
+            /* ★ 2026-11-22：三槽必须一起回读，否则新建武只在当前进程有第二/第三槽，
+               重启后编辑器回显空槽，保存任意属性还会把存档 skills[1..2] 清空。 */
+            skillCfgId2: patchRaw.skillCfgId2 || 0,
+            skillCfgId3: patchRaw.skillCfgId3 || 0,
           });
         }
         continue;
@@ -243,7 +247,7 @@ export function loadConfig(confDir = defaultConfDir()) {
         if (['force', 'strategy', 'defense', 'speed', 'destroy', 'politics',
           'force_grow', 'strategy_grow', 'defense_grow', 'speed_grow', 'destroy_grow',
           'cost', 'star'].includes(field)) row[field] = v;
-        else if (field === 'skillCfgId') row.skillCfgId = v;
+        else if (['skillCfgId', 'skillCfgId2', 'skillCfgId3'].includes(field)) row[field] = v;
       }
     }
   }

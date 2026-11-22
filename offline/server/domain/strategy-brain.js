@@ -11,6 +11,8 @@
  */
 import { marchableNeighbors } from './march.js';
 import { quoteMarch } from './strategy-log.js';
+/* ★ 2026-11-22：难度旋钮首次接入决策脑——只缩放扩张门槛，不碰伤害公式 */
+import { knobGet } from './knobs.js';
 
 export const PERSONA_AXES = {
   曹操: { aggression: 0.65, economy: 0.60, risk: 0.50, tempo: 0.70, defense: 0.55 },
@@ -169,6 +171,8 @@ function buildView(faction, snapshot, state, axes, mem) {
   const lord = (id) => (id === 'han' ? '汉廷' : id === 'player' ? '玩家' : (lords[id] || id));
   const patience = axes.tempo >= 0.75 ? 2 : 1;
   const need = 1.08 + (1 - axes.risk) * 0.42;
+  /* difficultyAi 只改敢不敢打：高难度降低所需兵力比；1.0 时对汉廷城仍单独减压。 */
+  const aiMul = Math.max(0.8, Math.min(1.4, Number(knobGet(state, 'difficultyAi')) || 1));
   const grain = Number(snapshot.own?.grain) || 0;
   const gold = Number(snapshot.own?.gold) || 0;
   const recruitBudget = Math.max(0, Math.min(
@@ -198,12 +202,18 @@ function buildView(faction, snapshot, state, axes, mem) {
     const stage = stageFor(city.id);
     if (!stage) return null;
     const reserve = sendOf(stage).reserve;
+    /* ★ 2026-11-22：汉廷城是无人值守的扩张目标，旧实现与有主城同门槛
+       （实测 30 旬只从 24 座降到 13 座，多数诸侯长期固守）。现在单独减压：
+       门槛 ×0.28、多派六成、下限 400→250；difficultyAi 高档再放低门槛。 */
+    const expansion = city.owner === 'han';
+    const sendFactor = sendMul * (expansion ? 1.6 : 1);
+    const needFactor = (expansion ? 0.28 : 1) / aiMul;
     /* sendMul：制衡讨伐时 1.35（倾巢而出），常规出征 1（sendOf 基准） */
-    const raw = Math.round((stage?.troops || 0) * (0.48 + axes.tempo * 0.22) * sendMul);
+    const raw = Math.round((stage?.troops || 0) * (0.48 + axes.tempo * 0.22) * sendFactor);
     const send = Math.max(0, Math.min(raw, (stage?.troops || 0) - reserve));
-    if (send < 400) return null;
+    if (send < (expansion ? 250 : 400)) return null;
     const ratio = odds(stage, city, send);
-    if (ratio < need * needMul) return null;
+    if (ratio < need * needMul * needFactor) return null;
     const quote = quoteMarch(stage.id, city.id, send, stage.arms, {
       grain: Math.max(0, grain - recruitBudget),
       gold,
@@ -501,6 +511,8 @@ function capitalThreat(view) {
   for (const c of view.foreign) {
     if (!view.reachOf(home.id).has(c.id)) continue;
     if (view.allies.has(c.owner)) continue;
+    /* ★ 2026-11-22：汉廷空城不会被玩家用来压境，不该把 AI 锁在城里。 */
+    if (c.owner === 'han') continue;
     const pressure = c.troops / Math.max(1, home.troops);
     const line = 1.45 + view.axes.defense * 0.2;
     if (pressure >= line && (!worst || c.troops > worst.troops)) worst = c;
