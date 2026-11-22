@@ -571,19 +571,23 @@ async function runSmoke(win, server, app) {
     })()`, true);
     await sleep(350);
 
-    // 合并后检查：六府入口须让位于战略层弹层，且不与战略层左上按钮坞重叠
+    // 合并后检查：六府视觉入口已并入沙盘横向菜单；旧 dock 留 DOM 与 z-index 契约但收起
     const dockState = await wc.executeJavaScript(`(function(){
       try {
         var d = document.getElementById('slgPanelsDock');
         if (!d) return { ok:false, reason:'no dock' };
         var z = Number(getComputedStyle(d).zIndex), r = d.getBoundingClientRect();
+        var hidden = getComputedStyle(d).display === 'none';
+        var integrated = document.querySelectorAll('#slgDock [data-slgpanel]').length;
         var other = document.getElementById('slgDock');
         var or = other ? other.getBoundingClientRect() : null;
-        var overlap = !!or && or.width > 0 &&
+        var overlap = !hidden && !!or && or.width > 0 &&
           !(r.right < or.left || r.left > or.right || r.bottom < or.top || r.top > or.bottom);
         return {
-          ok: z > 99998 && z < 100000 && !overlap && r.width > 0 && r.width <= 140,
-          zIndex: z, overlapWithStrategyDock: overlap, width: r.width,
+          ok: z > 99998 && z < 100000 && integrated >= 7 &&
+            (hidden || (!overlap && r.width > 0 && r.width <= 140)),
+          zIndex: z, hidden: hidden, integratedEntries: integrated,
+          overlapWithStrategyDock: overlap, width: r.width,
           rect: { left:r.left, top:r.top, right:r.right, bottom:r.bottom },
         };
       } catch(e){ return { ok:false, error:String(e) }; }
@@ -595,18 +599,19 @@ async function runSmoke(win, server, app) {
     // ★ P0-2：战报入口必须常驻六府 dock 且红点端点可用
     const repBtn = await wc.executeJavaScript(`(async function(){
       try {
-        var b = document.querySelector('#slgPanelsBtns .pb[data-id="__reports"]');
-        if (!b) return { ok:false, reason:'no reports button in panels dock' };
+        var b = document.querySelector('#slgDock [data-slgpanel="__reports"]');
+        if (!b) return { ok:false, reason:'no reports button in horizontal menu' };
+        var legacy = document.querySelector('#slgPanelsBtns .pb[data-id="__reports"]');
         var dot = document.getElementById('slgRepDot');
         var r = await fetch('/__slg/panels/reports-head', { cache:'no-store' });
         var v = await r.json();
         return { ok: !!v.ok, unread: v.unread, latest: v.latest, hasDot: !!dot,
-          visible: getComputedStyle(b).display !== 'none' };
+          hasLegacy: !!legacy, visible: getComputedStyle(b).display !== 'none' };
       } catch(e){ return { ok:false, error:String(e) }; }
     })()`, true);
     report.reportEntry = repBtn;
-    check('战报入口常驻六府 dock 且红点端点可用',
-      repBtn?.ok === true && repBtn?.visible === true && repBtn?.hasDot === true, repBtn);
+    check('战报入口并入横向菜单且红点端点可用',
+      repBtn?.ok === true && repBtn?.visible === true && repBtn?.hasDot === true && repBtn?.hasLegacy === true, repBtn);
 
     // ★ P4-①：开局举义页 —— 新档必须弹举义页且择主/择都链路可用；旧档不得弹
     const oathState = await wc.executeJavaScript(`(async function(){

@@ -40,6 +40,11 @@
   }
 
   var dock = null, mask = null, toastEl = null;
+  /* 资源内部键→玩家可见名。岗位产出键、流水兜底都走这里，禁止把 grain/gold 直接弹出。 */
+  var POST_RES_LABEL = {
+    wood: '木', iron: '铁', stone: '石', grain: '粮',
+    gold: '金', decree: '政令', jungong: '军工',
+  };
 
   /* ---------------- 基础工具 ---------------- */
   function esc(v) {
@@ -350,6 +355,9 @@
     '#slgPanelsDock .pb{position:relative;}',
     '#slgPanelsDock .dot{position:absolute;right:4px;top:4px;width:8px;height:8px;border-radius:50%;'
       + 'background:#e04a3a;box-shadow:0 0 4px rgba(224,74,58,.8);display:none;}',
+    /* ★ P41：保留 dock DOM 与原有 z-index 契约，只把视觉入口收起——
+       真正的入口已并入沙盘顶部「六府」分组；点击仍转发到这里的按钮，红点与打开逻辑不变。 */
+    '#slgPanelsDock{display:none!important;}',
     '#slgPanelsMask{position:fixed;inset:0;z-index:100100;background:rgba(6,8,6,.9);display:none;}',
     '#slgPanelsWin{position:absolute;inset:18px;max-width:1280px;margin:0 auto;background:#151811;',
     '  border:1px solid #75643d;border-radius:10px;box-shadow:0 18px 70px rgba(0,0,0,.8);display:flex;overflow:hidden;}',
@@ -946,9 +954,12 @@
       return '<div><span class="k">' + esc(g.name) + '</span> '
         + '<span class="tag ' + (blocked ? 'no' : 'ok') + '">' + esc(blocked ? '封锁' : '通行') + '</span></div>';
     }).join('') + '</div>' : '<div class="muted">当前行军图无关隘数据。</div>';
+    var marchNames = (s.marchable || []).map(function (cid) {
+      var row = (data.strategy.cities || []).find(function (c) { return String(c.id) === String(cid); });
+      return row ? row.name : ('城' + cid);
+    });
     out += '<div class="muted" style="margin-top:6px">本城可出征 '
-      + ((s.marchable || []).length) + ' 座（城池 ID：'
-      + esc((s.marchable || []).join('、') || '无') + '）</div></div>';
+      + marchNames.length + ' 座：' + esc(marchNames.join('、') || '暂无') + '</div></div>';
 
     // 诸侯战役意图：读战略层决策脑锁定的目标，不自己改写
     var plans = s.plans || [];
@@ -1076,13 +1087,16 @@
         + '<div class="muted">一户一丁、妇孺老弱免征；每城每旬只征一次。兵源耗尽先在城池内页办「劝课生息」。</div></div>';
     }
 
-    out += '<h3>岗位委任（换人 delta 实时预览）</h3><div class="grid">';
+    out += '<h3>岗位委任（换人 delta 实时预览）</h3>'
+      + '<div class="card" style="margin-bottom:8px"><div class="muted">一键委任只补空缺：按该岗位对应属性挑最高的闲置武将；'
+      + '在编/出征、军师、猛将和已在岗者不参与，同分看忠诚。已有任命不会被覆盖。</div>'
+      + '<button class="btn" style="margin-top:7px" data-act="appointAll">一键委任空缺岗位</button></div><div class="grid">';
     it.posts.forEach(function (p) {
       var now = data.generals.find(function (g) { return g.id === p.generalId; });
       out += '<div class="card"><b class="v">' + esc(p.name) + '</b> <span class="muted">' + esc(p.desc) + '</span>'
         + '<div style="margin:6px 0">现任：<span class="v">' + esc(p.generalName || '空缺') + '</span></div>'
         + '<div>当前岗位加成：<span class="up">+' + esc(it.output.bonusPct[p.id] || 0) + '%</span> '
-        + '<span class="muted">' + esc(p.resource) + '</span></div>'
+        + '<span class="muted">' + esc(POST_RES_LABEL[p.resource] || '资源产出') + '</span></div>'
         + '<div style="margin-top:8px"><select data-act="appoint" data-post="' + esc(p.id) + '">'
         + '<option value="0">— 撤任 —</option>'
         + data.generals.map(function (g) {
@@ -1111,28 +1125,39 @@
 
   function viewDepot() {
     var filters = [['all', '全部'], ['equip', '兵刃'], ['scroll', '兵书秘卷'], ['material', '材料'], ['relic', '信物']];
+    var guide = (data.interior.output && data.interior.output.guide) || {};
     var out = '<h3>府库分类账</h3><div class="muted" style="margin-bottom:10px">'
-      + '不数格子：分类账堆叠无上限，资源受府库容量约束。兵书残卷现存 <b class="v">' + esc(data.scrolls) + '</b> 卷。</div>'
+      + esc(guide.brief || '')
+      + ' 分类账里的兵刃/兵书按件堆叠、无格子限制；兵书残卷现存 <b class="v">' + esc(data.scrolls) + '</b> 卷。</div>'
       + '<div class="tabs">' + filters.map(function (f) {
         return '<button class="' + (ui.itemFilter === f[0] ? 'on' : '') + '" data-act="itemfilter" data-id="' + f[0] + '">' + f[1] + '</button>';
       }).join('') + '</div>';
 
     var list = data.items.filter(function (i) { return ui.itemFilter === 'all' || i.kind === ui.itemFilter; });
-    var guide = (data.interior.output && data.interior.output.guide) || {};
     var fullNames = (data.interior.output.resources || []).filter(function (r) { return r.full; }).map(function (r) { return r.label; });
-    out += '<div class="card"><h3>资源</h3><div class="muted" style="margin-bottom:8px">' + esc(guide.rule || '') + '</div>'
+    out += '<div class="card"><h3>资源：库存 / 日产 / 用途 / 上限</h3>'
+      + '<div class="muted" style="margin-bottom:8px">' + esc(guide.rule || '') + '</div>'
       + (fullNames.length ? '<div class="muted" style="color:#e07a5f;margin-bottom:8px">已满仓，日产不再入库：' + esc(fullNames.join('、')) + '</div>' : '')
-      + '<div class="grid">' + data.interior.output.resources.map(function (r) {
-      var eff = Math.floor((r.yield || 0) * (1 + (r.bonusPct || 0) / 100));
-      return '<div><span class="k">' + esc(r.label) + '</span> <span class="v">' + fmt(r.stock) + '</span>'
-        + (r.full ? ' <span class="tag no">已满</span>' : '')
-        + '<div class="muted">日产 +' + fmt(r.yield)
-        + (r.bonusPct ? '（委任 +<span class="up">' + r.bonusPct + '%</span> → 实际 +' + fmt(eff) + '）' : '')
-        + '</div><div class="muted">用途：' + esc(r.use || '—') + '</div></div>';
-    }).join('') + '</div>'
-      + '<div style="margin-top:8px">' + (guide.actions || []).map(function (a) {
-        return '<button class="btn" data-act="armory" data-id="' + esc(a.id) + '" title="' + esc(a.note || '') + '">'
-          + esc(a.label) + '</button>';
+      + '<table><thead><tr><th>资源</th><th>库存</th><th>日产</th><th>用途</th><th>上限</th><th>状态</th></tr></thead><tbody>'
+      + data.interior.output.resources.map(function (r) {
+        var eff = Math.floor((r.yield || 0) * (1 + (r.bonusPct || 0) / 100));
+        return '<tr><td>' + esc(r.label) + '</td><td class="v">' + fmt(r.stock) + '</td>'
+          + '<td>+' + fmt(r.yield)
+          + (r.bonusPct ? '<span class="up">（委任 +' + r.bonusPct + '% → 实际 +' + fmt(eff) + '）</span>' : '')
+          + '</td><td class="muted">' + esc(r.use || '—') + '</td>'
+          + '<td class="muted">' + (r.capacity ? fmt(r.capacity) : '不占仓库') + '</td>'
+          + '<td>' + (r.full ? '<span class="tag no">已满仓</span>' : '<span class="muted">正常</span>') + '</td></tr>';
+      }).join('') + '</tbody></table>'
+      + '<div class="muted" style="margin-top:8px">「库存」是现在能动用的量；「日产」是每天入账量；「上限」只对木铁石粮金生效，满仓后当天不再入库。</div>'
+      + '</div>';
+
+    out += '<div class="card"><h3>物资去处 · 即时办理</h3>'
+      + '<div class="muted" style="margin-bottom:8px">下列动作点了立刻结算，代价直接写在按钮下方；不派武将、不占工期。'
+      + '想安排武将按工期办理，请到城池内页「内政 · 物资去处」。</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(224px,1fr));gap:7px">'
+      + (guide.actions || []).map(function (a) {
+        return '<div><button class="btn" data-act="armory" data-id="' + esc(a.id) + '">'
+          + esc(a.label) + '</button><div class="muted" style="margin-top:3px">' + esc(a.note || '') + '</div></div>';
       }).join('') + '</div></div>';
 
     // ★ P0-3：收支流水——玩家第一次能回答「我的资源怎么没的」
@@ -1147,7 +1172,8 @@
       if (lg.entries.length) {
         out += '<table><thead><tr><th>游戏日</th><th>资源</th><th>增减</th><th>事由</th></tr></thead><tbody>'
           + lg.entries.map(function (e) {
-            var lbl = (data.interior.output.resources.find(function (r) { return r.key === e.res; }) || {}).label || e.res;
+            var lbl = (data.interior.output.resources.find(function (r) { return r.key === e.res; }) || {}).label
+              || POST_RES_LABEL[e.res] || '其他收支';
             var d = Number(e.delta) || 0;
             return '<tr><td class="muted">' + esc(e.day) + '</td><td>' + esc(lbl) + '</td><td class="'
               + (d > 0 ? 'up' : 'down') + '">' + (d > 0 ? '+' : '') + fmt(d) + '</td><td class="muted">'
@@ -1467,6 +1493,7 @@
     if (!t) return;
     var act = t.getAttribute('data-act');
     if (act === 'appoint') return post({ type: 'appoint', post: t.getAttribute('data-post'), target: Number(t.value) });
+    if (act === 'appointAll') return post({ type: 'appointAll' });
     if (act === 'citypick') { ui.selectedCity = Number(t.value); return render(); }
   }
   function onInput(e) {

@@ -5,8 +5,8 @@
  * 内在成本。多文件并发 runner 启动时会与其余测试文件的模块加载/JS 预热抢占 CPU，
  * 本机实测 7/21/41 次采样最小值都卡在 50.5~50.7ms；单独跑或放在队首串行则稳定
  * 21~32ms。这里不改预算、不改测试内容，只把测量环境固定下来：
- *   1. 性能用例排第一，避免被前面几十个文件的加载噪声抬高；
- *   2. --test-concurrency=1，避免同机其它测试进程抢占采样窗口。
+ *   1. 性能用例单独开一个进程先跑完，避免测试 runner 预加载其余文件的模块噪声；
+ *   2. 余下用例再以 --test-concurrency=1 串行跑，避免同机其它测试进程抢占采样窗口。
  */
 import { spawnSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
@@ -21,10 +21,15 @@ if (!files.includes(PRIORITY)) {
   console.error(`[run-tests] 缺少性能基准用例 ${PRIORITY}`);
   process.exit(1);
 }
-const ordered = [PRIORITY, ...files.filter((f) => f !== PRIORITY)]
-  .map((f) => join(TESTS, f));
+function run(list) {
+  return spawnSync(process.execPath, [
+    '--test', '--test-concurrency=1', '--test-timeout=60000', ...list,
+  ], { cwd: ROOT, stdio: 'inherit' });
+}
 
-const r = spawnSync(process.execPath, [
-  '--test', '--test-concurrency=1', '--test-timeout=60000', ...ordered,
-], { cwd: ROOT, stdio: 'inherit' });
-process.exit(r.status == null ? 1 : r.status);
+/* ① 先单独跑性能基准：独立进程，不预加载任何其它测试文件。 */
+const perf = run([join(TESTS, PRIORITY)]);
+if (perf.status !== 0) process.exit(perf.status == null ? 1 : perf.status);
+/* ② 再跑其余用例，仍然单文件串行。 */
+const rest = run(files.filter((f) => f !== PRIORITY).map((f) => join(TESTS, f)));
+process.exit(rest.status == null ? 1 : rest.status);

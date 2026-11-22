@@ -52,9 +52,9 @@
       + '#slgStratSide input,#slgStratSide select,#slgStratSide button'
       + '{font-family:inherit;color:inherit}'
       /* ---- 静止态：四张浮窗各占一角，互不遮挡 ---- */
-      /* ★ 六府 dock 常驻展开后占住右上 230px：当前事务必须往下让，否则会盖住
-         「内政/府库/兵刃/战法库」四个入口（探针实测被盖住四枚按钮）。 */
-      + 'html[data-slg-phase="game"] #slgIxAgenda{right:12px;top:232px;width:250px;max-height:24vh;overflow:auto}'
+      /* ★ P41：六府入口已并入沙盘顶部横向菜单，右上不再有竖排 dock，
+         「当前事务」回到右上角常驻位（此前 top:232px 是为了给旧 dock 让位）。 */
+      + 'html[data-slg-phase="game"] #slgIxAgenda{right:12px;top:56px;width:250px;max-height:24vh;overflow:auto}'
       + 'html[data-slg-phase="game"] #slgIxLens{left:12px;top:auto;bottom:118px;width:212px;max-height:132px;overflow:auto}'
       + 'html[data-slg-phase="game"] #slgIxQueue{left:50%;bottom:12px;transform:translateX(-50%);max-width:52vw;justify-content:center}'
       + 'html[data-slg-phase="game"] #slgIxGuide{left:50%;top:52px;bottom:auto;'

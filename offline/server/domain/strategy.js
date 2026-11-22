@@ -18,6 +18,7 @@ import { gameStatOf } from './general-stat.js';
 /* ★ M2-3 失败态与结局（本作设计）：零依赖叶子 */
 import { failstates, evaluateEnding, makeStandInGeneral } from './failstate.js';
 import { beginInteriorTask, cancelInteriorTask, interiorTaskView } from './interior-task.js';
+import { advanceMaterialTasks } from './material-task.js';
 /* ★ U20 粮道（supply 只依赖 march，不反向 import 本文件） */
 import { supplyMap, marchSupplyEstimate } from './supply.js';
 /* 修 U08：招降成功率收敛到唯一公式，面板图鉴/预览/实际掷骰同源 */
@@ -598,6 +599,8 @@ export function strategyTick(state, cfg, ctx, now = Date.now()) {
   openMonth(state);
   // ★ P2/P3 城市经营：旬灾害（蝗/瘟/丰收）+ 旬忠诚/俸禄/叛逃 + 30日人口增长
   cityEconTick(state, cfg, ctx);
+  /* ★ P41：物资处去的委派任务在旬结算推进，到期执行原 armory 动作（幂等、不提前扣物资）。 */
+  advanceMaterialTasks(state, cfg, ctx);
   /* ★ 2026-11-17 城防：城墙每旬自然修复（被围不修）——否则打过一次就永久残破，
      城防属性从此失去意义。 */
   repairCityWalls(state);

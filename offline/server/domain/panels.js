@@ -896,6 +896,40 @@ export function panelAction(state, cfg, action = {}) {
       return done(target ? `已委任 ${generalName(state, cfg, (state.generals || []).find((x) => x.id === target))} 掌${p.name}` : `已撤去${p.name}委任`, { output: interiorOutput(state, cfg) });
     }
 
+    /* ★ 一键委任：只填空缺岗位，不动已有任命；与手动委任共用职业适任表与属性口径。
+       不选在编/出征武将（收益减半且玩家看不出），一人不兼两岗；同分比忠诚、再比 id，保证重放一致。 */
+    if (type === 'appointAll') {
+      const busyIds = new Set(Object.values(state.interior.posts || {}).map((v) => Number(v)).filter(Boolean));
+      for (const a of state.armys || []) for (const gid of a.generals || []) if (gid) busyIds.add(Number(gid));
+      const candidates = (state.generals || []).filter((x) => {
+        if (busyIds.has(Number(x.id))) return false;
+        return !!CAREER_FIT[careerOf(x).career]?.civilPost;
+      });
+      const chosen = new Set();
+      const lines = [];
+      const skipped = [];
+      for (const p of PANEL_CONF.posts.posts) {
+        if (Number(state.interior.posts?.[p.id]) > 0) continue;
+        const ranked = candidates
+          .filter((x) => !chosen.has(Number(x.id)))
+          .map((x) => ({
+            g: x,
+            stat: Number(LORE_BY_CFG.get(Number(x.cfgId))?.historyStats?.[p.stat]) || 50,
+            loyal: Number(x.loyal) || 0,
+          }))
+          .sort((a, b) => (b.stat - a.stat) || (b.loyal - a.loyal) || (Number(a.g.id) - Number(b.g.id)));
+        if (!ranked.length) { skipped.push(p.name); continue; }
+        const pick = ranked[0];
+        state.interior.posts[p.id] = Number(pick.g.id);
+        chosen.add(Number(pick.g.id));
+        lines.push(`${p.name}→${generalName(state, cfg, pick.g)}（${p.stat} ${pick.stat}）`);
+      }
+      const text = lines.length
+        ? `一键委任完成：${lines.join('、')}${skipped.length ? `；${skipped.join('、')}暂无可任武将` : ''}`
+        : '没有空缺岗位，或暂无可任武将；现有任命未改动';
+      return done(text, { output: interiorOutput(state, cfg), assigned: lines, skipped });
+    }
+
     if (type === 'proposal') {
       const id = String(action.id || '');
       if (state.interior.appliedTurn === turnOf(state)) return fail('本回合已用过政令，下月再来');

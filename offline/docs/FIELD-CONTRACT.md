@@ -19,6 +19,7 @@
 | 领地建筑产量 | `handlers.buildYield()`：**举义后不再计入**（`state.oath.done`），序章坞堡阶段照常（★ 2026-11-19：旧实现把坞堡「土地 Lv.7」的 7000 石/日一直发到战略层，实测 10 旬把石头从 1 万顶到 74 万） | 单位/日 | 整数 | ❌ | 物资去向页、序章坞堡面板 |
 | 逐旬内政增量 | `interior-task.js taskView().perTick` | 点/旬 | 整数 | ❌ | 内政任务卡 |
 | 内政工期档位阈值 | `interior-task.js OFFICER_TICKS_TOP=85 / OFFICER_TICKS_OK=68`（**百分制 0~100**） | 属性点 | 整数 | ❌ | 内政任务卡「预计 N 旬完工」 |
+| 物资去处任务工期 | `material-task.js planMaterialTicks()` 复用上档阈值：≥85 → 1 旬、≥68 → 基准（单项 1 旬 / 余料 2 旬）、低于 68 → 基准+1、无人亲办 → 基准×1.5；**只改快慢，不改物资消耗与产出**。到期执行原 `armory.js` 动作，委派时不扣物资 | 旬 | 整数 | ❌ | 城池内页「物资去处」任务队列「第 N 日办结」 |
 | 国库沉淀税 | `economy.js applyDays()` 的 `hoardTaxPct`（参数表 `goldHoardTaxPct`，默认 4%/旬）；免税额 = 10 × 每旬金毛产 | 两 | 整数（floor） | ❌ | 府库流水「国库沉淀税」、顶栏金 |
 | 城市初始人口 | `conf/campaign/strategy/map.json population`（★ P13 阶梯 ×3~7：≥6 万×3 / ≥3 万×4 / ≥1 万×5 / 其余×7 / 边陲 0 人口显式 3 万）；运行时上限 **100 万**（`city-econ.js` / `interior-task.js`） | 人 | 整数 | ❌ | 城市画像、征兵兵源、城库上限 |
 | 城库存粮上限 | `city-econ.js storeCapOf(e)`：`clamp(pop×0.12, 2万, 24万)`（★ P13 随人口缩放，小城与旧值 2 万一致） | 斛 | 整数 | ❌ | 城卡城库行、粮道、运输队 |

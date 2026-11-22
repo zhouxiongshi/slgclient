@@ -34,6 +34,7 @@ import { RANK_NAMES } from './domain/official-rank.js';
    由 /__slg/session 轮询带给注入外壳转 toast。 */
 import { notify } from './notice-bus.js';
 import { materialGuide } from './domain/armory.js';
+import { materialTaskView, materialOfficers, MATERIAL_STAT_OF, MATERIAL_STAT_LABEL } from './domain/material-task.js';
 import { rngFor } from './domain/strategy-rng.js';
 import { ensureTavern, guestsNow, announceTavern, todaysGuests, dayFraction, exploreTalent, cityNameOf } from './domain/tavern.js';
 /* ★ U15 相性/义理/关系网：登庸成功率与面板构成条同源 */
@@ -645,7 +646,17 @@ export function handleRequest(ctx, req) {
       rsp.msg = { citys: clone(state.citys) };
       break;
     case 'role.myRoleRes':
-      rsp.msg = { role_res: roleResOf(state), guide: materialGuide(state) };
+      /* ★ P41：城内页与六府共用同一份 guide，并带上任务队列与可派武将。 */
+      rsp.msg = {
+        role_res: roleResOf(state),
+        guide: {
+          ...materialGuide(state),
+          tasks: materialTaskView(state),
+          officers: materialOfficers(state, cfg),
+          statOf: MATERIAL_STAT_OF,
+          statLabels: MATERIAL_STAT_LABEL,
+        },
+      };
       break;
     case 'role.myRoleBuild':
       rsp.msg = { mr_builds: clone(state.builds) };

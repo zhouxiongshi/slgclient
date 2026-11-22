@@ -52,6 +52,7 @@ import { interactionState } from './domain/interaction.js';
 /* ★ M2-3 失败态四出路（本作设计）：破产裁军/卖粮、兵尽紧急征兵·雇佣、无将代将、迁都 */
 import { disarmForGold, sellGrain, emergencyConscript, relocateCapital } from './domain/failstate.js';
 import { craftJungong, smeltStone, investDev } from './domain/armory.js';
+import { beginMaterialTask, cancelMaterialTask } from './domain/material-task.js';
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -754,6 +755,12 @@ export async function startOfflineServer(options = {}) {
           cityId: Number(body.cityId) || 0, field: String(body.field || ''),
           count: Number(body.count) || 0, drain: !!body.drain,
         });
+        /* ★ P41：物资去处任务化——委派只登记，到期才走上面的原数值函数。 */
+        else if (act === 'materialTask') result = beginMaterialTask(state, cfg, ctx, {
+          actionId: String(body.actionId || ''), officerId: Number(body.officerId) || 0,
+          cityId: Number(body.cityId) || 0,
+        });
+        else if (act === 'materialTaskCancel') result = cancelMaterialTask(state, ctx, { taskId: String(body.taskId || '') });
         else if (act === 'emergencyConscript') result = emergencyConscript(state, ctx, {
           cityId: Number(body.cityId), count: Number(body.count), mercenary: !!body.mercenary,
         });

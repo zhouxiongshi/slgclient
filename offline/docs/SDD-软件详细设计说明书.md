@@ -2495,6 +2495,16 @@ build/SLG-Offline-win32-x64/
 6. **兵刃面板**：`statBonusText()` / `costText()` 把 `bonusPct` 与 `forge.cost` 翻成「武力 +8%」「铁 300 · 木 120 · 金 200」，禁止 JSON 报文直出。
 7. **验证与边界**：新增 `tests/p33-ui-clarity.test.js` 7 项静态/逻辑闸；双态冒烟 33×2、UI 71×2、真鼠标 54×2、布局双态硬问题 0。`web/` 与协议层未动。全量单测曾因 `p10-preview-consistency` 的 50ms 硬闸假红：多文件 runner 下 7/21/41 次采样最小值均卡在 50.5~50.7ms，而单独跑/队首串行为 21~32ms。为固定测量环境而不放宽预算，新增 `tools/run-tests.mjs`，把性能用例排在队首并改为单文件串行；`npm test` 改走该入口，715/715 通过。
 
+### 17.30 内政委派/府库/菜单/AI 表现/物资任务化 P41（2026-11-22 用户反馈）
+
+1. **P33 残留清理**：决策预览删掉「（P4）」内部编号；物资动作失败由 `errText(rs)` 中文兜底；岗位产出资源键走 `POST_RES_LABEL`，收支流水缺中文名时不再回退英文键；战略面板可出征城改显城名而非内部 id。`p33` 增加第 8 项闸。
+2. **岗位一键委任**：`panelAction type='appointAll'` 只填空缺，与手动委任共用 `CAREER_FIT/careerOf`；排除在编、行军、已在岗、军师与猛将，按岗位属性降序、忠诚/id 兜底；返回逐岗中文结果，不覆盖已有任命。UI 在「岗位委任」上方给按钮与规则说明。
+3. **府库可读性**：`materialGuide()` 增加 `brief` 三句话；六府府库改「库存/日产/用途/上限/状态」表格，动作代价从 `title` 提升到可见小字；城内页府库不再自造资源行，改为消费同一次 `role.myRoleRes` 返回的 guide，杜绝两套口径。
+4. **菜单整合**：沙盘顶部 `#slgDock` 增「六府」分组（武将/战略/内政/府库/兵刃/战法库/战报），点击转发给 `#slgPanelsDock` 里的原按钮，红点与一屏一窗逻辑不复制；旧 dock 保留 DOM 与 z-index 契约但 `display:none`，当前事务浮窗回到右上角。`electron/smoke.cjs` 的 dock 取证同步改为核对横向入口。
+5. **AI 行军静态化**：`draw()` 中 `side !== 'player'` 走独立分支——完整红色实线、固定位置兵力徽章、方向箭头与「势力 → 目标城 · 第 N 日抵达」，无插值/流光/呼吸/`Date.now()`；rAF 只对玩家行军驱动，AI 实体仍由 `strategy.js` 生成并对视图可见。页脚补「诸侯动向 N 支」图例。
+6. **物资去处任务化**：新增零环叶子 `server/domain/material-task.js`。委派只登记任务、不扣物资；到期由 `strategyTick()` 调用 `advanceMaterialTasks()`，执行原 `craftJungong/smeltStone/investDev/sellGrain`，数值/reserve/cap 一律不动。工期按统一属性阈值（≥85 一旬、≥68 基准、低于 68 加一旬、无人亲办 ×1.5），用 `ticksDone + status` 保证同日重复推进不二次执行；失败与撤销均不扣物资且给中文原因。UI 默认只给「选任务 → 选武将 → 委派」与任务队列，原 11 个即时按钮收进「全部物资动作（应急用）」，代价仍可见。
+7. **测试与测量环境**：新增 `p41-one-click-appoint` / `p42-depot-clarity` / `p43-menu-integration` / `p44-ai-static-march` / `p45-material-task` 共 21 项；全量 763/763。`tools/run-tests.mjs` 改为**两个进程**：性能基准单独先跑，其余单文件串行；`tools/check-release.js` 汇总所有 `# pass/# fail` 摘要行，避免双进程输出被误读成「只有 2 项」。50ms 预算未放宽。双态冒烟 33×2、UI 71×2、真鼠标 54×2、布局硬问题 0，`byteIdentical=true`。
+
 **红线速查（改前必看）**：INV-01~INV-10（§1.4）、ADR-01/04/07/08/13/14（§1.2）、§7.15 键空间警告、§9.3 z-index 阶梯（含回放层 100700）、§10 确定性、§14.7 报告归属、§16.4 内核改法、§17 偏差登记。
 
 ---

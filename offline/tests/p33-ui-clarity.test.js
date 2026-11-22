@@ -98,3 +98,16 @@ test('P33-⑦ 兵刃面板不直接展示 JSON 报文', () => {
   assert.ok(p.includes('function statBonusText(o)') && p.includes('function costText(o)'));
   assert.ok(p.includes("COST_LABELS = { gold: '金'"), '材料有中文映射');
 });
+
+test('P33-⑧ 残留下划线：内部编号、英文资源键与英文 reason 不得到达玩家', () => {
+  const ix = read('server/interaction-ui.js');
+  assert.doesNotMatch(ix, /（P4）|（P\d+）/, '提示不得夹带内部编号');
+  const sk = read('server/skills.js');
+  const seg = sk.slice(sk.indexOf('function paintMaterialGuide'), sk.indexOf('function mountMaterialCard'));
+  assert.doesNotMatch(seg, /rs\.hint \|\| rs\.reason/, '物资动作失败必须走中文 errText');
+  assert.ok(seg.includes('errText(rs)'));
+  const p = read('server/panels-ui.js');
+  assert.doesNotMatch(p, /esc\(p\.resource\)/, '岗位资源键必须翻译');
+  assert.doesNotMatch(p, /城池 ID：/, '内部城池 id 不进玩家文案');
+  assert.ok(p.includes('POST_RES_LABEL') && p.includes("grain: '粮'"));
+});

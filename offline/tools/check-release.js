@@ -61,15 +61,18 @@ function fingerprint(m) {
 function runTests(cwd) {
   const r = spawnSync('npm', ['test'], { cwd, encoding: 'utf8', timeout: 300000, shell: true });
   const out = `${r.stdout ?? ''}${r.stderr ?? ''}`;
-  const fail = out.match(/# fail (\d+)/);
-  const pass = out.match(/# pass (\d+)/);
+  /* ★ P41：run-tests.mjs 把性能基准与其余用例拆成两个进程，输出里会有两组
+     `# pass/# fail`。这里汇总所有摘要行，不能只取第一组（否则 2/763 被误判成只有 2 项）。 */
+  const failNums = [...out.matchAll(/^# fail (\d+)$/gm)].map((m) => Number(m[1]));
+  const passNums = [...out.matchAll(/^# pass (\d+)$/gm)].map((m) => Number(m[1]));
+  const fails = failNums.length ? failNums.reduce((a, b) => a + b, 0) : -1;
   /* 只报「2 fail」等于没法诊断（本轮真发生过：打包态进程残留占端口，两个用端口的
      测试挂掉，报告里只有数字）。把失败用例名一并带出来，才不用靠猜。 */
   const names = [...out.matchAll(/^not ok \d+ - (.+)$/gm)].map((m) => m[1].trim());
   return {
-    ok: r.status === 0 && (!fail || fail[1] === '0'),
-    tests: pass ? Number(pass[1]) : 0,
-    fails: fail ? Number(fail[1]) : -1,
+    ok: r.status === 0 && (!failNums.length || fails === 0),
+    tests: passNums.reduce((a, b) => a + b, 0),
+    fails,
     names,
     out,
   };

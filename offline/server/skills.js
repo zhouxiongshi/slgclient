@@ -1449,9 +1449,28 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       + '<button class="chip" data-float="agenda" title="显示 / 收起「当前事务」">事务</button>'
       + '<button class="chip" data-float="legend" title="显示 / 收起「势力面板」">势力</button>'
       + '<i class="sep"></i>'
+      /* ★ P41：六府入口并入这条横向菜单，右侧独立 dock 收起。按钮点击仍转发给
+         六府自己的入口，保留红点未读与一屏一窗逻辑，不在两处复制业务。 */
+      + '<span class="gp">六府</span>'
+      + '<button class="chip" data-slgpanel="general" data-id="general">武将</button>'
+      + '<button class="chip" data-slgpanel="strategy" data-id="strategy">战略</button>'
+      + '<button class="chip" data-slgpanel="interior" data-id="interior">内政</button>'
+      + '<button class="chip" data-slgpanel="depot" data-id="depot">府库</button>'
+      + '<button class="chip" data-slgpanel="equip" data-id="equip">兵刃</button>'
+      + '<button class="chip" data-slgpanel="library" data-id="library">战法库</button>'
+      + '<button class="chip" data-slgpanel="__reports">战报</button>'
+      + '<i class="sep"></i>'
       + '<button id="slgBtnLog">天下日志</button>';
     Array.prototype.forEach.call(dock.querySelectorAll('button'), function (b) {
       b.style.fontFamily = '"Microsoft YaHei",sans-serif';
+    });
+    Array.prototype.forEach.call(dock.querySelectorAll('[data-slgpanel]'), function (b) {
+      b.onclick = function () {
+        var id = b.getAttribute('data-slgpanel');
+        var legacy = document.querySelector('#slgPanelsDock [data-id="' + id + '"]');
+        if (legacy) legacy.click();                    // 沿用红点未读 / 一屏一窗的同一条路径
+        else if (window.__slgPanels) window.__slgPanels.open(id);
+      };
     });
     /* 浮窗开关：状态只落 html[data-slg-float-*]，样式在外壳里，两边不互相引用 */
     Array.prototype.forEach.call(dock.querySelectorAll('[data-float]'), function (chip) {
@@ -1494,7 +1513,9 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       + '<div id="slgStratTurn" style="font-weight:normal;letter-spacing:0;opacity:.85;'
       + 'font-size:12px;margin-top:2px;text-align:left;"></div>'
       + '<div id="slgAlert" style="color:#ffb27a;font-weight:normal;letter-spacing:0;'
-      + 'font-size:12px;line-height:1.5;text-align:left;"></div>';
+      + 'font-size:12px;line-height:1.5;text-align:left;"></div>'
+      + '<div id="slgFoeMarch" style="color:#e08a72;font-weight:normal;letter-spacing:0;'
+      + 'font-size:11.5px;line-height:1.5;text-align:left;"></div>';
     var footList = document.createElement('div');
     footList.id = 'slgStratEvents';
     footList.style.cssText = 'max-height:150px;overflow-y:auto;padding:5px 12px 7px;text-align:left;'
@@ -2528,6 +2549,62 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
           var L = Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]);
           segs.push(L); total += L;
         }
+        /* ★ P41：诸侯军不做逐帧移动画面——静态红线 + 固定位置兵力徽章 + 方向箭头 +
+           「势力 → 目标城 · 第 N 日抵达」。玩家军仍走下方插值/流光动画，互不干扰。 */
+        if (isFoe) {
+          var fLen = total * 0.62, fAcc = 0;
+          var fCur = [pts[0][0], pts[0][1]], fTang = null;
+          for (var fi = 0; fi < segs.length; fi++) {
+            var fL = segs[fi];
+            if (fAcc + fL >= fLen || fi === segs.length - 1) {
+              var ft = fL > 0 ? (fLen - fAcc) / fL : 0;
+              ft = Math.max(0, Math.min(1, ft));
+              fCur = [pts[fi][0] + (pts[fi + 1][0] - pts[fi][0]) * ft,
+                pts[fi][1] + (pts[fi + 1][1] - pts[fi][1]) * ft];
+              fTang = [pts[fi + 1][0] - pts[fi][0], pts[fi + 1][1] - pts[fi][1]];
+              break;
+            }
+            fAcc += fL;
+          }
+          g.save();
+          g.strokeStyle = 'rgba(225,92,72,.9)';
+          g.lineWidth = Math.max(1.8, 2.6 * scale);
+          g.beginPath();
+          var fq0 = P(pts[0]); g.moveTo(fq0[0], fq0[1]);
+          for (var fj = 1; fj < pts.length; fj++) {
+            var fqj = P(pts[fj]); g.lineTo(fqj[0], fqj[1]);
+          }
+          g.stroke();
+          var qf = P(fCur), fR = Math.max(11, 13 * scale);
+          g.beginPath(); g.arc(qf[0], qf[1], fR, 0, 6.2832);
+          g.fillStyle = 'rgba(16,14,8,.9)'; g.fill();
+          g.lineWidth = 2; g.strokeStyle = '#e15c48'; g.stroke();
+          var fSum = Math.max(0, Number(mm.troops) || 0);
+          var fTxt = fSum >= 10000 ? (fSum / 10000).toFixed(1) + '万' : String(fSum);
+          g.fillStyle = '#ffb9a8';
+          g.font = 'bold ' + Math.max(9, Math.min(12, fR * 0.8)).toFixed(1) + 'px "Microsoft YaHei",sans-serif';
+          g.textAlign = 'center'; g.textBaseline = 'middle';
+          g.fillText(fTxt, qf[0], qf[1] + 0.5);
+          if (fTang) {
+            var ftl = Math.hypot(fTang[0], fTang[1]) || 1;
+            var fdx = fTang[0] / ftl, fdy = fTang[1] / ftl;
+            var fax = qf[0] + fdx * (fR + 9), fay = qf[1] + fdy * (fR + 9);
+            g.beginPath();
+            g.moveTo(fax + fdx * 8, fay + fdy * 8);
+            g.lineTo(fax - fdy * 5 - fdx * 3, fay + fdx * 5 - fdy * 3);
+            g.lineTo(fax + fdy * 5 - fdx * 3, fay - fdx * 5 - fdy * 3);
+            g.closePath(); g.fillStyle = '#e15c48'; g.fill();
+          }
+          var fLabel = (mm.factionName || '诸侯军') + ' → ' + (mm.toName || b.name || '')
+            + ' · 第 ' + Math.max(1, Math.floor(Number(mm.arriveDay) || 1)) + ' 日抵达';
+          g.font = Math.max(10, 11.5 * scale).toFixed(1) + 'px "Microsoft YaHei",sans-serif';
+          g.textAlign = 'center'; g.textBaseline = 'top';
+          g.lineWidth = 3; g.strokeStyle = 'rgba(250,244,228,.88)';
+          g.strokeText(fLabel, qf[0], qf[1] + fR + 5);
+          g.fillStyle = '#9e2b1c'; g.fillText(fLabel, qf[0], qf[1] + fR + 5);
+          g.restore();
+          return;
+        }
         var walked = p * total;
         var cur = [pts[0][0], pts[0][1]];
         var acc = 0, closed = false, tang = null;
@@ -2679,6 +2756,14 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       alertEl.textContent = alertTxt;
       alertEl.style.display = alertTxt ? 'block' : 'none';
     }
+    var foeEl = document.getElementById('slgFoeMarch');
+    if (foeEl) {
+      var foes = (s.marches || []).filter(function (mm) { return !!mm.side && mm.side !== 'player' && !mm.resolved; });
+      var foeTxt = foes.length
+        ? '诸侯动向 ' + foes.length + ' 支：红线与箭头为静态标记，不逐帧移动' : '';
+      foeEl.textContent = foeTxt;
+      foeEl.style.display = foeTxt ? 'block' : 'none';
+    }
     var ev = document.getElementById('slgStratEvents');
     if (ev) {
       if (s.chronicle && s.chronicle.length) {
@@ -2714,15 +2799,19 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     /* ★ #18：draw 是所有视口/选中变更的唯一收口，落盘放这里不会漏事件 */
     saveView();
 
-    // ★ P2：有队伍在行军时以 ~20fps 连续重绘，军标平滑移动；走完自动停
-    var marching = s.marches && s.marches.some(function (mm) { return !mm.resolved; });
-    if (marching && overlay && overlay.style.display !== 'none' && !rafId) {
+    /* ★ P41：只有玩家行军才驱动 ~20fps 连续重绘；诸侯军是静态地图标记，
+       不再让整张沙盘为了 AI 行军逐帧闪动。状态刷新时 draw 一次，标记照样出现。 */
+    var playerMarching = function (st) {
+      return !!(st && st.marches && st.marches.some(function (mm) {
+        return !mm.resolved && (!mm.side || mm.side === 'player');
+      }));
+    };
+    if (playerMarching(s) && overlay && overlay.style.display !== 'none' && !rafId) {
       rafId = requestAnimationFrame(function loop(ts) {
         rafId = null;
         if (!lastState || (overlay && overlay.style.display === 'none')) return;
         if (ts - lastRafAt > 50) { lastRafAt = ts; draw(lastState); }
-        var still = lastState.marches && lastState.marches.some(function (mm) { return !mm.resolved; });
-        if (still) rafId = requestAnimationFrame(loop);
+        if (playerMarching(lastState)) rafId = requestAnimationFrame(loop);
       });
     }
   }
@@ -5200,10 +5289,15 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     });
   }
 
-  /* 物资去处：说明和按钮都用服务端 guide，这里不自己算花费。 */
+  /* 物资去处（P41）：瞬时按钮改成「选任务 → 派武将 → 按工期办理」。
+     规则、数值、代价都由 guide 下发；这里只负责把队列与代价讲清楚。 */
   function paintMaterialGuide(box, guide, cityId, onDone) {
     var full = (guide.resources || []).filter(function (r) { return r.full; });
-    var html = '<h4 style="margin-top:0">物资去处</h4>'
+    var statOf = guide.statOf || {};
+    var statLabels = guide.statLabels || {};
+    var html = '<h4 style="margin-top:0">物资去处 · 委派办理</h4>'
+      + '<div class="cost">选任务 → 选武将 → 委派，到期自动执行；物资在完工时才扣除。'
+      + '同一件事完工前不能重复委派，撤销不扣物资。</div>'
       + '<div class="cost">' + esc(guide.rule || '') + '</div>'
       + '<div class="cost">军工 <b style="color:#f0d998">' + fmt(guide.jungong || 0) + '</b>'
       + '。军工不进仓库，也不会每天自己涨。</div>';
@@ -5219,23 +5313,98 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         + ' — ' + esc(r.use || '') + '</div>';
     });
     box.innerHTML = html;
-    var row = el('div', '');
-    row.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-top:8px';
+
+    var tasks = guide.tasks || [];
+    if (tasks.length) {
+      var tq = el('div', 'cost');
+      tq.style.cssText = 'margin-top:8px;border-top:1px solid rgba(186,154,82,.3);padding-top:6px';
+      tq.innerHTML = '<b style="color:#f0d998">当前任务</b>'
+        + tasks.map(function (t) {
+          return '<div style="padding:4px 0;border-bottom:1px dashed rgba(186,154,82,.18)">'
+            + '<span class="tag ' + (t.status === 'active' ? 'mid' : (t.status === 'done' ? 'ok' : 'no')) + '">'
+            + esc(t.statusText) + '</span> '
+            + esc(t.label) + ' · ' + esc(t.officer) + '（' + esc(t.officerStat) + '）'
+            + '<div class="muted">第 ' + t.startDay + ' 日领办 · 第 ' + t.endDay + ' 日办结 · 余 '
+            + t.daysLeft + ' 日 · 进度 ' + t.pct + '%' + (t.note ? ' · ' + esc(t.note) : '') + '</div>'
+            + (t.status === 'active'
+              ? '<button class="btn" style="margin-top:3px" data-mtask="' + esc(t.id) + '">撤销委派</button>' : '')
+            + '</div>';
+        }).join('');
+      box.appendChild(tq);
+      Array.prototype.forEach.call(tq.querySelectorAll('[data-mtask]'), function (b) {
+        b.onclick = function () {
+          postJSON('/__slg/strategy/action', { action: 'materialTaskCancel', taskId: b.getAttribute('data-mtask') })
+            .then(function (rs) {
+              toast(rs.ok ? (rs.message || '已撤销') : errText(rs), !!rs.ok);
+              if (onDone) onDone();
+            }).catch(function () { toast('撤销失败，请稍后再试', false); });
+        };
+      });
+    } else {
+      box.appendChild(el('div', 'cost', '当前没有委派任务。'));
+    }
+
+    var form = el('div', '');
+    form.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px';
+    var selTask = document.createElement('select');
+    selTask.innerHTML = (guide.actions || []).map(function (a) {
+      return '<option value="' + esc(a.id) + '">' + esc(a.label) + ' · ' + esc(a.note || '') + '</option>';
+    }).join('');
+    var selOff = document.createElement('select');
+    function fillOfficers() {
+      var key = statOf[selTask.value] || 'force';
+      var label = statLabels[key] || '属性';
+      selOff.innerHTML = '<option value="0">太守亲办（工期 +1 旬）</option>'
+        + (guide.officers || []).map(function (o) {
+          return '<option value="' + o.id + '">' + esc(o.name) + ' · ' + esc(label) + ' '
+            + ((o.stats || {})[key] || 0) + ' · ' + esc(o.cityName) + '</option>';
+        }).join('');
+    }
+    selTask.onchange = fillOfficers;
+    fillOfficers();
+    form.appendChild(selTask);
+    form.appendChild(selOff);
+    form.appendChild(mkBtn('委派执行', '', function () {
+      postJSON('/__slg/strategy/action', {
+        action: 'materialTask', actionId: selTask.value,
+        officerId: Number(selOff.value) || 0, cityId: cityId,
+      }).then(function (rs) {
+        toast(rs.ok ? (rs.message || '已委派') : errText(rs), !!rs.ok);
+        if (onDone) onDone();
+      }).catch(function () { toast('委派失败，请稍后再试', false); });
+    }));
+    box.appendChild(form);
+    box.appendChild(el('div', 'cost', '工期：属性 ≥85 一旬、≥68 按基准、低于 68 多一旬；无人亲办再加半旬。'
+      + '属性只影响快慢，不改变产出与消耗。'));
+
+    /* 应急口收起：原瞬时动作仍可达，代价照常可见，但不作为默认交互。 */
+    var foldBtn = mkBtn('全部物资动作（即时办理，应急用）', '', function () {
+      var on = panel.style.display === 'none';
+      panel.style.display = on ? 'flex' : 'none';
+      foldBtn.textContent = on ? '收起即时办理' : '全部物资动作（即时办理，应急用）';
+    });
+    box.appendChild(foldBtn);
+    var panel = el('div', '');
+    panel.style.cssText = 'display:none;flex-wrap:wrap;gap:6px;margin-top:6px';
     (guide.actions || []).forEach(function (a) {
       var b = mkBtn(a.label, '', function () {
         var body = {};
         Object.keys(a.body || {}).forEach(function (k) { body[k] = a.body[k]; });
         if (a.needsCity) body.cityId = cityId;
         postJSON('/__slg/strategy/action', body).then(function (rs) {
-          if (rs.ok) toast(rs.text || '已办妥', true);
-          else toast(rs.hint || rs.reason || '做不到', false);
+          toast(rs.ok ? (rs.text || rs.message || '已办妥') : errText(rs), !!rs.ok);
           if (onDone) onDone();
-        });
+        }).catch(function () { toast('办理失败，请稍后再试', false); });
       });
-      if (a.note) b.title = a.note;
-      row.appendChild(b);
+      if (a.note) {
+        b.title = a.note;
+        var wrap = el('div', '');
+        wrap.appendChild(b);
+        wrap.appendChild(el('div', 'cost', esc(a.note)));
+        panel.appendChild(wrap);
+      } else panel.appendChild(b);
     });
-    box.appendChild(row);
+    box.appendChild(panel);
   }
 
   function mountMaterialCard(parent, cityId, onDone) {
@@ -5790,16 +5959,18 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       .then(function (rs) {
         body.innerHTML = '';
         var res = (rs[1].msg && rs[1].msg.role_res) || {};
+        /* ★ P41：城内页府库不再自造资源行——与六府共用同一份 guide（库存/日产/用途/上限同源）。 */
+        var guide = (rs[1].msg && rs[1].msg.guide) || {};
         var meta = rs[2] || { collectIntervalSec: 30, collectLimit: 3 };
         var card = el('div', 'card');
-        card.innerHTML = '<h4 style="margin-top:0">府库</h4>';
+        card.innerHTML = '<h4 style="margin-top:0">府库</h4>'
+          + '<div class="cost">' + esc(guide.brief || '') + '</div>';
         var resRow = el('div', 'res');
-        [['wood', '木', res.wood_yield], ['iron', '铁', res.iron_yield], ['stone', '石', res.stone_yield],
-         ['grain', '粮', res.grain_yield], ['gold', '金', res.gold_yield], ['decree', '政令', null]]
-          .forEach(function (r) {
-            resRow.appendChild(el('div', 'r', '<b>' + fmt(res[r[0]]) + '</b>'
-              + (r[2] != null ? '<small>+' + fmt(r[2]) + '/日</small>' : '<small>&nbsp;</small>')));
-          });
+        (guide.resources || []).forEach(function (r) {
+          resRow.appendChild(el('div', 'r', '<b>' + fmt(r.stock) + '</b>'
+            + '<small>' + (r.yield ? '+' + fmt(r.yield) + '/日' : '不日产')
+            + (r.full ? ' · 满仓' : '') + '</small>'));
+        });
         card.appendChild(resRow);
         var collect = el('div', '');
         collect.style.marginTop = '8px';
