@@ -11,7 +11,6 @@ import { fileURLToPath } from 'node:url';
 import { loadConfig } from '../server/config.js';
 import { createWorld } from '../server/world.js';
 import { ensureStrategy } from '../server/domain/strategy.js';
-import { beginMaterialTask, materialTaskView } from '../server/domain/material-task.js';
 
 const ROOT = resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
 const read = (p) => readFileSync(resolve(ROOT, p), 'utf8');
@@ -42,25 +41,6 @@ test('P46-③ 六府收起后，横向菜单战报 chip 同步未读红点', () 
   assert.ok(pu.includes('function reportDots()'), '发布轮询统一取新旧两个红点');
   assert.ok(pu.includes("document.getElementById('slgRepDotTop')"), '同步到可见红点');
   assert.ok(pu.includes('reportDots().forEach'), '已读时两个红点一起熄灭');
-});
-
-test('P46-④ 非城池物资任务跨城不能重复下单，且归一到 cityId=0', () => {
-  const s = createWorld(cfg);
-  ensureStrategy(s);
-  s.clock.day = 10;
-  const ctx = { push() {} };
-  const first = beginMaterialTask(s, cfg, ctx, {
-    actionId: 'craft10', officerId: 0, cityId: Number(s.strategy.playerCity) || 0,
-  });
-  assert.equal(first.ok, true, JSON.stringify(first));
-  const second = beginMaterialTask(s, cfg, ctx, {
-    actionId: 'craft10', officerId: 0, cityId: 999999,
-  });
-  assert.equal(second.ok, false, '换一座城点进去也算同一件事');
-  assert.match(second.message, /已有一件在办/);
-  const list = materialTaskView(s);
-  assert.equal(list.length, 1, '只允许一件事在办');
-  assert.equal(list[0].cityId, 0, '非 needsCity 任务不绑定偶然的城内页城市');
 });
 
 test('P46-⑤ 玩家可见文案不再夹带内部里程碑编号', () => {

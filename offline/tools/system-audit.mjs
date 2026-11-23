@@ -35,7 +35,7 @@ import {
   factionConfFor, clearThreat, strategyFateView, marchableFrom,
 } from '../server/domain/strategy.js';
 import { canMarchBetween } from '../server/domain/march.js';
-import { strategyAppoint, strategyCancelAppointment } from '../server/domain/appointment.js';
+import { governorSet, governorAutoFill } from '../server/domain/governor.js';
 import { diplomacyAct } from '../server/domain/diplomacy.js';
 import {
   disarmForGold, sellGrain, emergencyConscript, relocateCapital, evaluateEnding,
@@ -222,7 +222,7 @@ export function runAudit({ seed = 20261114, turns = 60 } = {}) {
     switch (turnNo % 16) {
       case 1: attempt('内政·开垦', turnNo, () => strategyInvest(state, cfg, ctx, { cityId: home, kind: 'agri' })); break;
       case 2: attempt('内政·运输粮', turnNo, () => strategyTransport(state, cfg, ctx, { cityId: home, grain: 100, fromCityId: ownIds[1] || home })); break;
-      case 3: attempt('内政·委任', turnNo, () => strategyAppoint(state, cfg, ctx, { cityId: home, goal: 'develop' })); break;
+      case 3: attempt('内政·太守改方针', turnNo, () => governorSet(state, cfg, ctx, { cityId: home, policy: 'auto' })); break;
       case 4: attempt('内政·赏赐', turnNo, () => rewardGeneral(state, cfg, ctx, { generalId: state.generals?.[0]?.id || 0, amount: 100 })); break;
       case 5: attempt('内政·编队', turnNo, () => strategyFormup(state, cfg, ctx, {
         armyId: army?.id || 0, generals: army?.generals || [0, 0, 0], soldiers: army?.soldiers || [0, 0, 0],
@@ -337,7 +337,7 @@ export function runAudit({ seed = 20261114, turns = 60 } = {}) {
   /* 补充动作批次：主循环按旬轮换未覆盖到的动作，在这里集中走一遍真实入口。 */
   const T = st.turn;
   attempt('内政·撤销施政', T, () => cancelInvest(state, ctx, { taskId: String((st.interiorTasks || [])[0]?.id || '') }));
-  attempt('内政·撤销委任', T, () => strategyCancelAppointment(state, ctx, { apptId: String((st.appointments || [])[0]?.id || '') }));
+  attempt('内政·一键补任太守', T, () => governorAutoFill(state, cfg, ctx, {}));
   attempt('征战·清剿来犯', T, () => clearThreat(state, cfg, ctx, { garrisonId: (state.garrisons || [])[0]?.id || 0, armyId: (state.armys || [])[0]?.id || 0 }));
   attempt('征战·消化新城', T, () => strategyDigestDone(state, { cityId: Object.keys(st.cities)[0] }));
   attempt('俘虏·招降', T, () => recruitCaptive(state, cfg, ctx, { idx: 0 }));

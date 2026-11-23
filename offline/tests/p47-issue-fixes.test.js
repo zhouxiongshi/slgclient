@@ -145,8 +145,8 @@ test('#13 战报红点回写领域层：markReportsSeen 真的发 war.read', () 
   assert.ok(body.includes("__slgSend('war.read'"), '点开战报必须发 war.read，不能只藏红点');
 });
 
-test('#25 物资任务文案按旬，不承诺精确完工日', () => {
-  const src = readFileSync('server/domain/material-task.js', 'utf8');
-  assert.ok(src.includes('旬末统一办理'), '委派成功文案要说明旬末办理');
-  assert.doesNotMatch(src, /预计第 \$\{endDay\} 日完工/, '不再写死精确到日的完工承诺');
+test('#25 太守派单文案按旬，不承诺精确完工日', () => {
+  const src = readFileSync('server/domain/governor.js', 'utf8');
+  assert.ok(src.includes('自动续办'), '缺金文案要说明自动续办，不静默跳过');
+  assert.doesNotMatch(src, /预计第 \$\{endDay\} 日完工/, '不写死精确到日的完工承诺');
 });

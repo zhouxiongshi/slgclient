@@ -16,8 +16,9 @@ import { advanceInteriorTasks } from './interior-task.js';
 /* ★ U20 粮道连通与断粮：单向依赖 march（supply 不 import city-econ，无环）
  *   ★ M2 L2：军级补给线（supplyLineForArmy / armySupplyTick）与城级同模块同入口 */
 import { supplyTick, armySupplyTick } from './supply.js';
-/* ★ M2-4 委任对象化（本作设计）：旬界自动派单，走 interior-task 同源（无环） */
-import { appointmentTick } from './appointment.js';
+/* ★ P50 太守制（2026-11-23，对齐成熟 SLG 内政惯例）：旬界太守自动办政，替换旧长驻委任
+   （appointment.js 已删）；走 interior-task 同源，产出与旧手动/委任完全一致。 */
+import { governorTick } from './governor.js';
 import { knobGet } from './knobs.js';
 /* ★ 2026-11-20：春征秋收惩罚的季节判定复用 levy 的唯一口径（零依赖叶子，无环）。 */
 import { seasonOf } from './levy.js';
@@ -428,6 +429,11 @@ export function loyaltyTick(state, cfg, ctx) {
   const day = Math.floor(Number(state.clock?.day) || 1);
   const posts = state.interior?.posts || {};
   const postedIds = new Set(Object.values(posts).map(Number).filter((v) => v > 0));
+  /* ★ P50 太守制：太守视为「委任在岗」，与六府岗位同享 +0.6/旬（FIELD-CONTRACT §太守制）。 */
+  for (const gv of Object.values(state.strategy?.governors || {})) {
+    const oid = Number(gv?.officerId) || 0;
+    if (oid > 0) postedIds.add(oid);
+  }
   /* 民心崩：★ P47#1 只统计「玩家自己」的城。
      旧写法遍历全图 72 城，扬州 52/53/55 三座敌城民心原生为 0，
      于是玩家武将每旬无条件 -1，80 旬后 85 → 45，完美复现「高忠诚内政后
@@ -515,8 +521,8 @@ export function cityEconTick(state, cfg, ctx) {
   const supply = day % 10 === 0 ? supplyTick(state, cfg, ctx) : { isolated: [], recovered: [], hits: [] };
   /* ★ M2 粮道 L2：军级补给结算（通畅扣节点粮 / 断绝警告与逃兵），NPC 与玩家同入口 */
   const armySupply = day % 10 === 0 ? armySupplyTick(state, ctx) : { fed: [], cut: [] };
-  /* ★ M2-4 委任对象化（本作设计）：旬界自动派单（blocked 置顶报告），产出与手动同源 */
-  const appts = day % 10 === 0 ? appointmentTick(state, cfg, ctx) : { started: [], blocked: [], resumed: [], ended: [] };
+  /* ★ P50 太守制：旬界太守按方针自动办政（blocked 置顶报告），产出与手动同源 */
+  const govs = day % 10 === 0 ? governorTick(state, cfg, ctx) : { started: [], blocked: [], resumed: [], ended: [] };
   const dev = day % 10 === 0 ? cityDevTick(state, cfg, ctx) : { gains: [], upsets: [] };
   const fired = day % 10 === 0 ? disasterTick(state, cfg, ctx) : [];
   const loyalty = day % 10 === 0 ? loyaltyTick(state, cfg, ctx) : null;
@@ -531,7 +537,7 @@ export function cityEconTick(state, cfg, ctx) {
       time: Date.now(),
     });
   }
-  return { fired, loyalty, dev, tasks, supply, armySupply, appts };
+  return { fired, loyalty, dev, tasks, supply, armySupply, govs };
 }
 
 /** 出发行军粮：优先从出发城城库扣，不足部分吃全局池并加 25% 损耗。 */

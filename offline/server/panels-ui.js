@@ -1100,6 +1100,26 @@
         + '<div class="muted">一户一丁、妇孺老弱免征；每城每旬只征一次。兵源耗尽先在城池内页办「劝课生息」。</div></div>';
     }
 
+    /* ★ P50 太守制总览：每城太守/方针/在办一目了然，补任与改方针在城池内页办理。 */
+    var govRows = data.strategy.governors || [];
+    if (govRows.length) {
+      out += '<h3>天下太守总览（内政全自动）</h3>'
+        + '<div class="card" style="margin-bottom:8px"><div class="muted">每城由太守按方针逐旬自动办政（产出与亲手派单同源）；'
+        + '任免太守与改方针到城池内页「太守 · 方针」卡办理。补任只填空缺：行军中、已任他城太守或已掌岗位者不参与。</div>'
+        + '<button class="btn" style="margin-top:7px" data-act="governorAutoFill">一键补任空缺太守</button>'
+        + '<table style="margin-top:8px"><thead><tr><th>城池</th><th>太守</th><th>方针</th><th>状态</th><th>在办</th></tr></thead><tbody>'
+        + govRows.map(function (g) {
+          var stTag = g.status === 'blocked'
+            ? '<span class="tag no">暂停：' + esc(g.blockedReason || '缺金') + '</span>'
+            : '<span class="tag ok">办政中 · ' + esc(g.policyLabel) + '</span>';
+          return '<tr><td>' + esc(g.city) + '</td>'
+            + '<td>' + (g.officer ? esc(g.officer) + '（' + esc(g.officerStat) + '）' : '<span class="muted">空缺 · 太守亲办 ×1.5</span>') + '</td>'
+            + '<td>' + esc(g.policyLabel) + '</td>'
+            + '<td>' + stTag + '</td>'
+            + '<td>' + (g.active.length ? g.active.map(function (t) { return esc(t.label); }).join('、') : '<span class="muted">—</span>') + '</td></tr>';
+        }).join('') + '</tbody></table></div>';
+    }
+
     out += '<h3>岗位委任（换人 delta 实时预览）</h3>'
       + '<div class="card" style="margin-bottom:8px"><div class="muted">一键委任只补空缺：按该岗位对应属性挑最高的闲置武将；'
       + '在编/出征、军师、猛将和已在岗者不参与，同分看忠诚。已有任命不会被覆盖。</div>'
@@ -1166,7 +1186,7 @@
 
     out += '<div class="card"><h3>物资去处 · 即时办理</h3>'
       + '<div class="muted" style="margin-bottom:8px">下列动作点了立刻结算，代价直接写在按钮下方；不派武将、不占工期。'
-      + '想安排武将按工期办理，请到城池内页「内政 · 物资去处」。</div>'
+      + '金驱动的发展由各城太守按方针自动办理（见城池内页「太守 · 方针」）。</div>'
       + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(224px,1fr));gap:7px">'
       + (guide.actions || []).map(function (a) {
         return '<div><button class="btn" data-act="armory" data-id="' + esc(a.id) + '">'
@@ -1507,6 +1527,7 @@
     var act = t.getAttribute('data-act');
     if (act === 'appoint') return post({ type: 'appoint', post: t.getAttribute('data-post'), target: Number(t.value) });
     if (act === 'appointAll') return post({ type: 'appointAll' });
+    if (act === 'governorAutoFill') return post({ type: 'governorAutoFill' });
     if (act === 'citypick') { ui.selectedCity = Number(t.value); return render(); }
   }
   function onInput(e) {

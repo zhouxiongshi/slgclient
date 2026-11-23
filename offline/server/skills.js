@@ -5405,16 +5405,13 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     });
   }
 
-  /* 物资去处（P41）：瞬时按钮改成「选任务 → 派武将 → 按工期办理」。
-     规则、数值、代价都由 guide 下发；这里只负责把队列与代价讲清楚。 */
+  /* 物资去处（★ P50 回归即时办理）：点了立刻结算，代价直接写在按钮下方。
+     旧「选任务→派武将→按工期办理」的任务层已删——金驱动的发展由太守按方针自动办理，
+     这里只做物资转化（粮/石/木铁换开发与军工）。 */
   function paintMaterialGuide(box, guide, cityId, onDone) {
     var full = (guide.resources || []).filter(function (r) { return r.full; });
-    var statOf = guide.statOf || {};
-    var statLabels = guide.statLabels || {};
-    var html = '<h4 style="margin-top:0">物资去处 · 委派办理</h4>'
-      + '<div class="cost">选任务 → 选武将 → 委派，到期自动执行；物资在完工时才扣除。'
-      + '同一件事完工前不能重复委派，撤销不扣物资。</div>'
-      + '<div class="cost">' + esc(guide.rule || '') + '</div>'
+    var html = '<h4 style="margin-top:0">物资去处 · 即时办理</h4>'
+      + '<div class="cost">' + esc(guide.brief || '') + '</div>'
       + '<div class="cost">军工 <b style="color:#f0d998">' + fmt(guide.jungong || 0) + '</b>'
       + '。军工不进仓库，也不会每天自己涨。</div>';
     if (full.length) {
@@ -5428,102 +5425,25 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         + (r.full ? ' · 已满' : '')
         + ' — ' + esc(r.use || '') + '</div>';
     });
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(224px,1fr));gap:7px;margin-top:8px">'
+      + (guide.actions || []).map(function (a) {
+        return '<div><button class="btn" data-mact="' + esc(a.id) + '">' + esc(a.label) + '</button>'
+          + '<div class="muted" style="margin-top:3px">' + esc(a.note || '') + '</div></div>';
+      }).join('') + '</div>';
     box.innerHTML = html;
-
-    var tasks = guide.tasks || [];
-    if (tasks.length) {
-      var tq = el('div', 'cost');
-      tq.style.cssText = 'margin-top:8px;border-top:1px solid rgba(186,154,82,.3);padding-top:6px';
-      tq.innerHTML = '<b style="color:#f0d998">当前任务</b>'
-        + tasks.map(function (t) {
-          return '<div style="padding:4px 0;border-bottom:1px dashed rgba(186,154,82,.18)">'
-            + '<span class="tag ' + (t.status === 'active' ? 'mid' : (t.status === 'done' ? 'ok' : 'no')) + '">'
-            + esc(t.statusText) + '</span> '
-            + esc(t.label) + ' · ' + esc(t.officer) + '（' + esc(t.officerStat) + '）'
-            /* ★ P47#25：只在旬界推进，文案改为按旬，不承诺精确到某一日。 */
-            + '<div class="muted">第 ' + t.startDay + ' 日领办 · 约第 '
-            + Math.max(1, Math.ceil(Number(t.endDay) / 10)) + ' 旬旬末办结（预计第 '
-            + t.endDay + ' 日前）· 余 ' + t.daysLeft + ' 日 · 进度 ' + t.pct + '%'
-            + (t.note ? ' · ' + esc(t.note) : '') + '</div>'
-            + (t.status === 'active'
-              ? '<button class="btn" style="margin-top:3px" data-mtask="' + esc(t.id) + '">撤销委派</button>' : '')
-            + '</div>';
-        }).join('');
-      box.appendChild(tq);
-      Array.prototype.forEach.call(tq.querySelectorAll('[data-mtask]'), function (b) {
-        b.onclick = function () {
-          postJSON('/__slg/strategy/action', { action: 'materialTaskCancel', taskId: b.getAttribute('data-mtask') })
-            .then(function (rs) {
-              toast(rs.ok ? (rs.message || '已撤销') : errText(rs), !!rs.ok);
-              if (onDone) onDone();
-            }).catch(function () { toast('撤销失败，请稍后再试', false); });
-        };
-      });
-    } else {
-      box.appendChild(el('div', 'cost', '当前没有委派任务。'));
-    }
-
-    var form = el('div', '');
-    form.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px';
-    var selTask = document.createElement('select');
-    selTask.innerHTML = (guide.actions || []).map(function (a) {
-      return '<option value="' + esc(a.id) + '">' + esc(a.label) + ' · ' + esc(a.note || '') + '</option>';
-    }).join('');
-    var selOff = document.createElement('select');
-    function fillOfficers() {
-      var key = statOf[selTask.value] || 'force';
-      var label = statLabels[key] || '属性';
-      selOff.innerHTML = '<option value="0">太守亲办（工期 +1 旬）</option>'
-        + (guide.officers || []).map(function (o) {
-          return '<option value="' + o.id + '">' + esc(o.name) + ' · ' + esc(label) + ' '
-            + ((o.stats || {})[key] || 0) + ' · ' + esc(o.cityName) + '</option>';
-        }).join('');
-    }
-    selTask.onchange = fillOfficers;
-    fillOfficers();
-    form.appendChild(selTask);
-    form.appendChild(selOff);
-    form.appendChild(mkBtn('委派执行', '', function () {
-      postJSON('/__slg/strategy/action', {
-        action: 'materialTask', actionId: selTask.value,
-        officerId: Number(selOff.value) || 0, cityId: cityId,
-      }).then(function (rs) {
-        toast(rs.ok ? (rs.message || '已委派') : errText(rs), !!rs.ok);
-        if (onDone) onDone();
-      }).catch(function () { toast('委派失败，请稍后再试', false); });
-    }));
-    box.appendChild(form);
-    box.appendChild(el('div', 'cost', '工期：属性 ≥85 一旬、≥68 按基准、低于 68 多一旬；无人亲办再加半旬。'
-      + '属性只影响快慢，不改变产出与消耗。'));
-
-    /* 应急口收起：原瞬时动作仍可达，代价照常可见，但不作为默认交互。 */
-    var foldBtn = mkBtn('全部物资动作（即时办理，应急用）', '', function () {
-      var on = panel.style.display === 'none';
-      panel.style.display = on ? 'flex' : 'none';
-      foldBtn.textContent = on ? '收起即时办理' : '全部物资动作（即时办理，应急用）';
-    });
-    box.appendChild(foldBtn);
-    var panel = el('div', '');
-    panel.style.cssText = 'display:none;flex-wrap:wrap;gap:6px;margin-top:6px';
-    (guide.actions || []).forEach(function (a) {
-      var b = mkBtn(a.label, '', function () {
+    Array.prototype.forEach.call(box.querySelectorAll('[data-mact]'), function (b) {
+      var act = (guide.actions || []).find(function (a) { return a.id === b.getAttribute('data-mact'); });
+      if (!act) return;
+      b.onclick = function () {
         var body = {};
-        Object.keys(a.body || {}).forEach(function (k) { body[k] = a.body[k]; });
-        if (a.needsCity) body.cityId = cityId;
+        Object.keys(act.body || {}).forEach(function (k) { body[k] = act.body[k]; });
+        if (act.needsCity) body.cityId = cityId;
         postJSON('/__slg/strategy/action', body).then(function (rs) {
           toast(rs.ok ? (rs.text || rs.message || '已办妥') : errText(rs), !!rs.ok);
           if (onDone) onDone();
         }).catch(function () { toast('办理失败，请稍后再试', false); });
-      });
-      if (a.note) {
-        b.title = a.note;
-        var wrap = el('div', '');
-        wrap.appendChild(b);
-        wrap.appendChild(el('div', 'cost', esc(a.note)));
-        panel.appendChild(wrap);
-      } else panel.appendChild(b);
+      };
     });
-    box.appendChild(panel);
   }
 
   function mountMaterialCard(parent, cityId, onDone) {
@@ -5574,7 +5494,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       var taskCard = el('div', 'card', '<h4 style="margin-top:0">内政任务状</h4>');
       var tasks = c.interiorTasks || [];
       if (!tasks.length) {
-        taskCard.appendChild(el('div', 'empty', '本城暂无内政任务。选一项委派，会按执行武将能力在 1~3 旬内完工。'));
+        taskCard.appendChild(el('div', 'empty', '本城暂无内政任务。太守每旬会按方针自动派单，无需手动办理。'));
       } else {
         tasks.forEach(function (t) {
           var active = t.status === 'active';
@@ -5608,108 +5528,88 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       mountMaterialCard(body, c.id, function () {
         fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
       });
-      var invCard = el('div', 'card', '<h4 style="margin-top:0">委派内政</h4>'
-        + '<div class="cost">只留能回到粮、金、兵、人口的六项。执行武将越强，旬数越少，总产出不变。'
-        + '征兵按兵扣木、铁、粮、金。设施升级扣木、铁、石、粮、金和政令。战法升级只扣军工，在「武将」页办。</div>');
+      /* ★ P50 太守制（对齐成熟 SLG 内政惯例）：城内页只留一张太守·方针卡。
+         旧的三套派单入口（逐项委派卡 / 推荐卡 / 周目标委任卡）全部删除——
+         玩家的决策收敛为：任免太守 + 选方针，其余由太守每旬自动办理（与旧手动同源同价）。 */
+      var gv = c.governor || null;
+      var gvCands = c.governorCands || [];
+      var govCard = el('div', 'card', '<h4 style="margin-top:0">太守 · 方针</h4>'
+        + '<div class="cost">内政全自动：太守每旬按方针办理一件实事（金、工期、产出与亲手派单完全同源），'
+        + '有灾自动开仓赈济；缺金暂停并置顶提醒，金到位自动续办，城丢失自动中止。</div>');
+      if (!gv) {
+        govCard.appendChild(el('div', 'empty', '太守信息尚未就绪，稍后再试。'));
+      } else {
+        var stTxt = gv.status === 'blocked'
+          ? '<span style="color:#ff9d6b">暂停：' + esc(gv.blockedReason || '缺金') + '（金到位自动续办）</span>'
+          : '<span style="color:#a9e2a0">自动办政中 · 已办 ' + (gv.doneCount || 0) + ' 单</span>';
+        var head = el('div', 'row', '<span><b style="color:#f0d998">方针：' + esc(gv.policyLabel) + '</b>'
+          + '<span class="cost">　' + esc(gv.policyDesc) + '</span><br>'
+          + '<span class="cost">太守：' + (gv.officer ? (esc(gv.officer) + (gv.officerStat ? '（治政 ' + gv.officerStat + '）' : '')) : '无太守 · 由太守亲办，工期 ×1.5')
+          + '　' + stTxt
+          + (gv.active.length ? ('　在办：' + gv.active.map(function (t) { return esc(t.label); }).join('、')) : '')
+          + '</span></span>');
+        govCard.appendChild(head);
+
+        var govRow = el('div', '');
+        govRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px';
+        var selGov = document.createElement('select');
+        selGov.innerHTML = gvCands.map(function (g) {
+          return '<option value="' + g.id + '">' + esc(g.name) + ' · 治政 ' + g.politics + ' · 忠 ' + g.loyal + '</option>';
+        }).join('');
+        govRow.appendChild(selGov);
+        govRow.appendChild(mkBtn('任命太守', '', function () {
+          postJSON('/__slg/strategy/action', {
+            action: 'governorSet', cityId: c.id, officerId: Number(selGov.value) || 0,
+          }).then(function (rs) {
+            toast(rs.ok ? '太守已任命：内政从此由太守按方针自动办理' : '无法任命：' + errText(rs), !!rs.ok);
+            fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
+          }).catch(function () { toast('任命失败，请稍后再试', false); });
+        }));
+        if (gv.officerId) {
+          govRow.appendChild(mkBtn('撤任太守', 'ghost', function () {
+            postJSON('/__slg/strategy/action', {
+              action: 'governorSet', cityId: c.id, officerId: 0,
+            }).then(function (rs) {
+              toast(rs.ok ? '太守已撤任：由太守亲办（工期 ×1.5）' : '无法撤任：' + errText(rs), !!rs.ok);
+              fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
+            }).catch(function () { toast('撤任失败，请稍后再试', false); });
+          }));
+        }
+        govRow.appendChild(mkBtn('一键补任', 'ghost', function () {
+          postJSON('/__slg/strategy/action', { action: 'governorAutoFill', cityId: c.id })
+            .then(function (rs) {
+              var f = (rs.filled || [])[0];
+              toast(rs.ok && f ? ('已补任 ' + f.city + '太守：' + f.officer + '（治政 ' + f.politics + '）')
+                : (rs.ok ? '没有可补任的空缺或可用武将' : '无法补任：' + errText(rs)), !!rs.ok && !!f);
+              fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
+            }).catch(function () { toast('补任失败，请稍后再试', false); });
+        }));
+        govCard.appendChild(govRow);
+
+        var polRow = el('div', '');
+        polRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-top:6px';
+        [['auto', '太守自决'], ['agri', '重农'], ['trade', '重商'],
+         ['military', '强兵'], ['defense', '固防'], ['civil', '安民']].forEach(function (p) {
+          var mine = gv.policy === p[0];
+          var b = mkBtn(mine ? (p[1] + '（当前）') : p[1], mine ? 'ghost' : '', function () {
+            postJSON('/__slg/strategy/action', {
+              action: 'governorSet', cityId: c.id, policy: p[0],
+            }).then(function (rs) {
+              toast(rs.ok ? ('方针已改为「' + p[1] + '」：下一旬按新方针办政') : '无法改方针：' + errText(rs), !!rs.ok);
+              fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
+            }).catch(function () { toast('改方针失败，请稍后再试', false); });
+          });
+          if (mine) b.disabled = true;
+          polRow.appendChild(b);
+        });
+        govCard.appendChild(polRow);
+      }
       var sink = el('div', '');
       sink.style.cssText = 'display:flex;gap:6px;margin:6px 0';
       sink.appendChild(mkBtn('去征兵', 'ghost', function () { window.__slgCityInterior(c.id, 'army'); }));
       sink.appendChild(mkBtn('去府库升级设施', 'ghost', function () { window.__slgCityInterior(c.id, 'home'); }));
-      var mkInv = function (label, kind, cost, note) {
-        /* ★ 修 bug-12：按项冷却 —— 只置灰刚办过的那一项，并写明哪天可再办 */
-        var today = Number((cache && cache.day) || 0);
-        var days = (c.investDays || {});
-        var legacy = Object.keys(days).length ? 0 : Number(c.lastInvestDay || 0);
-        var last = Number(days[kind] || legacy) || 0;
-        var cdDay = (last && today - last < 10) ? last + 10 : 0;
-        var doing = (c.interiorTasks || []).some(function (t) { return t.kind === kind && t.status === 'active'; });
-        var b = mkBtn(cdDay ? ('第 ' + cdDay + ' 日可再办') : (doing ? (label + '（进行中）') : (label + '（' + cost + ' 金）')),
-          cdDay ? 'ghost' : '', function () {
-            fetch('/__slg/strategy/action', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'invest', cityId: c.id, kind: kind }),
-            }).then(function (r2) { return r2.json(); }).then(function (rs) {
-              if (rs.ok) {
-                var tk = rs.task || {};
-                toast(rs.instant
-                  ? (label + '已完成：' + (rs.effectText || ''))
-                  : (label + '已委派给 ' + (tk.officer || '无专员') + '，' + tk.ticks + ' 旬完工（第 ' + tk.endDay + ' 日），每旬 +' + tk.perTick), true);
-                fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
-              } else if (rs.reason === 'busy') toast('这项还在办，第 ' + rs.nextDay + ' 日完工', false);
-              else if (rs.reason === 'cooldown') toast('这项内政本旬办过了，第 ' + rs.nextDay + ' 日可再办', false);
-              else if (rs.reason === 'no_gold') toast('金不足（需 ' + rs.cost + '）', false);
-              else if (rs.reason === 'no_disaster') toast('本城眼下无灾可赈', false);
-              else toast('无法办理：' + errText(rs), false);
-            });
-          });
-        b.style.margin = '0';
-        if (cdDay) b.disabled = true;
-        var row = el('div', 'row', '<span>' + label + '<span class="cost">　' + note + '</span></span>');
-        row.appendChild(b);
-        invCard.appendChild(row);
-      };
-      /* ★ P11 兵役制：人口是兵源根，摆在第一行，征兵页也反向链回这里 */
-      mkInv('劝课生息', 'populate', 400, '人口 +8%、民心 +2 → 新增户口才有新丁可征');
-      mkInv('开垦农田', 'agri', 300, '农田 +3 → 粮产上升');
-      mkInv('招商兴市', 'trade', 300, '市集 +3 → 金产上升');
-      mkInv('募兵整编', 'barracks', 350, '兵营 +3 → 征兵更快，民心 +1');
-      mkInv('修筑城防', 'defense', 400, '城防 +2、治安 +2，守军 +150');
-      if (c.disaster || c.modUntil) mkInv('开仓赈灾', 'relief', 500, '解除减产，民心 +6、治安 +3');
-      /* ★ 2026-11-22：六项委派收进「全部任务」，主视口只留一个推荐动作。 */
-      invCard.style.display = 'none';
+      govCard.appendChild(sink);
 
-      /* ★ M2-4 委任对象化（本作设计）：「我不用管，但我知道它在干什么」——
-         每旬自动派一条真实内政任务（与手动同源同价同工期）；缺金置顶暂停、金到位续办、失城中止。 */
-      var apptCard = el('div', 'card', '<h4 style="margin-top:0">长驻委任</h4>'
-        + '<div class="cost">委任后每旬自动办一条真实内政任务（产出与手动完全同源，报告写清谁涨了什么）；'
-        + '缺金时暂停并置顶提醒，金到位自动续办；城丢失自动中止。</div>');
-      var appts = ((cache && cache.appointments) || []).filter(function (a) { return Number(a.cityId) === Number(c.id); });
-      var mkAppt = function (goal, label, note) {
-        var mine = appts.find(function (a) { return a.goal === goal && a.status === 'running'; });
-        var b = mkBtn(mine ? (label + '（委任中）') : (label + '·委任'), mine ? 'ghost' : '', function () {
-          fetch('/__slg/strategy/action', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'appoint', cityId: c.id, goal: goal }),
-          }).then(function (r2) { return r2.json(); }).then(function (rs) {
-            if (rs.ok) toast(label + '委任已设：' + note, true);
-            else if (rs.reason === 'busy') toast('该城已有同目标委任在办', false);
-            else if (rs.reason === 'no_gold') toast('库金不足，本旬暂缓（下一旬自动重试）', false);
-            else toast('无法委任：' + errText(rs), false);
-            fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
-          });
-        });
-        b.style.margin = '0';
-        if (mine) b.disabled = true;
-        var r3 = el('div', 'row', '<span>' + label + '<span class="cost">　' + note + '</span></span>');
-        r3.appendChild(b);
-        apptCard.appendChild(r3);
-      };
-      mkAppt('develop', '劝农商', '开垦/招商轮转，抬农田市集');
-      mkAppt('recruit', '缮甲兵', '募兵整编，抬兵营');
-      mkAppt('defend', '固城防', '修筑城防，抬守备');
-      appts.forEach(function (a) {
-        var stTag = a.status === 'blocked'
-          ? '<span style="color:#ff9d6b">暂停：' + esc(a.blockedReason || '缺金') + '</span>'
-          : (a.status === 'done' ? '已中止（' + esc(a.blockedReason || '') + '）' : '<span style="color:#a9e2a0">运行中</span>');
-        var r4 = el('div', 'row', '<span><b style="color:#f0d998">' + esc(a.goalLabel) + '</b>'
-          + '<span class="cost">　' + stTag + ' · 已办 ' + (a.doneCount || 0) + ' 单'
-          + (a.lastTaskLabel ? ' · 当前：' + esc(a.lastTaskLabel) : '')
-          + (a.officer ? ' · 主官 ' + esc(a.officer) : '') + '</span></span>');
-        if (a.status === 'running' || a.status === 'blocked') {
-          r4.appendChild(mkBtn('取消委任', 'ghost', function () {
-            fetch('/__slg/strategy/action', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'cancelAppoint', apptId: a.id }),
-            }).then(function (r2) { return r2.json(); }).then(function (rs) {
-              if (rs.ok) toast('委任已取消（在施任务照常推进）', true);
-              else toast('无法取消：' + errText(rs), false);
-              fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
-            });
-          }));
-        }
-        apptCard.appendChild(r4);
-      });
-      body.appendChild(apptCard);
       body.appendChild(el('div', 'cost',
         '民心的作用：影响人口增长（+2%~6%/月）与粮金产量（×0.85~1.10）。'
         + '治安越高灾害越少。开发度到 100 以上收益递减，别把一座城堆到顶。'));
@@ -5720,61 +5620,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       body.appendChild(facCard);
       mountFacilitiesCard(facCard, c);
 
-      /* ★ 2026-11-22 内政减负：主视口只给「当前推荐一步」，其余收进折叠区。
-         推荐按发育短板选，不掷骰、不替玩家决策，点「全部任务」仍可逐项办理。 */
-      var pickList = [
-        { kind: 'agri', label: '开垦农田', cost: 300, note: '农田 +3 → 粮产上升', v: Number(c.devAgri) || 0 },
-        { kind: 'trade', label: '招商兴市', cost: 300, note: '市集 +3 → 金产上升', v: Number(c.devTrade) || 0 },
-        { kind: 'barracks', label: '募兵整编', cost: 350, note: '兵营 +3 → 征兵更快', v: Number(c.devArms) || 0 },
-        { kind: 'defense', label: '修筑城防', cost: 400, note: '城防 +2、治安 +2', v: Number(c.devDef) || 0 },
-        { kind: 'populate', label: '劝课生息', cost: 400, note: '人口 +8% → 兵源', v: (Number(c.pop) || 0) / 10000 },
-      ];
-      if (c.disaster || c.modUntil) {
-        pickList.unshift({ kind: 'relief', label: '开仓赈灾', cost: 500,
-          note: '解除减产，民心 +6、治安 +3', v: -1 });
-      }
-      pickList.sort(function (x, y) { return x.v - y.v || x.kind.localeCompare(y.kind); });
-      var rec = pickList[0];
-      var recommend = el('div', 'card', '<h4 style="margin-top:0">当前推荐一步</h4>'
-        + '<div class="cost">先办「' + esc(rec.label) + '」（' + rec.cost + ' 金）：' + esc(rec.note)
-        + '。委派后按执行武将能力 1~3 旬完工，不必盯屏；其余五项和长驻委任都可展开。</div>');
-      var recRow = el('div', 'row', '<span><b style="color:#f0d998">' + esc(rec.label) + '</b>'
-        + '<span class="cost">　主推 · ' + rec.cost + ' 金</span></span>');
-      recRow.appendChild(mkBtn('一键委派', '', function () {
-        fetch('/__slg/strategy/action', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'invest', cityId: c.id, kind: rec.kind }),
-        }).then(function (r2) { return r2.json(); }).then(function (rs) {
-          if (rs.ok) {
-            var tk = rs.task || {};
-            toast(rs.instant ? (rec.label + '已完成：' + (rs.effectText || ''))
-              : (rec.label + '已委派给 ' + (tk.officer || '无专员') + '，第 ' + tk.endDay + ' 日完工'), true);
-          } else if (rs.reason === 'busy' || rs.reason === 'cooldown') {
-            toast('这项在办或本旬已办，第 ' + rs.nextDay + ' 日再试', false);
-          } else toast('无法办理：' + errText(rs), false);
-          fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
-        });
-      }));
-      recRow.appendChild(mkBtn('全部任务', 'ghost', function () {
-        invCard.style.display = invCard.style.display === 'none' ? '' : 'none';
-      }));
-      recommend.appendChild(recRow);
-      /* 人口是兵源根，保留一个常驻快捷入口（真鼠标验收也钉住了这条闭环）。 */
-      var popRow = el('div', 'row', '<span>劝课生息<span class="cost">　人口 +8% → 兵源</span></span>');
-      popRow.appendChild(mkBtn('劝课生息·快速办理', '', function () {
-        fetch('/__slg/strategy/action', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'invest', cityId: c.id, kind: 'populate' }),
-        }).then(function (r2) { return r2.json(); }).then(function (rs) {
-          if (rs.ok) toast('劝课生息已委派，第 ' + ((rs.task || {}).endDay || '—') + ' 日完工', true);
-          else toast('无法办理：' + errText(rs), false);
-          fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
-        });
-      }));
-      recommend.appendChild(popRow);
-      recommend.appendChild(sink);
-      body.insertBefore(recommend, taskCard);
-      body.insertBefore(invCard, taskCard);
+      /* ★ P50：太守·方针卡插在任务状之前——玩家看完决策入口，再看见自动派出的任务。 */
+      body.insertBefore(govCard, taskCard);
       return;
     }
     body.appendChild(el('div', 'card', '<h4 style="margin-top:0">' + c.name + ' · 内政</h4><div class="grid">'

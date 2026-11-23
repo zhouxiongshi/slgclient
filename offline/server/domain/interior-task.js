@@ -209,10 +209,12 @@ function applyGain(state, e, t, ratio) {
 
 /**
  * 派单（替代旧的瞬时 strategyInvest）。
+ * ★ P50 太守制：可传 officerId 指定执行武将（太守本人）；不传或武将不可用
+ *   （不存在/行军中）时退回 pickOfficer（驻城最高属性），再退「太守亲办 ×1.5」。
  * 返回 { ok, task, ... } 或 { ok:false, reason }。
  * reason: not_own_city / no_econ / bad_kind / cooldown / no_gold / no_disaster / busy
  */
-export function beginInteriorTask(state, cfg, ctx, { cityId, kind }) {
+export function beginInteriorTask(state, cfg, ctx, { cityId, kind, officerId } = {}) {
   const st = state?.strategy;
   const id = Number(cityId);
   const K = KINDS[kind];
@@ -246,7 +248,21 @@ export function beginInteriorTask(state, cfg, ctx, { cityId, kind }) {
   e.investDays[kind] = day;
   e.lastInvestDay = day;
 
-  const officer = pickOfficer(state, cfg, id, K.stat);
+  /* ★ P50 太守制：优先太守本人办理；不可用再退驻城最高属性者。 */
+  let officer = null;
+  const oid = Number(officerId) || 0;
+  if (oid) {
+    const g = (state.generals || []).find((x) => Number(x.id) === oid);
+    const marching = g && (state.armys || []).some((a) => a.marchId && (a.generals || []).includes(oid));
+    if (g && !marching) {
+      officer = {
+        id: g.id,
+        name: cfg?.generalByCfg?.get?.(Number(g.cfgId))?.name || `武将${g.id}`,
+        stat: Math.round(officerStat(cfg, g, K.stat)),
+      };
+    }
+  }
+  if (!officer) officer = pickOfficer(state, cfg, id, K.stat);
   /* 城名：strategy 层创建后会补写权威名（cityName(id)）；这里只做兜底，避免跨模块取 map。 */
   const cityName = st.cities[id].name || `城${id}`;
 

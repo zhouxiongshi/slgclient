@@ -28,6 +28,8 @@ import { STAGE_GOALS, UNIFY_CITIES, SANDBOX_ENDING, nextStageGoal } from './stag
 import { facilityView } from './facility-catalog.js';
 /* ★ 2026-11-17 城防：城墙耐久与战斗内用的是同一份公式（零依赖叶子，不成环） */
 import { wallMaxOf, wallView } from './city-wall.js';
+/* ★ P50 太守制：六府·内政总览的一键补任走 governor 唯一口径（governor 只依赖 interior-task 叶子，无环） */
+import { governorAutoFill, governorListView } from './governor.js';
 /* 战略台以并行会话的战略层为唯一口径：行军可达/关隘取 march.js，出征账取 strategy-log.js。
    刻意不 import strategy.js —— 它反向 import world.js，而 world.js 又 import 本文件，会成环。 */
 import { marchableNeighbors, marchGraph } from './march.js';
@@ -925,10 +927,22 @@ export function panelAction(state, cfg, action = {}) {
       return done(target ? `已委任 ${generalName(state, cfg, (state.generals || []).find((x) => x.id === target))} 掌${p.name}` : `已撤去${p.name}委任`, { output: interiorOutput(state, cfg) });
     }
 
+    /* ★ P50 太守制：一键补任空缺太守（六府·内政总览入口）。资格规则全在 governor.js：
+       行军中、已任他城太守、已掌六府岗位者不参与；政治最高者优先，主角不占补任名额。 */
+    if (type === 'governorAutoFill') {
+      const r = governorAutoFill(state, cfg, null, { cityId: int(action.cityId, 0) });
+      if (!r.filled.length) {
+        return fail(r.remaining
+          ? '没有可用武将可补任（行军中、已任他城太守或已掌岗位者不参与），请先撤任或出征归来'
+          : '所有城都有太守，没有空缺');
+      }
+      return done(`已补任太守：${r.filled.map((f) => `${f.city}→${f.officer}`).join('、')}`,
+        { governors: governorListView(state, cfg) });
+    }
+
     /* ★ 一键委任：只填空缺岗位，不动已有任命；与手动委任共用职业适任表与属性口径。
        不选在编/出征武将（收益减半且玩家看不出），一人不兼两岗；同分比忠诚、再比 id，保证重放一致。 */
-    if (type === 'appointAll') {
-      /* ★ P47#12：与手动委任共用 canAppoint（职业闸 / 一人一岗）；
+    if (type === 'appointAll') {      /* ★ P47#12：与手动委任共用 canAppoint（职业闸 / 一人一岗）；
          「在编不参与」仍是一键路径独有的保守策略，手动指定不受此限。 */
       const busyIds = new Set();
       for (const a of state.armys || []) for (const gid of a.generals || []) if (gid) busyIds.add(Number(gid));

@@ -18,7 +18,6 @@ import { gameStatOf } from './general-stat.js';
 /* ★ M2-3 失败态与结局（本作设计）：零依赖叶子 */
 import { failstates, failureCheck, evaluateEnding, makeStandInGeneral } from './failstate.js';
 import { beginInteriorTask, cancelInteriorTask, interiorTaskView } from './interior-task.js';
-import { advanceMaterialTasks } from './material-task.js';
 /* ★ U20 粮道（supply 只依赖 march，不反向 import 本文件） */
 import { supplyMap, marchSupplyEstimate } from './supply.js';
 /* 修 U08：招降成功率收敛到唯一公式，面板图鉴/预览/实际掷骰同源 */
@@ -64,15 +63,17 @@ import { captureFromBattle } from './captives.js';
 import { skillProfile, previewNarrative } from './battle-narrative.js';
 import { oathOf, oathPending, oathFactionOf, factionTraitOf, protagonistStat } from './oath.js';
 import { playerIdentity, isFounded, foundStatus } from './faction-identity.js';
-/* ★ M2-4 委任对象化与外交（本作设计）：两个模块都自包含，strategy 单向引它们 */
-import { appointmentTick, appointmentListView, strategyAppoint, strategyCancelAppointment } from './appointment.js';
+/* ★ P50 太守制（2026-11-23）：旧长驻委任（appointment.js）已删，视图只下发太守总览。
+   外交模块保持原接线。 */
+/* ★ P50 太守制：视图下发太守总览（城内页/六府共用） */
+import { governorListView, governorView, governorCandidates } from './governor.js';
 import { diplomacyView, diplomacyAct, noteCityCaptured, truceActive, PLAYER_ID, adjustAttitudeByEvent } from './diplomacy.js';
 /* ★ M3-4 事件系统接线（本作设计）：引擎是零依赖叶子，ctx 由本层适配 */
 import { eventCooldownTick, selectEvents, applyEffects } from './event-engine.js';
 /* ★ M3-4 宿命 24 组落战斗（本作设计）：同队 ≥2 人组合生效 */
 import { loadFateGroups, fatesOfHero } from './fate-groups.js';
 /* 委任/外交动作经本模块转发给 index.js（保持 index 只 import strategy 一个入口） */
-export { strategyAppoint, strategyCancelAppointment, diplomacyAct };
+export { diplomacyAct };
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const MAP_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'map.json');
@@ -600,8 +601,7 @@ export function strategyTick(state, cfg, ctx, now = Date.now()) {
   openMonth(state);
   // ★ P2/P3 城市经营：旬灾害（蝗/瘟/丰收）+ 旬忠诚/俸禄/叛逃 + 30日人口增长
   cityEconTick(state, cfg, ctx);
-  /* ★ P41：物资处去的委派任务在旬结算推进，到期执行原 armory 动作（幂等、不提前扣物资）。 */
-  advanceMaterialTasks(state, cfg, ctx);
+  /* ★ P50：物资任务层已删，物资去处回归 armory 即时动作；旬结算里不再有 advanceMaterialTasks。 */
   /* ★ 2026-11-17 城防：城墙每旬自然修复（被围不修）——否则打过一次就永久残破，
      城防属性从此失去意义。 */
   repairCityWalls(state);
@@ -3523,6 +3523,9 @@ export function strategyViewState(state, cfg = null) {
           levy: levyView(state, c.id, { rate: knobGet(state, 'conscriptRate') }),
           /* ★ U14 该城在施/最近完工的内政任务状（进度、执行武将、每旬增量、预计完工） */
           interiorTasks: interiorTaskView(state, c.id),
+          /* ★ P50 太守制：本城太守/方针与候选名单，城内页太守卡只读这份，不在界面复算资格 */
+          governor: governorView(state, cfg, c.id),
+          governorCands: governorCandidates(state, cfg, c.id),
           /* ★ U20 粮道：连通到都城的跳数与里程；断绝时给原因，界面必须显示断粮后果 */
           supply: (() => {
             const s = SUP.byCity[c.id] || { connected: false, hops: -1, km: -1, via: [] };
@@ -3549,8 +3552,8 @@ export function strategyViewState(state, cfg = null) {
     /* ★ P47#3：四态统一展示数据，UI 只读这份，不再散落四种分支 */
     failCheck: failureCheck(state),
     ending: evaluateEnding(state),
-    /* ★ M2-4 委任对象化与外交视图（本作设计）：blocked 置顶 + 理由链 */
-    appointments: appointmentListView(state),
+    /* ★ P50 太守制总览（替换旧 appointments）：城内页太守卡与六府总览共用 */
+    governors: governorListView(state, cfg),
     diplomacy: diplomacyView(state),
     /* ★ M3-4 事件弹窗队列与宿命组合视图（本作设计） */
     pendingEvents: st.pendingEvents || [],

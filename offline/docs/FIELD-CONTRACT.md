@@ -149,6 +149,7 @@
 | 集市兑换流水（★ P40） | `handlers.js interior.transform()`：正负两侧逐条 `recordRes(..., '集市兑换')`，与税赋/招降/缴获同一本 `state.resLedger` | 金/粮/木/铁/石 | 整数 | ✅ 读写 | 府库「钱粮去哪了」 |
 | 玩家可见 reason 兜底（★ P40） | `skills.js REASON_TEXT/reasonText()/warReason()`：自立、存档导入读取、出征/撤回未知码一律中文；英文 reason 只留协议与日志。解甲二次确认，征兵 <1 人中文拒绝 | 文案 | 字符串 | ❌ 只展示 | toast / 推演失败卡 |
 | 布局双态硬闸（★ P40） | `check-release.js` 7.7.5 + 7.8b：`layout-original.json` 与 `layout-packaged.json` 都要求报告不早于出厂源码与生成工具，且五档分辨率零裁切/零硬问题/零页面异常 | 报告 | JSON | ❌ 只展示 | 发布检查 `release-check.json` |
+| 太守制（★ P50，2026-11-23） | `domain/governor.js` 是太守任免/方针/旬界办政的唯一口径。每座己方城一条 `st.governors[cityId]`（officerId/policy/status），玩家可见操作只有「任免太守 + 六方针（太守自决/重农/重商/强兵/固防/安民）」；旬界 `governorTick` 走 `interior-task.beginInteriorTask` 派单——**金、工期、每旬增量与产出总量与旧手动派单逐字同源，零数值改动**。缺金 `blocked` 置顶、金到位自动续办；只赈真实减产（`e.mod.grain<1`，不碰丰收加成）；失城中止。旧 `st.appointments` 一次性迁移（develop→自决/recruit→强兵/defend→固防）。**同时废止**：旧长驻委任（appointment.js）、物资委派任务层（material-task.js）——物资去处回归 armory 即时动作，数值零改动。忠诚联动：太守纳入 `loyaltyTick` 的「委任在岗」集合（+0.6/旬，与六府岗位同口径） | 旬 | — | ❌ 只展示 | 城池内页「太守·方针」卡、六府·内政「天下太守总览」、忠诚旬结 |
 
 ## 历史教训（写死，防回归）
 
