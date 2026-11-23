@@ -63,5 +63,5 @@ test('P41-③ 一键委任入口与规则展示都在运行时 UI 中', () => {
   assert.ok(p.includes('一键委任只补空缺'), '规则必须写在界面上');
   const d = readFileSync(resolve(ROOT, 'server/domain/panels.js'), 'utf8');
   assert.ok(d.includes("if (type === 'appointAll')"), '规则必须在领域层，不在 UI 复算');
-  assert.ok(d.includes('CAREER_FIT[careerOf(x).career]?.civilPost'), '与手动委任同源职业闸');
+  assert.ok(d.includes('canAppoint(state, x, null, cfg).ok'), '与手动委任同源准入闸（P47#12 收敛到 canAppoint）');
 });

@@ -61,8 +61,24 @@ try {
   EXISTING_NAMES.add(pg.name);
   if (!EXISTING_CFG.has(pg.name)) EXISTING_CFG.set(pg.name, Number(pg.cfgId));
 } catch { /* 可选文件 */ }
-const officialRaw = readJson(join(KIT, 'source', 'raw', 'stzb_skill_extra.json'));
-const mapping = readJson(join(KIT, 'adapted', 'full_mapping_stzb.json'));
+/* ★ P47#7：第三方原始快照不随包发行（未授权），干净 clone 无法重生成。
+   这里给出明确的一次性导入说明，而不是抛一个 ENOENT 让人误以为仓库坏了。
+   证据链：conf/innate-skills.json 顶部 source/sourceSha256 + provenance.json 同条登记。 */
+const SOURCE_FILES = {
+  official: join(KIT, 'source', 'raw', 'stzb_skill_extra.json'),
+  mapping: join(KIT, 'adapted', 'full_mapping_stzb.json'),
+};
+for (const [name, file] of Object.entries(SOURCE_FILES)) {
+  if (!existsSync(file)) {
+    console.error(`[build-innate-skills] 缺少${name}原始快照：${file}`);
+    console.error('本工具是一次性导入（第三方未授权素材不随包发行）。'
+      + '现有 conf/innate-skills.json 为唯一权威产物，逐条 provenance/sourceSha256 已固化；'
+      + '需要重生成时请在有授权快照的开发机上执行，不要修改产物冒充可复现。');
+    process.exit(2);
+  }
+}
+const officialRaw = readJson(SOURCE_FILES.official);
+const mapping = readJson(SOURCE_FILES.mapping);
 const generalDoc = readJson(join(ROOT, 'conf', 'json', 'general', 'general.json'));
 const heroesDoc = readJson(join(ROOT, 'conf', 'campaign', 'heroes-240.json'));
 const protagonist = readJson(join(ROOT, 'conf', 'campaign', 'protagonist.json'));

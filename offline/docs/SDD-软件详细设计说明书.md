@@ -2514,6 +2514,14 @@ build/SLG-Offline-win32-x64/
 5. **文案与合规台账**：武将履历删裸 `P3` 里程碑；GM 页「服务端拒绝」改「写入失败」。审计发现 `conf/innate-skills.json` 96 条第三方战法既未进台账也不在 `DERIVED_GLOBS`（合规报告 `ok:true` 属假阴性），现补登为 `derived_unlicensed`，未授权项由 7 如实变为 8；战法审计报告 3.1 计数 84→68、3.9~3.11 空表标注归档；FIELD-CONTRACT 经验系数 0.5→0.8、SDD GAME-09 撤围 120→180 日。
 6. **验收与留痕**：新增 `tests/p46-residual-fixes.test.js` 7 项闸；全量 768/768，双态冒烟 33×2、UI 71×2、真鼠标 54×2、布局硬问题 0，重打包 `byteIdentical=true`。PF-01 冷启动 8.3~8.4s 仍属原版 Cocos 首场景存量漂移，非本轮引入、非发布硬闸，预算未放宽。**需用户裁决**项见本轮交付报告：8 项未授权派生素材的授权/换皮、战法描述 159 项差异的机制层二选一、史料分层展示闸优先级、手动委任是否强制一人一岗。
 
+### 17.32 全流程 25 条问题清单修复 P47（2026-11-23）
+
+1. **忠诚污染（#1）**：`city-econ.loyaltyTick` 的「民心崩」判定原来遍历全图 72 城，扬州 52/53/55 三座敌城民心原生为 0，导致玩家武将每旬无条件 −1，实跑 85→45。现按 `st.cities[id].owner === 'player'` 过滤；新增 `loyaltyOf()/setLoyalty()` 统一读写口径，`recruitCaptive/defectTick/rewardGeneral` 不再直接覆盖 `loyal`。
+2. **紧急征兵门禁（#2）**：`failstate.emergencyConscript` 原来只查己方城与金币，可一次凭空 +N 兵。现复用 `levyView()` 兵源口径（适龄壮丁/旬上限/单次硬闸 1000），成功后 `commitLevy()` 落人口台账；民心统一 −10，不叠加抽丁 bite。
+3. **失败态四态可见（#3）**：新增领域单点 `failureCheck()`（破产/兵尽/无将/都城失陷/全境失陷 + 出路清单），`strategyViewState.failCheck` 下发；沙盘常驻非模态告急条 z-index 100790，四态出路按钮同屏可达，零城给重开入口。
+4. **工具链可信度（#5/#6/#7）**：`check-release.runTests` 摘要行缺失/失败行缺失直接判红并把用例门槛从 10 提到 700；`p46` 测试改从 provenance 推导，不再依赖被 gitignore 的 `reports/`；先天战法生成器缺源时给「一次性导入」明确提示，provenance 登记 `regenerable:false` 与证据链。
+5. **加成上限（#8）**：`battle-core/src/rules.ts calcDamage()` 把 `one_plus_bonus` 封顶 2×，`offline/kernel/rules.js` 已按 `kernel-sync --write` 同步；原始 `bonus_total` 保留供审计。黄金向量最大 1.48×，37/37 内核测试通过；FIELD-CONTRACT 新增该字段定义。
+
 **红线速查（改前必看）**：INV-01~INV-10（§1.4）、ADR-01/04/07/08/13/14（§1.2）、§7.15 键空间警告、§9.3 z-index 阶梯（含回放层 100700）、§10 确定性、§14.7 报告归属、§16.4 内核改法、§17 偏差登记。
 
 ---

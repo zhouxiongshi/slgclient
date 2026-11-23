@@ -16,7 +16,7 @@ import { knobGet } from './knobs.js';
 /* ★ M4-8：行军速度与战斗/内政/外交共用同一份武将属性基线 */
 import { gameStatOf } from './general-stat.js';
 /* ★ M2-3 失败态与结局（本作设计）：零依赖叶子 */
-import { failstates, evaluateEnding, makeStandInGeneral } from './failstate.js';
+import { failstates, failureCheck, evaluateEnding, makeStandInGeneral } from './failstate.js';
 import { beginInteriorTask, cancelInteriorTask, interiorTaskView } from './interior-task.js';
 import { advanceMaterialTasks } from './material-task.js';
 /* ★ U20 粮道（supply 只依赖 march，不反向 import 本文件） */
@@ -42,6 +42,7 @@ import { grantBattleExp, levelUpSentence, takeBattlePromos } from './general-pro
 import {
   ensureCityEcon, consumeMarchGrain, deliverGrain, cityEconTick, cityName,
   cityYield, armsApt, armsCounter, ARMS_NAMES, devLevel, cityDevTick, storeCapOf,
+  loyaltyOf, setLoyalty, LOYAL_BASELINE,
 } from './city-econ.js';
 import { SKILLS, LEVEL_COUNT, skillById } from '../skills.js';
 /* ★ 2026-11-20：边境威胁视图抽为零环叶子，六府与沙盘共用同一份映射/常量 */
@@ -2369,7 +2370,13 @@ export function strategyResolveMarches(state, cfg, ctx) {
     } else if (fought.result === 0) {
       recordEvent(state, `攻${target.name}不利，败退（折损约 ${fought.aTotal - (fought.recovered || 0)}）。`);
     } else {
-      recordEvent(state, `攻${target.name}相持不下，暂退。`);
+      /* ★ P47#8 配套：相持/平局也要交代折损与歼敌。
+         旧文案只有「相持不下，暂退」，玩家与战报链都看不到这一战是否真打过；
+         和败退分支一样写明实际损失（同源 fought.report.analysis，不另算数值）。 */
+      const an = fought.report?.analysis || {};
+      const aLoss = Math.max(0, Number(an.aLoss) || 0);
+      const dLoss = Math.max(0, Number(an.dLoss) || 0);
+      recordEvent(state, `攻${target.name}相持不下，暂退（折损 ${aLoss}、歼敌 ${dLoss}）。`);
     }
     // ★ P7 驻城归位：胜则进驻新占城，败/平则退回出发城。
     //   分城出征后队伍不再永远挂在旧城，玩家能在新城里继续操作。
@@ -2718,7 +2725,7 @@ export function rewardGeneral(state, cfg, ctx, { generalId, amount }) {
   const r = state.roleRes;
   if ((Number(r.gold) || 0) < amt) return { ok: false, reason: 'no_gold' };
   r.gold -= amt;
-  g.loyal = Math.min(100, Math.round(((g.loyal ?? 88) + Math.min(15, amt / 100)) * 10) / 10);
+  setLoyalty(g, loyaltyOf(g) + Math.min(15, amt / 100));
   const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
   recordRes(state, 'gold', -amt, `赏赐·${cfg?.generalByCfg?.get(g.cfgId)?.name || `武将${g.id}`}`, day);
   ctx.push?.('general.push', g);
@@ -3008,7 +3015,9 @@ export function recruitCaptive(state, cfg, ctx, { idx }) {
   recordRes(state, 'gold', -cost, `招降·${cap.name}`, day);
   state.captives.splice(i, 1);
   const g = makeGeneral(cfg, nextId(state, 'generalId'), cap.cfgId, st.playerCity || 1, 1);
-  g.loyal = Math.min(100, 70 + Math.round(protagonistStat(state, '魅力') / 25));
+  /* ★ P47#1：新附武将忠诚走统一口径（0~100、一位小数），
+     不再直接把俘虏对象 `loyal: 50` 原样塞进 state.generals。 */
+  setLoyalty(g, LOYAL_BASELINE + Math.round(protagonistStat(state, '魅力') / 25));
   state.generals.push(g);
   /* ★ 2026-11-20 修：招降与酒馆/来投走同一份名册口径——
      不标记 recruited，敌将次日仍出现在酒馆可被二次登庸，招出同名同 cfgId 的重复武将。 */
@@ -3079,7 +3088,7 @@ export function defectTick(state, cfg, ctx) {
   const pick = pool[(day * 13 + own.length * 7) % pool.length];
   const cityId = own.includes(Number(pick.birthCity)) ? Number(pick.birthCity) : (st.playerCity || own[0]);
   const g = makeGeneral(cfg, nextId(state, 'generalId'), pick.cfgId, cityId, 1);
-  g.loyal = Math.min(100, 72 + Math.round(protagonistStat(state, '魅力') / 22));
+  setLoyalty(g, 72 + Math.round(protagonistStat(state, '魅力') / 22));
   state.generals.push(g);
   pick.recruited = true;
   // 战法登记表增量更新（与原版技能面板共用一张表）
@@ -3537,6 +3546,8 @@ export function strategyViewState(state, cfg = null) {
     })),
     /* ★ M2-3 失败态四出路与结局判定：判定 + 出路清单一并下发，界面不再自己猜 */
     fail: failstates(state),
+    /* ★ P47#3：四态统一展示数据，UI 只读这份，不再散落四种分支 */
+    failCheck: failureCheck(state),
     ending: evaluateEnding(state),
     /* ★ M2-4 委任对象化与外交视图（本作设计）：blocked 置顶 + 理由链 */
     appointments: appointmentListView(state),

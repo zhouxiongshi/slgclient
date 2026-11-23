@@ -10,12 +10,16 @@
  *   不再读从未写入的 st.oathPending——剧本未举义时 owned=0 曾被误判「败亡」。
  */
 import { oathPending } from './oath.js';
+/* ★ P47#2：紧急征兵不再凭空 +N 兵。levy.js 是零依赖叶子，不会与 failstate 成环；
+   这里只读 quota 做门禁，成功后 commitLevy 把人口/已征户落账，防止同一旬反复抽。 */
+import { levyView, commitLevy } from './levy.js';
 
 const CAP = 20000;
 const GRAIN_GOLD_RATE = 0.5;      // 卖粮市价：1 粮 = 0.5 金（本作设计 资源锚的中位换算）
 const SELL_CAP_PER_TURN = 2000;   // 每旬卖粮上限（防止套利刷钱）
 const DISARM_REFUND = 0.3;        // 裁军返还：兵值金 ×30%（本作设计）
 const MERC_COST_MUL = 3;          // 雇佣兵：紧急征兵成本 ×3（本作设计「贵 3 倍」）
+const EMERGENCY_CAP_PER_CALL = 1000; // ★ P47#2：单次硬闸，防止一次调用塞满全城
 
 function recordRes(state, res, delta, reason, day) {
   const d = Math.round(Number(delta) || 0);
@@ -66,6 +70,39 @@ export function failstates(state) {
   return { bankrupt, troopsStarved, noGeneral, capitalLost, actions };
 }
 
+/**
+ * ★ P47#3 失败态单一展示入口：领域层给「有哪些正在发生 + 每条出路」，
+ * UI 只负责渲染，不再自己拼四种分支（旧版只覆盖其中一种，其余三态玩家卡死无提示）。
+ * 本函数纯读，可被 strategyViewState 直接下发。
+ */
+export function failureCheck(state) {
+  const st = state?.strategy;
+  if (!st) return { active: [], actions: [], fatal: false };
+  const f = failstates(state);
+  const active = [];
+  const owned = ownedCities(st);
+  if (owned.length === 0) {
+    active.push({ kind: 'all_cities_lost', title: '全境失陷',
+      text: '名下已无城池，府库与军队失去立足之地。可迁都到仍属我军的城市，或重开一局。' });
+  } else if (f.capitalLost) {
+    active.push({ kind: 'capital_lost', title: '都城失陷',
+      text: '旧都已易主，朝堂不能无根。请迁都到任一己方城，资源保留五成。' });
+  }
+  if (f.bankrupt) {
+    active.push({ kind: 'bankrupt', title: '府库告罄',
+      text: '金已见底且存粮不足 500，旬俸发不出。可裁军返还三成兵值金，或卖粮换金（每旬上限 2000 粮）。' });
+  }
+  if (f.troopsStarved.length) {
+    active.push({ kind: 'no_army', title: '守军将尽',
+      text: `${f.troopsStarved.length} 座城守军不足 200。可紧急征兵（民心 −10）或雇雇佣兵（贵三倍）。` });
+  }
+  if (f.noGeneral) {
+    active.push({ kind: 'no_generals', title: '军中将尽',
+      text: '所有队伍都没有可用武将。出征时会自动补一名代将（五维 50、不可培养），不会卡死流程。' });
+  }
+  return { active, actions: f.actions, fatal: owned.length === 0 };
+}
+
 /* -------------------------------------------------------------- 出路动作 */
 
 /** 裁军：从指定队伍遣散 count 兵，返还 30% 兵值金（兵值按征兵价 2 金/兵折算）。 */
@@ -109,26 +146,49 @@ export function sellGrain(state, ctx, { grain }) {
   return { ok: true, grain: n, gold, roomLeft: Math.max(0, SELL_CAP_PER_TURN - state.market.sold) };
 }
 
-/** 紧急征兵 / 雇雇佣兵（本作设计 兵尽出路）：不计兵源上限，民心 −10；雇佣兵再贵 3 倍。 */
+/** 紧急征兵 / 雇雇佣兵（本作设计 兵尽出路）：快且贵，但**不是无条件**。
+ *  ★ P47#2 修复：旧实现只查「己方城 + 金够」，一次可加任意 N 兵且不碰人口台账，
+ *  实跑破产/满编/无城三态仍能 +1000。现在与正常征兵共用 levy 的兵源口径：
+ *   - 仍允许「本旬已正常征过兵」时再强征（这是兜底的意义），
+ *   - 但不能超过该城适龄壮丁余额与旬上限，也不能突破单次 1000 的硬闸，
+ *   - 成功后 commitLevy 把人口/已征户落账，同一批丁不能再被抽第二次。 */
 export function emergencyConscript(state, ctx, { cityId, count, mercenary = false }) {
   const st = state?.strategy;
   const id = Number(cityId);
   const row = st?.cities?.[id];
   if (!row || row.owner !== 'player') return { ok: false, reason: 'not_own_city' };
-  const n = Math.max(1, Math.floor(Number(count) || 0));
+  const want = Math.max(1, Math.floor(Number(count) || 0));
+  const levy = levyView(state, id);
+  /* 旧档没有 cityEcon 时 levyView 的人口为 0，直接拒绝而不是白送兵。 */
+  if (!levy.pop) return { ok: false, reason: 'no_population', quota: 0, need: want };
+  const room = Math.min(levy.quota, EMERGENCY_CAP_PER_CALL);
+  if (room <= 0) {
+    return { ok: false, reason: levy.houseBalance <= 0 ? 'levy_exhausted' : 'need_population',
+      quota: 0, need: want, text: '此城已无适龄壮丁可抽，先办「劝课生息」增殖人口。' };
+  }
+  const n = Math.min(want, room);
   const goldPer = 2 * (mercenary ? MERC_COST_MUL : 1);
   const cost = n * goldPer;
   const r = state.roleRes;
-  if ((Number(r.gold) || 0) < cost) return { ok: false, reason: 'no_gold', cost };
+  if ((Number(r.gold) || 0) < cost) {
+    return { ok: false, reason: 'no_gold', cost, quota: room, need: want,
+      text: `${mercenary ? '雇佣' : '强征'} ${want} 兵需 ${cost} 金，府库不足；本次最多可征 ${room} 兵。` };
+  }
   const day = Math.floor(Number(state.clock?.day) || 1);
   const econ = st.cityEcon?.[id];
+  const moraleBefore = Number(econ?.morale ?? 60);
   r.gold -= cost;
   recordRes(state, 'gold', -cost, mercenary ? `雇佣兵·${n}` : `紧急征兵·${n}`, day);
   row.troops = (Number(row.troops) || 0) + n;
-  if (econ) econ.morale = Math.max(0, (econ.morale ?? 60) - 10);   // 强征伤民心
-  recordEvent(state, `${mercenary ? '雇雇佣兵' : '紧急征兵'} ${n} 入驻城防（耗金 ${cost}，民心 −10）。`);
+  const commit = commitLevy(state, id, n);
+  /* 强征的民心代价统一为 −10（本作设计原文），不叠加 commitLevy 的抽丁 bite，
+     否则同一件事两套口径、旧回归也会被无谓打破。 */
+  if (econ) econ.morale = Math.max(0, moraleBefore - 10);
+  recordEvent(state, `${mercenary ? '雇雇佣兵' : '紧急征兵'} ${n} 入驻城防（耗金 ${cost}，民心 −10，抽丁 ${commit?.popCost || 0}）。`);
   ctx?.push?.('roleRes.push', { ...state.roleRes });
-  return { ok: true, count: n, cost, troops: row.troops, mercenary: !!mercenary };
+  return { ok: true, count: n, want, cost, troops: row.troops, mercenary: !!mercenary,
+    quota: room, popCost: commit?.popCost || 0,
+    text: `${mercenary ? '雇佣' : '强征'} ${n} 兵入城，耗金 ${cost}，抽走 ${commit?.popCost || 0} 口。` };
 }
 
 /** 代将（本作设计 兜底，不是玩法）：五维 50、无战法、不可培养、不触发宿命。

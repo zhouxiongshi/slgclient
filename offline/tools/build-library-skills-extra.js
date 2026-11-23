@@ -1,7 +1,9 @@
 /**
  * M3-8 战法补量（本作设计）：把包内战法从 51 条扩到 80 条。
  *
- * 本脚本生成 conf/library-skills-extra.json —— 29 条【新机制组合】的原创战法。
+ * 本脚本生成 conf/library-skills-extra.json —— 29 条【新机制组合】战法。
+ * ★ P47#17：原注释称「原创」，但输入模板来自第三方 patterns.csv；合规口径改为
+ *   derived_unlicensed，不再冒充完全原创。
  *
  * 为什么不能直接从既有素材再挑：
  *   - conf/skills.json 31 条已用尽 damage_rates.csv 的全部真实片段模式；
@@ -227,7 +229,7 @@ function buildOne(d, i) {
     kernel,
     provenance: {
       pairing: 'skill-library-extra',
-      source: 'offline/tools/build-library-skills-extra.js（M3-8 原创组合，patterns.csv P01~P16 语义内）',
+      source: 'offline/tools/build-library-skills-extra.js（基于 patterns.csv P01~P16 的效果模板重组，第三方派生）',
       pattern: d.pattern,
       tags: d.tags,
       quality: 4,
@@ -333,9 +335,11 @@ const skills = DESIGNS.map(buildOne);
 const table = {
   version: 1,
   generatedBy: 'offline/tools/build-library-skills-extra.js',
-  source: 'skill-library patterns.csv (P01~P16) 语义内的原创效果组合；kernelNotes 逐条说明内核生效面',
+  source: '基于 battle-kit/skill-library patterns.csv（P01~P16）的效果模板重组，逐条 kernelNotes 说明内核生效面；属于第三方派生，不是完全原创',
+  license: 'derived_unlicensed',
+  licenseNote: '仅本地学习/内部对照；对外发行须取得授权或换名换文案',
   fidelity: {
-    design: 'authored',          // 原创设计（skill-library 延续）
+    design: 'derived',           // ★ P47#17：模板来自第三方，不再标 authored
     kernelSemantics: 'verified', // 逐条对照 battle-core/src/{rules,engine}.ts 真实生效面
   },
   levelCount: 10,

@@ -879,7 +879,12 @@
         + '</div></div>';
     }
 
-    out += '<div class="card"><h3>资源与产出</h3><table><thead><tr><th>资源</th><th>库存</th><th>日产</th><th>府库上限</th></tr></thead><tbody>'
+    /* ★ P47#14：两处都读 state.roleRes（全局府库），不是逐城 cityEcon；
+       旧文案不写口径，玩家把这里和城内页不同的刷新时点误认成「资源丢失」。 */
+    out += '<div class="card"><h3>资源与产出</h3>'
+      + '<div class="muted" style="font-size:11px;line-height:1.6;margin:-2px 0 6px">'
+      + '库存为全局府库（全部城池共用），日产为全局日产；与城内页同一份账，仅刷新时点可能相差一瞬。</div>'
+      + '<table><thead><tr><th>资源</th><th>库存</th><th>日产</th><th>府库上限</th></tr></thead><tbody>'
       + data.interior.output.resources.map(function (r) {
         return '<tr><td>' + esc(r.label) + '</td><td class="v">' + fmt(r.stock) + '</td><td>+' + fmt(r.yield)
           + '</td><td class="muted">' + (r.capacity ? fmt(r.capacity) : '—') + '</td></tr>';
@@ -1655,7 +1660,15 @@
     });
   }
   function markReportsSeen() {
-    // 点开战报窗即视为已读（原版 war.read 在战报详情内逐条触发；红点只做提醒）
+    /* ★ P47#13：旧版只把红点藏起来并写 localStorage，从未回写领域层的
+       `a_is_read/d_is_read`。下一次 pollReports 拿到 unread>0 又把红点点亮，
+       玩家反复点开同一份战报也永远清不掉。现在先发 `war.read`（id:0=全部），
+       本地隐藏只作即时反馈，权威状态由战报列表自己说了算。 */
+    try {
+      if (typeof window.__slgSend === 'function') {
+        Promise.resolve(window.__slgSend('war.read', { id: 0 })).catch(function () { /* 断线不卡界面 */ });
+      }
+    } catch (_) { /* 启动早期协议未就绪，不影响本地隐藏 */ }
     reportDots().forEach(function (dot) { if (dot) dot.style.display = 'none'; });
     fetchReportsHead(function (v) {
       if (v && typeof v.latest === 'number') {

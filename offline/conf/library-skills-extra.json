@@ -1,7 +1,7 @@
 {
   "version": 1,
   "generatedBy": "offline/tools/build-library-skills-extra.js",
-  "source": "skill-library patterns.csv (P01~P16) 语义内的原创效果组合；kernelNotes 逐条说明内核生效面",
+  "source": "基于 battle-kit/skill-library patterns.csv（P01~P16）的效果模板重组，逐条 kernelNotes 说明内核生效面；属于第三方派生，不是完全原创",
   "fidelity": {
     "design": "authored",
     "kernelSemantics": "verified"
@@ -5193,5 +5193,7 @@
         ]
       }
     }
-  ]
+  ],
+  "license": "derived_unlicensed",
+  "licenseNote": "仅本地学习/内部对照；对外发行须取得授权或换名换文案"
 }

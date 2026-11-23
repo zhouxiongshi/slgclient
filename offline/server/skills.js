@@ -1399,6 +1399,20 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       + '#slgDock button.chip{font-size:11.5px;padding:3px 8px;border-color:rgba(186,154,82,.3);color:#a89c7c}'
       + '#slgDock button.chip.on{color:#ffe9b0;border-color:#ba9a52;background:rgba(186,154,82,.16)}'
       + '@media (max-width:1180px){#slgDock .gp{display:none}}'
+      /* ★ P47#3 失败态告急条：非模态、不吸键盘，压在主窗之上、确认框之下 */
+      + '#slgFailBanner{position:fixed;left:50%;top:64px;transform:translateX(-50%);z-index:100790;'
+      + 'width:min(680px,calc(100vw - 32px));padding:10px 14px;border-radius:8px;'
+      + 'background:linear-gradient(180deg,rgba(58,26,22,.97),rgba(28,16,14,.97));'
+      + 'border:1px solid rgba(200,90,70,.65);box-shadow:0 8px 28px rgba(0,0,0,.55);'
+      + 'font-family:"Microsoft YaHei",sans-serif;color:#f0d8c0}'
+      + '#slgFailBanner .fb-head{font:600 15px/1.5 "KaiTi","STKaiti",serif;letter-spacing:2px;color:#ffb9a8;'
+      + 'border-bottom:1px solid rgba(200,90,70,.35);padding-bottom:5px;margin-bottom:5px}'
+      + '#slgFailBanner .fb-line{font-size:12px;line-height:1.7;color:#e6d2c4;padding:2px 0}'
+      + '#slgFailBanner .fb-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}'
+      + '#slgFailBanner .fb-actions button{cursor:pointer;font:12px/1.4 "Microsoft YaHei",sans-serif;'
+      + 'padding:4px 9px;border-radius:5px;border:1px solid rgba(224,197,106,.45);'
+      + 'background:rgba(186,154,82,.14);color:#ffe9b0}'
+      + '#slgFailBanner .fb-actions button:hover{background:rgba(186,154,82,.28);color:#fff6d6}'
       /* 势力面板（原「势力图例」）——与按钮坞、六府同一套色与圆角 */
       + '#slgLegend .lg-head{display:flex;align-items:center;justify-content:space-between;'
       + 'color:#e8c670;font-weight:bold;letter-spacing:2px;padding-bottom:5px;margin-bottom:5px;'
@@ -1749,6 +1763,94 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     b.textContent = n > 0 ? ('出征 ● ' + n) : '出征';
     b.style.color = n > 0 ? '#ff9d6b' : '';
   }
+  /* ★ P47#3 失败态常驻告急条：领域层 failureCheck() 给四态，这里只渲染 + 给出路按钮。
+     非模态、不抢键盘，z-index 100790（低于决策预览/确认框，高于主窗）。 */
+  function failstateBanner(s) {
+    var id = 'slgFailBanner';
+    var old = document.getElementById(id);
+    var fc = s && s.failCheck;
+    var rows = (fc && fc.active) || [];
+    var fatal = !!(fc && fc.fatal);
+    if (!rows.length && !fatal) { if (old) old.remove(); return; }
+    var box = old || document.createElement('div');
+    box.id = id;
+    box.className = 'slgFailBanner';
+    box.innerHTML = '';
+    var head = document.createElement('div');
+    head.className = 'fb-head';
+    head.textContent = '局势告急 · ' + rows.map(function (r) { return r.title; }).join(' / ');
+    box.appendChild(head);
+    rows.forEach(function (r) {
+      var line = document.createElement('div');
+      line.className = 'fb-line';
+      line.textContent = r.text;
+      box.appendChild(line);
+    });
+    var bar = document.createElement('div');
+    bar.className = 'fb-actions';
+    var acts = (fc && fc.actions) || [];
+    var ownCities = (s.cities || []).filter(function (c) { return c.owner === 'player'; });
+    var capital = (s.strategy && s.strategy.playerCity) || (ownCities[0] && ownCities[0].id) || 0;
+    var sendAct = function (action, extra) {
+      fetch('/__slg/strategy/action', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.assign({ action: action }, extra || {})),
+      }).then(function (r) { return r.json(); }).then(function (r) {
+        if (window.__slgToast) {
+          window.__slgToast(r && r.ok !== false ? '已办：' + action : ('未办成：' + ((r && (r.text || r.reason)) || '条件不足')), r && r.ok !== false);
+        }
+        refresh();
+      }).catch(function () { if (window.__slgToast) window.__slgToast('本机无响应', false); });
+    };
+    acts.forEach(function (a) {
+      var b = document.createElement('button');
+      b.textContent = a.label;
+      b.onclick = function () {
+        if (a.kind === 'disarm') {
+          var army = (s.armys || []).find(function (x) { return (x.soldiers || []).some(function (n) { return n > 0; }); });
+          if (!army) { if (window.__slgToast) window.__slgToast('没有可裁的队伍', false); return; }
+          sendAct('disarm', { armyId: army.id, count: Math.min(500, Math.max.apply(null, army.soldiers)) });
+        } else if (a.kind === 'sellGrain') {
+          var grain = Math.min(1000, Math.floor(Number(s.roleRes && s.roleRes.grain) || 0));
+          if (grain <= 0) { if (window.__slgToast) window.__slgToast('无粮可卖', false); return; }
+          sendAct('sellGrain', { grain: grain });
+        } else if (a.kind === 'emergencyConscript' || a.kind === 'mercenary') {
+          sendAct('emergencyConscript', { cityId: capital, count: 100, mercenary: a.kind === 'mercenary' });
+        } else if (a.kind === 'relocate') {
+          var dest = ownCities.find(function (c) { return Number(c.id) !== Number(capital); });
+          if (!dest) { if (window.__slgToast) window.__slgToast('已无其他可迁之城', false); return; }
+          sendAct('relocateCapital', { cityId: Number(dest.id) });
+        } else {
+          if (window.__slgToast) window.__slgToast(a.label + '：出征时自动办理', true);
+        }
+      };
+      bar.appendChild(b);
+    });
+    if (fatal) {
+      var restart = document.createElement('button');
+      restart.textContent = '重开一局';
+      restart.onclick = function () {
+        /* Electron 内禁 window.confirm：直接用原版确认框层，没有就用文字说明后执行。 */
+        if (window.__slgConfirm) {
+          window.__slgConfirm('重开一局', ['当前进度将被覆盖，确定重来？'], '重来', '取消', function () {
+            fetch('/__slg/restart', { method: 'POST' }).then(function () { location.reload(); });
+          });
+          return;
+        }
+        if (restart.dataset.confirmed !== '1') {
+          restart.dataset.confirmed = '1';
+          restart.textContent = '再点一次确认重开';
+          if (window.__slgToast) window.__slgToast('重开将覆盖当前进度，请再点一次', false);
+          return;
+        }
+        fetch('/__slg/restart', { method: 'POST' }).then(function () { location.reload(); })
+          .catch(function () { if (window.__slgToast) window.__slgToast('重开失败', false); });
+      };
+      bar.appendChild(restart);
+    }
+    if (acts.length || fatal) box.appendChild(bar);
+    if (!old) document.body.appendChild(box);
+  }
   function refresh() {
     lastFetchAt = Date.now();
     fetch('/__slg/strategy/state').then(function (r) { return r.json(); }).then(function (s) {
@@ -1756,6 +1858,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       var cnt = (s.pendingBattles || []).length;
       lastPendingCount = cnt;
       lastState = s; restorePick(); draw(s);
+      failstateBanner(s);
       if (window.__slgHudTick) window.__slgHudTick();
       /* ★ M4-13：抵达挂起后主动引导。旧版 UI 完全不监听 pendingBattles，
          队伍卡在城下、角标不亮、没有提示，玩家只能自己发现「③ 遭遇」页签；
@@ -5337,8 +5440,11 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
             + '<span class="tag ' + (t.status === 'active' ? 'mid' : (t.status === 'done' ? 'ok' : 'no')) + '">'
             + esc(t.statusText) + '</span> '
             + esc(t.label) + ' · ' + esc(t.officer) + '（' + esc(t.officerStat) + '）'
-            + '<div class="muted">第 ' + t.startDay + ' 日领办 · 第 ' + t.endDay + ' 日办结 · 余 '
-            + t.daysLeft + ' 日 · 进度 ' + t.pct + '%' + (t.note ? ' · ' + esc(t.note) : '') + '</div>'
+            /* ★ P47#25：只在旬界推进，文案改为按旬，不承诺精确到某一日。 */
+            + '<div class="muted">第 ' + t.startDay + ' 日领办 · 约第 '
+            + Math.max(1, Math.ceil(Number(t.endDay) / 10)) + ' 旬旬末办结（预计第 '
+            + t.endDay + ' 日前）· 余 ' + t.daysLeft + ' 日 · 进度 ' + t.pct + '%'
+            + (t.note ? ' · ' + esc(t.note) : '') + '</div>'
             + (t.status === 'active'
               ? '<button class="btn" style="margin-top:3px" data-mtask="' + esc(t.id) + '">撤销委派</button>' : '')
             + '</div>';

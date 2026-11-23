@@ -26,6 +26,9 @@ const OUT_DIR = join(ROOT, 'reports');
 const DERIVED_GLOBS = [
   'offline/conf/skills.json',
   'offline/conf/library-skills.json',
+  /* ★ P47#17：29 条扩展战法基于第三方 patterns.csv 模板重组，原只写「原创组合」
+     且既不在台账也不在扫描范围，属合规假阴性。 */
+  'offline/conf/library-skills-extra.json',
   'offline/conf/innate-skills.json',
   'offline/conf/skills-range.json',
   'offline/conf/relations.json',

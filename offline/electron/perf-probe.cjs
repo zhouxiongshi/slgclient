@@ -291,9 +291,14 @@ async function runPerf(win, server, app) {
     })()`, true);
     const firstPaintMs = gated >= 0 ? (sceneMs || loginPhaseMs) + gated : null;
     report.raw.firstScreen = { loginPhaseMs, sceneMs, gatedMs: gated, totalMs: firstPaintMs };
-    push('PF-01', '首屏可交互（冷启动）', firstPaintMs, 'ms', BUDGETS.firstPaintSceneMs,
+    /* ★ P47#19：.totalMs 里 7~8s 是不可改的原版 Cocos 首场景，拿它给注入层设硬闸
+       等于把环境噪声当代码退化——干净环境两态 8.6~9.2s、并发审计时能到 11.25s。
+       现在 PF-01 只记录趋势；真正的硬闸是 PF-01a（登录页）与 PF-01c（注入层），
+       PF-01b 单独记录 Cocos 段。预算数字保留在 BUDGETS 里仅供对照，不放宽、不删除。 */
+    push('PF-01', '首屏可交互（冷启动，仅记录）', firstPaintMs, 'ms', null,
       '分解：登录页 ' + loginPhaseMs + 'ms + Cocos 首场景 ' + (sceneReady < 0 ? '-' : sceneReady)
-      + 'ms + 登录到沙盘 ' + (gated < 0 ? '-' : gated) + 'ms');
+      + 'ms + 登录到沙盘 ' + (gated < 0 ? '-' : gated)
+      + 'ms；原版固有 ' + BUDGETS.firstPaintSceneMs + 'ms 仅作对照，硬闸看 PF-01a/PF-01c');
     /* ① 登录页：HTML + 注入层门禁脚本解析执行（这部分是本项目的成本，单独设闸） */
     push('PF-01a', '登录页出现（HTML + 注入层门禁）', loginPhaseMs, 'ms',
       BUDGETS.loginPhaseMs, '注入层同步脚本/样式在 document-start 的代价');

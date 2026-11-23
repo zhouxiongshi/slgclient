@@ -19,6 +19,10 @@ export declare function levelValue(v1: number, level: number, span?: number): nu
 export declare function normalizeBonus(value: number, op?: number): number;
 /** E0：从 0 起逐项 add，全部修正项求和后只乘一次（不是分桶连乘） */
 export declare function sumTermsBonus(terms: readonly BonusTerm[]): number;
+/** ★ P47#8：所有加成项求和后，最终乘区上限 2×。
+ *  十级同名战法可重复叠加（被动每回合刷新）时旧口径能到 6.75×，
+ *  与 FIELD-CONTRACT 的平衡上限冲突。这里在唯一出口钳住，黄金向量最大 1.48× 不受影响。 */
+export declare const MAX_DAMAGE_BONUS_MULTIPLIER = 2;
 /** E0：三档相克系数，越界或档位缺失退化 1.0 */
 export declare function counterFactor(cfg: BattleConfig, attackType: AttackType | string, weakness: number): {
     factor: number;

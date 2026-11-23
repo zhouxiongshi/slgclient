@@ -30,6 +30,10 @@ export function sumTermsBonus(terms) {
         total += normalizeBonus(t.value, t.op);
     return total;
 }
+/** ★ P47#8：所有加成项求和后，最终乘区上限 2×。
+ *  十级同名战法可重复叠加（被动每回合刷新）时旧口径能到 6.75×，
+ *  与 FIELD-CONTRACT 的平衡上限冲突。这里在唯一出口钳住，黄金向量最大 1.48× 不受影响。 */
+export const MAX_DAMAGE_BONUS_MULTIPLIER = 2.0;
 /** E0：三档相克系数，越界或档位缺失退化 1.0 */
 export function counterFactor(cfg, attackType, weakness) {
     const order = ['normal', 'armor', 'chain'];
@@ -83,7 +87,7 @@ export function baseDamage(cfg, effect, attacker, defender) {
 export function calcDamage(baseDamageValue, counter, bonusTotal, minDamage) {
     const base = Number(baseDamageValue);
     const afterCounter = base * Number(counter);
-    const onePlusBonus = 1.0 + Number(bonusTotal);
+    const onePlusBonus = Math.min(MAX_DAMAGE_BONUS_MULTIPLIER, 1.0 + Number(bonusTotal));
     const raw = afterCounter * onePlusBonus;
     const floored = Math.floor(raw);
     const final = Math.max(floored, Math.trunc(minDamage));

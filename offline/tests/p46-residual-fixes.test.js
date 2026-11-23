@@ -80,9 +80,14 @@ test('P46-⑥ 先天战法 96 条已进合规台账，审计工具会扫到', ()
   assert.equal(entry.status, 'derived_unlicensed', '与 skills.json 同批第三方来源');
   assert.equal(entry.count, 96);
   assert.ok(read('tools/compliance-report.js').includes("'offline/conf/innate-skills.json'"), 'DERIVED_GLOBS 覆盖该文件');
-  const report = JSON.parse(read('reports/compliance.json'));
-  assert.equal(report.problems.length, 0);
-  assert.ok(report.warnings.some((w) => w.kind === 'unlicensed' && w.count >= 8));
+  /* ★ P47#6：不再读 reports/compliance.json —— reports/ 被 .gitignore 忽略，
+     干净 clone 不先跑生成器就会让全量单测假红。台账源本身就是权威：
+     直接从 provenance.json 推导「未授权项 ≥8、每条都有状态与来源」。 */
+  const derived = prov.assets.filter((a) => a.status === 'derived_unlicensed');
+  assert.ok(derived.length >= 8, `未授权派生项应 ≥8，实测 ${derived.length}`);
+  for (const a of derived) {
+    assert.ok(a.source || a.note || a.path, `${a.path} 缺少来源/说明，台账不可复核`);
+  }
 });
 
 test('P46-⑦ 文档漂移已修正：经验系数与撤围天数', () => {

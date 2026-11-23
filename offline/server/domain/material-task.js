@@ -174,10 +174,13 @@ export function beginMaterialTask(state, cfg, ctx, { actionId, officerId, cityId
   };
   materialTasks(state).push(task);
   const endDay = task.startDay + ticks * MATERIAL_TICK_DAYS;
-  recordEvent(state, `${task.officerName}领办「${action.label}」，预计 ${ticks * MATERIAL_TICK_DAYS} 日后办结。`);
+  /* ★ P47#25：真实推进只发生在旬界，写「第 N 日完工」会早 1~9 日。
+     改为按旬表述，同时保留预计日给明细，不编造精确时刻。 */
+  const endTurn = Math.max(1, Math.ceil(endDay / 10));
+  recordEvent(state, `${task.officerName}领办「${action.label}」，工期 ${ticks} 旬，约第 ${endTurn} 旬旬末办结。`);
   return {
     ok: true,
-    message: `已委派「${action.label}」给${task.officerName}，预计第 ${endDay} 日完工；物资完工时才扣除`,
+    message: `已委派「${action.label}」给${task.officerName}，工期 ${ticks} 旬，约第 ${endTurn} 旬旬末统一办理（预计第 ${endDay} 日前）；物资完工时才扣除`,
     task: materialTaskView(state).find((v) => v.id === task.id),
   };
 }

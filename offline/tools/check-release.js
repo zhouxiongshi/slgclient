@@ -65,12 +65,15 @@ function runTests(cwd) {
      `# pass/# fail`。这里汇总所有摘要行，不能只取第一组（否则 2/763 被误判成只有 2 项）。 */
   const failNums = [...out.matchAll(/^# fail (\d+)$/gm)].map((m) => Number(m[1]));
   const passNums = [...out.matchAll(/^# pass (\d+)$/gm)].map((m) => Number(m[1]));
-  const fails = failNums.length ? failNums.reduce((a, b) => a + b, 0) : -1;
+  /* ★ P47#5：failNums 为空不再当作「零失败」。runner 崩溃 / 没跑任何用例
+     时两组摘要行都可能缺失，旧写法 `fails=-1` 仍判通过，发布闸假绿。 */
+  const fails = (passNums.length && failNums.length)
+    ? failNums.reduce((a, b) => a + b, 0) : -1;
   /* 只报「2 fail」等于没法诊断（本轮真发生过：打包态进程残留占端口，两个用端口的
      测试挂掉，报告里只有数字）。把失败用例名一并带出来，才不用靠猜。 */
   const names = [...out.matchAll(/^not ok \d+ - (.+)$/gm)].map((m) => m[1].trim());
   return {
-    ok: r.status === 0 && (!failNums.length || fails === 0),
+    ok: r.status === 0 && passNums.length > 0 && failNums.length > 0 && fails === 0,
     tests: passNums.reduce((a, b) => a + b, 0),
     fails,
     names,
@@ -189,7 +192,8 @@ check('战斗内核 10000 场压测：不变量与确定性零失败',
 
 const gameTests = runTests(ROOT);
 check('离线协议层测试全通过（编解码/登录/战斗/存档重启）',
-  gameTests.ok && gameTests.tests >= 10,
+  /* ★ P47#5：10 项门槛太低，空跑/半跑也能过；按当前基线锁到 700+ */
+  gameTests.ok && gameTests.tests >= 700,
   `${gameTests.tests} tests / ${gameTests.fails} fail`
   + (gameTests.names?.length ? ' · ' + gameTests.names.slice(0, 3).join(' | ') : ''));
 check('协议测试覆盖存档重启续跑',
@@ -336,7 +340,10 @@ check('构建脚本可复现（npm run pack）', existsSync(join(ROOT, 'tools', 
 function newestShippedSource() {
   /* ★ M4-7：kernel/ 是真正打进包里的确定性内核，改了它必须重跑所有报告；
      旧清单漏掉这一层，会出现「内核换了、报告还是旧的」的假绿。 */
-  const SHIPPED_DIRS = ['electron', 'server', 'conf', 'kernel'];
+  /* ★ P47#18：原基准只覆盖真正打进包里的四层，改测试/工具/文档后旧报告仍算新鲜，
+     等于用旧断言验新代码。验证链本身也算「出厂源码」：工具改了报告口径、测试改了
+     断言、文档改了契约，都必须让报告作废重跑。 */
+  const SHIPPED_DIRS = ['electron', 'server', 'conf', 'kernel', 'tools', 'tests', 'docs'];
   const SKIP = new Set(['node_modules', 'reports', 'build', '.git']);
   const SKIP_REL = ['conf/campaign'];
   /* conf/campaign/ 整目录被跳过是因为存档/覆盖层每次开打都会回写；但里面的

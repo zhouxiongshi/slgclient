@@ -334,6 +334,36 @@ export function careerOf(g) {
   return { career, top, topVal };
 }
 
+/**
+ * ★ P47#12 手动 / 一键委任共用的唯一准入闸。
+ * 规则：文职适任、不可在编/行军、一人只掌一岗（撤任 target=0 永远允许）。
+ * @param postId 目标岗位 id；null=不得已占任何岗位；undefined=不查岗位占用
+ */
+export function canAppoint(state, g, postId, cfg = null) {
+  const nm = (x) => (x.isProtagonist ? (state.role?.nickName || '主公')
+    : (cfg?.generalByCfg?.get?.(Number(x.cfgId))?.name
+      || LORE_BY_CFG.get(Number(x.cfgId))?.name || `武将${x.cfgId}`));
+  if (!g) return { ok: false, text: '找不到该武将' };
+  const kind = careerOf(g);
+  const fit = CAREER_FIT[kind.career];
+  if (!fit?.civilPost) {
+    return { ok: false, text: `${nm(g)}是${CAREER_NAMES[kind.career]}（${kind.top}${kind.topVal}），${fit?.note || '不宜掌内政'}` };
+  }
+  const gid = Number(g.id);
+  /* 「在编不任内政」只约束一键批量委派（见 appointAll），不约束玩家手动指定——
+     手动路径历来允许主公/在编武将兼任，属既有玩法口径，不在本次一人一岗修复范围。 */
+  if (postId !== undefined) {
+    for (const [p, holder] of Object.entries(state.interior?.posts || {})) {
+      if (postId !== null && p === String(postId)) continue;
+      if (Number(holder) === gid) {
+        const name = PANEL_CONF.posts.posts.find((x) => x.id === p)?.name || p;
+        return { ok: false, text: `${nm(g)}已掌${name}，一人只任一岗；请先撤任` };
+      }
+    }
+  }
+  return { ok: true, career: kind.career };
+}
+
 function interiorOutput(state, cfg) {
   const bonusPct = postBonusPct(state);
   const resBonus = yieldBonusByResource(state);
@@ -886,11 +916,10 @@ export function panelAction(state, cfg, action = {}) {
       if (target) {
         const g = (state.generals || []).find((x) => x.id === target);
         if (!g) return fail('找不到该武将');
-        // ★ P4：岗位限制——职业的意义在岗位限制。军师/猛将不上内政岗。
-        const fit = CAREER_FIT[careerOf(g).career];
-        if (!fit.civilPost) {
-          return fail(`${generalName(state, cfg, g)}是${CAREER_NAMES[careerOf(g).career]}（${careerOf(g).top}${careerOf(g).topVal}），${fit.note}，不宜掌${p.name}`);
-        }
+        /* ★ P47#12：手动委任与一键委任共用同一道闸——一人一岗、在编/行军不兼任。
+           旧写法只查职业，同一武将可连续委任 agri/commerce 两次都成功。 */
+        const gate = canAppoint(state, g, post, cfg);
+        if (!gate.ok) return fail(gate.text);
       }
       state.interior.posts[post] = target;
       return done(target ? `已委任 ${generalName(state, cfg, (state.generals || []).find((x) => x.id === target))} 掌${p.name}` : `已撤去${p.name}委任`, { output: interiorOutput(state, cfg) });
@@ -899,12 +928,13 @@ export function panelAction(state, cfg, action = {}) {
     /* ★ 一键委任：只填空缺岗位，不动已有任命；与手动委任共用职业适任表与属性口径。
        不选在编/出征武将（收益减半且玩家看不出），一人不兼两岗；同分比忠诚、再比 id，保证重放一致。 */
     if (type === 'appointAll') {
-      const busyIds = new Set(Object.values(state.interior.posts || {}).map((v) => Number(v)).filter(Boolean));
+      /* ★ P47#12：与手动委任共用 canAppoint（职业闸 / 一人一岗）；
+         「在编不参与」仍是一键路径独有的保守策略，手动指定不受此限。 */
+      const busyIds = new Set();
       for (const a of state.armys || []) for (const gid of a.generals || []) if (gid) busyIds.add(Number(gid));
-      const candidates = (state.generals || []).filter((x) => {
-        if (busyIds.has(Number(x.id))) return false;
-        return !!CAREER_FIT[careerOf(x).career]?.civilPost;
-      });
+      const candidates = (state.generals || [])
+        .filter((x) => !busyIds.has(Number(x.id)))
+        .filter((x) => canAppoint(state, x, null, cfg).ok);
       const chosen = new Set();
       const lines = [];
       const skipped = [];

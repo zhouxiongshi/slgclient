@@ -3,8 +3,18 @@
   "updated": "2026-11-13",
   "note": "第三方派生数据的唯一台账（U26）。凡是从外部项目/导出表复制进本仓库的数据文件都必须在此登记；tools/compliance-report.js 会做覆盖性核对，未登记的文件会被判为缺口。status 语义：own=本作原创；derived_unlicensed=复制自第三方、当前无授权、商业发行前必须替换或取得授权；derived_public_domain=史实/公有领域整理。",
   "forbidden_artifacts": {
-    "extensions": [".dll", ".pdb", ".il", ".exe"],
-    "path_patterns": ["完整原始版", "/export/", "反汇编", "decompiled"],
+    "extensions": [
+      ".dll",
+      ".pdb",
+      ".il",
+      ".exe"
+    ],
+    "path_patterns": [
+      "完整原始版",
+      "/export/",
+      "反汇编",
+      "decompiled"
+    ],
     "policy": "反汇编/IL/内部类结构与原始二进制一律不得进入本仓库与发行包；battle-core 只保留数值表与名录的移植，不保留原始二进制。"
   },
   "assets": [
@@ -33,9 +43,11 @@
       "status": "derived_unlicensed",
       "origin": "battle-kit/skill-library 率土之滨 W0 战法表 + adapted/full_mapping_stzb.json；文件内每条 provenance.source 逐条标注原始导出，与 skills.json 同批来源",
       "count": 96,
-      "evidence": "conf/innate-skills.json 顶部 source/sourceSha256/license；tools/build-innate-skills.mjs",
+      "evidence": "conf/innate-skills.json 顶部 source/sourceSha256/license；tools/build-innate-skills.mjs；★ 一次性导入：原始 648 条战法表与映射表不随包发行（第三方未授权），干净 clone 不能重生成；逐条来源与 sourceSha256 已固化在产物里，复核以产物为准",
       "action_before_release": "与 skills.json 同口径：整体换名换文案或取得授权；换皮后需复核 920xxx cfgId 与内核档位映射",
-      "confidence": "高"
+      "confidence": "高",
+      "regenerable": false,
+      "source_snapshot": "battle-kit/skill-library/source/raw/stzb_skill_extra.json + adapted/full_mapping_stzb.json（仓外开发快照，仅内部复核用）"
     },
     {
       "path": "offline/conf/skills-range.json",
@@ -135,6 +147,16 @@
       "count": 648,
       "action_before_release": "不随发行包分发；仅作生成/审计证据，商业发行前需确认引用许可",
       "confidence": "高"
+    },
+    {
+      "path": "offline/conf/library-skills-extra.json",
+      "kind": "扩展战法 29 条（patterns.csv 效果模板重组）",
+      "status": "derived_unlicensed",
+      "origin": "battle-kit/skill-library patterns.csv P01~P16；文件头 source 已改为如实标注，不再宣称完全原创",
+      "count": 29,
+      "evidence": "conf/library-skills-extra.json 头 license/licenseNote；tools/build-library-skills-extra.js",
+      "action_before_release": "与 skills.json 同批：取得授权或换名换文案后复核内核映射",
+      "confidence": "中"
     }
   ]
 }
