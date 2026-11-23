@@ -169,6 +169,7 @@
       + '.slgIx-tip h4{margin:0 0 6px;font-size:14px;color:#f0e2b8}'
       + '.slgIx-tip .meta{font-size:11px;color:#a9a48f;margin-bottom:7px}'
       + '.slgIx-tip .body{font-size:12px;line-height:1.6}'
+      + '.slgIx-tip .tierv{margin-top:7px;font-size:11px;color:#c8b88a}'
       + '.slgIx-tip .src{margin-top:8px;font-size:11px;color:#9cae8c;border-top:1px solid #3d4636;padding-top:6px}'
       + '.slgIx-tip .links{margin-top:7px;display:flex;flex-wrap:wrap;gap:5px}'
       + '.slgIx-tip .links button{padding:2px 7px;min-height:22px;font-size:11px}'
@@ -347,9 +348,15 @@
     }).join('');
     var crumb = crumbs && crumbs.length
       ? '<div class="crumb">路径：' + crumbs.map(function (c) { return esc(BY_ID[c] ? BY_ID[c].名称 : c); }).join(' › ') + '</div>' : '';
+    /* 依据层级：P49 裁决允许玩家可见溯源；展示中文层级与可信度，
+       借鉴对象名仍由 ui-presentation-hygiene 把守。 */
+    var evidenceLabel = String(t['证据级别'] || '');
+    var evidenceConf = String(t.confidence || '');
     return crumb
       + '<h4>' + esc(t.名称) + ' <span class="tag">' + esc(t.分类) + '</span></h4>'
       + '<div class="body">' + esc(t.简述 || '') + '</div>'
+      + (evidenceLabel ? '<div class="tierv">依据层级：' + esc(evidenceLabel)
+        + (evidenceConf ? ' · 可信度：' + esc(evidenceConf) : '') + '</div>' : '')
       + (link ? '<div class="links">' + link + '<button data-act="ixEncy" data-id="' + esc(t.id) + '">在百科中打开 ↗</button></div>' : '')
       + '<div class="meta" style="margin-top:8px">悬停框内词条可继续展开 · 点此框或按 K 锁定 · Esc 关闭最上层</div>';
   }

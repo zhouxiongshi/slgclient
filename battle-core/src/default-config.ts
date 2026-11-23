@@ -2437,6 +2437,11 @@ export const DEFAULT_BATTLE_CONFIG: BattleConfig = {
   },
   "base_damage_policy": "attributed_placeholder",
   "troop_factor": 1.0,
+  "attr_delta": {
+    "span": 100.0,
+    "min": 0.5,
+    "max": 2.0
+  },
   "probability_default": 0.35,
   "demo_attributes": {
     "attack_base": 90.0,

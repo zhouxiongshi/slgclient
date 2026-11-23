@@ -160,14 +160,14 @@ export interface UnitInput {
   initial_buffs?: BonusTerm[];
 }
 
-/** 由 BUFF 槽授予的常驻反应：洞察 / 回击 / 减伤。rounds=0 表示整场有效。 */
+/** 由 BUFF 槽授予的常驻反应：洞察 / 回击 / 减伤 / 易伤。rounds=0 表示整场有效。 */
 export interface Reaction {
-  kind: 'insight' | 'counter' | 'damage_reduce';
+  kind: 'insight' | 'counter' | 'damage_reduce' | 'damage_taken_increase';
   skill_id: number;
   skill_name: string;
   /** 剩余回合；0 = 整场战斗有效 */
   rounds: number;
-  /** counter = 回击概率；damage_reduce = 减伤比例 */
+  /** counter = 回击概率；damage_reduce = 减伤比例；damage_taken_increase = 易伤比例 */
   value: number;
   /** counter 专用 */
   rate_pct?: number;
@@ -290,4 +290,11 @@ export interface BattleConfig {
    * corrected : 减伤随防御单调增加，符合直觉；后续数值微调时建议切换。
    */
   defense_model?: 'legacy' | 'corrected';
+  /**
+   * ★ P49 属性差乘区（移植版新增，缺省 = {span:100,min:0.5,max:2.0}）。
+   * 率土式：修正 = clamp(1 + (攻方属性 − 守方对应抗性)/span, min, max)。
+   * 物理攻对守方防（defence），策略攻对守方智（intel）。
+   * 武将属性为五维百分制（0~100），span=100 即满差 → ×2，对标率土 /300 满差口径。
+   */
+  attr_delta?: { span: number; min: number; max: number };
 }

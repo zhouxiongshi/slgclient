@@ -2522,6 +2522,15 @@ build/SLG-Offline-win32-x64/
 4. **工具链可信度（#5/#6/#7）**：`check-release.runTests` 摘要行缺失/失败行缺失直接判红并把用例门槛从 10 提到 700；`p46` 测试改从 provenance 推导，不再依赖被 gitignore 的 `reports/`；先天战法生成器缺源时给「一次性导入」明确提示，provenance 登记 `regenerable:false` 与证据链。
 5. **加成上限（#8）**：`battle-core/src/rules.ts calcDamage()` 把 `one_plus_bonus` 封顶 2×，`offline/kernel/rules.js` 已按 `kernel-sync --write` 同步；原始 `bonus_total` 保留供审计。黄金向量最大 1.48×，37/37 内核测试通过；FIELD-CONTRACT 新增该字段定义。
 
+### 17.33 P49 用户裁决（2026-11-23）：素材路线 / 战法数值与机制 / 属性权重 / 溯源展示
+
+1. **未授权派生资产路线（9 项）**：**原型验证期保留原名原文案运行；游戏稳定后、商业发行前统一「换名换画面」**——全部派生条目改用本作原创命名并重绘/重写画面与文案，**不再逐条单独授权**（旧路线废止）。`provenance.json` 的 9 项 `derived_unlicensed` 的 `action_before_release` 已统一指向本条；换皮执行前需用户批准，验收标准：全部产物零第三方专名/原文案、`compliance-report` 未授权计数归 0。
+2. **战法数值折半（68 项）**：`build-innate-skills.mjs` 第 431 行历史折半 `b.value / 2` 废止，bonus_terms 值恢复为描述值；`conf/innate-skills.json` 已同步（34 条 920 系 Lv1/Lv10 共 68 项）。描述层不再改。
+3. **机制方向性错误（18 项）**：内核按词条名语义分桶——「受到…伤害降低 / 伤害降低」进 `damage_reduce`、「受到…伤害提高」进 `damage_taken_increase`（新 reaction kind），不再混入攻击加成；锋矢（920065）/犒劳（920094）数据层改 BUFF 正向。旧「一锅端 `sumTermsBonus`」口径废止。
+4. **武将属性权重**：伤害结算新增率土式属性差乘区 `attr_delta = 1 + clamp((攻方属性 − 守方对应抗性)/span, −0.5, +0.6)`，`span=300` 可配置（`battleConfig().attr_delta`）；物理攻 vs 防、策略攻 vs 智抗。黄金向量随之重生成（预期内漂移，见 FIELD-CONTRACT 条款）。
+5. **溯源展示放开**：`ui-presentation-hygiene` 的台账字段渲染禁令解除（借鉴对象名禁令保留）；术语提示框展示「依据层级 + 可信度」、人物卡提供「依据」折叠入口；design-audit #26/#27 升 ✅（三证机器判据）。
+6. **委任**：一键委任与手动委任共用 `canAppoint()`（文职适任 + 一人一岗）；「在编不参与内政」仍是一键路径的保守策略，手动允许兼任（既有玩法口径不变）。
+
 **红线速查（改前必看）**：INV-01~INV-10（§1.4）、ADR-01/04/07/08/13/14（§1.2）、§7.15 键空间警告、§9.3 z-index 阶梯（含回放层 100700）、§10 确定性、§14.7 报告归属、§16.4 内核改法、§17 偏差登记。
 
 ---

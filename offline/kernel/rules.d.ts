@@ -23,6 +23,21 @@ export declare function sumTermsBonus(terms: readonly BonusTerm[]): number;
  *  十级同名战法可重复叠加（被动每回合刷新）时旧口径能到 6.75×，
  *  与 FIELD-CONTRACT 的平衡上限冲突。这里在唯一出口钳住，黄金向量最大 1.48× 不受影响。 */
 export declare const MAX_DAMAGE_BONUS_MULTIPLIER = 2;
+/** ★ P49：bonus 词条语义分类——旧口径「一锅端 sumTermsBonus」把减伤词条也
+ *  当攻击加成，方向反了（审计 3.2/3.6/3.14 共 18 项）。
+ *  damage_reduce        ：受到…伤害降低 / 伤害降低 → 挂承受者，按减伤结算。
+ *  damage_taken_increase：受到…伤害提高 → 挂承受者，按易伤（受伤放大）结算。
+ *  attack_bonus         ：其余词条维持旧口径，计入攻击方加成链。 */
+export declare function classifyTerm(name: string): 'damage_reduce' | 'damage_taken_increase' | 'attack_bonus';
+/** ★ P49：率土式属性差乘区。修正 = clamp(1 + (攻方属性 − 守方抗性)/span, min, max)。
+ *  物理攻 vs 守方防（defence），策略攻 vs 守方智（intel）；五维百分制下 span=100
+ *  即满差 → ×2，对标率土 /300 满差口径。用户裁决：武将属性在战斗中的权重应更大。 */
+export declare function attrDeltaFactor(cfg: BattleConfig, effectType: EffectType, attacker: UnitState, defender: UnitState): {
+    factor: number;
+    atk_attr: number;
+    def_attr: number;
+    note: string;
+};
 /** E0：三档相克系数，越界或档位缺失退化 1.0 */
 export declare function counterFactor(cfg: BattleConfig, attackType: AttackType | string, weakness: number): {
     factor: number;
@@ -40,6 +55,8 @@ export interface BaseDamageResult {
     rate_pct_at_level: number;
     attribute: number;
     attribute_note: string;
+    attr_delta_factor: number;
+    attr_delta_note: string;
     evidence: string;
     note: string;
 }

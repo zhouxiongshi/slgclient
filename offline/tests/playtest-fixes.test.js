@@ -146,6 +146,11 @@ test('P0-3 战败不会把家底清零：溃兵归营', () => {
     .sort((a, b) => garrisonOf(b) - garrisonOf(a))[0];
   assert.ok(target, '玩家本城应有守军足够的邻城可打');
   state.armys[0].soldiers = [400, 0, 0];
+  /* ★ P49：属性差乘区改变了低兵力 vs 高守军的胜负边界（攻方武将属性占优时
+     伤害被放大，400 兵实测也能打下守军 1810 的城）。本用例专测「战败不丢家底」，
+     直接把守军抬到绝对碾压量级，不再依赖地图平衡的巧合。 */
+  const gate = state.strategy.cities[target.id];
+  if (gate) gate.troops = Math.max(Number(gate.troops) || 0, 50000);
   const rsp = handleRequest(ctx, req('strategy.attack', { cityId: target.id, armyId: state.armys[0].id }));
   assert.equal(rsp.msg.ok, true);
   // ★ P2：行军到到达日再结算

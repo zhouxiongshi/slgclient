@@ -179,6 +179,15 @@ function mirrorOne(local, off) {
   if (UNSUPPORTED.test(canonical(off.desc)) || UNSUPPORTED.test(canonical(off['desc(level1)']))) {
     return { skip: '描述含本作内核不支持的条件/叠加/多段机制' };
   }
+  /* ★ P49：方向性修复——「伤害降低/伤害提高」不带「受到」前缀时是输出增减益，
+     只有挂敌军（DEBUFF）方向才正确；本工具把 BUFF/DEBUFF 一律落 self/enemy_single，
+     落成 self 的这类词条会反向作用在自己身上（锋矢/犒劳曾被审计判 P1）。
+     无法忠实落地 → 按红线「不做假照搬」剔除进 skip 台账，回退本地语义正确版本。 */
+  if (!/受到/.test(canonical(off.desc))
+    && /伤害降低|伤害提高/.test(canonical(off.desc))
+    && !/敌军/.test(String(off.targetType || ''))) {
+    return { skip: 'P49：输出增减益词条映射为 self 会反向作用，无法忠实落地，回退本地版本' };
+  }
   const cls = String(off.type || '').trim();
   if (!TRIGGER[cls]) return { skip: '不支持的战法类别：' + cls };
   const trigger = TRIGGER[cls];

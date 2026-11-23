@@ -129,11 +129,12 @@ test('原 slg 的 AbsInt 缺陷不存在：结算式带保底、不会被防御�
   assert.equal(calcDamage(100, 1.2, 0.25, 1).final, 150);
 });
 
-test('数值缺陷登记：legacy 模式的 E2 减伤式方向反了（保持与参考实现一致）', () => {
+test('legacy mitigation 方向缺陷仍在，但 P49 属性乘区让净效果恢复「防高受伤低」', () => {
   const weak = defenseProbe(10);
   const strong = defenseProbe(500);
-  // 如实记录继承缺陷：防御 500 的受伤反而高于防御 10
-  assert.ok(strong.base > weak.base, 'legacy 减伤方向反了，这是 battle-kit E2 占位式的已知缺陷');
+  // ★ P49 登记：legacy 的 E2 占位式方向仍反（保留与参考实现一致的乘子），
+  // 但属性差乘区把防御经 attr_delta 再生效一次，净效果高防御受伤显著更低。
+  assert.ok(strong.base < weak.base, '防御 500 的受伤必须低于防御 10（P49 属性乘区生效）');
 });
 
 test('corrected 模式修复减伤方向：防御越高伤害越低，且仍有保底', () => {

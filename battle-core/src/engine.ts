@@ -37,9 +37,12 @@ import {
   controlBlocks,
   counterFactor,
   effectAvailable,
+  attrDeltaFactor,
+  classifyTerm,
   hasControl,
   heroAttr,
   levelValue,
+  normalizeBonus,
   rollTrigger,
   SKILL_PHASE_ORDER,
   sumTermsBonus,
@@ -213,11 +216,13 @@ export class BattleEngine {
       const calc = calcDamage(bd.value, cf.factor, bonusTotal, this.cfg.min_damage);
 
       /* M4-7：「自身受到伤害降低」只作用在承受者身上，不进攻击方加成链。
-         减伤求和后 clamp 到 90%，避免叠加出无敌导致战斗永无终结。 */
-      const reduce = Math.min(0.9, Math.max(0, target.reactions
-        .filter((r) => r.kind === 'damage_reduce')
-        .reduce((s, r) => s + r.value, 0)));
-      const mitigated = reduce > 0
+         ★ P49：减伤与易伤净额统一结算——reduce 为正=减伤、负=易伤放大，
+         clamp ±90%，避免叠加出无敌或秒杀导致战斗永无终结。 */
+      const takenDelta = target.reactions
+        .filter((r) => r.kind === 'damage_reduce' || r.kind === 'damage_taken_increase')
+        .reduce((s, r) => s + (r.kind === 'damage_reduce' ? r.value : -r.value), 0);
+      const reduce = Math.min(0.9, Math.max(-0.9, takenDelta));
+      const mitigated = reduce !== 0
         ? Math.max(0, Math.trunc(calc.final * (1 - reduce)))
         : calc.final;
 
@@ -238,8 +243,9 @@ export class BattleEngine {
         troops_after: troopsAfter,
         applied: troopsBefore - troopsAfter,
         /* M4-7 审计字段只在真的发生时写入：旧战法的事件必须逐字节不变，
-           否则黄金向量 / event_fingerprint 会整体漂移。 */
-        ...(reduce > 0 ? { damage_reduce: reduce, before_mitigation: calc.final } : {}),
+           否则黄金向量 / event_fingerprint 会整体漂移。
+           ★ P49：damage_reduce 为负值时表示易伤放大（P49 语义分桶后可能出现）。 */
+        ...(reduce !== 0 ? { damage_reduce: reduce, before_mitigation: calc.final } : {}),
         ...(effect.note === 'counter' ? { counter: true } : {}),
       }, 'E0');
 
@@ -326,17 +332,28 @@ export class BattleEngine {
 
     if (t === 'BUFF' || t === 'DEBUFF') {
       const sign = t === 'BUFF' ? 1.0 : -1.0;
+      /* ★ P49 语义分桶：减伤/易伤词条挂承受者 reactions，按「受伤修正」结算，
+         不再混进攻击方加成链（旧口径把「受到伤害降低」算成攻击 +N%，方向反了）。
+         同源战法重复授予（被动每回合触发）只刷新，不堆叠。 */
+      const sid = skill?.skill_id ?? effect.detail_id;
+      let classified = false;
       for (const term of effect.bonus_terms) {
-        target.buffs.push({
-          name: term.name,
-          value: term.value * sign,
-          op: term.op,
-          evidence: 'E2',
-          source: 'effect',
-        });
+        const kind = classifyTerm(term.name);
+        if (kind === 'attack_bonus') {
+          target.buffs.push({
+            name: term.name,
+            value: term.value * sign,
+            op: term.op,
+            evidence: 'E2',
+            source: 'effect',
+          });
+          continue;
+        }
+        classified = true;
+        const value = Math.abs(normalizeBonus(term.value, term.op));
+        target.reactions = target.reactions.filter((x) => !(x.skill_id === sid && x.kind === kind));
+        target.reactions.push({ kind, skill_id: sid, skill_name: skillName, rounds: 0, value });
       }
-      /* M4-7：mechanics 不进 buffs（内核对攻击方 buffs 无差别求和，减伤/回击词
-         混进去会变成攻击加成，描述与计算就分家了），单独记在 reactions 上。 */
       const m = t === 'BUFF' ? effect.mechanics : undefined;
       const mechanics: string[] = [];
       if (m) {

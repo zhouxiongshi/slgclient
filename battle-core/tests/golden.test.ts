@@ -77,5 +77,5 @@ test('首个伤害结算与黄金向量 first_damage_calc 逐字段一致', () =
 
 test('Python 参考事件流指纹与黄金向量声明一致', () => {
   assert.equal(py.event_fingerprint, vectors.battle_smoke.event_fingerprint);
-  assert.equal(py.event_fingerprint, 'b1e8b82031471baa');
+  assert.equal(py.event_fingerprint, '196cf74a44e13b68'); // ★ P49 属性乘区后重生成（旧 b1e8b82031471baa）
 });

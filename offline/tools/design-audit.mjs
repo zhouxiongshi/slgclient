@@ -137,13 +137,22 @@ add(25, '百科离线内置、术语互链、与提示框同源',
   /slgIxEncy/.test(INTERACTION) ? '⚠️' : '❌',
   '有百科容器与检索框；与术语表同源（terms.json）已确认，互链需人工');
 
+/* ★ P49 裁决：允许玩家可见溯源。三项机器证据齐备判 ✅：
+   ① 术语层全量带证据级别字段；② 术语提示框展示依据层级+可信度；
+   ③ 人物卡有「依据」折叠入口。缺任一项降级 ⚠️/❌。 */
+const evidenceUi = termCount > 0
+  && /依据层级/.test(INTERACTION)
+  && /hcEvidence/.test(PANELS_UI)
+  && /依据/.test(PANELS_UI);
 add(26, '史实/演义/本作设定分层，带 source_id 与 confidence',
-  termCount > 0 && /evidence|confidence|source/i.test(INTERACTION) ? '⚠️' : '❌',
-  '术语结构含证据级别字段；界面是否展示 source_id 未验证');
+  evidenceUi ? '✅' : (termCount > 0 && /evidence|confidence|source/i.test(INTERACTION) ? '⚠️' : '❌'),
+  evidenceUi ? '术语层全量证据字段；提示框展示依据层级+可信度；人物卡有依据入口（三证齐备）'
+    : '术语结构含证据级别字段；界面是否展示 source_id 未验证');
 
 add(27, '剧本/武将名/地名可考，有「依据」入口',
-  /依据|出处/.test(PANELS_UI) || /依据|出处/.test(SKILLS) ? '⚠️' : '❌',
-  '人物档案有史料短评；「依据」按钮入口未确认');
+  evidenceUi ? '✅' : (/依据|出处/.test(PANELS_UI) || /依据|出处/.test(SKILLS) ? '⚠️' : '❌'),
+  evidenceUi ? '人物卡依据折叠入口 + 术语框依据层级，均为运行时可点开的真实入口'
+    : '人物档案有史料短评；「依据」按钮入口未确认');
 
 add(28, '色盲双编码、字号缩放、键位重映射、减少动效',
   /reduceMotion|reduce-motion|S\.reduceMotion/.test(INTERACTION) ? '⚠️' : '❌',

@@ -428,7 +428,9 @@ function makeSkill(src, idx) {
       available_round: 0,
       control_state: s.control_state,
       control_probability: 0,
-      bonus_terms: s.bonus_terms.map((b) => ({ ...b, value: r2(b.value / 2) })),
+      /* ★ P49：历史折半（b.value / 2）废止——bonus 词条值恢复为描述值，
+         34 条 920 系共 68 项差异归零；旧口径见 SDD §17.33。 */
+      bonus_terms: s.bonus_terms.map((b) => ({ ...b, value: r2(b.value) })),
     })),
   };
   return {

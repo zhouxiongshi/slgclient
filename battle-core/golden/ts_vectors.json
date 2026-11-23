@@ -1,6 +1,6 @@
 {
   "_说明": "TS 内核回归快照。纯函数向量应与 golden/expected_vectors.json 精确一致；整场统计量应与 Python 参考一致。",
-  "config_fingerprint_ts": "9d7295a2464cc39e",
+  "config_fingerprint_ts": "af4fb57c78ed4fb0",
   "config_fingerprint_python": "f186e15d0c1f266b",
   "level_value": {
     "v(40,1)": 40,
@@ -72,9 +72,9 @@
   "battle_smoke": {
     "seed": 20261106,
     "winner": 1,
-    "rounds": 6,
-    "event_count": 175,
-    "damage_event_count": 48,
+    "rounds": 5,
+    "event_count": 155,
+    "damage_event_count": 42,
     "survivors": {
       "1": [
         "曹植#1-1",
@@ -83,29 +83,29 @@
       "2": []
     },
     "first_damage_calc": {
-      "base": 110.0187250996016,
+      "base": 119.48033545816732,
       "counter": 1,
       "bonus_total": 0.06,
-      "after_counter": 110.0187250996016,
+      "after_counter": 119.48033545816732,
       "one_plus_bonus": 1.06,
-      "raw": 116.6198486055777,
-      "floored": 116,
+      "raw": 126.64915558565737,
+      "floored": 126,
       "min_damage": 1,
-      "final": 116,
+      "final": 126,
       "evidence": "E0",
       "il": "Game.Map.dll::CalcDamageByTerms"
     },
     "event_summary": {
-      "skill_miss": 36,
-      "skill_trigger": 51,
-      "buff": 31,
-      "damage": 48,
+      "skill_miss": 30,
+      "skill_trigger": 46,
+      "buff": 28,
+      "damage": 42,
       "control": 2,
       "state_clear": 2,
-      "skill_blocked": 1,
-      "unit_down": 4
+      "unit_down": 4,
+      "skill_blocked": 1
     },
-    "event_fingerprint": "919ea63236ba8a8e",
-    "rng_calls": 70
+    "event_fingerprint": "d4e9521c7e430128",
+    "rng_calls": 61
   }
 }

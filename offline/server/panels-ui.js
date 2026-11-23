@@ -460,6 +460,9 @@
     '#slgPanelsWin .hcTags{margin-top:8px;color:#a99e84;font-size:11px;display:flex;gap:8px;flex-wrap:wrap;}',
     '#slgPanelsWin .hcTags span{padding:2px 7px;background:#1d2017;border:1px solid #3d3a2c;border-radius:3px;}',
     '#slgPanelsWin .hcTags b{color:#d8c9a5;font-weight:600;}',
+    '#slgPanelsWin .hcEvidence{margin-top:10px;font-size:12px;color:#b3a88f;}',
+    '#slgPanelsWin .hcEvidence summary{cursor:pointer;color:#e3c46a;padding:3px 0;}',
+    '#slgPanelsWin .hcEvidence .evbody{padding:6px 0 2px;line-height:1.7;}',
     '#slgPanelsWin .hcState{margin-top:12px;}',
     '#slgPanelsWin .hcState>.card{margin-top:9px;}',
     '#slgPanelsWin .hcNote{margin-top:10px;padding:8px 10px;border-left:2px solid #ba9a52;',
@@ -573,6 +576,11 @@
       + '<div class="hcBrief">' + brief + '<div class="hcTags">'
       + tags.map(function (t) { return '<span>' + t + '</span>'; }).join('')
       + '</div></div>'
+      + '<details class="hcEvidence"><summary>依据</summary><div class="evbody">'
+      + (hasLoreStats ? '史载人物：五维取史料档案所载数值，逐字沿用不改；无记载的一维显示「未设」，不补造。'
+        : '本局设定人物：史无明载，五维取当前存档设定值；无记载的一维显示「未设」，不补造。')
+      + ' 两者同为 0~100 口径，战斗中以本局五维为唯一权威。'
+      + '</div></details>'
       + '</div></div>'
       + heroStateHtml(g);
   }

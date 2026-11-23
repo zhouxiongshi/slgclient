@@ -3,8 +3,8 @@
   "generatedBy": "tools/mirror-official-skills.mjs",
   "sourceUrl": "https://g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10",
   "sourceSha256": "db82f837fb765ea11de77398ddbe57ba66f6e8022b8140403e58c4130cfe3d92",
-  "count": 12,
-  "skippedCount": 164,
+  "count": 10,
+  "skippedCount": 166,
   "rules": "同名逐字匹配；仅镜像伤害/治疗/控制/增减益可忠实落地的百分比槽；其余保留原样",
   "skills": [
     {
@@ -1337,231 +1337,6 @@
       }
     },
     {
-      "cfgId": 920065,
-      "name": "锋矢",
-      "trigger": 4,
-      "dir": "zhihui",
-      "ui": {
-        "cfgId": 920065,
-        "name": "锋矢",
-        "des": "战斗中，使我军全体骑兵进行普通攻击的伤害降低%n%%，发动主动战法的伤害提高%n%%（受速度属性影响）",
-        "trigger": 4,
-        "target": 9,
-        "limit": 1,
-        "arms": [
-          3,
-          6,
-          9
-        ],
-        "include_effect": [
-          1,
-          2
-        ],
-        "levels": [
-          {
-            "probability": 100,
-            "effect_value": [
-              25,
-              9
-            ],
-            "effect_round": [
-              0,
-              0
-            ]
-          },
-          {
-            "probability": 100,
-            "effect_value": [
-              25,
-              10
-            ],
-            "effect_round": [
-              0,
-              0
-            ]
-          },
-          {
-            "probability": 100,
-            "effect_value": [
-              25,
-              11
-            ],
-            "effect_round": [
-              0,
-              0
-            ]
-          },
-          {
-            "probability": 100,
-            "effect_value": [
-              25,
-              12
-            ],
-            "effect_round": [
-              0,
-              0
-            ]
-          },
-          {
-            "probability": 100,
-            "effect_value": [
-              25,
-              13
-            ],
-            "effect_round": [
-              0,
-              0
-            ]
-          },
-          {
-            "probability": 100,
-            "effect_value": [
-              25,
-              14
-            ],
-            "effect_round": [
-              0,
-              0
-            ]
-          },
-          {
-            "probability": 100,
-            "effect_value": [
-              25,
-              15
-            ],
-            "effect_round": [
-              0,
-              0
-            ]
-          },
-          {
-            "probability": 100,
-            "effect_value": [
-              25,
-              16
-            ],
-            "effect_round": [
-              0,
-              0
-            ]
-          },
-          {
-            "probability": 100,
-            "effect_value": [
-              25,
-              17
-            ],
-            "effect_round": [
-              0,
-              0
-            ]
-          },
-          {
-            "probability": 100,
-            "effect_value": [
-              25,
-              18
-            ],
-            "effect_round": [
-              0,
-              0
-            ]
-          }
-        ],
-        "range": 3,
-        "rangeNote": "有效距离 3 · 单体"
-      },
-      "kernel": {
-        "cfgId": 920065,
-        "name": "锋矢",
-        "skill_class": "指挥",
-        "effect_type": "BUFF",
-        "rate_pct_lv1": 25,
-        "rate_pct_lv10": 25,
-        "probability_init": 1,
-        "probability_max": 1,
-        "prepare": 0,
-        "target_type": "self",
-        "attack_type": "normal",
-        "control_state": null,
-        "control_probability": 0,
-        "bonus_terms": [
-          {
-            "name": "伤害降低",
-            "value": 25,
-            "op": 0
-          }
-        ],
-        "detail_id": 9200651,
-        "effects": [
-          {
-            "detail_id": 9200651,
-            "effect_type": "BUFF",
-            "rate_pct": 25,
-            "target_type": "self",
-            "attack_type": "normal",
-            "available_round": 0,
-            "control_probability": 0,
-            "control_state": null,
-            "bonus_terms": [
-              {
-                "name": "伤害降低",
-                "value": 25,
-                "op": 0
-              }
-            ]
-          },
-          {
-            "detail_id": 9200652,
-            "effect_type": "DEBUFF",
-            "rate_pct": 18,
-            "target_type": "self",
-            "attack_type": "normal",
-            "available_round": 0,
-            "control_probability": 0,
-            "control_state": null,
-            "bonus_terms": [
-              {
-                "name": "伤害提高",
-                "value": 9,
-                "op": 0
-              }
-            ]
-          }
-        ]
-      },
-      "provenance": {
-        "pairing": "stzb-w0",
-        "source": "battle-kit/skill-library/source/raw/stzb_skill_extra.json",
-        "sourceId": 200718,
-        "sourceName": "锋矢",
-        "quality": "B",
-        "effectTags": [
-          "主动战法伤害提高",
-          "普通攻击伤害降低"
-        ],
-        "signature": "指挥|DEBUFF|group|普通攻击伤害降低",
-        "referenceIds": [
-          200718,
-          200716
-        ],
-        "rateSource": "adapted/full_mapping_stzb.json（20 档位钳位近似，非官网原文数值）",
-        "license": "参考用：战法名来自率土之滨官网公开名录，描述与数值为本游戏重写/内核档位近似；仅本地学习与内部对照，对外发布须换皮",
-        "evidence_level": "W0",
-        "mirror": {
-          "officialId": 200718,
-          "sourceUrl": "https://g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10",
-          "sourceSha256": "db82f837fb765ea11de77398ddbe57ba66f6e8022b8140403e58c4130cfe3d92",
-          "officialType": "指挥",
-          "officialProbability": "--",
-          "officialTarget": "我军群体（有效距离内3个目标）",
-          "officialLv1": "战斗中，使我军全体骑兵进行普通攻击的伤害降低25.0%，发动主动战法的伤害提高9.0%（受速度属性影响）",
-          "officialLv10": "战斗中，使我军全体骑兵进行普通攻击的伤害降低25.0%，发动主动战法的伤害提高18.0%（受速度属性影响）"
-        }
-      }
-    },
-    {
       "cfgId": 920074,
       "name": "钝兵挫锐",
       "trigger": 3,
@@ -2194,197 +1969,6 @@
           "officialTarget": "敌军单体",
           "officialLv1": "对敌军单体发动策略攻击（伤害率74.0%，受谋略属性影响），并使其陷入混乱状态，持续1回合",
           "officialLv10": "对敌军单体发动策略攻击（伤害率148.0%，受谋略属性影响），并使其陷入混乱状态，持续1回合"
-        }
-      }
-    },
-    {
-      "cfgId": 920094,
-      "name": "犒劳",
-      "trigger": 1,
-      "dir": "zhudong",
-      "ui": {
-        "cfgId": 920094,
-        "name": "犒劳",
-        "des": "使自身进行策略攻击时的伤害提高%n%%，持续2回合",
-        "trigger": 1,
-        "target": 6,
-        "limit": 1,
-        "arms": [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          8,
-          9
-        ],
-        "include_effect": [
-          1
-        ],
-        "levels": [
-          {
-            "probability": 30,
-            "effect_value": [
-              17.5
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              19.44
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              21.39
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              23.33
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              25.28
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              27.22
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              29.17
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              31.11
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              33.06
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              35
-            ],
-            "effect_round": [
-              0
-            ]
-          }
-        ],
-        "range": 2,
-        "rangeNote": "无距离限制"
-      },
-      "kernel": {
-        "cfgId": 920094,
-        "name": "犒劳",
-        "skill_class": "主动",
-        "effect_type": "DEBUFF",
-        "rate_pct_lv1": 17.5,
-        "rate_pct_lv10": 35,
-        "probability_init": 0.3,
-        "probability_max": 0.3,
-        "prepare": 0,
-        "target_type": "self",
-        "attack_type": "normal",
-        "control_state": null,
-        "control_probability": 0,
-        "bonus_terms": [
-          {
-            "name": "伤害提高",
-            "value": 17.5,
-            "op": 0
-          }
-        ],
-        "detail_id": 9200941,
-        "effects": [
-          {
-            "detail_id": 9200941,
-            "effect_type": "DEBUFF",
-            "rate_pct": 35,
-            "target_type": "self",
-            "attack_type": "normal",
-            "available_round": 0,
-            "control_probability": 0,
-            "control_state": null,
-            "bonus_terms": [
-              {
-                "name": "伤害提高",
-                "value": 17.5,
-                "op": 0
-              }
-            ]
-          }
-        ]
-      },
-      "provenance": {
-        "pairing": "stzb-w0",
-        "source": "battle-kit/skill-library/source/raw/stzb_skill_extra.json",
-        "sourceId": 200197,
-        "sourceName": "犒劳",
-        "quality": "D",
-        "effectTags": [
-          "策略攻击伤害提高"
-        ],
-        "signature": "主动|BUFF|single|策略攻击伤害提高",
-        "referenceIds": [
-          200197
-        ],
-        "rateSource": "adapted/full_mapping_stzb.json（20 档位钳位近似，非官网原文数值）",
-        "license": "参考用：战法名来自率土之滨官网公开名录，描述与数值为本游戏重写/内核档位近似；仅本地学习与内部对照，对外发布须换皮",
-        "evidence_level": "W0",
-        "mirror": {
-          "officialId": 200197,
-          "sourceUrl": "https://g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10",
-          "sourceSha256": "db82f837fb765ea11de77398ddbe57ba66f6e8022b8140403e58c4130cfe3d92",
-          "officialType": "主动",
-          "officialProbability": "30%",
-          "officialTarget": "自己",
-          "officialLv1": "使自身进行策略攻击时的伤害提高17.5%，持续2回合",
-          "officialLv10": "使自身进行策略攻击时的伤害提高35.0%，持续2回合"
         }
       }
     }
@@ -3081,6 +2665,11 @@
       "reason": "描述含本作内核不支持的条件/叠加/多段机制"
     },
     {
+      "cfgId": 920065,
+      "name": "锋矢",
+      "reason": "P49：输出增减益词条映射为 self 会反向作用，无法忠实落地，回退本地版本"
+    },
+    {
       "cfgId": 920066,
       "name": "美人计",
       "reason": "描述含本作内核不支持的条件/叠加/多段机制"
@@ -3204,6 +2793,11 @@
       "cfgId": 920093,
       "name": "固阵",
       "reason": "描述含本作内核不支持的条件/叠加/多段机制"
+    },
+    {
+      "cfgId": 920094,
+      "name": "犒劳",
+      "reason": "P49：输出增减益词条映射为 self 会反向作用，无法忠实落地，回退本地版本"
     },
     {
       "cfgId": 920095,

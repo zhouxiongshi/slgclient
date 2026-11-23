@@ -3,8 +3,9 @@
  *
  * 1) 俘虏处置按钮必须与六府面板共用同一套按钮语言：明确字号、前景色、底色与危险色，
  *    小字说明也不能压到几乎看不见。
- * 2) 玩家可见文案不得出现借鉴对象、外部名录、内部规格编号或工程溯源字段。
- *    工程溯源数据仍保留在 conf/ 中供合规检查，但禁止再渲染到界面。
+ * 2) 玩家可见文案不得出现借鉴对象与外部名录（率土之滨、battle-kit 等）。
+ *    ★ P49 用户裁决：允许玩家可见溯源——术语提示框展示依据层级与可信度、
+ *    人物卡提供「依据」入口；借鉴对象名仍一律禁止。
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -30,7 +31,8 @@ const SOURCE_LEAKS = [
   'battle-kit', '设计规格', '章节 K',
 ];
 
-// 合规台账字段名：代码与数据必须保留，只禁止渲染到玩家界面。
+// ★ P49 裁决前：合规台账字段名禁止渲染到玩家界面。
+//   裁决后：允许玩家可见溯源，本清单仅保留给术语表字段值的借鉴对象名检查。
 const TRACE_FIELDS = ['数值来源', 'source_id', 'confidence', '证据级别', '可信度'];
 
 test('俘虏处置按钮使用六府统一按钮样式，字体与对比度可读', () => {
@@ -49,13 +51,21 @@ test('俘虏处置按钮使用六府统一按钮样式，字体与对比度可�
     '六府窗口没有 .ghost 样式，不得再使用该类');
 });
 
-test('注入层不含任何借鉴对象、外部名录或工程溯源提示', () => {
+test('注入层不含任何借鉴对象或外部名录（P49 后允许玩家可见溯源字段）', () => {
   for (const file of UI_FILES) {
     const src = read(file);
-    for (const token of [...SOURCE_LEAKS, ...TRACE_FIELDS]) {
-      assert.ok(!src.includes(token), `${file} 仍会向玩家暴露来源提示：${token}`);
+    for (const token of SOURCE_LEAKS) {
+      assert.ok(!src.includes(token), `${file} 仍会向玩家暴露借鉴对象：${token}`);
     }
   }
+});
+
+test('P49 溯源展示落地：术语框展示依据层级，人物卡有依据入口', () => {
+  const ix = read('server/interaction-ui.js');
+  assert.ok(ix.includes("'证据级别'"), '术语提示框应直接展示证据级别（依据层级）');
+  assert.ok(ix.includes('.confidence') || ix.includes("confidence"), '术语提示框应展示可信度');
+  const pu = read('server/panels-ui.js');
+  assert.ok(pu.includes('hcEvidence') && pu.includes('>依据<'), '人物卡应有「依据」折叠入口');
 });
 
 test('源码注释与开发者字符串不含借鉴对象或内部规格编号', () => {

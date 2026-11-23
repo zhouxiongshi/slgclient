@@ -78,7 +78,7 @@ test('双方都有存活单位时判平局（winner=null）', () => {
 test('一方全灭时立即结束并给出唯一胜方', () => {
   const { result } = battle(20261106, 8);
   assert.equal(result.winner, 1);
-  assert.equal(result.rounds, 6);
+  assert.equal(result.rounds, 5); // ★ P49 属性乘区后战斗节奏加快
   assert.equal(result.survivors['2'].length, 0);
   assert.ok(result.survivors['1'].length > 0);
 });
@@ -113,14 +113,14 @@ test('战报文本可读且包含关键结算信息', () => {
   const text = toText(result);
   assert.match(text, /战斗战报/);
   assert.match(text, /伤害=/);
-  assert.match(text, /回合数=6/);
+  assert.match(text, /回合数=5/);
   assert.ok(text.length > 1000);
 });
 
 test('runDemo 便捷入口可一行跑通', () => {
   const r = runDemo({ seed: 20261106, perSide: 3, level: 10, troops: 1200, roundLimit: 8 });
   assert.equal(r.winner, 1);
-  assert.equal(r.events.length, 175);
+  assert.equal(r.events.length, 155);
 });
 
 // ── 战位与射程（P7 语义回填到 TS 基准内核，防止 rebuild 丢失）───────────────
@@ -209,5 +209,5 @@ test('缺省 pos/attack_range 时事件流与旧实现完全一致（黄金向�
   const a = runBattle({ units: legacy, seed: 20261106, config: cfg, roundLimit: 8 });
   const b = runBattle({ units, seed: 20261106, config: cfg, roundLimit: 8 });
   assert.equal(a.event_fingerprint, b.event_fingerprint);
-  assert.equal(a.events.length, 175);
+  assert.equal(a.events.length, 155);
 });

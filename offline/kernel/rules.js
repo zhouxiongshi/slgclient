@@ -34,6 +34,39 @@ export function sumTermsBonus(terms) {
  *  十级同名战法可重复叠加（被动每回合刷新）时旧口径能到 6.75×，
  *  与 FIELD-CONTRACT 的平衡上限冲突。这里在唯一出口钳住，黄金向量最大 1.48× 不受影响。 */
 export const MAX_DAMAGE_BONUS_MULTIPLIER = 2.0;
+/** ★ P49：bonus 词条语义分类——旧口径「一锅端 sumTermsBonus」把减伤词条也
+ *  当攻击加成，方向反了（审计 3.2/3.6/3.14 共 18 项）。
+ *  damage_reduce        ：受到…伤害降低 / 伤害降低 → 挂承受者，按减伤结算。
+ *  damage_taken_increase：受到…伤害提高 → 挂承受者，按易伤（受伤放大）结算。
+ *  attack_bonus         ：其余词条维持旧口径，计入攻击方加成链。 */
+export function classifyTerm(name) {
+    const n = String(name || '');
+    /* 只认「受到…」前缀：承受者受伤修正。不带前缀的「攻击伤害降低」等是
+       攻方输出减益，维持旧口径（DEBUFF 负加成挂敌军，方向本来就对）。 */
+    if (/受到.+伤害降低/.test(n))
+        return 'damage_reduce';
+    if (/受到.+伤害提高/.test(n))
+        return 'damage_taken_increase';
+    return 'attack_bonus';
+}
+/** ★ P49：率土式属性差乘区。修正 = clamp(1 + (攻方属性 − 守方抗性)/span, min, max)。
+ *  物理攻 vs 守方防（defence），策略攻 vs 守方智（intel）；五维百分制下 span=100
+ *  即满差 → ×2，对标率土 /300 满差口径。用户裁决：武将属性在战斗中的权重应更大。 */
+export function attrDeltaFactor(cfg, effectType, attacker, defender) {
+    const d = cfg.attr_delta ?? { span: 100, min: 0.5, max: 2.0 };
+    const atkAttr = attributeFor(effectType, attacker.hero).value;
+    const defKey = effectType === 'STRATEGY_DAMAGE' ? 'intel' : 'defence';
+    const defAttr = heroAttr(defender.hero, defKey);
+    const raw = 1.0 + (atkAttr - defAttr) / (d.span > 0 ? d.span : 100);
+    const factor = Math.min(d.max, Math.max(d.min, raw));
+    return {
+        factor,
+        atk_attr: atkAttr,
+        def_attr: defAttr,
+        note: `attr_delta: (atk ${atkAttr.toFixed(1)} − def_${defKey} ${defAttr.toFixed(1)})/` + d.span
+            + ` → ×${factor.toFixed(3)} (clamp ${d.min}~${d.max})`,
+    };
+}
 /** E0：三档相克系数，越界或档位缺失退化 1.0 */
 export function counterFactor(cfg, attackType, weakness) {
     const order = ['normal', 'armor', 'chain'];
@@ -73,12 +106,17 @@ export function baseDamage(cfg, effect, attacker, defender) {
     const mitigation = cfg.defense_model === 'corrected'
         ? defense / (defense + 200.0)
         : Math.max(0.0, 1.0 - defense / (defense + 200.0));
-    const value = attr * rate * cfg.troop_factor * (1.0 - 0.5 * mitigation);
+    const value0 = attr * rate * cfg.troop_factor * (1.0 - 0.5 * mitigation);
+    /* ★ P49：武将属性差乘区（率土式），让统武智防真正参与伤害强弱 */
+    const ad = attrDeltaFactor(cfg, effect.effect_type, attacker, defender);
+    const value = Math.max(0.0, value0 * ad.factor);
     return {
-        value: Math.max(0.0, value),
+        value,
         rate_pct_at_level: rate * 100.0,
         attribute: attr,
         attribute_note: attrNote,
+        attr_delta_factor: ad.factor,
+        attr_delta_note: ad.note,
         evidence: 'E2',
         note: 'BaseDamage 解析式包内不可知；见 cfg.unresolved',
     };

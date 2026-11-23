@@ -25,7 +25,7 @@
       "origin": "battle-kit 导出表（skill_names.csv / damage_rates.csv 及衍生整理）",
       "count": 31,
       "evidence": "battle-core/README.md「来源与保真度」；conf/campaign/skill-source.json 记录了 nameCount=796 的来源与缺失字段",
-      "action_before_release": "整体换名换数值，或取得授权；替换后需同步 conf/skills-range.json 与 battle-core/config/battle_config.json 的指纹说明",
+      "action_before_release": "P49 裁决方案（2026-11-23）：当前阶段为原型验证，保留原名原文案运行；游戏稳定后、商业发行前统一「换名换画面」——全部派生条目改用本作原创命名并重绘/重写画面与文案，不再逐条单独授权；换皮执行清单与验收以 SDD §17.33 为准，执行前需用户批准。",
       "confidence": "高"
     },
     {
@@ -34,7 +34,7 @@
       "status": "derived_unlicensed",
       "origin": "同上，按六府展示需要重排",
       "count": 20,
-      "action_before_release": "随 skills.json 一并替换",
+      "action_before_release": "P49 裁决方案（2026-11-23）：当前阶段为原型验证，保留原名原文案运行；游戏稳定后、商业发行前统一「换名换画面」——全部派生条目改用本作原创命名并重绘/重写画面与文案，不再逐条单独授权；换皮执行清单与验收以 SDD §17.33 为准，执行前需用户批准。",
       "confidence": "高"
     },
     {
@@ -44,7 +44,7 @@
       "origin": "battle-kit/skill-library 率土之滨 W0 战法表 + adapted/full_mapping_stzb.json；文件内每条 provenance.source 逐条标注原始导出，与 skills.json 同批来源",
       "count": 96,
       "evidence": "conf/innate-skills.json 顶部 source/sourceSha256/license；tools/build-innate-skills.mjs；★ 一次性导入：原始 648 条战法表与映射表不随包发行（第三方未授权），干净 clone 不能重生成；逐条来源与 sourceSha256 已固化在产物里，复核以产物为准",
-      "action_before_release": "与 skills.json 同口径：整体换名换文案或取得授权；换皮后需复核 920xxx cfgId 与内核档位映射",
+      "action_before_release": "P49 裁决方案（2026-11-23）：当前阶段为原型验证，保留原名原文案运行；游戏稳定后、商业发行前统一「换名换画面」——全部派生条目改用本作原创命名并重绘/重写画面与文案，不再逐条单独授权；换皮执行清单与验收以 SDD §17.33 为准，执行前需用户批准。",
       "confidence": "高",
       "regenerable": false,
       "source_snapshot": "battle-kit/skill-library/source/raw/stzb_skill_extra.json + adapted/full_mapping_stzb.json（仓外开发快照，仅内部复核用）"
@@ -64,7 +64,7 @@
       "status": "derived_unlicensed",
       "origin": "battle-kit/kernel/config/battle_config.json 字节级复制（指纹 f186e15d0c1f266b）",
       "count": 83,
-      "action_before_release": "换皮阶段整体重做数值；重做后必须重跑 npm run golden 并更新指纹声明",
+      "action_before_release": "P49 裁决方案（2026-11-23）：当前阶段为原型验证，保留原名原文案运行；游戏稳定后、商业发行前统一「换名换画面」——全部派生条目改用本作原创命名并重绘/重写画面与文案，不再逐条单独授权；换皮执行清单与验收以 SDD §17.33 为准，执行前需用户批准。",
       "confidence": "高"
     },
     {
@@ -118,7 +118,7 @@
       "status": "derived_unlicensed",
       "origin": "学习用客户端原版构建产物，逐字节保留（指纹 ee987ec2…，1582 文件）",
       "count": 1582,
-      "action_before_release": "**最高优先**：画面与 UI 资源必须整体替换或取得授权；当前仅用于原型验证，不可直接商业发行",
+      "action_before_release": "P49 裁决方案（2026-11-23）：当前阶段为原型验证，保留原名原文案运行；游戏稳定后、商业发行前统一「换名换画面」——全部派生条目改用本作原创命名并重绘/重写画面与文案，不再逐条单独授权；换皮执行清单与验收以 SDD §17.33 为准，执行前需用户批准。",
       "confidence": "高"
     },
     {
@@ -127,7 +127,7 @@
       "status": "derived_unlicensed",
       "origin": "官方公开战法库快照 skill-library-official-20261120.json（SHA256 db82f837…），由 tools/mirror-official-skills.mjs 生成",
       "count": 12,
-      "action_before_release": "商业发行前需取得公开战法描述的引用授权，或整体换名换文案；生成器与 skip 台账保留作为证据链",
+      "action_before_release": "P49 裁决方案（2026-11-23）：当前阶段为原型验证，保留原名原文案运行；游戏稳定后、商业发行前统一「换名换画面」——全部派生条目改用本作原创命名并重绘/重写画面与文案，不再逐条单独授权；换皮执行清单与验收以 SDD §17.33 为准，执行前需用户批准。",
       "confidence": "高"
     },
     {
@@ -136,7 +136,7 @@
       "status": "derived_unlicensed",
       "origin": "官方公开战法库快照两端描述，由 tools/sync-growth-direction.mjs 生成；只取升降方向、保留原 Lv10 终点",
       "count": 43,
-      "action_before_release": "与镜像层同口径：商业发行前取得引用授权或整体换名换文案；生成器与 skip 台账保留作为证据链",
+      "action_before_release": "P49 裁决方案（2026-11-23）：当前阶段为原型验证，保留原名原文案运行；游戏稳定后、商业发行前统一「换名换画面」——全部派生条目改用本作原创命名并重绘/重写画面与文案，不再逐条单独授权；换皮执行清单与验收以 SDD §17.33 为准，执行前需用户批准。",
       "confidence": "高"
     },
     {
@@ -145,7 +145,7 @@
       "status": "derived_unlicensed",
       "origin": "官方公开配置端点 g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10，2026-11-20 抓取",
       "count": 648,
-      "action_before_release": "不随发行包分发；仅作生成/审计证据，商业发行前需确认引用许可",
+      "action_before_release": "P49 裁决方案（2026-11-23）：当前阶段为原型验证，保留原名原文案运行；游戏稳定后、商业发行前统一「换名换画面」——全部派生条目改用本作原创命名并重绘/重写画面与文案，不再逐条单独授权；换皮执行清单与验收以 SDD §17.33 为准，执行前需用户批准。",
       "confidence": "高"
     },
     {
@@ -155,8 +155,11 @@
       "origin": "battle-kit/skill-library patterns.csv P01~P16；文件头 source 已改为如实标注，不再宣称完全原创",
       "count": 29,
       "evidence": "conf/library-skills-extra.json 头 license/licenseNote；tools/build-library-skills-extra.js",
-      "action_before_release": "与 skills.json 同批：取得授权或换名换文案后复核内核映射",
+      "action_before_release": "P49 裁决方案（2026-11-23）：当前阶段为原型验证，保留原名原文案运行；游戏稳定后、商业发行前统一「换名换画面」——全部派生条目改用本作原创命名并重绘/重写画面与文案，不再逐条单独授权；换皮执行清单与验收以 SDD §17.33 为准，执行前需用户批准。",
       "confidence": "中"
     }
+  ],
+  "notes": [
+    "P49 裁决（2026-11-23）：未授权派生资产采用「统一换名换画面」路线：原型验证期保留原名原文案；发行前一次性换皮，逐项授权路线废止。"
   ]
 }
