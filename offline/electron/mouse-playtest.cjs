@@ -402,27 +402,31 @@ async function runMousePlaytest(win, server, app) {
     await trace('after city.enter');
     await shot('01-city-interior');
 
-    /* ---------- 3. 内政（真鼠标） ---------- */
+    /* ---------- 3. 内政（真鼠标，P50 太守制） ---------- */
     await click('#slgCityNav button[data-citytab="home"]', 'city.tab.home', '点「内政」页签');
     await sleep(500);
     const interior = await js(`(function(){ var b=document.getElementById('slgCityBody'); return b ? b.textContent : ''; })()`);
-    rec('city.interior', /劝课生息/.test(interior), '内政页含「劝课生息」（人口→兵源闭环）');
+    rec('city.interior', /太守 · 方针/.test(interior), '内政页含「太守 · 方针」卡（太守制）');
     await trace('after city.tab.home');
-    const populateSel = await js(`(function(){
+    const governorSel = await js(`(function(){
       var bs=Array.prototype.slice.call(document.querySelectorAll('#slgCityBody button'));
-      var b=bs.find(function(x){ return /劝课生息/.test(x.textContent||''); });
+      var b=bs.find(function(x){ return /任命太守/.test(x.textContent||''); });
       if(!b) return null;
       /* 给按钮做一次性标记，供真实鼠标定位 */
-      b.setAttribute('data-mouse-target','populate'); return b.textContent.trim().slice(0,40);
+      b.setAttribute('data-mouse-target','governor'); return b.textContent.trim().slice(0,40);
     })()`);
-    if (populateSel) {
-      const okBefore = await js(`(async function(){ var r=await fetch('/__slg/strategy/state',{cache:'no-store'}); var s=await r.json();
-        return (s.interiorTasks||[]).length; })()`);
-      await click('#slgCityBody button[data-mouse-target="populate"]', 'city.populate.click', '真鼠标点「劝课生息」');
+    if (governorSel) {
+      const govBefore = await js(`(async function(){ var r=await fetch('/__slg/strategy/state',{cache:'no-store'}); var s=await r.json();
+        var c=(s.cities||[]).find(function(x){return Number(x.id)===Number(${Number(homeId)});});
+        return c && c.governor ? Number(c.governor.officerId)||0 : -1; })()`);
+      await click('#slgCityBody button[data-mouse-target="governor"]', 'city.governor.click', '真鼠标点「任命太守」');
       await sleep(900);
-      const okAfter = await js(`(function(){ var b=document.getElementById('slgCityBody'); return b ? /已委派|进行中|已办/.test(b.textContent) : false; })()`);
-      rec('city.populate.result', okAfter, '内政派单有反馈；before=' + okBefore);
-    } else rec('city.populate.click', false, '找不到「劝课生息」按钮');
+      const govAfter = await js(`(async function(){ var r=await fetch('/__slg/strategy/state',{cache:'no-store'}); var s=await r.json();
+        var c=(s.cities||[]).find(function(x){return Number(x.id)===Number(${Number(homeId)});});
+        return c && c.governor ? Number(c.governor.officerId)||0 : -1; })()`);
+      rec('city.governor.result', govAfter > Math.max(0, govBefore),
+        '太守任命有反馈：officerId ' + govBefore + ' → ' + govAfter);
+    } else rec('city.governor.click', false, '找不到「任命太守」按钮');
 
     /* ---------- 4. 征兵：兵源台账 + 一键征兵（真鼠标） ---------- */
     await click('#slgCityNav button[data-citytab="army"]', 'city.tab.army', '点「征兵」页签');
