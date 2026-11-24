@@ -1716,6 +1716,19 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     selectCity(hit);
     return true;
   };
+  /* ★ 批量调防选城：只把沙盘定位并高亮到目标城，不收起当前六府窗口。
+     上面那个「战报回跳」入口会 dismissCityAndPanels，弹窗里用会把正在操作的面板关掉。 */
+  window.__slgMapPreviewCity = function (cityId) {
+    if (!document.getElementById('slgStrategyOverlay')) return false;
+    var key = String(cityId == null ? '' : cityId);
+    var hit = null, i;
+    for (i = 0; i < (lastState?.cities || []).length; i++) {
+      if (String(lastState.cities[i].id) === key) { hit = lastState.cities[i]; break; }
+    }
+    if (!hit) return false;
+    selectCity(hit);
+    return true;
+  };
   /* ★ P11 真鼠标验收：把战略城的投影坐标换算成屏幕坐标，供 Electron 的
      webContents.sendInputEvent 派发真实 mousePressed/mouseReleased。
      只做坐标换算，不代替点击——测试必须真的把鼠标按下去。 */

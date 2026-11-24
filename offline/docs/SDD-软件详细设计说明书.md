@@ -2555,6 +2555,16 @@ build/SLG-Offline-win32-x64/
 4. **领域口径**：新增 `strategy.dispatchGenerals`（端点 `dispatchGenerals`），先对全部勾选校验、去重，再统一落账；不可调者只跳过并在中文 `text` 写明原因（已在此城 / 行军中不可调 / 武将已不在营中），全体不可调返回 `all_skipped` 且一人不动。只改 `g.cityId`、`g.order`，从在编队伍摘除；不动兵力、城池归属、岗位委任；一次调遣只写一条汇总事件，不刷屏。FIELD-CONTRACT 已登记。
 5. **回归**：`tests/p51-general-panel.test.js` 8 项（双栏 CSS 与滚动记忆、批量 UI、批量成功/局部跳过/行军/全失败/单人回归/端点接线）；`p33`、`p41`、`p47`、`m4-a11y`、`hygiene`、`domain-coverage`、`http-endpoints`、`whitebox` 全绿。
 
+### 17.36 批量调防弹窗选城与地图联动 P52（2026-11-24 用户反馈）
+
+**用户原话**：批量调防，改成弹窗来选择城市，在选择城市要联动地图，要让玩家知道自己选择调任到的目的城市。
+
+1. **问题**：P51 的批量调防把目的城塞在左栏 190px 的下拉里，选完看不见城在地图上的位置，只有城名；玩家无法确认「我到底把人调到哪」。
+2. **弹窗**：`panels-ui.js openDispatchDialog()`，`#slgDispatchMask`（确认框层 100820，高于六府窗 100100）。左侧列全部己方城（城名/州郡/驻军，选中态 ◉），右侧 `dispatchMapSvg()` 画 2400×1350 同坐标系小地图（与 `conf/campaign/strategy/map.json` 同源下发 `x/y`）：金圈=目的城、浅金点=勾选武将的调出城、虚线=调遣方向；底部「已选 N 人 → 目的城：X（州）」。确认才提交，取消回滚本次选择。
+3. **联动**：点城市时调 `window.__slgMapPreviewCity(cityId)`（skills.js）——只做 `selectCity(hit)`（居中/高亮/城市介绍），**刻意不调 `showMap()`**：战报回跳用的 `__slgFocusCity` 会 `dismissCityAndPanels()` 把正在操作的六府窗关掉。沙盘不可用时返回 false，弹窗内小地图仍完整可用。
+4. **口径不变**：提交仍走 `dispatchGenerals` → `dispatchCheck`/`applyDispatch`，不改任何数值、兵力、城池归属与岗位；`x/y` 只是定位展示字段。
+5. **回归**：`tests/p51-general-panel.test.js` 新增 P52-① 静态断言（弹窗层级/列表/目的地文案/地图坐标/联动 API），全量 `npm test` 与双态取证见交付报告。FIELD-CONTRACT 已登记。
+
 **红线速查（改前必看）**：INV-01~INV-10（§1.4）、ADR-01/04/07/08/13/14（§1.2）、§7.15 键空间警告、§9.3 z-index 阶梯（含回放层 100700）、§10 确定性、§14.7 报告归属、§16.4 内核改法、§17 偏差登记。
 
 ---

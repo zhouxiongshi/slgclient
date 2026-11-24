@@ -43,16 +43,35 @@ test('P51-① 列表与详情独立滚动：两栏各有滚动容器并切断滚
     '换武将后详情从头看，列表位置不动');
 });
 
-test('P51-② 批量调防入口：勾选、全选、目标城、一次提交都在左栏', () => {
+test('P51-② 批量调防入口：勾选、全选、弹窗选城、一次提交都在左栏', () => {
   const ui = read('server/panels-ui.js');
   assert.match(ui, /class="genpick" type="checkbox" data-act="genpick"/);
   assert.match(ui, /data-act="genpickAll"/);
   assert.match(ui, /data-act="genpickClear"/);
-  assert.match(ui, /<select data-act="dispatchTo">/);
+  assert.doesNotMatch(ui, /<select data-act="dispatchTo">/, '下拉直选已废止，改弹窗选城');
+  assert.match(ui, /data-act="dispatchPickCity"/);
   assert.match(ui, /data-act="dispatchBatch"/);
   assert.match(ui, /action: 'dispatchGenerals', generalIds: ui\.genPick\.slice\(\)/);
   assert.match(ui, /请先勾选要调遣的武将/, '空选给中文提示');
   assert.match(ui, /驻' \+ esc\(g\.cityName/, '左栏显示驻地，便于批量挑人');
+});
+
+test('P52-① 选城弹窗：目的城列表 + 地图联动 + 明示目的地', () => {
+  const ui = read('server/panels-ui.js');
+  assert.match(ui, /#slgDispatchMask\{position:fixed;inset:0;z-index:100820/, '弹窗落在确认框层');
+  assert.match(ui, /function openDispatchDialog\(\)/);
+  assert.match(ui, /批量调防 · 选择目的城市/);
+  assert.match(ui, /data-role="cities"/);
+  assert.match(ui, /'目的城：' \+ d\.name/);
+  assert.match(ui, /金圈＝目的城市 · 浅金点＝调出城 · 虚线＝调遣方向/);
+  assert.match(ui, /viewBox="0 0 2400 1350"/, '与沙盘同坐标系');
+  assert.match(ui, /window\.__slgMapPreviewCity\(ui\.dispatchTo\)/);
+  const skill = read('server/skills.js');
+  assert.match(skill, /window\.__slgMapPreviewCity = function \(cityId\)/);
+  assert.match(skill, /if \(!document\.getElementById\('slgStrategyOverlay'\)\) return false/,
+    '只定位高亮，不收起六府窗口');
+  const view = read('server/domain/panels.js');
+  assert.match(view, /x: Number\(c\.x\) \|\| 0, y: Number\(c\.y\) \|\| 0/, '地图预览坐标同源下发');
 });
 
 test('P51-③ 批量调防：多名武将一次改驻地，返回中文汇总', () => {

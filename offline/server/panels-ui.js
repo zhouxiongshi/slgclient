@@ -422,7 +422,29 @@
     '#slgPanelsWin .genpickbar{display:flex;flex-wrap:wrap;gap:5px;align-items:center;position:sticky;top:0;',
     '  z-index:2;background:#151811;padding:4px 0 8px;border-bottom:1px solid #3a3325;margin-bottom:7px;}',
     '#slgPanelsWin .genpickbar .btn{font-size:11px;padding:2px 7px;margin:0;}',
-    '#slgPanelsWin .genpickbar select{font-size:11px;padding:2px 4px;max-width:104px;}',
+    '#slgPanelsWin .genpickbar .citypickbtn{color:#ffe1a2;border-color:#8a7038;max-width:190px;',
+    '  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+    /* 选城弹窗：确认框层 100820，高于六府窗(100100)；关闭即回到原列表位置。 */
+    '#slgDispatchMask{position:fixed;inset:0;z-index:100820;background:rgba(0,0,0,.62);',
+    '  display:flex;align-items:center;justify-content:center;}',
+    '#slgDispatchDlg{width:780px;max-width:94vw;max-height:86vh;display:flex;flex-direction:column;',
+    '  background:#20221c;border:1px solid #ba9a52;border-radius:10px;color:#e2d6b8;',
+    '  box-shadow:0 18px 60px rgba(0,0,0,.8);font:13px "Microsoft YaHei",sans-serif;}',
+    '#slgDispatchDlg .dhead{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid #3a3325;}',
+    '#slgDispatchDlg .dhead b{font-size:15px;color:#f0d998;}',
+    '#slgDispatchDlg .dhead .x{margin-left:auto;cursor:pointer;color:#9c9382;padding:0 5px;}',
+    '#slgDispatchDlg .dbody{display:flex;gap:14px;padding:12px 16px;min-height:0;overflow:hidden;}',
+    '#slgDispatchDlg .dcities{width:272px;flex:0 0 272px;overflow-y:auto;max-height:52vh;}',
+    '#slgDispatchDlg .dcity{display:block;width:100%;text-align:left;background:#151811;color:#c9bfa3;',
+    '  border:1px solid #3a3325;border-radius:5px;padding:7px 9px;margin-bottom:5px;cursor:pointer;',
+    '  font:12.5px "Microsoft YaHei",sans-serif;}',
+    '#slgDispatchDlg .dcity:hover{background:#262a1e;}',
+    '#slgDispatchDlg .dcity.on{background:#3a3325;border-color:#ba9a52;color:#ffe6a6;}',
+    '#slgDispatchDlg .dmap{flex:1;min-width:0;min-height:280px;background:#10150f;border:1px solid #3a3325;',
+    '  border-radius:6px;overflow:hidden;}',
+    '#slgDispatchDlg .dmap svg{display:block;width:100%;height:100%;}',
+    '#slgDispatchDlg .dfoot{display:flex;align-items:center;gap:8px;padding:11px 16px;border-top:1px solid #3a3325;}',
+    '#slgDispatchDlg .dfoot .dest{color:#f0d998;flex:1;}',
     '#slgPanelsWin .genrow{display:flex;align-items:center;gap:4px;width:100%;text-align:left;background:transparent;color:#c9bfa3;border:1px solid transparent;',
     '  border-radius:5px;padding:7px 9px;margin-bottom:3px;font:13px "Microsoft YaHei",sans-serif;}',
     '#slgPanelsWin .genrow .genpick{flex:0 0 15px;width:15px;height:15px;accent-color:#ba9a52;cursor:pointer;margin:0;}',
@@ -642,10 +664,9 @@
       + '<button class="btn" data-act="genpickClear">清空</button>'
       + '<span class="muted">已选 ' + ui.genPick.length + ' 人</span>'
       + (ownCities.length
-        ? '<select data-act="dispatchTo">' + ownCities.map(function (c) {
-          return '<option value="' + c.id + '"'
-            + (Number(c.id) === Number(ui.dispatchTo) ? ' selected' : '') + '>' + esc(c.name) + '</option>';
-        }).join('') + '</select><button class="btn" data-act="dispatchBatch">批量调防</button>'
+        ? '<button class="btn citypickbtn" data-act="dispatchPickCity" title="弹窗选城，沙盘同步定位">目的城：'
+          + esc((ownCities.find(function (c) { return Number(c.id) === Number(ui.dispatchTo); }) || {}).name || '未选')
+          + '</button><button class="btn" data-act="dispatchBatch">批量调防</button>'
         : '<span class="muted">暂无其他己方城</span>')
       + '</div><h4>帐下武将（' + data.generals.length + '）</h4>';
     data.generals.forEach(function (g) {
@@ -677,6 +698,113 @@
       });
     }
     return out + '</div>';
+  }
+
+  /* ★ 批量调防选城弹窗：右半张小地图与沙盘同坐标系（2400×1350），
+     金色圈=目的城、浅金点=调出城、虚线=调遣方向；点选时沙盘也同步定位。
+     这里只画位置与文字，不重算任何战力/粮耗，数值一律来自服务端视图。 */
+  function dispatchMapSvg(destId) {
+    var cities = (data.strategy || {}).cities || [];
+    var dest = cities.find(function (c) { return Number(c.id) === Number(destId); });
+    if (!dest || !Number(dest.x) || !Number(dest.y)) {
+      return '<div style="padding:18px;color:#9c9382;font-size:12px">先在左侧选一座目的城市，地图上会标出它与调出城的位置。</div>';
+    }
+    var src = {};
+    (data.generals || []).forEach(function (g) {
+      if (ui.genPick.indexOf(Number(g.id)) < 0) return;
+      var from = cities.find(function (c) {
+        return Number(c.id) === Number(g.cityId) || c.name === g.cityName;
+      });
+      if (from && Number(from.id) !== Number(destId)) src[from.id] = true;
+    });
+    var lines = Object.keys(src).map(Number).map(function (id) {
+      var c = cities.find(function (x) { return Number(x.id) === id; });
+      if (!c || !Number(c.x) || !Number(c.y)) return '';
+      return '<line x1="' + c.x + '" y1="' + c.y + '" x2="' + dest.x + '" y2="' + dest.y
+        + '" stroke="#d8b45a" stroke-width="7" stroke-dasharray="20 14" opacity=".8"/>';
+    }).join('');
+    var dots = cities.filter(function (c) {
+      return c.owner === 'player' && Number(c.x) && Number(c.y) && Number(c.id) !== Number(destId);
+    }).map(function (c) {
+      var isSrc = !!src[c.id];
+      return '<circle cx="' + c.x + '" cy="' + c.y + '" r="' + (isSrc ? 17 : 10) + '" fill="'
+        + (isSrc ? '#d8b45a' : '#70895b') + '" stroke="#151811" stroke-width="5"/>'
+        + (isSrc ? '<text x="' + (c.x + 26) + '" y="' + (c.y + 20) + '" font-size="56" fill="#e8d4a2">'
+          + esc(c.name) + '</text>' : '');
+    }).join('');
+    var right = Number(dest.x) > 1850;
+    var mark = '<circle cx="' + dest.x + '" cy="' + dest.y + '" r="44" fill="none" stroke="#ffcf6b" stroke-width="9" opacity=".9"/>'
+      + '<circle cx="' + dest.x + '" cy="' + dest.y + '" r="18" fill="#ffcf6b" stroke="#3a2c12" stroke-width="6"/>'
+      + '<text x="' + (dest.x + (right ? -62 : 62)) + '" y="' + (dest.y + 22) + '" font-size="64"'
+      + ' text-anchor="' + (right ? 'end' : 'start') + '" fill="#ffe9b0" font-weight="bold">' + esc(dest.name) + '</text>';
+    return '<div style="padding:7px 10px;color:#9c9382;font-size:11.5px;border-bottom:1px solid #3a3325">'
+      + '金圈＝目的城市 · 浅金点＝调出城 · 虚线＝调遣方向；选城时沙盘同步定位。</div>'
+      + '<svg viewBox="0 0 2400 1350" preserveAspectRatio="xMidYMid meet" aria-label="调防目的地地图">'
+      + '<rect x="0" y="0" width="2400" height="1350" fill="#10150f"/>'
+      + '<g opacity=".22"><path d="M0 300H2400M0 600H2400M0 900H2400M0 1200H2400'
+      + 'M300 0V1350M600 0V1350M900 0V1350M1200 0V1350M1500 0V1350M1800 0V1350M2100 0V1350"'
+      + ' stroke="#6b6a4c" stroke-width="2"/></g>'
+      + lines + dots + mark + '</svg>';
+  }
+
+  function openDispatchDialog() {
+    var prev = Number(ui.dispatchTo) || 0;
+    var old = document.getElementById('slgDispatchMask');
+    if (old) old.remove();
+    var cities = ((data.strategy || {}).cities || []).filter(function (c) {
+      return c.owner === 'player' && Number(c.id);
+    });
+    var mask = document.createElement('div');
+    mask.id = 'slgDispatchMask';
+    mask.innerHTML = '<div id="slgDispatchDlg">'
+      + '<div class="dhead"><b>批量调防 · 选择目的城市</b><span class="x" data-close="1" title="关闭">✕</span></div>'
+      + '<div class="dbody"><div class="dcities" data-role="cities"></div>'
+      + '<div class="dmap" data-role="map"></div></div>'
+      + '<div class="dfoot"><span class="dest" data-role="dest"></span>'
+      + '<button class="btn" data-act="dispatchDlgCancel">取消</button>'
+      + '<button class="btn" data-act="dispatchDlgOk">确认调防</button></div></div>';
+    document.body.appendChild(mask);
+    function close(restore) {
+      if (restore) { ui.dispatchTo = prev; persistUI(); }
+      mask.remove();
+      render();
+    }
+    function paint() {
+      var box = mask.querySelector('[data-role="cities"]');
+      box.innerHTML = cities.map(function (c) {
+        var on = Number(c.id) === Number(ui.dispatchTo);
+        return '<button class="dcity' + (on ? ' on' : '') + '" data-city="' + c.id + '">'
+          + (on ? '◉ ' : '○ ') + esc(c.name)
+          + '<span style="color:#9c9382"> · ' + esc(c.province || '—')
+          + ' · 驻军 ' + fmt(c.garrison || c.troops || 0) + '</span></button>';
+      }).join('');
+      Array.prototype.forEach.call(box.querySelectorAll('.dcity'), function (b) {
+        b.onclick = function () {
+          ui.dispatchTo = Number(b.getAttribute('data-city')) || 0;
+          persistUI();
+          paint();
+          if (window.__slgMapPreviewCity) window.__slgMapPreviewCity(ui.dispatchTo);
+        };
+      });
+      mask.querySelector('[data-role="map"]').innerHTML = dispatchMapSvg(ui.dispatchTo);
+      var d = cities.find(function (c) { return Number(c.id) === Number(ui.dispatchTo); });
+      mask.querySelector('[data-role="dest"]').textContent = '已选 ' + ui.genPick.length + ' 人 → '
+        + (d ? '目的城：' + d.name + '（' + (d.province || '—') + '）' : '请先选目的城市');
+    }
+    mask.querySelector('[data-close]').onclick = function () { close(true); };
+    mask.querySelector('[data-act="dispatchDlgCancel"]').onclick = function () { close(true); };
+    mask.querySelector('[data-act="dispatchDlgOk"]').onclick = function () {
+      var to = Number(ui.dispatchTo) || 0;
+      if (!to) return toast('请先选目的城市', true);
+      if (!ui.genPick.length) return toast('请先勾选要调遣的武将', true);
+      mask.remove();
+      render();
+      return strategyAction({ action: 'dispatchGenerals', generalIds: ui.genPick.slice(), toCityId: to },
+        function (r) { if (r.ok) { ui.genPick = []; persistUI(); render(); } });
+    };
+    mask.onclick = function (e) { if (e.target === mask) close(true); };
+    paint();
+    if (ui.dispatchTo && window.__slgMapPreviewCity) window.__slgMapPreviewCity(ui.dispatchTo);
   }
 
   /* 旧 genAttrHtml 已删除：五维只在人物卡显示，原状态信息由 heroStateHtml 承接。 */
@@ -1475,14 +1603,10 @@
       return render();
     }
     if (act === 'genpickClear') { ui.genPick = []; return render(); }
+    if (act === 'dispatchPickCity') return openDispatchDialog();
     if (act === 'dispatchBatch') {
       if (!ui.genPick.length) return toast('请先勾选要调遣的武将', true);
-      var toBatch = Number(ui.dispatchTo) || 0;
-      if (!toBatch) return toast('请先选目标城', true);
-      return strategyAction({ action: 'dispatchGenerals', generalIds: ui.genPick.slice(), toCityId: toBatch },
-        function (r) {
-          if (r.ok) { ui.genPick = []; persistUI(); render(); }
-        });
+      return openDispatchDialog();
     }
     if (act === 'gen') { ui.genId = Number(t.getAttribute('data-id')); return render(); }
     if (act === 'prospect') { ui.genId = -Number(t.getAttribute('data-i')) - 1; return render(); }
@@ -1607,7 +1731,6 @@
       if (counter) counter.textContent = '已选 ' + ui.genPick.length + ' 人';
       return;
     }
-    if (act === 'dispatchTo') { ui.dispatchTo = Number(t.value) || 0; persistUI(); return; }
   }
   function onInput(e) {
     var t = e.target.closest('[data-act]');

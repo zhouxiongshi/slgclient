@@ -598,6 +598,8 @@ export function panelState(state, cfg) {
     const wall = wallView({ hp: Number.isFinite(wRaw) ? wRaw : wMax, max: wMax });
     return {
       id: c.id, name: c.name, province: c.province, level: c.level,
+      /* ★ 批量调防选城弹窗的联动预览坐标：与沙盘同源，只用于定位展示，不参与任何数值。 */
+      x: Number(c.x) || 0, y: Number(c.y) || 0,
       owner: row.owner || 'han', ownerName: nameOfFaction(row.owner || 'han'), troops,
       garrison: troops, // 兼容旧 UI 字段：已改为实时驻军，不再是拍脑袋估算
       agriculture: c.attrs?.农业 ?? null, commerce: c.attrs?.商业 ?? null,
