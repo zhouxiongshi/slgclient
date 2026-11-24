@@ -2575,6 +2575,16 @@ build/SLG-Offline-win32-x64/
 4. **审计口径同步**：`ACTIVE_STATES` 用内核 `ALL_NEGATIVE_STATES`；已分桶词条不再报「语义丢失」；「或/中的一种」互斥多槽不算「单效果多数值」。结果 **74→2，P1 全清**；剩 2 项即锋矢 Lv1 25%↔12.5%、Lv10 50%↔25%，属 P49 镜像回退的本地口径，如实保留台账不改写。
 5. **验收**：内核 42/42（`tests/p53-term-semantics.test.ts` 新增 5 项）、Python 参考 23/23、事件指纹 `196cf74a44e13b68` 未漂移、离线 5 项 P53 测试；全量 `npm test` 与双态取证见交付报告。FIELD-CONTRACT 已登记。
 
+### 17.38 编队同城与一人一队 P54（2026-11-24 用户反馈）
+
+**用户原话**：编队，现在同一个武将可以反复被编队，不在同一城池也可以编队，这是非常不合理的。从当前城池进入选择征兵时，队伍选择武将时，有个 bug 导致可以选到其他城市的武将，非常不合理。
+
+1. **根因**：两条编队入口各写各的。`army.dispose` 只校验城归我方 + 武将存在，发现重复就**静默从别队摘掉**，界面仍把他列为可选，玩家看到的是「同一人反复编队」；`strategyFormup` 已有 `dup_general`/`in_other_army`，但没有任何 `g.cityId` 比对。征兵页 `tabArmy` 请求 `general.myGenerals {}` 拿全量武将，且按城请求的只有 `army.myList`，所以别城武将直接出现在下拉并编队成功。
+2. **单一口径**：新增零依赖叶子 `domain/formation.js`：`formationGeneralCheck(state,{generalId,cityId,armyId})` 判「武将存在 → `g.cityId === cityId` → 不在别的队伍」，同队换槽仍合法；`syncGeneralOrders(state)` 统一重算派生 `g.order`。WS `army.dispose` 与 HTTP `strategyFormup` 都调用它，不再各自复制规则。拒绝时状态零改动，不动兵力、城池归属、武将驻地，调防仍只走 `dispatchGeneral(s)`/`dispatchGenerals`。
+3. **候选来源**：`general.myGenerals` 新增可选 `cityId`；征兵页按当前城请求，武将战法页不带参仍是全量。UI 侧再加一道 `Number(g.cityId) === Number(cid)` 兜底，旧缓存/竞态也不会露出别城武将。六府整编的队伍投影补 `cityId`，下拉只列驻城武将并明示已隐藏人数与驻城名。
+4. **界面防呆**：征兵页把「除当前槽外已在编」的下拉项标「在编」并禁用；整编弹窗用 `data-busy` 记队外占用、`refresh()` 实时禁用同弹窗重复选择。两处为中文原因表补 `general_other_city`/`in_other_army`/`dup_general` 等，英文 reason 不弹给玩家。
+5. **回归**：新增 `tests/p54-formation-city.test.js` 6 项（静态 UI 断言、领域判据、按城候选、两个入口的跨城/跨队拒绝、`g.order` 同步）；`bugfix.test.js` 改为「先在原队撤下再改挂」，P17 修掉「队伍在 1 城、人在 10 城」的假场景；契约矩阵登记 `general.myGenerals.cityId`。FIELD-CONTRACT 已登记。
+
 **红线速查（改前必看）**：INV-01~INV-10（§1.4）、ADR-01/04/07/08/13/14（§1.2）、§7.15 键空间警告、§9.3 z-index 阶梯（含回放层 100700）、§10 确定性、§14.7 报告归属、§16.4 内核改法、§17 偏差登记。
 
 ---

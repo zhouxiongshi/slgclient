@@ -4041,6 +4041,10 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     bad_choice: '该选项已不可选', no_army: '没有可用部队', zero: '数量不能为零',
     empty_slot: '槽位为空', marching: '部队正在行军', bad_order: '指令无效',
     bad_pos: '位置无效', bad_general: '武将不可用', no_population: '此城无人口',
+    /* ★ P54：编队拒绝原因一律中文，同城/一人一队是硬规则。 */
+    no_general: '找不到该武将', dup_general: '同一武将不能重复上阵',
+    in_other_army: '该武将已在别的队伍，请先从原队撤下',
+    general_other_city: '该武将不在本城，请先调防到本城再编队',
     busy: '这项还在办理', cooldown: '本旬已办过，下一旬再来',
     no_gold: '库金不足', no_disaster: '本城眼下无灾可赈',
     /* ★ P40：自立与存档端点也会回英文 reason，一律在同一张中文表里兜底。 */
@@ -6145,7 +6149,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     var cid = (c && c.id) || (cache && cache.playerCity) || 1;
     body.innerHTML = '<div class="empty">读取中…</div>';
     Promise.all([send('army.myList', { cityId: cid }), loadMeta(), send('role.myRoleRes', {}),
-      send('general.myGenerals', {})])
+      /* ★ P54：候选武将按当前城取，别城的人根本不进下拉。 */
+      send('general.myGenerals', { cityId: cid })])
       .then(function (rs) {
         body.innerHTML = '';
         var meta = rs[1] || { conscript: { wood: 10, iron: 10, grain: 10, gold: 1 } };
@@ -6158,7 +6163,10 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
           { wood: per.wood, iron: per.iron, stone: per.stone || 5, grain: per.grain, gold: per.gold },
         ];
         var res = (rs[2].msg && rs[2].msg.role_res) || {};
-        var gens = (rs[3].msg && rs[3].msg.generals) || [];
+        /* ★ P54：服务端已按 cityId 过滤；这里再守一道，旧缓存/竞态也不能露出别城武将。 */
+        var gens = ((rs[3].msg && rs[3].msg.generals) || []).filter(function (g) {
+          return Number(g.cityId) === Number(cid);
+        });
         var armies = (rs[0].msg && rs[0].msg.armys) || [];
         var byOrder = {};
         armies.forEach(function (a) { byOrder[a.order] = a; });
@@ -6312,6 +6320,9 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
           }).catch(function () { refreshQuick(); });
         }
         body.appendChild(levyCard);
+        /* ★ P54：把硬规则写在页面上，别让玩家对着灰色下拉猜原因。 */
+        body.appendChild(el('div', 'cost',
+          '编队只认本城武将，且一人只在一队；已在别队者请先从原队撤下，驻在其他城者请先调防。'));
         if (!gens.length) {
           body.appendChild(el('div', 'empty', '帐下无人。先去「酒馆」招募。'));
           return;
@@ -6340,9 +6351,16 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
             empty.textContent = '（空）';
             sel.appendChild(empty);
             gens.forEach(function (g) {
+              /* ★ P54：除当前槽自己外，已在任何队伍的武将都不可再选——一人一队在界面上先挡一道。 */
+              var busy = armies.some(function (x) {
+                return (x.generals || []).some(function (id, i) {
+                  return Number(id) === Number(g.id) && !(x.id === a.id && i === pos);
+                });
+              });
               var o = document.createElement('option');
               o.value = String(g.id);
-              o.textContent = (g.name || ('武将' + g.cfgId)) + ' ★' + (g.star || 0);
+              o.textContent = (g.name || ('武将' + g.cfgId)) + ' ★' + (g.star || 0) + (busy ? '（在编）' : '');
+              o.disabled = busy;
               if (g.id === gid) o.selected = true;
               sel.appendChild(o);
             });

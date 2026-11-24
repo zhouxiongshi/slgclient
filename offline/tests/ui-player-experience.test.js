@@ -338,6 +338,8 @@ test('编队按每槽武将官阶校验带兵上限：高官阶可填 6100，降
   const homeId = state.strategy.playerCity;
   army.cityId = homeId;
   army.soldiers = [6200, 0, 0];
+  /* ★ P54：本例只验证官阶带兵上限，先把 fixture 驻城对齐到队伍所在城。 */
+  state.generals[0].cityId = homeId;
   army.generals = [state.generals[0].id, 0, 0];
   delete army.marchId;
   const vet = state.generals[0];

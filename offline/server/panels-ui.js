@@ -178,6 +178,8 @@
     too_many_troops: '兵力分配超出该队现有兵力', not_own_city: '只能运输到己方城池',
     bad_amount: '数量不合法', no_grain: '粮草不足', no_gold: '金钱不足',
     no_general: '找不到该武将', same_city: '该武将已在此城', no_city: '目标城不存在',
+    /* ★ P54：编队拒绝原因与征兵页同源，玩家永远看不到英文协议码。 */
+    general_other_city: '该武将不在本队驻城，请先调防',
     no_captive: '该俘虏已不在营中，请刷新名单后再试',
     refused: '对方拒绝归降，忠诚下降；本次未扣金',
     escaped: '对方宁死不降，趁夜越狱；本次未扣金',
@@ -202,7 +204,13 @@
     var mask = document.createElement('div');
     mask.id = 'slgFormup';
     mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:100004;display:flex;align-items:center;justify-content:center;';
-    var gens = data.strategy.allGenerals || [];
+    /* ★ P54：整编只认队伍驻城。别城武将不进下拉，先在武将页调防过来。 */
+    var armyCity = Number(army.cityId) || 0;
+    var allGens = data.strategy.allGenerals || [];
+    var gens = allGens.filter(function (g) { return Number(g.cityId) === armyCity; });
+    var hiddenOtherCity = allGens.length - gens.length;
+    var armyCityName = (data.strategy.cities || []).filter(function (c) { return Number(c.id) === armyCity; })
+      .map(function (c) { return c.name || ''; })[0] || '';
     var genById = {};
     gens.forEach(function (g) { genById[g.id] = g; });
     var slotCapOfGen = function (g) { return g ? (Number(g.slotCap) || 5000) : 5000; };
@@ -212,17 +220,23 @@
         + '<option value="0">（空槽）</option>'
         + gens.map(function (g) {
           var inThis = (army.generals || [])[slot] && army.generals[slot].id === g.id;
-          var busy = (data.strategy.armies || []).some(function (a) {
+          var busyElsewhere = (data.strategy.armies || []).some(function (a) {
             return a.id !== army.id && (a.generals || []).some(function (gg) { return gg && gg.id === g.id; });
           });
-          return '<option value="' + g.id + '"' + (inThis ? ' selected' : '') + (busy && !inThis ? ' disabled' : '') + '>'
+          var sameArmyOther = (army.generals || []).some(function (gg, i) { return i !== slot && gg && gg.id === g.id; });
+          var busy = busyElsewhere || sameArmyOther;
+          /* ★ P54：data-busy 只记队外占用；同队重复由 refresh() 按当前三个下拉实时禁用。 */
+          return '<option value="' + g.id + '" data-busy="' + (busyElsewhere ? 1 : 0) + '"'
+            + (inThis ? ' selected' : '') + (busy && !inThis ? ' disabled' : '') + '>'
             + esc(g.name) + (g.cityName ? '（' + esc(g.cityName) + '）' : '')
             + (g.rank ? ' · ' + esc(g.rank) : '') + (busy && !inThis ? ' · 在编' : '') + '</option>';
         }).join('') + '</select>';
     };
     mask.innerHTML = '<div style="background:#1d1a12;border:1px solid #ba9a52;border-radius:8px;padding:18px 22px;min-width:620px;max-width:92vw;color:#e8e0cc;font:13px \'Microsoft YaHei\',sans-serif">'
-      + '<h3 style="margin:0 0 6px;color:#ffdf9a">整编队伍#' + army.order + '</h3>'
+      + '<h3 style="margin:0 0 6px;color:#ffdf9a">整编队伍#' + army.order + '（驻城：' + esc(armyCityName || ('#' + armyCity)) + '）</h3>'
       + '<div class="muted" style="margin-bottom:10px;line-height:1.7">三槽同时是战位：一前锋 / 二中军 / 三大营，也对应盾步、弓兵、骑兵。'
+      + '只列本城武将，一人只在一队；已在别队者先从原队撤下，驻在其他城者请先调防'
+      + (hiddenOtherCity ? '（已隐藏他城武将 ' + hiddenOtherCity + ' 人）' : '') + '。'
       + '兵力只在这支队伍现有 ' + fmt(total) + ' 人内重分，少填的会退回驻城，不会凭空消失。'
       + '每槽上限取本机按该槽武将官阶与等级算出的真实值（基础 5000 + 官阶×300 +（等级−1）×200，满级三公 9500），换将后会自动刷新。</div>'
       + '<div id="slgFormupSummary" style="background:#242820;border:1px solid #6a5f42;border-radius:5px;padding:8px 10px;margin-bottom:10px;color:#f0d998"></div>'
@@ -250,6 +264,17 @@
     };
     var refresh = function () {
       var cur = readSlots();
+      /* ★ P54：同一人在本弹窗内也只能占一个槽；队外占用由 data-busy 继承，当前选中项保持可选。 */
+      [0, 1, 2].forEach(function (slot) {
+        var node = mask.querySelector('[data-fup="gen' + slot + '"]');
+        if (!node) return;
+        Array.prototype.forEach.call(node.options, function (o) {
+          var id = Number(o.value) || 0;
+          if (!id) return;
+          var repeated = cur.ids.some(function (v, i) { return i !== slot && v === id; });
+          o.disabled = id !== cur.ids[slot] && (o.getAttribute('data-busy') === '1' || repeated);
+        });
+      });
       var caps = cur.ids.map(function (id) { return slotCapOfGen(genById[id]); });
       cur.vals.forEach(function (v, i) {
         var input = mask.querySelector('[data-fup="troop' + i + '"]');

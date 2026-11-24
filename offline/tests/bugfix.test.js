@@ -40,22 +40,27 @@ test('army.dispose：合法槽位不抛异常且字段完整；越界 order 不�
   assert.equal(state.armys.length, before, '不应新建队伍');
   assert.equal(state.armys.some((a) => a.order === 4), false);
 
-  // 合法的第 2 军：新建后字段完整
+  /* ★ P54：跨队占用不再静默搬将——先在原队撤下，才允许编入新队。 */
+  const first = state.armys.find((a) => a.cityId === 1 && a.order === 1);
+  const stolen = handleRequest(ctx, req('army.dispose', { cityId: 1, order: 2, position: 0, generalId: 1000 }));
+  assert.equal(stolen.code, 1, '已在别队的武将不得直接编入第 2 军');
+  assert.equal(stolen.msg.reason, 'in_other_army');
+  assert.equal(first.generals.includes(1000), true, '被拒后原队仍持有该武将');
+  assert.equal(handleRequest(ctx, req('army.dispose', { cityId: 1, order: 1, position: 0, generalId: 0 })).code, 0);
+
+  // 合法的第 2 军：撤下后新建，字段完整
   const r = handleRequest(ctx, req('army.dispose', { cityId: 1, order: 2, position: 0, generalId: 1000 }));
-  assert.equal(r.code, 0);
+  assert.equal(r.code, 0, JSON.stringify(r.msg));
   const army = state.armys.find((a) => a.cityId === 1 && a.order === 2);
   assert.ok(army, '第 2 军已创建');
   assert.deepEqual(army.generals, [1000, 0, 0]);
   assert.deepEqual(army.soldiers, [0, 0, 0]);
   assert.deepEqual(army.con_times, [0, 0, 0]);
   assert.equal(army.cmd, 0);
-  // 同一武将不能同时属于两支队伍：第 1 军里的 1000 必须被摘掉
-  const first = state.armys.find((a) => a.cityId === 1 && a.order === 1);
-  assert.equal(first.generals.includes(1000), false, '同一武将不能同时挂在两队');
-  // 重复操作同一槽位不应再抛异常
+  // 同队换槽仍合法：目标槽换人后旧槽只保留一个 gid
   assert.equal(handleRequest(ctx, req('army.dispose', { cityId: 1, order: 2, position: 1, generalId: 1000 })).code, 0);
   assert.deepEqual(army.generals, [0, 1000, 0], '同一队内也只保留一个槽位');
-  assert.equal(ctx.pushes.filter((p) => p.name === 'army.push').length, 2);
+  assert.equal(ctx.pushes.filter((p) => p.name === 'army.push').length, 3);
 });
 
 test('协议入参清洗：NaN/null 坐标不会进入返回体或存档', () => {

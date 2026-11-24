@@ -30,6 +30,8 @@ test('编队单槽不得超过 5000，多余的兵退回驻城', () => {
   const homeId = state.strategy.playerCity;
   army.cityId = homeId;
   army.soldiers = [8000, 0, 0];
+  /* ★ P54：编队同城判定看 g.cityId；该用例只测带兵上限，先把 fixture 的驻城对齐。 */
+  if (state.generals[0]) state.generals[0].cityId = homeId;
   army.generals = [state.generals[0]?.id || 0, 0, 0];
   delete army.marchId;
   const before = Number(state.strategy.cities[homeId].troops) || 0;

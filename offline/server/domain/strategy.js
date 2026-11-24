@@ -67,6 +67,8 @@ import { playerIdentity, isFounded, foundStatus } from './faction-identity.js';
    外交模块保持原接线。 */
 /* ★ P50 太守制：视图下发太守总览（城内页/六府共用） */
 import { governorListView, governorView, governorCandidates } from './governor.js';
+/* ★ P54：编队资格与派将共用一份判据（城内征兵 / 六府整编两个入口同口径）。 */
+import { formationGeneralCheck, syncGeneralOrders } from './formation.js';
 import { diplomacyView, diplomacyAct, noteCityCaptured, truceActive, PLAYER_ID, adjustAttitudeByEvent } from './diplomacy.js';
 /* ★ M3-4 事件系统接线（本作设计）：引擎是零依赖叶子，ctx 由本层适配 */
 import { eventCooldownTick, selectEvents, applyEffects } from './event-engine.js';
@@ -2573,15 +2575,16 @@ export function strategyFormup(state, cfg, ctx, { armyId, generals, soldiers }) 
   if (!army) return { ok: false, reason: 'no_army' };
   if (army.marchId) return { ok: false, reason: 'marching' };
   const slots = [0, 1, 2].map((i) => Number(generals?.[i]) || 0);
+  const cityId = Number(army.cityId) || st.playerCity || 0;
   const seen = new Set();
   for (const gid of slots) {
     if (!gid) continue;
-    const g = (state.generals || []).find((x) => x.id === gid);
-    if (!g) return { ok: false, reason: 'no_general', generalId: gid };
     if (seen.has(gid)) return { ok: false, reason: 'dup_general', generalId: gid };
     seen.add(gid);
-    const other = (state.armys || []).find((a) => a.id !== army.id && (a.generals || []).includes(gid));
-    if (other) return { ok: false, reason: 'in_other_army', generalId: gid, armyId: other.id };
+    /* ★ P54：同城、一人一队——与 army.dispose 共用 formationGeneralCheck，
+       不再出现"人在 A 城、队伍在 B 城"或同一武将挂两支队伍。 */
+    const check = formationGeneralCheck(state, { generalId: gid, cityId, armyId: army.id });
+    if (!check.ok) return check;
   }
   const troops = [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(soldiers?.[i]) || 0)));
   /* ★ 2026-11-16：每槽带兵上限随该槽武将官阶浮动（白身 5000 → 三公 7700）；
@@ -2617,6 +2620,7 @@ export function strategyFormup(state, cfg, ctx, { armyId, generals, soldiers }) 
   army.soldiers = troops;
   army.con_times = [0, 0, 0];
   army.con_cnts = [0, 0, 0];
+  syncGeneralOrders(state);   // ★ P54：g.order 是派生字段，换将后必须随队伍重算
   const names = slots.map((gid) => {
     const g = (state.generals || []).find((x) => x.id === gid);
     return g ? (cfg?.generalByCfg?.get(g.cfgId)?.name || `武将${g.id}`) : '';

@@ -49,6 +49,8 @@ import { createHash } from 'node:crypto';
 import { noteIfGeneralDown } from './command.js';
 import { factionTraitOf, protagonistStat } from './domain/oath.js';
 import { conscriptNeed, checkSlotCaps, splitEven, affordableConscript, planDisarm, ARMS_NAMES } from './domain/conscript.js';
+/* ★ P54：编队资格（同城 / 一人一队 / 派生 order）唯一口径，与六府整编共用。 */
+import { formationGeneralCheck, syncGeneralOrders } from './domain/formation.js';
 import { foundNation, foundStatus, playerIdentity } from './domain/faction-identity.js';
 
 const OK = 0;
@@ -1008,9 +1010,16 @@ export function handleRequest(ctx, req) {
     }
 
     /* ---------------- 武将 ---------------- */
-    case 'general.myGenerals':
-      rsp.msg = { generals: withGeneralNames(state, cfg, clone(state.generals)) };
+    case 'general.myGenerals': {
+      /* ★ P54：可选 cityId —— 征兵页按当前城取候选武将，不再把别城的人塞进下拉。
+         不带 cityId 时仍是全量名单（武将战法页等沿用旧语义）。 */
+      const cityId = Number(m.cityId ?? 0);
+      const list = cityId > 0
+        ? state.generals.filter((g) => Number(g.cityId) === cityId)
+        : state.generals;
+      rsp.msg = { generals: withGeneralNames(state, cfg, clone(list)), cityId };
       break;
+    }
     case 'general.drawGeneral': {
       ensureTavern(state, cfg);
       const times = Math.max(1, Math.min(10, Number(m.drawTimes ?? 1)));
@@ -1340,17 +1349,24 @@ export function handleRequest(ctx, req) {
         rsp.msg = { reason: 'not_own_city', cityId };
         break;
       }
-      if (gid > 0 && !findGeneral(state, gid)) {
-        rsp.code = CODE.InvalidParam;
-        rsp.msg = { reason: 'bad_general', generalId: gid };
-        break;
-      }
       let army = state.armys.find((a) => a.cityId === cityId && a.order === order);
       // ★ 试玩 bug-2：行军中的队伍不能改编制（否则等于边走边换将补兵）
       if (army && army.marchId) {
         rsp.code = CODE.InvalidParam;
         rsp.msg = { reason: 'marching', army: clone(army) };
         break;
+      }
+      /* ★ P54：同城 + 一人一队，两个编队入口共用同一份判据。
+         旧实现静默把武将从别队/别城搬来，界面还显示"可选"，玩家看到的就是重复编队。 */
+      if (gid > 0) {
+        const check = formationGeneralCheck(state, {
+          generalId: gid, cityId, armyId: army ? army.id : 0, missingReason: 'bad_general',
+        });
+        if (!check.ok) {
+          rsp.code = CODE.InvalidParam;
+          rsp.msg = { ...check, army: clone(army || {}) };
+          break;
+        }
       }
       if (!army) {
         if (gid <= 0) { rsp.msg = { army: {} }; break; }   // 只是把空槽位清空，不建队
@@ -1375,11 +1391,11 @@ export function handleRequest(ctx, req) {
           else a.soldiers[slot] = back; // 无驻城记录时兵留队里，绝不蒸发
         }
       };
-      // 同一武将只能占一个槽位：先从其它队伍/槽位摘掉（连带退兵），再落到目标槽位
+      /* ★ P54：跨队占用已被上方拒绝；这里只清同队旧槽（同队换槽合法），连带退兵不留幽灵兵。 */
       if (gid > 0) {
         for (const a of state.armys) {
           (a.generals || []).forEach((id, i) => {
-            if (id === gid && !(a === army && i === pos)) {
+            if (Number(id) === gid && !(a === army && i === pos)) {
               returnTroopsToCity(a, i);
               a.generals[i] = 0;
             }
@@ -1393,11 +1409,7 @@ export function handleRequest(ctx, req) {
         }
         army.generals[pos] = 0;
       }
-      for (const g of state.generals) g.order = 0;
-      for (const a of state.armys) for (const id of (a.generals || [])) {
-        const g = findGeneral(state, id);
-        if (g) g.order = a.order;
-      }
+      syncGeneralOrders(state);
       ctx.push('army.push', army);
       ctx.save();
       rsp.msg = { army: clone(army) };

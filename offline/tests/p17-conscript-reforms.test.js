@@ -35,7 +35,9 @@ function oathWorld() {
   const lord = oathOptions(state).lords.filter((l) => l.cities.length >= 2)[0];
   chooseOath(state, cfg, { push() {} }, { lord: lord.id, city: lord.cities[0].id });
   for (const k of ['gold', 'grain', 'wood', 'iron', 'stone']) state.roleRes[k] = 1_000_000;
-  const cid = Number(Object.keys(state.strategy.cities).find((id) => state.strategy.cities[id].owner === 'player'));
+  /* ★ P54：举义后的队伍与武将都驻 playerCity；不能拿 Object.keys 的第一座城当驻城，
+     否则造出「队伍在 1 城、人在 10 城」的假场景，与同城编队口径冲突。 */
+  const cid = Number(state.strategy.playerCity);
   const army = state.armys[0];
   army.cityId = cid;
   army.generals = [state.generals[0].id, state.generals[1]?.id || 0, state.generals[2]?.id || 0];

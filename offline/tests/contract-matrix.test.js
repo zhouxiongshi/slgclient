@@ -53,7 +53,7 @@ const CASES = {
   'interior.openCollect': {},
   'interior.transform': { from: [0, 0, 0, 0], to: [0, 0, 0, 0] },
 
-  'general.myGenerals': {},
+  'general.myGenerals': { cityId: '@mainCity' },   // ★ P54：征兵页按城取候选武将
   'general.drawGeneral': { drawTimes: 1 },
   'general.composeGeneral': { gIds: [] },
   'general.addPrGeneral': { gId: 1000, attr: 'level', val: 0 },

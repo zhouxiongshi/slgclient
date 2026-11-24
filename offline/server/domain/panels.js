@@ -736,6 +736,8 @@ export function panelState(state, cfg) {
       // ★ P0 编队：三槽=盾步/弓兵/骑兵，带武将名与适性（编队弹窗数据源）
       armies: (state.armys || []).map((a) => ({
         id: a.id, order: a.order, marching: !!a.marchId,
+        /* ★ P54：整编弹窗按队伍驻城筛候选武将，必须是同一份 cityId。 */
+        cityId: int(a.cityId, 0),
         soldiers: (a.soldiers || []).map((v) => Math.max(0, Math.floor(Number(v) || 0))),
         armsNames: [ARMS_NAMES[1], ARMS_NAMES[2], ARMS_NAMES[3]],
         generals: (a.generals || []).map((gid, i) => {
