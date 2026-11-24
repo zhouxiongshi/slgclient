@@ -39,12 +39,22 @@ test('镜像规模与来源可追溯：至少 10 条，skip 台账完整', () =>
 });
 
 test('每条镜像均已装载；cfgId / 名称 / 十级数值 / 内核完全同源', () => {
+  /* ★ P53：一致性修正层是显式的、可审计的文案权威；仅对登记在案的条目豁免
+     镜像原文前缀断言，其余镜像仍要求逐字同源，防止未授权改写。 */
+  const fixDoc = JSON.parse(readFileSync(
+    new URL('../conf/skill-consistency.json', import.meta.url), 'utf8'));
+  const fixedDes = new Map((fixDoc.entries || []).filter((e) => e.des)
+    .map((e) => [Number(e.cfgId), e.des]));
   for (const m of doc.skills) {
     const s = skillById(m.cfgId);
     assert.ok(s, `${m.cfgId} 镜像战法未进入运行时表`);
     assert.equal(s.name, m.name);
     /* 运行时会按射程规则追加「（有效距离 N · M 人）」，原文必须是其前缀。 */
-    assert.ok(s.ui.des.startsWith(m.ui.des), `${m.name} 描述被改写：${s.ui.des}`);
+    if (fixedDes.has(Number(m.cfgId))) {
+      assert.equal(s.ui.des, fixedDes.get(Number(m.cfgId)), `${m.name} 应按 P53 修正层文案展示`);
+    } else {
+      assert.ok(s.ui.des.startsWith(m.ui.des), `${m.name} 描述被改写：${s.ui.des}`);
+    }
     assert.equal(s.kernel.skill_class, m.kernel.skill_class);
     assert.deepEqual(s.ui.levels, m.ui.levels);
     /* 面板的 %n% 与 effect_value 必须逐个对齐，否则玩家看到 A、内核算 B。 */

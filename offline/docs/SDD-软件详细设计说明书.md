@@ -2565,6 +2565,16 @@ build/SLG-Offline-win32-x64/
 4. **口径不变**：提交仍走 `dispatchGenerals` → `dispatchCheck`/`applyDispatch`，不改任何数值、兵力、城池归属与岗位；`x/y` 只是定位展示字段。
 5. **回归**：`tests/p51-general-panel.test.js` 新增 P52-① 静态断言（弹窗层级/列表/目的地文案/地图坐标/联动 API），全量 `npm test` 与双态取证见交付报告。FIELD-CONTRACT 已登记。
 
+### 17.37 战法描述↔实现一致性裁决 P53（2026-11-24 用户：「按常见做法先定一版」）
+
+**裁决总原则**：描述是玩家契约、内核是事实；能忠实落地的语义补内核，纯文案错位改描述，**数值零改动**。P49 已定的折半数值与锋矢镜像回退不翻案。
+
+1. **现状**：`audit-skill-description.mjs` 报 74 项（P1 6、P2 68；P49 报告记 76，为当时口径），分八类：状态无行为 31、加成语义丢失 27、机制未实现 6、控制槽写伤害率 3、持续回合 2、单效果多数值 2、净化未实现 1、镜像回退数值 2。
+2. **内核补四类（TS+Python 双实现同源）**：`classifyTerm` 增 `purge` / `attr_bonus` / `probability_bonus`，条件易伤正则扩到「处于…状态受伤害提高」；`baseDamage` 读 `attr_bonus` reaction 计入对应属性（速度/攻城不参与伤害）；`rollTrigger` 加 `probabilityBonus` 形参加到触发率；`BUFF` 分支按几率清 `ALL_NEGATIVE_STATES` 并 emit `purge`。九种负面状态统一：失控类阻主动战法、怯战/暴走阻普攻、回合末全清。顺带修 `受到.+伤害降低` → `受到.*伤害降低`（原来匹配不到「受到伤害降低」本身）。
+3. **文案修正层**：`conf/skill-consistency.json`（9 条）装在 skills.js 的成长层之后、玩家覆盖之前——重跑任何生成器都不冲掉裁决；只改 `ui.des` 与既有机制接线。控制槽「伤害率」改「几率」；删分兵/逃兵/逐次递增/优先行动/两次普攻等内核无分支的承诺；buff 改「整场有效」。「反击」以 `mechanics.counter`（`rate_from_ui:true`）接线，Lv1 37.5%→Lv10 75% 伤害率、必定反击；`kernelSkillAt` 单效果分支补上 mechanics 透传（原来只有数组分支透传，配置里的补丁不生效）。
+4. **审计口径同步**：`ACTIVE_STATES` 用内核 `ALL_NEGATIVE_STATES`；已分桶词条不再报「语义丢失」；「或/中的一种」互斥多槽不算「单效果多数值」。结果 **74→2，P1 全清**；剩 2 项即锋矢 Lv1 25%↔12.5%、Lv10 50%↔25%，属 P49 镜像回退的本地口径，如实保留台账不改写。
+5. **验收**：内核 42/42（`tests/p53-term-semantics.test.ts` 新增 5 项）、Python 参考 23/23、事件指纹 `196cf74a44e13b68` 未漂移、离线 5 项 P53 测试；全量 `npm test` 与双态取证见交付报告。FIELD-CONTRACT 已登记。
+
 **红线速查（改前必看）**：INV-01~INV-10（§1.4）、ADR-01/04/07/08/13/14（§1.2）、§7.15 键空间警告、§9.3 z-index 阶梯（含回放层 100700）、§10 确定性、§14.7 报告归属、§16.4 内核改法、§17 偏差登记。
 
 ---

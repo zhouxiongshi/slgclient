@@ -38,8 +38,11 @@ import {
   counterFactor,
   effectAvailable,
   attrDeltaFactor,
+  attrBonusKey,
   classifyTerm,
   hasControl,
+  ATTACK_BLOCK_STATES,
+  ALL_NEGATIVE_STATES,
   heroAttr,
   levelValue,
   normalizeBonus,
@@ -337,6 +340,7 @@ export class BattleEngine {
          同源战法重复授予（被动每回合触发）只刷新，不堆叠。 */
       const sid = skill?.skill_id ?? effect.detail_id;
       let classified = false;
+      const mechanics: string[] = [];
       for (const term of effect.bonus_terms) {
         const kind = classifyTerm(term.name);
         if (kind === 'attack_bonus') {
@@ -351,11 +355,36 @@ export class BattleEngine {
         }
         classified = true;
         const value = Math.abs(normalizeBonus(term.value, term.op));
-        target.reactions = target.reactions.filter((x) => !(x.skill_id === sid && x.kind === kind));
-        target.reactions.push({ kind, skill_id: sid, skill_name: skillName, rounds: 0, value });
+        /* 同源同词条只刷新不堆叠；一词条一项，避免「攻击+防御」互相覆盖。 */
+        target.reactions = target.reactions.filter((x) => !(
+          x.skill_id === sid && x.kind === kind && x.term_name === term.name
+        ));
+        target.reactions.push({
+          kind, skill_id: sid, skill_name: skillName, rounds: 0, value, term_name: term.name,
+        });
+        /* ★ P53：镇静/净化/驱散——按词条几率清除自身负面状态（含九种配置状态）。
+           每施加一次消耗一次随机数，与 CONTROL 判定的确定性口径一致。 */
+        if (kind === 'purge') {
+          const chance = Math.min(1, Math.max(0, value));
+          const cleared: string[] = [];
+          if (this.rng.random() < chance) {
+            for (const st of [...target.states]) {
+              if (ALL_NEGATIVE_STATES.has(st)) {
+                target.states.splice(target.states.indexOf(st), 1);
+                cleared.push(st);
+              }
+            }
+          }
+          this.emit(phase, attacker.unit_id, 'purge', {
+            target: target.unit_id, chance, cleared, term: term.name,
+          }, 'E2');
+          mechanics.push('净化');
+        }
+        if (kind === 'attr_bonus') mechanics.push('属性提高');
+        if (kind === 'probability_bonus') mechanics.push('发动率提高');
       }
+      void classified;
       const m = t === 'BUFF' ? effect.mechanics : undefined;
-      const mechanics: string[] = [];
       if (m) {
         const sid = skill?.skill_id ?? effect.detail_id;
         const grant = (r: Reaction): void => {
@@ -420,9 +449,13 @@ export class BattleEngine {
     }
     /* ★ M3-8：prepare_ready 释放必发（发动率在引导开始那次判定已消耗），
        旧实现在释放时再掷一次概率，会让已判定的引导二次掷骰。 */
+    /* ★ P53：发动率提高词条计入本战法发动判定（不再混进伤害加成）。 */
+    const probabilityBonus = unit.reactions.reduce(
+      (sum, r) => sum + (r.kind === 'probability_bonus' ? Math.max(0, r.value) : 0), 0,
+    );
     const { fired, probability } = phase === 'prepare_ready'
       ? { fired: true, probability: 1 }
-      : rollTrigger(skill, this.rng);
+      : rollTrigger(skill, this.rng, probabilityBonus);
     if (!fired) {
       this.emit(phase, unit.unit_id, 'skill_miss', { skill: skill.name, probability }, 'E2');
       return;
@@ -540,7 +573,7 @@ export class BattleEngine {
           });
         }
 
-        if (target && !hasControl(u, '怯战')) {
+        if (target && !u.states.some((s) => ATTACK_BLOCK_STATES.includes(s))) {
           this.applyEffect(this.normalAttackEffect(u), u, target, '普通攻击', 'action');
         }
         const active = u.hero.skills
@@ -554,10 +587,10 @@ export class BattleEngine {
         }
       }
 
-      // 回合结束：清除单回合控制状态 + 递减有期限的反应（洞察 3 回合口径）
+      // 回合结束：九种负面状态统一单回合清除 + 递减有期限的反应（洞察 3 回合口径）
       for (const u of this.units) {
         for (const st of [...u.states]) {
-          if (st === '犹豫' || st === '怯战') {
+          if (ALL_NEGATIVE_STATES.has(st)) {
             u.states.splice(u.states.indexOf(st), 1);
             this.emit('round_end', u.unit_id, 'state_clear', { state: st }, 'E2');
           }

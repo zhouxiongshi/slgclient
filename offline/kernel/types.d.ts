@@ -11,7 +11,8 @@ export type SkillClass = '指挥' | '主动' | '被动' | '追击';
 export type EffectType = 'PHYSICAL_DAMAGE' | 'STRATEGY_DAMAGE' | 'HEAL' | 'CONTROL' | 'BUFF' | 'DEBUFF';
 /** 兵种 / 攻击类型，对应 GetCounterFactor 的三档 */
 export type AttackType = 'normal' | 'armor' | 'chain';
-export type ControlState = '犹豫' | '混乱' | '暴走' | '怯战';
+/** P53：补齐配置中实际出现的九种负面状态（与 Python model.ControlState 对齐） */
+export type ControlState = '犹豫' | '混乱' | '暴走' | '怯战' | '动摇' | '恐慌' | '挑衅' | '妖术' | '燃烧';
 export type TargetType = 'self' | 'ally_single' | 'ally_all' | 'enemy_single' | 'enemy_all'
 /** M4-7 主角战法：自身 + 一名友军（按阵列顺序取第一个非自身存活友军） */
  | 'self_and_ally_single';
@@ -131,16 +132,19 @@ export interface UnitInput {
 }
 /** 由 BUFF 槽授予的常驻反应：洞察 / 回击 / 减伤 / 易伤。rounds=0 表示整场有效。 */
 export interface Reaction {
-    kind: 'insight' | 'counter' | 'damage_reduce' | 'damage_taken_increase';
+    kind: 'insight' | 'counter' | 'damage_reduce' | 'damage_taken_increase' | 'purge' | 'attr_bonus' | 'probability_bonus';
     skill_id: number;
     skill_name: string;
     /** 剩余回合；0 = 整场战斗有效 */
     rounds: number;
-    /** counter = 回击概率；damage_reduce = 减伤比例；damage_taken_increase = 易伤比例 */
+    /** counter=回击概率；damage_reduce=减伤；damage_taken_increase=易伤；
+        purge=清除几率；attr_bonus=属性提高比例；probability_bonus=发动率提高比例 */
     value: number;
     /** counter 专用 */
     rate_pct?: number;
     damage_type?: 'PHYSICAL_DAMAGE' | 'STRATEGY_DAMAGE';
+    /** attr_bonus 专用：原词条名，用于判定提高的是哪一项属性 */
+    term_name?: string;
 }
 /** 引擎内部状态（深拷贝自 UnitInput，调用方对象不会被修改） */
 export interface UnitState {

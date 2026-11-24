@@ -23,12 +23,17 @@ export declare function sumTermsBonus(terms: readonly BonusTerm[]): number;
  *  十级同名战法可重复叠加（被动每回合刷新）时旧口径能到 6.75×，
  *  与 FIELD-CONTRACT 的平衡上限冲突。这里在唯一出口钳住，黄金向量最大 1.48× 不受影响。 */
 export declare const MAX_DAMAGE_BONUS_MULTIPLIER = 2;
-/** ★ P49：bonus 词条语义分类——旧口径「一锅端 sumTermsBonus」把减伤词条也
- *  当攻击加成，方向反了（审计 3.2/3.6/3.14 共 18 项）。
- *  damage_reduce        ：受到…伤害降低 / 伤害降低 → 挂承受者，按减伤结算。
- *  damage_taken_increase：受到…伤害提高 → 挂承受者，按易伤（受伤放大）结算。
- *  attack_bonus         ：其余词条维持旧口径，计入攻击方加成链。 */
-export declare function classifyTerm(name: string): 'damage_reduce' | 'damage_taken_increase' | 'attack_bonus';
+/** bonus 词条语义分类。
+ *  P49：damage_reduce / damage_taken_increase 挂承受者，按受伤修正结算；
+ *  P53 裁决补四类可忠实落地的语义（其余仍归 attack_bonus 旧口径）：
+ *  purge             ：镇静/净化/驱散 → 清除自身负面状态（按词条值作几率）。
+ *  attr_bonus        ：攻击/防御/谋略/速度/攻城属性提高 → 计入对应属性，不再当伤害加成。
+ *  probability_bonus ：发动率提高 → 计入战法发动概率，不再当伤害加成。
+ *  条件易伤          ：「处于…状态受伤害提高」并入 damage_taken_increase。 */
+export type TermKind = 'damage_reduce' | 'damage_taken_increase' | 'purge' | 'attr_bonus' | 'probability_bonus' | 'attack_bonus';
+export declare function classifyTerm(name: string): TermKind;
+/** 属性提高词条对应的属性键；未命中返回 null（如速度/攻城不参与本作伤害解析） */
+export declare function attrBonusKey(name: string): AttrKey | null;
 /** ★ P49：率土式属性差乘区。修正 = clamp(1 + (攻方属性 − 守方抗性)/span, min, max)。
  *  物理攻 vs 守方防（defence），策略攻 vs 守方智（intel）；五维百分制下 span=100
  *  即满差 → ×2，对标率土 /300 满差口径。用户裁决：武将属性在战斗中的权重应更大。 */
@@ -69,10 +74,17 @@ export declare const SKILL_PHASE_ORDER: Record<SkillClass, number>;
 /** E0：speed 降序；同速按 unit_id 升序稳定排序保证确定性 */
 export declare function actionOrder(units: readonly UnitState[]): UnitState[];
 export declare function hasControl(unit: UnitState, state: ControlState): boolean;
-/** E0 术语：犹豫阻止主动战法；怯战阻止普通攻击 */
-export declare function controlBlocks(unit: UnitState, skill: Skill): ControlState | null;
-/** 被动战法按分类语义无条件生效（不消耗随机数）；其余三类走概率判定 */
-export declare function rollTrigger(skill: Skill, rng: Rng): {
+/** P53：配置里实际使用九种负面状态，全部纳入「行动受阻」判定——
+ *  失控类（犹豫/混乱/暴走/动摇/恐慌/挑衅/妖术/燃烧）阻断主动战法；
+ *  怯战阻断普通攻击（见 engine 普攻分支）。原型阶段统一按单回合受阻处理。 */
+export declare const SKILL_BLOCK_STATES: readonly string[];
+export declare const ATTACK_BLOCK_STATES: readonly string[];
+/** 配置中出现过的全部负面状态；净化按此集合清除。 */
+export declare const ALL_NEGATIVE_STATES: ReadonlySet<string>;
+export declare function controlBlocks(unit: UnitState, skill: Skill): string | null;
+/** 被动战法按分类语义无条件生效（不消耗随机数）；其余三类走概率判定。
+ *  P53：probability_bonus 词条（发动率提高）在此叠加，不再混进伤害加成链。 */
+export declare function rollTrigger(skill: Skill, rng: Rng, probabilityBonus?: number): {
     fired: boolean;
     probability: number;
 };

@@ -119,6 +119,21 @@ if (existsSync(GROWTH_PATH)) {
     }
   } catch { /* 成长层损坏不阻塞启动，按无成长覆盖处理 */ }
 }
+/* ★ P53 一致性修正层：战法描述 ↔ 内核实现的裁决落地。只修文案标签与既有内核
+   机制的接线（如 counter），不动任何等级数值；装在各生成器产物之后、玩家覆盖之前，
+   因此重跑 build-skills / 镜像 / 成长方向生成器都不会冲掉裁决。 */
+const CONSISTENCY_PATH = join(ROOT, 'conf', 'skill-consistency.json');
+if (existsSync(CONSISTENCY_PATH)) {
+  try {
+    const fix = JSON.parse(readFileSync(CONSISTENCY_PATH, 'utf8'));
+    for (const e of fix.entries || []) {
+      const i = TABLE.skills.findIndex((x) => Number(x.cfgId) === Number(e.cfgId));
+      if (i < 0) continue;
+      if (e.des) TABLE.skills[i].ui.des = e.des;
+      if (e.kernelPatch) Object.assign(TABLE.skills[i].kernel, e.kernelPatch);
+    }
+  } catch { /* 修正层损坏不阻塞启动，按未修正处理 */ }
+}
 /* ★ 2026-11-17 初始数据编辑器（用户：「技能和属性要提供新增和编辑功能……我要自己来
    修改和创建」）：conf/campaign/custom-skills.json 覆盖层，最后装载 → 同 cfgId/同名
    覆盖任何来源的战法。编辑器（server/domain/skill-editor.js）是唯一写入口；五张原表
@@ -342,7 +357,11 @@ export function kernelSkillAt(cfgId, lv) {
             mechanics.insight_rounds = Math.max(0, Math.trunc(Number(now) || 0));
           }
           if (mechanics.counter) {
-            mechanics.counter = { ...mechanics.counter, chance: (Number(now) || 0) / 100 };
+            /* P53：rate_from_ui 表示描述里的 %n% 是反击伤害率（必定反击）；
+               否则沿用主角战法旧口径：%n% 是触发概率，伤害率固定。 */
+            mechanics.counter = mechanics.counter.rate_from_ui
+              ? { ...mechanics.counter, rate_pct: Number(now) || 0 }
+              : { ...mechanics.counter, chance: (Number(now) || 0) / 100 };
           }
           if (mechanics.damage_taken_reduce != null) {
             mechanics.damage_taken_reduce = (Number(now) || 0) / 100;
@@ -404,6 +423,18 @@ export function kernelSkillAt(cfgId, lv) {
         op: b.op,
         evidence: 'E2',
       })),
+      /* ★ P53：单效果战法的 mechanics 也要透传（此前只有 effects 数组分支透传），
+         否则「反击」等挂在单效果上的回击补丁只在配置里、战斗里不生效。
+         回击概率同样取本等级 UI 槽值，与数组分支同源。 */
+      ...(k.mechanics ? {
+        mechanics: {
+          ...k.mechanics,
+          ...(k.mechanics.counter
+            ? { counter: k.mechanics.counter.rate_from_ui
+              ? { ...k.mechanics.counter, rate_pct: Number(rate) || 0 }
+              : { ...k.mechanics.counter, chance: (Number(rate) || 0) / 100 } } : {}),
+        },
+      } : {}),
       evidence: 'E0',
     }],
     evidence: 'E0',

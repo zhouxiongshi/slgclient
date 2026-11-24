@@ -34,20 +34,31 @@ export function sumTermsBonus(terms) {
  *  十级同名战法可重复叠加（被动每回合刷新）时旧口径能到 6.75×，
  *  与 FIELD-CONTRACT 的平衡上限冲突。这里在唯一出口钳住，黄金向量最大 1.48× 不受影响。 */
 export const MAX_DAMAGE_BONUS_MULTIPLIER = 2.0;
-/** ★ P49：bonus 词条语义分类——旧口径「一锅端 sumTermsBonus」把减伤词条也
- *  当攻击加成，方向反了（审计 3.2/3.6/3.14 共 18 项）。
- *  damage_reduce        ：受到…伤害降低 / 伤害降低 → 挂承受者，按减伤结算。
- *  damage_taken_increase：受到…伤害提高 → 挂承受者，按易伤（受伤放大）结算。
- *  attack_bonus         ：其余词条维持旧口径，计入攻击方加成链。 */
 export function classifyTerm(name) {
     const n = String(name || '');
     /* 只认「受到…」前缀：承受者受伤修正。不带前缀的「攻击伤害降低」等是
        攻方输出减益，维持旧口径（DEBUFF 负加成挂敌军，方向本来就对）。 */
-    if (/受到.+伤害降低/.test(n))
+    if (/受到.*伤害降低/.test(n))
         return 'damage_reduce';
-    if (/受到.+伤害提高/.test(n))
+    if (/受到.*伤害提高|处于.*状态受伤害提高/.test(n))
         return 'damage_taken_increase';
+    if (/镇静|净化|驱散/.test(n))
+        return 'purge';
+    if (/(攻击|防御|谋略|智力|速度|攻城)属性提高/.test(n))
+        return 'attr_bonus';
+    if (/发动率提高/.test(n))
+        return 'probability_bonus';
     return 'attack_bonus';
+}
+/** 属性提高词条对应的属性键；未命中返回 null（如速度/攻城不参与本作伤害解析） */
+export function attrBonusKey(name) {
+    if (/谋略属性提高|智力属性提高/.test(name))
+        return 'intel';
+    if (/防御属性提高/.test(name))
+        return 'defence';
+    if (/攻击属性提高/.test(name))
+        return 'attack';
+    return null;
 }
 /** ★ P49：率土式属性差乘区。修正 = clamp(1 + (攻方属性 − 守方抗性)/span, min, max)。
  *  物理攻 vs 守方防（defence），策略攻 vs 守方智（intel）；五维百分制下 span=100
@@ -100,7 +111,13 @@ export function attributeFor(effectType, hero) {
 export function baseDamage(cfg, effect, attacker, defender) {
     // M4-7 回击：rate_pct 已是最终伤害率（按战法等级注入），不随武将等级二次成长。
     const rate = (effect.flat_rate ? effect.rate_pct : levelValue(effect.rate_pct, attacker.hero.level)) / 100.0;
-    const { value: attr, note: attrNote } = attributeFor(effect.effect_type, attacker.hero);
+    const { value: attrBase, note: attrNote } = attributeFor(effect.effect_type, attacker.hero);
+    /* ★ P53：属性提高词条终于落在属性上（之前被当伤害加成）。只取与本伤害类型
+       对应的那一项；速度与攻城不参与本作伤害解析，保留标记但不改数值。 */
+    const attrKey = effect.effect_type === 'STRATEGY_DAMAGE' ? 'intel' : 'attack';
+    const attrBoost = attacker.reactions.reduce((sum, r) => (r.kind === 'attr_bonus' && attrBonusKey(r.term_name || '') === attrKey
+        ? sum + Math.max(0, r.value) : sum), 0);
+    const attr = attrBase * (1 + Math.min(1, attrBoost));
     const defense = heroAttr(defender.hero, 'defence');
     // legacy 为参考实现原样（E2 占位，方向反了）；corrected 为后续微调推荐值。
     const mitigation = cfg.defense_model === 'corrected'
@@ -163,17 +180,28 @@ export function actionOrder(units) {
 export function hasControl(unit, state) {
     return unit.states.includes(state);
 }
-/** E0 术语：犹豫阻止主动战法；怯战阻止普通攻击 */
+/** P53：配置里实际使用九种负面状态，全部纳入「行动受阻」判定——
+ *  失控类（犹豫/混乱/暴走/动摇/恐慌/挑衅/妖术/燃烧）阻断主动战法；
+ *  怯战阻断普通攻击（见 engine 普攻分支）。原型阶段统一按单回合受阻处理。 */
+export const SKILL_BLOCK_STATES = [
+    '犹豫', '混乱', '暴走', '动摇', '恐慌', '挑衅', '妖术', '燃烧',
+];
+export const ATTACK_BLOCK_STATES = ['怯战', '暴走'];
+/** 配置中出现过的全部负面状态；净化按此集合清除。 */
+export const ALL_NEGATIVE_STATES = new Set([
+    '犹豫', '混乱', '暴走', '怯战', '动摇', '恐慌', '挑衅', '妖术', '燃烧',
+]);
 export function controlBlocks(unit, skill) {
-    if (hasControl(unit, '犹豫') && skill.skill_class === '主动')
-        return '犹豫';
-    return null;
+    if (skill.skill_class !== '主动')
+        return null;
+    return unit.states.find((s) => SKILL_BLOCK_STATES.includes(s)) ?? null;
 }
-/** 被动战法按分类语义无条件生效（不消耗随机数）；其余三类走概率判定 */
-export function rollTrigger(skill, rng) {
+/** 被动战法按分类语义无条件生效（不消耗随机数）；其余三类走概率判定。
+ *  P53：probability_bonus 词条（发动率提高）在此叠加，不再混进伤害加成链。 */
+export function rollTrigger(skill, rng, probabilityBonus = 0) {
     if (skill.skill_class === '被动')
         return { fired: true, probability: 1.0 };
-    const p = Math.min(1.0, Math.max(0.0, skillProbability(skill)));
+    const p = Math.min(1.0, Math.max(0.0, skillProbability(skill) + probabilityBonus));
     return { fired: rng.random() < p, probability: p };
 }
 /** E0 字段 available_round：0 表示不限 */
