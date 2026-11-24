@@ -109,10 +109,16 @@ export function failureCheck(state) {
 export function disarmForGold(state, ctx, { armyId, count }) {
   const army = (state.armys || []).find((a) => a.id === Number(armyId));
   if (!army) return { ok: false, reason: 'no_army' };
+  /* ★ P55：与 army.disarm 同口径——行军中的队伍兵力已锁定，不得裁军改战力。 */
+  if (army.marchId) return { ok: false, reason: 'marching' };
   const n = Math.max(0, Math.min(Math.floor(Number(count) || 0), Math.floor(Number(army.soldiers?.[0]) || 0)));
   if (n <= 0) return { ok: false, reason: 'no_troops' };
   const refund = Math.round(n * 2 * DISARM_REFUND);
   army.soldiers[0] -= n;
+  /* ★ P55：裁军即作废在途征兵令牌，避免旧定时器把刚裁掉的槽再补满。 */
+  army.conToken = Math.floor(Number(army.conToken) || 0) + 1;
+  army.con_cnts = [0, 0, 0];
+  army.con_times = [0, 0, 0];
   const r = state.roleRes;
   r.gold = (r.gold || 0) + refund;
   const day = Math.floor(Number(state.clock?.day) || 1);

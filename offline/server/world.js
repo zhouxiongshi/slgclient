@@ -12,6 +12,7 @@ import { ensureFates } from './domain/fate.js';
 import { ensureStrategy } from './domain/strategy.js';
 import { ensurePanels } from './domain/panels.js';
 import { applyGeneralExp } from './domain/general-progress.js';
+import { syncGeneralOrders } from './domain/formation.js';
 import { loadOverrides, applyTileOverlay } from './gm/overrides.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -451,6 +452,20 @@ export function normalizeWorld(state, cfg) {
   ensureStrategy(state);
   ensurePanels(state, cfg);   // 六面板新字段兜底：11-08 之前无 strategy 的旧档也能开
   applyTileOverlay(state);
+  /* ★ P55：老档队伍/武将关系迁移。旧实现只归一化三槽数组，留下三处僵尸态：
+     ① 字符串 cityId 让 formationGeneralCheck（宽松转数）与 army.dispose（严格 ===）
+        两套口径打架，找不到队伍就重复建队；② g.order 停留在 P54 之前，武将面板
+        与队伍编号脱节；③ counters.armyId 缺失时 nextId 从 1 起，与老队 id 碰撞。 */
+  for (const a of state.armys || []) {
+    a.id = Math.max(1, Math.floor(Number(a.id) || 0));
+    a.cityId = Math.max(0, Math.floor(Number(a.cityId) || 0));
+    a.order = Math.max(1, Math.min(99, Math.floor(Number(a.order) || 0)));
+  }
+  for (const g of state.generals || []) g.cityId = Math.max(0, Math.floor(Number(g.cityId) || 0));
+  const maxArmyId = (state.armys || []).reduce((m, a) => Math.max(m, Number(a.id) || 0), 0);
+  state.counters = state.counters || {};
+  state.counters.armyId = Math.max(Number(state.counters.armyId) || 0, maxArmyId + 1);
+  syncGeneralOrders(state);
   state.version = SAVE_VERSION;
   return state;
 }

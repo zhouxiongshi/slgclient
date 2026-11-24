@@ -598,6 +598,8 @@ export function panelState(state, cfg) {
     const wall = wallView({ hp: Number.isFinite(wRaw) ? wRaw : wMax, max: wMax });
     return {
       id: c.id, name: c.name, province: c.province, level: c.level,
+      /* ★ P55：城址（州·郡·今地）下发到批量调防弹窗，玩家可按address找城，不再只看城名。 */
+      jun: c.jun || '', today: c.today || '',
       /* ★ 批量调防选城弹窗的联动预览坐标：与沙盘同源，只用于定位展示，不参与任何数值。 */
       x: Number(c.x) || 0, y: Number(c.y) || 0,
       owner: row.owner || 'han', ownerName: nameOfFaction(row.owner || 'han'), troops,

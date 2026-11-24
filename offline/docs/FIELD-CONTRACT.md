@@ -176,6 +176,15 @@
 8. **占城判定不因城墙而变**：破城只影响「下一波更好打」与战报文案，`judgeBattle`
    的 2/1/0 语义与 `ROUT_RATIO` 溃败线不动——否则「首战可胜」等既有验收全部作废。
 
+## P55 队伍权限与城池关系（写死，防回归）
+
+1. **空槽不许带兵**：武将离开槽位（调防/撤将）必须走 `formation.js releaseSlot()` 清兵/清在途/作废令牌并退原驻城；`generals[i]=0 && soldiers[i]>0` 一律是 bug。
+2. **行军锁是全入口的**：`assign/dispose/conscript/disarm/disarmForGold/conscript_done` 任一处都不得对 `marchId` 队伍改编制或补兵；出征兵力/军粮按出发快照锁定。
+3. **队伍城权**：`army.*` 四个 handler 必须 `isOwnCity(state, army.cityId)`；敌城/失效驻地队伍不得征兵、预览、解甲或出兵。
+4. **order 是派生的**：`g.order` 永远由 `syncGeneralOrders` 重算；同城 `(cityId, order)` 唯一，残部重编分配空号；新队 id 不得与老档碰撞（`counters.armyId`）。
+5. **调防地图只能是真大地图**：全景底图 `/__slg/strategy/panorama.png` + 全城坐标落点 + 可点选己方城 + 城址搜索；坐标与沙盘同源，不重算任何战力/粮耗。
+6. **六府内弹窗层级**：整编/运粮/调防弹窗一律 `z-index:100820`，高于六府窗 100100；低于此值视为遮挡 bug。
+
 ## 变更流程
 
 1. 新数值：先在本表登记 → 再实现服务端权威源 → 最后接 UI。

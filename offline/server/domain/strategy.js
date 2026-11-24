@@ -68,7 +68,7 @@ import { playerIdentity, isFounded, foundStatus } from './faction-identity.js';
 /* ★ P50 太守制：视图下发太守总览（城内页/六府共用） */
 import { governorListView, governorView, governorCandidates } from './governor.js';
 /* ★ P54：编队资格与派将共用一份判据（城内征兵 / 六府整编两个入口同口径）。 */
-import { formationGeneralCheck, syncGeneralOrders } from './formation.js';
+import { formationGeneralCheck, syncGeneralOrders, releaseSlot } from './formation.js';
 import { diplomacyView, diplomacyAct, noteCityCaptured, truceActive, PLAYER_ID, adjustAttitudeByEvent } from './diplomacy.js';
 /* ★ M3-4 事件系统接线（本作设计）：引擎是零依赖叶子，ctx 由本层适配 */
 import { eventCooldownTick, selectEvents, applyEffects } from './event-engine.js';
@@ -1445,15 +1445,28 @@ export function rebindArmiesIfStranded(state, ctx) {
   const home = own.find((c) => c.id === Number(st.playerCity))
     || own.slice().sort((a, b) => b.troops - a.troops)[0];
   const moved = [];
+  /* ★ P55：多城失守时多支残部会涌进同一座 home 城。旧实现只改 cityId 不重排 order，
+     于是一城之内出现 1,1,2,2…… 重复编号，army.dispose/myOne 的 find 永远只命中第一支，
+     其余队伍在 UI 里彻底不可编辑。这里迁入后按该城现占用情况分配未用编号。 */
+  const taken = new Set(
+    state.armys.filter((a) => !a.marchId && Number(a.cityId) === home.id)
+      .map((a) => Number(a.order)),
+  );
+  const freeOrder = () => {
+    for (let o = 1; o <= 99; o += 1) if (!taken.has(o)) { taken.add(o); return o; }
+    return 99;
+  };
   for (const a of state.armys) {
     if (a.marchId) continue;
     const cid = Number(a.cityId) || 0;
     if (cid && st.cities[cid] && st.cities[cid].owner === 'player') continue;
     const hadSomething = (a.generals || []).some((g) => g) || (a.soldiers || []).some((n) => n > 0);
     a.cityId = home.id;
+    a.order = freeOrder();
     syncGeneralsCity(state, a, home.id);
     moved.push({ armyId: a.id, from: cid, had: hadSomething });
   }
+  if (moved.length) syncGeneralOrders(state);
   const real = moved.filter((m) => m.had);
   if (real.length) {
     const nm = strategyMap().cities.find((c) => c.id === home.id)?.name || cityName(home.id);
@@ -2164,6 +2177,8 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
     const standin = makeStandInGeneral(state, home);
     (state.generals || (state.generals = [])).push(standin);
     army.generals[0] = standin.id;
+    /* ★ P55：order 是队伍编号的派生字段，新增代将后必须同步重算。 */
+    syncGeneralOrders(state);
     recordEvent(state, `帐下无将，以代将${standin.name}权充先锋（五维 50、无战法）。`);
     ctx.push?.('general.push', standin);
   }
@@ -2609,11 +2624,15 @@ export function strategyFormup(state, cfg, ctx, { armyId, generals, soldiers }) 
   const home = st.cities?.[army.cityId];
   let returnedToCity = 0;
   if (diff > 0) {
-    if (home) {
-      home.troops = Math.max(0, Math.round(Number(home.troops) || 0) + diff);
+    /* ★ P55：找不到驻城记录时退到玩家主城，绝不再塞回槽位制造空槽兵/越过带兵上限。 */
+    const fallback = st.cities?.[Number(st.playerCity)]
+      || Object.values(st.cities || {}).find((c) => c && c.owner === 'player');
+    const target = home || fallback;
+    if (target) {
+      target.troops = Math.max(0, Math.round(Number(target.troops) || 0) + diff);
       returnedToCity = diff;
     } else {
-      troops[0] += diff; // 无驻城记录时兵留队里，绝不蒸发
+      return { ok: false, reason: 'no_home_city' };
     }
   }
   army.generals = slots;
@@ -2655,9 +2674,9 @@ function syncGeneralsCity(state, army, cityId) {
  * 行军中不可调（与 strategyFormup 同规则）。瞬发，不另算行程。
  */
 /* 调防的唯一校验口径：单人与批量共用，reason 只走协议，玩家文案由调用方给中文。 */
-function dispatchCheck(state, st, g, to) {
+function dispatchCheck(state, st, g, to, fromFallback = 0) {
   if (!g) return { ok: false, reason: 'no_general' };
-  const from = Number(g.cityId) || st.playerCity || 0;
+  const from = Number(g.cityId) || fromFallback || st.playerCity || 0;
   if (!to) return { ok: false, reason: 'no_city' };
   if (to === from) return { ok: false, reason: 'same_city', cityId: to, from };
   const tstate = st.cities?.[to];
@@ -2670,18 +2689,24 @@ function dispatchCheck(state, st, g, to) {
   return { ok: true, from };
 }
 
-/* 调防的唯一落账口径：从原队伍摘除并回填 order（与 army.dispose 同口径）。 */
+/* 调防的唯一落账口径：从原队伍摘除并回填 order（与 army.dispose 同口径）。
+   ★ P55：旧实现只摘武将不处理该槽兵力/在途，留下「空槽带兵」幽灵队——
+   兵会计入战损却不上阵，又因 empty_slot 永远补不回来。这里统一走 releaseSlot
+   把该槽兵力与在途退回原驻城，绝不留空槽兵。 */
 function applyDispatch(state, ctx, g, to, from) {
   const gid = Number(g.id);
+  let returned = 0;
   for (const a of state.armys || []) {
-    if ((a.generals || []).includes(gid)) {
-      a.generals = (a.generals || []).map((id) => (Number(id) === gid ? 0 : id));
-    }
+    const slot = (a.generals || []).findIndex((id) => Number(id) === gid);
+    if (slot < 0) continue;
+    returned += releaseSlot(state, a, slot);
+    a.generals[slot] = 0;
+    ctx.push?.('army.push', a);
   }
   g.cityId = to;
   g.order = 0;
   ctx.push?.('general.push', g);
-  return { generalId: gid, from, to, fromName: cityName(from), toName: cityName(to) };
+  return { generalId: gid, from, to, returned, fromName: cityName(from), toName: cityName(to) };
 }
 
 export function dispatchGeneral(state, cfg, ctx, { generalId, toCityId, fromCityId = 0 } = {}) {
@@ -2690,9 +2715,9 @@ export function dispatchGeneral(state, cfg, ctx, { generalId, toCityId, fromCity
   const to = Number(toCityId) || 0;
   const g = (state.generals || []).find((x) => x.id === gid);
   if (!g) return { ok: false, reason: 'no_general' };
-  /* 兼容旧调用方显式给的出发城：仅在武将自身未记驻地时兜底。 */
-  if (!Number(g.cityId) && Number(fromCityId)) g.cityId = Number(fromCityId);
-  const check = dispatchCheck(state, st, g, to);
+  /* ★ P55：旧调用方显式给的出发城只在武将未记驻地时作局部兜底参与校验，
+     绝不在这里写 g.cityId——校验失败的路径此前会留下「被拒绝却改了驻地」的脏档。 */
+  const check = dispatchCheck(state, st, g, to, Number(fromCityId) || 0);
   if (!check.ok) return check;
   const out = applyDispatch(state, ctx, g, to, check.from);
   const gname = cfg?.generalByCfg?.get?.(Number(g.cfgId))?.name || g.name || `武将${gid}`;

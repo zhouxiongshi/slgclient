@@ -50,7 +50,7 @@ import { noteIfGeneralDown } from './command.js';
 import { factionTraitOf, protagonistStat } from './domain/oath.js';
 import { conscriptNeed, checkSlotCaps, splitEven, affordableConscript, planDisarm, ARMS_NAMES } from './domain/conscript.js';
 /* ★ P54：编队资格（同城 / 一人一队 / 派生 order）唯一口径，与六府整编共用。 */
-import { formationGeneralCheck, syncGeneralOrders } from './domain/formation.js';
+import { formationGeneralCheck, syncGeneralOrders, releaseSlot } from './domain/formation.js';
 import { foundNation, foundStatus, playerIdentity } from './domain/faction-identity.js';
 
 const OK = 0;
@@ -567,8 +567,26 @@ export function processTask(ctx, task) {
     army.soldiers = normalizeTriple(army.soldiers);
     army.con_times = normalizeTriple(army.con_times);
     army.con_cnts = normalizeTriple(army.con_cnts);
+    /* ★ P55：行军中抵达的在途兵不得补进队伍——出征兵力/军粮已按出发快照锁定，
+       中途补兵等于白嫖战力且预览失真。资源已扣，兵改退驻城，绝不蒸发。 */
+    if (army.marchId) {
+      const totalBack = [0, 1, 2].reduce((s, i) => s + Math.max(0, Math.floor(Number(task.cnts?.[i]) || 0)), 0);
+      const home = state.strategy?.cities?.[Number(army.cityId)]
+        || Object.values(state.strategy?.cities || {}).find((c) => c && c.owner === 'player');
+      if (home && totalBack > 0) {
+        home.troops = Math.max(0, Math.floor(Number(home.troops) || 0) + totalBack);
+        recordEvent(state, `第 ${army.order} 军行军期间征兵 ${totalBack} 人到位，已改退驻城待命。`);
+      }
+      army.con_times = [0, 0, 0];
+      army.con_cnts = [0, 0, 0];
+      ctx.push('army.push', army);
+      ctx.save();
+      return;
+    }
     for (let i = 0; i < 3; i += 1) {
       const add = Math.max(0, Math.floor(Number(task.cnts?.[i]) || 0));
+      /* ★ P55：空槽（武将已调防/撤下）不得补兵，否则再造空槽幽灵兵。 */
+      if (!army.generals?.[i]) { army.con_times[i] = 0; army.con_cnts[i] = 0; continue; }
       army.soldiers[i] += add;
       army.con_times[i] = 0;
       army.con_cnts[i] = 0;
@@ -1379,18 +1397,9 @@ export function handleRequest(ctx, req) {
       /* ★ 2026-11-18 用户诉求：剔除武将后兵力不再停留在空槽。
          旧实现只改 generals[pos]、不动 soldiers[pos]，出现「有兵无将」槽位仍显示旧兵力。
          现在任何槽位从「有将」变「无将」，该槽兵力/在途退回驻城并清零，UI 不再显示幽灵兵力。 */
-      const returnTroopsToCity = (a, slot) => {
-        const back = Math.max(0, Math.floor(Number(a.soldiers?.[slot]) || 0))
-          + Math.max(0, Math.floor(Number(a.con_cnts?.[slot]) || 0));
-        a.soldiers = normalizeTriple((a.soldiers || []).map((n, i) => (i === slot ? 0 : n)));
-        a.con_cnts = normalizeTriple((a.con_cnts || []).map((n, i) => (i === slot ? 0 : n)));
-        a.con_times = normalizeTriple((a.con_times || []).map((n, i) => (i === slot ? 0 : n)));
-        if (back > 0) {
-          const city = state.strategy?.cities?.[Number(a.cityId)];
-          if (city) city.troops = Math.max(0, Math.floor(Number(city.troops) || 0) + back);
-          else a.soldiers[slot] = back; // 无驻城记录时兵留队里，绝不蒸发
-        }
-      };
+      /* ★ P55：与调防共用同一份退兵口径——清兵/清在途/作废令牌，
+         旧实现在无驻城记录时把兵写回刚清空的槽，正是「空槽带兵」幽灵兵的来源。 */
+      const returnTroopsToCity = (a, slot) => { releaseSlot(state, a, slot); };
       /* ★ P54：跨队占用已被上方拒绝；这里只清同队旧槽（同队换槽合法），连带退兵不留幽灵兵。 */
       if (gid > 0) {
         for (const a of state.armys) {
@@ -1421,6 +1430,10 @@ export function handleRequest(ctx, req) {
     case 'army.conscriptPreview': {
       const army = armyById(state, m.armyId);
       if (!army) { rsp.code = CODE.InvalidParam; rsp.msg = { reason: 'no_army', max: 0 }; break; }
+      /* ★ P55：驻地为敌城的队伍不预览可征量（队伍权限统一闸）。 */
+      if (!isOwnCity(state, army.cityId)) {
+        rsp.code = CODE.InvalidParam; rsp.msg = { reason: 'not_own_city', max: 0 }; break;
+      }
       const c0 = cfg.basic.conscript || {};
       const trait0 = factionTraitOf(state);
       const perSlot0 = conscriptNeed([1, 1, 1], c0, trait0).perSlot;
@@ -1444,6 +1457,10 @@ export function handleRequest(ctx, req) {
     case 'army.conscript': {
       const army = armyById(state, m.armyId);
       if (!army) { rsp.code = CODE.InvalidParam; rsp.msg = { reason: 'no_army' }; break; }
+      /* ★ P55：队伍权限——驻地为敌城的队伍不得动用我方资源征兵。 */
+      if (!isOwnCity(state, army.cityId)) {
+        rsp.code = CODE.InvalidParam; rsp.msg = { reason: 'not_own_city', army: clone(army) }; break;
+      }
       // ★ 试玩 bug-2：行军中不能征兵（否则路上补满兵再打）
       if (army.marchId) { rsp.code = CODE.InvalidParam; rsp.msg = { reason: 'marching', army: clone(army) }; break; }
       /* ★ 2026-11-18 用户诉求「一键征满平分所有兵力」：m.fill=true 时服务端按
@@ -1557,6 +1574,10 @@ export function handleRequest(ctx, req) {
     case 'army.disarm': {
       const army = armyById(state, m.armyId);
       if (!army) { rsp.code = CODE.InvalidParam; rsp.msg = { reason: 'no_army' }; break; }
+      /* ★ P55：敌城驻军不得把兵「退回」敌城守军。 */
+      if (!isOwnCity(state, army.cityId)) {
+        rsp.code = CODE.InvalidParam; rsp.msg = { reason: 'not_own_city', army: clone(army) }; break;
+      }
       if (army.marchId) { rsp.code = CODE.InvalidParam; rsp.msg = { reason: 'marching', army: clone(army) }; break; }
       const plan = planDisarm(m.counts || m.disband, army, null, { marching: !!army.marchId });
       if (!plan.ok) { rsp.code = CODE.InvalidParam; rsp.msg = { reason: plan.reason }; break; }
@@ -1586,7 +1607,25 @@ export function handleRequest(ctx, req) {
       const x = Number(m.x ?? 0);
       const y = Number(m.y ?? 0);
       if (!army) { rsp.msg = { army: {} }; break; }
-      const city = mainCity(state);
+      /* ★ P55：与 dispose/conscript/disarm 同口径——行军中队伍不得二次派兵，
+         否则同一队伍同时挂战略行军与 battle_arrive 定时器，双线并发结算。 */
+      if (army.marchId) {
+        rsp.code = CODE.InvalidParam;
+        rsp.msg = { reason: 'marching', army: clone(army) };
+        break;
+      }
+      /* ★ P55：队伍权限——驻地为敌城的队伍不得出兵（含易主瞬间的窗口）。 */
+      if (!isOwnCity(state, army.cityId)) {
+        rsp.code = CODE.InvalidParam;
+        rsp.msg = { reason: 'not_own_city', army: clone(army) };
+        break;
+      }
+      /* ★ P55：优先用驻城自身的沙盘坐标（举义后本地主城与战略城是两套编号）；
+         仅当该城确属我方时才采用，未举义的老存档仍走 mainCity，避免出发坐标错位。 */
+      const homeRow = state.strategy?.cities?.[Number(army.cityId)];
+      const city = (homeRow && homeRow.owner === 'player'
+        && Number(homeRow.x) && Number(homeRow.y))
+        ? homeRow : mainCity(state);
       army.cmd = cmd;
       army.from_x = city?.x ?? 0;
       army.from_y = city?.y ?? 0;

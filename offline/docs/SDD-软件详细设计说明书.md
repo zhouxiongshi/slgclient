@@ -2585,6 +2585,17 @@ build/SLG-Offline-win32-x64/
 4. **界面防呆**：征兵页把「除当前槽外已在编」的下拉项标「在编」并禁用；整编弹窗用 `data-busy` 记队外占用、`refresh()` 实时禁用同弹窗重复选择。两处为中文原因表补 `general_other_city`/`in_other_army`/`dup_general` 等，英文 reason 不弹给玩家。
 5. **回归**：新增 `tests/p54-formation-city.test.js` 6 项（静态 UI 断言、领域判据、按城候选、两个入口的跨城/跨队拒绝、`g.order` 同步）；`bugfix.test.js` 改为「先在原队撤下再改挂」，P17 修掉「队伍在 1 城、人在 10 城」的假场景；契约矩阵登记 `general.myGenerals.cityId`。FIELD-CONTRACT 已登记。
 
+### 17.39 队伍权限与城池关系专项 P55（2026-11-24 用户反馈）
+
+**用户原话**：重点测试队伍，玩家的队伍有严重 bug，队伍权限、队伍与城池关系都有问题；调防时弹出地图不是大地图，无法根据地址选中城市；编制队伍弹窗风格不美观。
+
+1. **队伍权限**：`army.assign` 补 `marchId` 行军锁（与 dispose/conscript/disarm 同口径），杜绝同一队伍同时挂战略行军与 `battle_arrive` 双线结算；`army.conscript`／`conscriptPreview`／`disarm`／`assign` 统一加 `isOwnCity(state, army.cityId)` 闸，敌城/失效驻地的队伍不得动用我方资源或出兵；`disarmForGold`（失败态 HTTP 裁军）补行军锁 + `conToken++`，与 `army.disarm` 同源；`conscript_done` 在行军中改退兵入驻城（出征兵力/军粮已按快照锁定，中途补兵等于白嫖），空槽不再补兵。
+2. **队伍-城池关系**：`applyDispatch` 旧实现只摘武将不清该槽兵力/在途，留下 `generals[i]=0 && soldiers[i]>0` 幽灵槽（真链路复现 800 兵滞留、原驻城兵力不增）。新增零依赖叶子 `formation.js releaseSlot()`，调防与 `army.dispose` 共用「清兵/清在途/作废令牌/退原驻城」；`strategyFormup` 无驻城记录时退到主城而非塞回空槽；`dispatchCheck` 的 `fromCityId` 兜底改为局部参与校验，失败路径不再写脏 `g.cityId`。
+3. **多城残部/老档**：`rebindArmiesIfStranded` 重编时按目标城已占 order 分配空号并 `syncGeneralOrders`，杜绝同城 1,1,2,2 重复编号的不可编辑僵尸队；`normalizeWorld` 统一 `Number()` 化 `army.cityId/order`、`general.cityId`，补齐 `counters.armyId` 防撞号，重算 `g.order`；代将入队补 `syncGeneralOrders`。
+4. **调防大地图**：弹窗铺真实全景底图 `/__slg/strategy/panorama.png`（与沙盘同一张 2400×1350 图），全图城池按配置坐标落点；己方城是可点的金色标记，点地图上的城即选为目的城并联动沙盘定位；新增「城名/州郡/今地」搜索框，城池视图下发 `jun`/`today`。数值一律来自服务端视图，UI 只画位置。
+5. **整编弹窗**：从 `z-index:100004`（低于六府窗 100100，从六府点整编会被遮住）抬到确认框层 100820，运粮弹窗同步；视觉统一为「深底 + 金线 + 分区」的 `#slgFormupDlg`（页头/说明/摘要/三槽卡片/页脚），三槽 0 基下标与 `data-fup` 动画钩子不变。
+6. **回归**：新增 `tests/p55-team-permissions-and-map.test.js` 9 项，含真链路空槽兵复现/行军锁/敌城权限/在途令牌/残部重编/老档迁移/失败路径脏写/UI 静态断言。FIELD-CONTRACT 已登记。
+
 **红线速查（改前必看）**：INV-01~INV-10（§1.4）、ADR-01/04/07/08/13/14（§1.2）、§7.15 键空间警告、§9.3 z-index 阶梯（含回放层 100700）、§10 确定性、§14.7 报告归属、§16.4 内核改法、§17 偏差登记。
 
 ---

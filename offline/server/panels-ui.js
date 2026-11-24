@@ -203,7 +203,9 @@
   function formupBox(army) {
     var mask = document.createElement('div');
     mask.id = 'slgFormup';
-    mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:100004;display:flex;align-items:center;justify-content:center;';
+    /* ★ P55：旧值 100004 低于六府窗的 100100——从「六府→战略」点整编时弹窗被面板
+       遮住，玩家只看到一闪或根本点不到。抬到确认框层 100820（与调防弹窗一致）。 */
+    mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:100820;display:flex;align-items:center;justify-content:center;';
     /* ★ P54：整编只认队伍驻城。别城武将不进下拉，先在武将页调防过来。 */
     var armyCity = Number(army.cityId) || 0;
     var allGens = data.strategy.allGenerals || [];
@@ -216,7 +218,7 @@
     var slotCapOfGen = function (g) { return g ? (Number(g.slotCap) || 5000) : 5000; };
     var total = (army.soldiers || []).reduce(function (s, v) { return s + (Number(v) || 0); }, 0);
     var sel = function (slot, curId) {
-      return '<select data-fup="gen' + slot + '" style="flex:1;min-width:150px;background:#2a2617;border:1px solid #ba9a52;color:#e8e0cc;padding:5px;border-radius:4px">'
+      return '<select data-fup="gen' + slot + '" class="fsel">'
         + '<option value="0">（空槽）</option>'
         + gens.map(function (g) {
           var inThis = (army.generals || [])[slot] && army.generals[slot].id === g.id;
@@ -232,31 +234,35 @@
             + (g.rank ? ' · ' + esc(g.rank) : '') + (busy && !inThis ? ' · 在编' : '') + '</option>';
         }).join('') + '</select>';
     };
-    mask.innerHTML = '<div style="background:#1d1a12;border:1px solid #ba9a52;border-radius:8px;padding:18px 22px;min-width:620px;max-width:92vw;color:#e8e0cc;font:13px \'Microsoft YaHei\',sans-serif">'
-      + '<h3 style="margin:0 0 6px;color:#ffdf9a">整编队伍#' + army.order + '（驻城：' + esc(armyCityName || ('#' + armyCity)) + '）</h3>'
-      + '<div class="muted" style="margin-bottom:10px;line-height:1.7">三槽同时是战位：一前锋 / 二中军 / 三大营，也对应盾步、弓兵、骑兵。'
-      + '只列本城武将，一人只在一队；已在别队者先从原队撤下，驻在其他城者请先调防'
+    mask.innerHTML = '<div id="slgFormupDlg">'
+      + '<div class="fhead"><div><b>整编队伍 · 第 ' + army.order + ' 军</b>'
+      + '<span class="fsub">驻城：' + esc(armyCityName || ('#' + armyCity)) + ' · 现兵 ' + fmt(total) + '</span></div>'
+      + '<span class="fx" data-fup="cancel" title="关闭">✕</span></div>'
+      + '<div class="fbody">'
+      + '<div class="fnote">三槽即战位：前锋 / 中军 / 大营，对应盾步 / 弓兵 / 骑兵。'
+      + '只列本城武将、一人只在一队；已在别队者先从原队撤下，他城武将请先调防'
       + (hiddenOtherCity ? '（已隐藏他城武将 ' + hiddenOtherCity + ' 人）' : '') + '。'
-      + '兵力只在这支队伍现有 ' + fmt(total) + ' 人内重分，少填的会退回驻城，不会凭空消失。'
-      + '每槽上限取本机按该槽武将官阶与等级算出的真实值（基础 5000 + 官阶×300 +（等级−1）×200，满级三公 9500），换将后会自动刷新。</div>'
-      + '<div id="slgFormupSummary" style="background:#242820;border:1px solid #6a5f42;border-radius:5px;padding:8px 10px;margin-bottom:10px;color:#f0d998"></div>'
+      + '兵力只在本队现有 ' + fmt(total) + ' 人内重分，余兵退回驻城。每槽上限取本机按该槽武将官阶与等级算出的真实值（基础 5000 + 官阶×300 +（等级−1）×200，满级三公 9500），换将后自动刷新。</div>'
+      + '<div id="slgFormupSummary" class="fsummary"></div>'
+      + '<div class="fslots">'
       + [1, 2, 3].map(function (slot) {
         var s = slot - 1;
         var cur = army.generals[s];
         var captain = cur ? genById[cur.id] : null;
         var cap = slotCapOfGen(captain);
-        return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">'
-          + '<span style="width:96px;color:#ffdf9a">第 ' + (slot + 1) + ' 槽 · ' + esc((army.armsNames || ['盾步', '弓兵', '骑兵'])[s]) + '</span>'
+        return '<div class="fslot"><div class="frole">'
+          + '<b>第 ' + (slot + 1) + ' 槽</b><span>' + esc((army.armsNames || ['盾步', '弓兵', '骑兵'])[s]) + '</span></div>'
           + sel(s, cur && cur.id)
-          + '<input type="number" min="0" max="' + cap + '" value="' + (army.soldiers[s] || 0) + '" data-fup="troop' + s + '" style="width:88px;background:#2a2617;border:1px solid #ba9a52;color:#fff;padding:4px 6px;border-radius:4px">'
-          + '<span class="muted" style="width:132px;white-space:nowrap" data-fup="cap' + s + '">上限 ' + fmt(cap) + (captain && captain.rank ? '（' + captain.rank + '阶）' : '') + '</span>'
-          + '<span class="muted" style="width:92px;white-space:nowrap" data-fup="apt' + s + '">' + (cur ? ('适性 ' + cur.apt + '% · 忠' + cur.loyal) : '空槽') + '</span>'
+          + '<label class="ftroop">兵力<input type="number" min="0" max="' + cap + '" value="' + (army.soldiers[s] || 0) + '" data-fup="troop' + s + '"></label>'
+          + '<span class="fmeta" data-fup="cap' + s + '">上限 ' + fmt(cap) + (captain && captain.rank ? '（' + captain.rank + '阶）' : '') + '</span>'
+          + '<span class="fmeta" data-fup="apt' + s + '">' + (cur ? ('适性 ' + cur.apt + '% · 忠' + cur.loyal) : '空槽') + '</span>'
           + '</div>';
       }).join('')
-      + '<div style="margin-top:12px;display:flex;justify-content:flex-end;gap:8px;align-items:center">'
-      + '<button data-fup="even" style="background:#2c2f22;border:1px solid #7a6a42;color:#e8d7a8;padding:5px 12px;border-radius:4px;cursor:pointer">按现兵平分（仅填表）</button>'
-      + '<button data-fup="cancel" style="background:none;border:1px solid #777;color:#ccc;padding:5px 14px;border-radius:4px;cursor:pointer">取消</button> '
-      + '<button data-fup="ok" style="background:#7a5c1e;border:1px solid #ba9a52;color:#ffe9b0;padding:5px 18px;border-radius:4px;cursor:pointer">确认整编</button></div></div>';
+      + '</div></div>'
+      + '<div class="ffoot"><button data-fup="even" class="fbtn">按现兵平分</button>'
+      + '<span class="fsp"></span>'
+      + '<button data-fup="cancel" class="fbtn">取消</button>'
+      + '<button data-fup="ok" class="fbtn primary">确认整编</button></div></div>';
     var readSlots = function () {
       var ids = [0, 1, 2].map(function (slot) { return Number(mask.querySelector('[data-fup="gen' + slot + '"]').value) || 0; });
       var vals = [0, 1, 2].map(function (slot) { return Math.max(0, Math.floor(Number(mask.querySelector('[data-fup="troop' + slot + '"]').value) || 0)); });
@@ -334,7 +340,8 @@
     if (!own.length) { toast('没有别的城可以调粮', false); return; }
     var mask = document.createElement('div');
     mask.id = 'slgTransportBox';
-    mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:100004;display:flex;'
+    /* ★ P55：与整编弹窗同理，运粮从六府「府库」打开时必须盖过面板（100100）。 */
+    mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:100820;display:flex;'
       + 'align-items:center;justify-content:center;';
     var selStyle = 'background:#2a2617;border:1px solid #ba9a52;color:#fff;padding:4px 6px;border-radius:4px;'
       + 'font:13px "Microsoft YaHei",sans-serif;';
@@ -458,16 +465,54 @@
     '#slgDispatchDlg .dhead{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid #3a3325;}',
     '#slgDispatchDlg .dhead b{font-size:15px;color:#f0d998;}',
     '#slgDispatchDlg .dhead .x{margin-left:auto;cursor:pointer;color:#9c9382;padding:0 5px;}',
-    '#slgDispatchDlg .dbody{display:flex;gap:14px;padding:12px 16px;min-height:0;overflow:hidden;}',
-    '#slgDispatchDlg .dcities{width:272px;flex:0 0 272px;overflow-y:auto;max-height:52vh;}',
+    /* ★ P55：按城址找城 + 大地图可点选。 */
+    '#slgDispatchDlg .dsearch{padding:9px 16px 0;}',
+    '#slgDispatchDlg .dsearch input{width:100%;box-sizing:border-box;background:#151811;color:#e2d6b8;',
+    '  border:1px solid #6a5f42;border-radius:5px;padding:7px 10px;font:12.5px "Microsoft YaHei",sans-serif;}',
+    '#slgDispatchDlg .dsearch input:focus{outline:1px solid #ba9a52;border-color:#ba9a52;}',
+    '#slgDispatchDlg .dbody{display:flex;gap:14px;padding:10px 16px 12px;min-height:0;overflow:hidden;}',
+    '#slgDispatchDlg .dcities{width:300px;flex:0 0 300px;overflow-y:auto;max-height:52vh;}',
     '#slgDispatchDlg .dcity{display:block;width:100%;text-align:left;background:#151811;color:#c9bfa3;',
     '  border:1px solid #3a3325;border-radius:5px;padding:7px 9px;margin-bottom:5px;cursor:pointer;',
-    '  font:12.5px "Microsoft YaHei",sans-serif;}',
+    '  font:12.5px "Microsoft YaHei",sans-serif;line-height:1.5;}',
     '#slgDispatchDlg .dcity:hover{background:#262a1e;}',
     '#slgDispatchDlg .dcity.on{background:#3a3325;border-color:#ba9a52;color:#ffe6a6;}',
+    '#slgDispatchDlg .dcity .addr{display:block;color:#a89c7c;font-size:11px;}',
+    '#slgDispatchDlg .dcity .garrison{display:block;color:#8f9c84;font-size:11px;}',
     '#slgDispatchDlg .dmap{flex:1;min-width:0;min-height:280px;background:#10150f;border:1px solid #3a3325;',
-    '  border-radius:6px;overflow:hidden;}',
-    '#slgDispatchDlg .dmap svg{display:block;width:100%;height:100%;}',
+    '  border-radius:6px;overflow:hidden;display:flex;flex-direction:column;}',
+    '#slgDispatchDlg .dmap svg{display:block;width:100%;height:100%;flex:1;min-height:0;}',
+    '#slgDispatchDlg .dmap .dpin.own:hover circle:last-of-type{stroke:#ffe9b0;stroke-width:8;}',
+    /* ★ P55：整编弹窗统一到「深底 + 金线 + 分区」语言，与调防弹窗同一套观感。 */
+    '#slgFormupDlg{width:760px;max-width:94vw;max-height:88vh;overflow:auto;background:#20221c;',
+    '  border:1px solid #ba9a52;border-radius:10px;color:#e2d6b8;box-shadow:0 18px 60px rgba(0,0,0,.8);',
+    '  font:13px "Microsoft YaHei",sans-serif;}',
+    '#slgFormupDlg .fhead{display:flex;align-items:center;padding:13px 18px;border-bottom:1px solid #3a3325;}',
+    '#slgFormupDlg .fhead b{font-size:15px;color:#f0d998;}',
+    '#slgFormupDlg .fhead .fsub{display:block;color:#a89c7c;font-size:11.5px;margin-top:3px;}',
+    '#slgFormupDlg .fhead .fx{margin-left:auto;cursor:pointer;color:#9c9382;font-size:16px;padding:0 5px;}',
+    '#slgFormupDlg .fbody{padding:14px 18px;}',
+    '#slgFormupDlg .fnote{color:#a89c7c;line-height:1.75;font-size:12px;margin-bottom:11px;}',
+    '#slgFormupDlg .fsummary{background:#242820;border:1px solid #6a5f42;border-radius:5px;',
+    '  padding:8px 11px;margin-bottom:12px;color:#f0d998;font-size:12.5px;}',
+    '#slgFormupDlg .fslots{display:flex;flex-direction:column;gap:9px;}',
+    '#slgFormupDlg .fslot{display:flex;gap:9px;align-items:center;background:#191b14;',
+    '  border:1px solid #3a3325;border-radius:7px;padding:10px 12px;}',
+    '#slgFormupDlg .frole{flex:0 0 86px;color:#ffdf9a;}',
+    '#slgFormupDlg .frole b{display:block;font-size:13px;}',
+    '#slgFormupDlg .frole span{font-size:11.5px;color:#a89c7c;}',
+    '#slgFormupDlg .fsel{flex:1;min-width:140px;max-width:240px;background:#2a2617;border:1px solid #7a6a42;',
+    '  color:#e8e0cc;padding:6px 7px;border-radius:4px;font:12.5px "Microsoft YaHei",sans-serif;}',
+    '#slgFormupDlg .ftroop{flex:0 0 116px;color:#a89c7c;font-size:11px;}',
+    '#slgFormupDlg .ftroop input{display:block;width:100%;box-sizing:border-box;margin-top:3px;background:#2a2617;',
+    '  border:1px solid #7a6a42;color:#fff;padding:5px 6px;border-radius:4px;font:13px "Microsoft YaHei",sans-serif;}',
+    '#slgFormupDlg .fmeta{flex:0 0 118px;color:#a89c7c;font-size:11.5px;line-height:1.5;}',
+    '#slgFormupDlg .ffoot{display:flex;align-items:center;gap:8px;padding:12px 18px;border-top:1px solid #3a3325;}',
+    '#slgFormupDlg .fsp{flex:1;}',
+    '#slgFormupDlg .fbtn{background:#2c2f22;border:1px solid #7a6a42;color:#e8d7a8;',
+    '  padding:6px 15px;border-radius:4px;cursor:pointer;font:12.5px "Microsoft YaHei",sans-serif;}',
+    '#slgFormupDlg .fbtn:hover{background:#474029;}',
+    '#slgFormupDlg .fbtn.primary{background:#7a5c1e;border-color:#ba9a52;color:#ffe9b0;}',
     '#slgDispatchDlg .dfoot{display:flex;align-items:center;gap:8px;padding:11px 16px;border-top:1px solid #3a3325;}',
     '#slgDispatchDlg .dfoot .dest{color:#f0d998;flex:1;}',
     '#slgPanelsWin .genrow{display:flex;align-items:center;gap:4px;width:100%;text-align:left;background:transparent;color:#c9bfa3;border:1px solid transparent;',
@@ -725,15 +770,13 @@
     return out + '</div>';
   }
 
-  /* ★ 批量调防选城弹窗：右半张小地图与沙盘同坐标系（2400×1350），
-     金色圈=目的城、浅金点=调出城、虚线=调遣方向；点选时沙盘也同步定位。
-     这里只画位置与文字，不重算任何战力/粮耗，数值一律来自服务端视图。 */
+  /* ★ P55：批量调防选城弹窗的「大地图」——与沙盘共用 2400×1350 坐标系，
+     直接铺真实全景底图（/__slg/strategy/panorama.png，与沙盘同一张），全部城池按
+     配置坐标落点；己方城是可点的金色标记，点地图上的城即可选为目的地，
+     并同步把沙盘定位到该城。这里只画位置/城址，不重算任何战力/粮耗。 */
   function dispatchMapSvg(destId) {
     var cities = (data.strategy || {}).cities || [];
     var dest = cities.find(function (c) { return Number(c.id) === Number(destId); });
-    if (!dest || !Number(dest.x) || !Number(dest.y)) {
-      return '<div style="padding:18px;color:#9c9382;font-size:12px">先在左侧选一座目的城市，地图上会标出它与调出城的位置。</div>';
-    }
     var src = {};
     (data.generals || []).forEach(function (g) {
       if (ui.genPick.indexOf(Number(g.id)) < 0) return;
@@ -742,34 +785,46 @@
       });
       if (from && Number(from.id) !== Number(destId)) src[from.id] = true;
     });
-    var lines = Object.keys(src).map(Number).map(function (id) {
+    var lines = !dest ? '' : Object.keys(src).map(Number).map(function (id) {
       var c = cities.find(function (x) { return Number(x.id) === id; });
       if (!c || !Number(c.x) || !Number(c.y)) return '';
       return '<line x1="' + c.x + '" y1="' + c.y + '" x2="' + dest.x + '" y2="' + dest.y
-        + '" stroke="#d8b45a" stroke-width="7" stroke-dasharray="20 14" opacity=".8"/>';
+        + '" stroke="#ffcf6b" stroke-width="8" stroke-dasharray="22 15" opacity=".85"/>';
     }).join('');
-    var dots = cities.filter(function (c) {
-      return c.owner === 'player' && Number(c.x) && Number(c.y) && Number(c.id) !== Number(destId);
-    }).map(function (c) {
+    /* 所有城池都落点：己方金点可点选、他在灰点仅作方位参照。each pin carries
+       data-city so paint() can bind a real click → 选城不再只能靠左侧列表。 */
+    var pins = cities.filter(function (c) { return Number(c.x) && Number(c.y); }).map(function (c) {
+      var own = c.owner === 'player';
       var isSrc = !!src[c.id];
-      return '<circle cx="' + c.x + '" cy="' + c.y + '" r="' + (isSrc ? 17 : 10) + '" fill="'
-        + (isSrc ? '#d8b45a' : '#70895b') + '" stroke="#151811" stroke-width="5"/>'
-        + (isSrc ? '<text x="' + (c.x + 26) + '" y="' + (c.y + 20) + '" font-size="56" fill="#e8d4a2">'
-          + esc(c.name) + '</text>' : '');
+      var isDest = !!dest && Number(c.id) === Number(dest.id);
+      var addr = [c.province, c.jun, c.today].filter(Boolean).join(' · ');
+      var title = esc(c.name + (addr ? '（' + addr + '）' : '') + (own ? ' · 己方' : ''));
+      if (isDest) return ''; // 目的城单独画大标记，避免重叠
+      var r = own ? (isSrc ? 19 : 13) : 7;
+      var fill = own ? (isSrc ? '#ffcf6b' : '#9fc47a') : '#5b6350';
+      var label = (own || isSrc) ? '<text x="' + (c.x + r + 9) + '" y="' + (c.y + 16)
+        + '" font-size="42" fill="' + (isSrc ? '#ffe9b0' : '#cfe0b4') + '">' + esc(c.name) + '</text>' : '';
+      return '<g class="dpin' + (own ? ' own' : '') + '" data-city="' + c.id + '" title="' + title + '"'
+        + (own ? ' style="cursor:pointer"' : '') + '>'
+        + '<circle cx="' + c.x + '" cy="' + c.y + '" r="' + (r + 9) + '" fill="transparent"/>'
+        + '<circle cx="' + c.x + '" cy="' + c.y + '" r="' + r + '" fill="' + fill
+        + '" stroke="#10150f" stroke-width="5"/>' + label + '</g>';
     }).join('');
-    var right = Number(dest.x) > 1850;
-    var mark = '<circle cx="' + dest.x + '" cy="' + dest.y + '" r="44" fill="none" stroke="#ffcf6b" stroke-width="9" opacity=".9"/>'
-      + '<circle cx="' + dest.x + '" cy="' + dest.y + '" r="18" fill="#ffcf6b" stroke="#3a2c12" stroke-width="6"/>'
-      + '<text x="' + (dest.x + (right ? -62 : 62)) + '" y="' + (dest.y + 22) + '" font-size="64"'
-      + ' text-anchor="' + (right ? 'end' : 'start') + '" fill="#ffe9b0" font-weight="bold">' + esc(dest.name) + '</text>';
-    return '<div style="padding:7px 10px;color:#9c9382;font-size:11.5px;border-bottom:1px solid #3a3325">'
-      + '金圈＝目的城市 · 浅金点＝调出城 · 虚线＝调遣方向；选城时沙盘同步定位。</div>'
-      + '<svg viewBox="0 0 2400 1350" preserveAspectRatio="xMidYMid meet" aria-label="调防目的地地图">'
-      + '<rect x="0" y="0" width="2400" height="1350" fill="#10150f"/>'
-      + '<g opacity=".22"><path d="M0 300H2400M0 600H2400M0 900H2400M0 1200H2400'
-      + 'M300 0V1350M600 0V1350M900 0V1350M1200 0V1350M1500 0V1350M1800 0V1350M2100 0V1350"'
-      + ' stroke="#6b6a4c" stroke-width="2"/></g>'
-      + lines + dots + mark + '</svg>';
+    var mark = !dest ? '' : (function () {
+      var right = Number(dest.x) > 1850;
+      return '<g data-city="' + dest.id + '" style="cursor:pointer">'
+        + '<circle cx="' + dest.x + '" cy="' + dest.y + '" r="52" fill="none" stroke="#ffcf6b" stroke-width="11" opacity=".95"/>'
+        + '<circle cx="' + dest.x + '" cy="' + dest.y + '" r="22" fill="#ffcf6b" stroke="#3a2c12" stroke-width="7"/>'
+        + '<text x="' + (dest.x + (right ? -66 : 66)) + '" y="' + (dest.y + 24) + '" font-size="66"'
+        + ' text-anchor="' + (right ? 'end' : 'start') + '" fill="#ffe9b0" font-weight="bold">' + esc(dest.name) + '</text></g>';
+    })();
+    return '<div style="padding:7px 10px;color:#b9ad90;font-size:11.5px;border-bottom:1px solid #3a3325">'
+      + '金圈＝目的城市 · 浅金点＝调出城 · 虚线＝调遣方向；金点＝可选己方城、灰点＝他城方位；<b>直接点地图上的城即可选定</b>，沙盘同步定位。</div>'
+      + '<svg viewBox="0 0 2400 1350" preserveAspectRatio="xMidYMid meet" aria-label="调防目的地大地图">'
+      + '<image href="/__slg/strategy/panorama.png" x="0" y="0" width="2400" height="1350"'
+      + ' preserveAspectRatio="none" opacity=".62"/>'
+      + '<rect x="0" y="0" width="2400" height="1350" fill="#10150f" opacity=".18"/>'
+      + lines + pins + mark + '</svg>';
   }
 
   function openDispatchDialog() {
@@ -783,39 +838,62 @@
     mask.id = 'slgDispatchMask';
     mask.innerHTML = '<div id="slgDispatchDlg">'
       + '<div class="dhead"><b>批量调防 · 选择目的城市</b><span class="x" data-close="1" title="关闭">✕</span></div>'
+      + '<div class="dsearch"><input data-role="query" type="search" placeholder="按城名 / 州郡 / 今地找城，如 长安 / 司隶 / 陕西"'
+      + ' autocomplete="off"/></div>'
       + '<div class="dbody"><div class="dcities" data-role="cities"></div>'
       + '<div class="dmap" data-role="map"></div></div>'
       + '<div class="dfoot"><span class="dest" data-role="dest"></span>'
       + '<button class="btn" data-act="dispatchDlgCancel">取消</button>'
       + '<button class="btn" data-act="dispatchDlgOk">确认调防</button></div></div>';
     document.body.appendChild(mask);
+    var query = '';
     function close(restore) {
       if (restore) { ui.dispatchTo = prev; persistUI(); }
       mask.remove();
       render();
     }
+    var addrOf = function (c) { return [c.province, c.jun, c.today].filter(Boolean).join(' · '); };
+    function pick(id) {
+      ui.dispatchTo = Number(id) || 0;
+      persistUI();
+      paint();
+      if (ui.dispatchTo && window.__slgMapPreviewCity) window.__slgMapPreviewCity(ui.dispatchTo);
+    }
     function paint() {
       var box = mask.querySelector('[data-role="cities"]');
-      box.innerHTML = cities.map(function (c) {
+      var q = String(query || '').trim();
+      var shown = cities.filter(function (c) {
+        if (!q) return true;
+        return (c.name + addrOf(c)).indexOf(q) >= 0;
+      });
+      box.innerHTML = (shown.length ? shown : cities).map(function (c) {
         var on = Number(c.id) === Number(ui.dispatchTo);
         return '<button class="dcity' + (on ? ' on' : '') + '" data-city="' + c.id + '">'
           + (on ? '◉ ' : '○ ') + esc(c.name)
-          + '<span style="color:#9c9382"> · ' + esc(c.province || '—')
-          + ' · 驻军 ' + fmt(c.garrison || c.troops || 0) + '</span></button>';
+          + '<span class="addr">' + esc(addrOf(c) || '—') + '</span>'
+          + '<span class="garrison">驻军 ' + fmt(c.garrison || c.troops || 0) + '</span></button>';
       }).join('');
       Array.prototype.forEach.call(box.querySelectorAll('.dcity'), function (b) {
-        b.onclick = function () {
-          ui.dispatchTo = Number(b.getAttribute('data-city')) || 0;
-          persistUI();
-          paint();
-          if (window.__slgMapPreviewCity) window.__slgMapPreviewCity(ui.dispatchTo);
+        b.onclick = function () { pick(b.getAttribute('data-city')); };
+      });
+      var mapEl = mask.querySelector('[data-role="map"]');
+      mapEl.innerHTML = dispatchMapSvg(ui.dispatchTo);
+      /* ★ P55：大地图上的城点真可点——只接受己方城作目的地，他城点给出中文说明。 */
+      Array.prototype.forEach.call(mapEl.querySelectorAll('.dpin'), function (p) {
+        p.onclick = function () {
+          var cid = Number(p.getAttribute('data-city')) || 0;
+          var c = cities.find(function (x) { return Number(x.id) === cid; });
+          if (!c) return;
+          if (c.owner !== 'player') return toast('只能调往己方城池：' + c.name, true);
+          pick(cid);
         };
       });
-      mask.querySelector('[data-role="map"]').innerHTML = dispatchMapSvg(ui.dispatchTo);
       var d = cities.find(function (c) { return Number(c.id) === Number(ui.dispatchTo); });
       mask.querySelector('[data-role="dest"]').textContent = '已选 ' + ui.genPick.length + ' 人 → '
         + (d ? '目的城：' + d.name + '（' + (d.province || '—') + '）' : '请先选目的城市');
     }
+    var queryEl = mask.querySelector('[data-role="query"]');
+    if (queryEl) queryEl.addEventListener('input', function () { query = queryEl.value || ''; paint(); });
     mask.querySelector('[data-close]').onclick = function () { close(true); };
     mask.querySelector('[data-act="dispatchDlgCancel"]').onclick = function () { close(true); };
     mask.querySelector('[data-act="dispatchDlgOk"]').onclick = function () {

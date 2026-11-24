@@ -40,6 +40,34 @@ export function formationGeneralCheck(state, { generalId, cityId, armyId = 0, mi
   return { ok: true, general: g };
 }
 
+/**
+ * 武将离开槽位（调防/撤将）时把该槽兵力与在途征兵退回驻城，绝不留「空槽带兵」。
+ * ★ P55：调防旧实现只摘武将、不清兵/在途，留下 generals[i]=0 && soldiers[i]>0 的幽灵槽；
+ *   这些兵会被计入战损却不上阵，还因 empty_slot 永远无法补兵。与 army.dispose 同口径。
+ * 返回退回的兵数（含在途）。无驻城记录时退到玩家主城，绝不往空槽回填。
+ */
+export function releaseSlot(state, army, slot) {
+  const i = Number(slot);
+  const at = Number(army?.cityId) || 0;
+  const back = Math.max(0, Math.floor(Number(army?.soldiers?.[i]) || 0))
+    + Math.max(0, Math.floor(Number(army?.con_cnts?.[i]) || 0));
+  const clear = (list) => Array.isArray(list)
+    ? [0, 1, 2].map((k) => (k === i ? 0 : Math.max(0, Math.floor(Number(list[k]) || 0))))
+    : [0, 0, 0];
+  army.soldiers = clear(army.soldiers);
+  army.con_cnts = clear(army.con_cnts);
+  army.con_times = clear(army.con_times);
+  army.conToken = Math.floor(Number(army.conToken) || 0) + 1; // 作废该槽在途定时器
+  const st = state?.strategy || {};
+  const city = st.cities?.[at]
+    || st.cities?.[Number(st.playerCity)]
+    || Object.values(st.cities || {}).find((c) => c && c.owner === 'player');
+  if (back > 0 && city) {
+    city.troops = Math.max(0, Math.floor(Number(city.troops) || 0) + back);
+  }
+  return back;
+}
+
 /** `g.order` 是队伍编号的派生字段：任何编队落账后都从此重算，避免残留旧编号。 */
 export function syncGeneralOrders(state) {
   for (const g of state.generals || []) g.order = 0;
