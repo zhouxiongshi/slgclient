@@ -3,8 +3,8 @@
   "generatedBy": "tools/mirror-official-skills.mjs",
   "sourceUrl": "https://g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10",
   "sourceSha256": "db82f837fb765ea11de77398ddbe57ba66f6e8022b8140403e58c4130cfe3d92",
-  "count": 10,
-  "skippedCount": 166,
+  "count": 8,
+  "skippedCount": 168,
   "rules": "同名逐字匹配；仅镜像伤害/治疗/控制/增减益可忠实落地的百分比槽；其余保留原样",
   "skills": [
     {
@@ -211,356 +211,6 @@
           "officialTarget": "敌军群体（有效距离内2个目标）",
           "officialLv1": "对敌军群体发动一次攻击（伤害率75.0%），并使敌军群体进行策略攻击的伤害降低25.0%（受攻击属性影响），持续1回合",
           "officialLv10": "对敌军群体发动一次攻击（伤害率150.0%），并使敌军群体进行策略攻击的伤害降低50.0%（受攻击属性影响），持续1回合"
-        }
-      }
-    },
-    {
-      "cfgId": 10008,
-      "name": "一骑当千",
-      "trigger": 1,
-      "dir": "zhudong",
-      "ui": {
-        "cfgId": 10008,
-        "name": "一骑当千",
-        "des": "1回合准备，对敌军全体发动一次猛烈攻击（伤害率%n%%）",
-        "trigger": 1,
-        "target": 9,
-        "limit": 3,
-        "arms": [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          8,
-          9
-        ],
-        "include_effect": [
-          1
-        ],
-        "levels": [
-          {
-            "probability": 30,
-            "effect_value": [
-              140
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              155.56
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              171.11
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              186.67
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              202.22
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              217.78
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              233.33
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              248.89
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              264.44
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              280
-            ],
-            "effect_round": [
-              0
-            ]
-          }
-        ],
-        "range": 5,
-        "rangeNote": "有效距离 3 · 单体"
-      },
-      "kernel": {
-        "cfgId": 10008,
-        "name": "一骑当千",
-        "skill_class": "主动",
-        "effect_type": "PHYSICAL_DAMAGE",
-        "rate_pct_lv1": 140,
-        "rate_pct_lv10": 280,
-        "probability_init": 0.3,
-        "probability_max": 0.3,
-        "prepare": 1,
-        "target_type": "enemy_all",
-        "attack_type": "normal",
-        "control_state": null,
-        "control_probability": 0,
-        "bonus_terms": [],
-        "detail_id": 900007,
-        "effects": [
-          {
-            "detail_id": 900007,
-            "effect_type": "PHYSICAL_DAMAGE",
-            "rate_pct": 280,
-            "target_type": "enemy_all",
-            "attack_type": "normal",
-            "available_round": 0,
-            "control_probability": 0,
-            "control_state": null,
-            "bonus_terms": []
-          }
-        ]
-      },
-      "provenance": {
-        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
-        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
-        "rateSource": "片段内 lv1→lv10 真实成长对",
-        "pairing": "reconstructed",
-        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径",
-        "mirror": {
-          "officialId": 200647,
-          "sourceUrl": "https://g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10",
-          "sourceSha256": "db82f837fb765ea11de77398ddbe57ba66f6e8022b8140403e58c4130cfe3d92",
-          "officialType": "主动",
-          "officialProbability": "30%",
-          "officialTarget": "敌军群体（有效距离内3个目标）",
-          "officialLv1": "1回合准备，对敌军全体发动一次猛烈攻击（伤害率140.0%）",
-          "officialLv10": "1回合准备，对敌军全体发动一次猛烈攻击（伤害率280.0%）"
-        }
-      }
-    },
-    {
-      "cfgId": 10019,
-      "name": "乱阵",
-      "trigger": 1,
-      "dir": "zhudong",
-      "ui": {
-        "cfgId": 10019,
-        "name": "乱阵",
-        "des": "使敌军群体进行策略攻击时的伤害降低%n%%（受谋略属性影响），持续2回合",
-        "trigger": 1,
-        "target": 8,
-        "limit": 3,
-        "arms": [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          8,
-          9
-        ],
-        "include_effect": [
-          1
-        ],
-        "levels": [
-          {
-            "probability": 30,
-            "effect_value": [
-              7.5
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              8.33
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              9.17
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              10
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              10.83
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              11.67
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              12.5
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              13.33
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              14.17
-            ],
-            "effect_round": [
-              0
-            ]
-          },
-          {
-            "probability": 30,
-            "effect_value": [
-              15
-            ],
-            "effect_round": [
-              0
-            ]
-          }
-        ],
-        "range": 4,
-        "rangeNote": "有效距离 3 · 单体"
-      },
-      "kernel": {
-        "cfgId": 10019,
-        "name": "乱阵",
-        "skill_class": "主动",
-        "effect_type": "DEBUFF",
-        "rate_pct_lv1": 7.5,
-        "rate_pct_lv10": 15,
-        "probability_init": 0.3,
-        "probability_max": 0.3,
-        "prepare": 0,
-        "target_type": "enemy_single",
-        "attack_type": "normal",
-        "control_state": null,
-        "control_probability": 0,
-        "bonus_terms": [
-          {
-            "name": "伤害降低",
-            "value": 7.5,
-            "op": 0
-          }
-        ],
-        "detail_id": 900018,
-        "effects": [
-          {
-            "detail_id": 900018,
-            "effect_type": "DEBUFF",
-            "rate_pct": 15,
-            "target_type": "enemy_single",
-            "attack_type": "normal",
-            "available_round": 0,
-            "control_probability": 0,
-            "control_state": null,
-            "bonus_terms": [
-              {
-                "name": "伤害降低",
-                "value": 7.5,
-                "op": 0
-              }
-            ]
-          }
-        ]
-      },
-      "provenance": {
-        "descSource": "battle-kit/data/damage_rates.csv 片段 0x766c483a/5635（原文）",
-        "nameSource": "battle-kit/data/skill_names.csv（真实名录）",
-        "rateSource": "片段内 lv1→lv10 真实成长对",
-        "pairing": "reconstructed",
-        "probability": "原始概率未解包，按 02-技能与效果字典.md §1 占位口径",
-        "mirror": {
-          "officialId": 200200,
-          "sourceUrl": "https://g0.gph.netease.com/ngsocial/community/stzb/cfg/skill_extra.json?gameid=g10",
-          "sourceSha256": "db82f837fb765ea11de77398ddbe57ba66f6e8022b8140403e58c4130cfe3d92",
-          "officialType": "主动",
-          "officialProbability": "30%",
-          "officialTarget": "敌军群体（有效距离内1-2个目标）",
-          "officialLv1": "使敌军群体进行策略攻击时的伤害降低7.5%（受谋略属性影响），持续2回合",
-          "officialLv10": "使敌军群体进行策略攻击时的伤害降低15.0%（受谋略属性影响），持续2回合"
         }
       }
     },
@@ -2005,6 +1655,11 @@
       "reason": "描述含本作内核不支持的条件/叠加/多段机制"
     },
     {
+      "cfgId": 10008,
+      "name": "一骑当千",
+      "reason": "目标形状不一致（本作 enemy_single / 官方 enemy_all），不做假照搬"
+    },
+    {
       "cfgId": 10009,
       "name": "万军取首",
       "reason": "描述含本作内核不支持的条件/叠加/多段机制"
@@ -2037,7 +1692,7 @@
     {
       "cfgId": 10015,
       "name": "亡命一搏",
-      "reason": "描述无可忠实映射的百分比效果槽"
+      "reason": "目标形状不一致（本作 enemy_single / 官方 enemy_group），不做假照搬"
     },
     {
       "cfgId": 10016,
@@ -2053,6 +1708,11 @@
       "cfgId": 10018,
       "name": "中级扰乱",
       "reason": "无同名条目"
+    },
+    {
+      "cfgId": 10019,
+      "name": "乱阵",
+      "reason": "目标形状不一致（本作 enemy_single / 官方 enemy_group），不做假照搬"
     },
     {
       "cfgId": 10020,

@@ -1998,7 +1998,10 @@ function settleArmyBattle(state, cfg, ctx, {
     if (added.length) {
       const names = added.map((c) => c.name).join('、');
       summary += ` 阵前擒得敌将「${names}」！可在武将府招降，也可释放或处斩。`;
-      result.report.summary = summary + counterNote;
+      /* ★ P59：抓俘后重写摘要时补回城墙与宿命两段。
+         旧写法只拼 counterNote，一场「破城 + 抓俘」的胜仗会把
+         「城墙 100% → 0%」整句吞掉，玩家看不到攻城值起了什么作用。 */
+      result.report.summary = summary + wallNote + counterNote + fateNote;
       result.report.analysis.captive = names;
       for (const c of added) {
         recordEvent(state, `${place}一战告捷，敌将「${c.name}」被俘，押入大营听候发落。`);

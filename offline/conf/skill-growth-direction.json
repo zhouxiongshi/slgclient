@@ -3,7 +3,7 @@
   "sourceSha256": "db82f837fb765ea11de77398ddbe57ba66f6e8022b8140403e58c4130cfe3d92",
   "generatedBy": "tools/sync-growth-direction.mjs",
   "note": "同名战法 Lv1→Lv10 成长方向按官方两端文案对齐；只改方向，保留原 Lv10 终点与内核机制。已镜像战法不重复处理。",
-  "count": 44,
+  "count": 46,
   "skippedCount": 53,
   "entries": [
     {
@@ -119,6 +119,126 @@
           "probability": 32,
           "effect_value": [
             200
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 10008,
+      "name": "一骑当千",
+      "skillClass": "主动",
+      "officialProbability": "30%",
+      "officialLv1": "1回合准备，对敌军全体发动一次猛烈攻击（伤害率140.0%）",
+      "officialLv10": "1回合准备，对敌军全体发动一次猛烈攻击（伤害率280.0%）",
+      "baselineLv1": {
+        "probability": 30,
+        "effect_value": [
+          140
+        ]
+      },
+      "baselineLv10": {
+        "probability": 32,
+        "effect_value": [
+          280
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "30→32",
+          "to": "32→32",
+          "official": "30→30"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 32,
+          "effect_value": [
+            140
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            155.56
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            171.11
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            186.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            202.22
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            217.78
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            233.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            248.89
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            264.44
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 32,
+          "effect_value": [
+            280
           ],
           "effect_round": [
             0
@@ -765,6 +885,126 @@
           "effect_round": [
             3,
             3,
+            3
+          ]
+        }
+      ]
+    },
+    {
+      "cfgId": 10019,
+      "name": "乱阵",
+      "skillClass": "主动",
+      "officialProbability": "30%",
+      "officialLv1": "使敌军群体进行策略攻击时的伤害降低7.5%（受谋略属性影响），持续2回合",
+      "officialLv10": "使敌军群体进行策略攻击时的伤害降低15.0%（受谋略属性影响），持续2回合",
+      "baselineLv1": {
+        "probability": 32,
+        "effect_value": [
+          30
+        ]
+      },
+      "baselineLv10": {
+        "probability": 40,
+        "effect_value": [
+          60
+        ]
+      },
+      "changes": [
+        {
+          "field": "probability",
+          "from": "32→40",
+          "to": "40→40",
+          "official": "30→30"
+        }
+      ],
+      "levels": [
+        {
+          "probability": 40,
+          "effect_value": [
+            30
+          ],
+          "effect_round": [
+            1
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            33.33
+          ],
+          "effect_round": [
+            1
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            36.67
+          ],
+          "effect_round": [
+            1
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            40
+          ],
+          "effect_round": [
+            1
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            43.33
+          ],
+          "effect_round": [
+            2
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            46.67
+          ],
+          "effect_round": [
+            2
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            50
+          ],
+          "effect_round": [
+            2
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            53.33
+          ],
+          "effect_round": [
+            2
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            56.67
+          ],
+          "effect_round": [
+            3
+          ]
+        },
+        {
+          "probability": 40,
+          "effect_value": [
+            60
+          ],
+          "effect_round": [
             3
           ]
         }

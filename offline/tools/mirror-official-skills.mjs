@@ -195,6 +195,32 @@ function mirrorOne(local, off) {
   if (!prob) return { skip: '发动率无法解析或越界：' + off.probability };
   const tgt = targetOf(off.targetType, trigger);
   if (!tgt) return { skip: '目标类型无法映射：' + off.targetType };
+  /* ★ P59：同名 ≠ 同机制。官方这条的「目标形状」或「准备回合」与本作原表不一致时整条跳过。
+     真实事故：本作 10008「一骑当千」是敌军单体、无准备；官方同名条目是
+     「1 回合准备，对敌军全体」。镜像层整条替换后，单体 140% 变成全体 140%，
+     守军一回合打我三名武将，战报只能看到「对方输出一次、我方三人各掉 200+」，
+     玩家完全无法解释。按红线「不做假照搬」——机制形状不同就不镜像，保留本地版本。
+     只比「单体 / 多目标」这一层，是因为单体↔多目标是数量级差别；
+     enemy_all ↔ enemy_group 都属多目标，允许镜像官方数值。 */
+  const shapeOf = (tt) => {
+    const x = String(tt || '');
+    if (x === 'enemy_single') return 'enemy1';
+    if (x.startsWith('enemy')) return 'enemyN';
+    if (x === 'self') return 'self';
+    if (x.startsWith('ally')) return 'ally';
+    return x;
+  };
+  const localTt = String(
+    local.kernel?.effects?.[0]?.target_type || local.kernel?.target_type || '',
+  );
+  const localPrepare = Number(local.kernel?.prepare) || 0;
+  const officialPrepare = Number((String(off.desc || '').match(/(\d+)回合准备/) || [])[1] || 0);
+  if (localTt && shapeOf(tgt.tt) !== shapeOf(localTt)) {
+    return { skip: `目标形状不一致（本作 ${localTt} / 官方 ${tgt.tt}），不做假照搬` };
+  }
+  if (localPrepare !== officialPrepare) {
+    return { skip: `准备回合不一致（本作 ${localPrepare} / 官方 ${officialPrepare}），不做假照搬` };
+  }
   const desc10 = canonical(off.desc);
   const desc1 = canonical(off['desc(level1)']);
   const lv10 = parseDesc(desc10);

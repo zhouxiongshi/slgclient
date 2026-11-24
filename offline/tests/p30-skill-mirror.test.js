@@ -26,12 +26,22 @@ const SOURCE_PATH = process.env.SLG_OFFICIAL_SKILL_JSON
 const doc = JSON.parse(readFileSync(MIRROR_PATH, 'utf8'));
 const round2 = (n) => Math.round(Number(n) * 100) / 100;
 
-test('镜像规模与来源可追溯：至少 10 条，skip 台账完整', () => {
-  assert.ok(doc.skills.length >= 10, `镜像条目过少（${doc.skills.length}）`);
+test('镜像规模与来源可追溯：至少 8 条，skip 台账完整', () => {
+  /* ★ P59：契约由「≥10」降为「≥8」。10008 一骑当千（本作单体 / 官方全体）、
+     10015 亡命一搏、10019 乱阵（本作单体 / 官方群体）三条属于「同名但机制形状不同」，
+     镜像层整条替换会把单体变成群体——守军一回合打三名武将，正是战报 9 输掉的主因之一。
+     按红线「不做假照搬」回退原表，条目数随之减少；下面另加断言锁死这 3 条不许回流。 */
+  assert.ok(doc.skills.length >= 8, `镜像条目过少（${doc.skills.length}）`);
   assert.ok(doc.skippedCount >= 50, '未命同名 / 内核不支持的条目必须留痕');
   assert.equal(doc.skipped.length, doc.skippedCount);
   assert.match(doc.sourceUrl, /^https:\/\//);
   assert.match(doc.sourceSha256, /^[0-9a-f]{64}$/);
+  const shapeSkipped = doc.skipped
+    .filter((s) => /目标形状不一致|准备回合不一致/.test(String(s.reason || '')))
+    .map((s) => Number(s.cfgId));
+  for (const id of [10008, 10015, 10019]) {
+    assert.ok(shapeSkipped.includes(id), `${id} 机制形状与原表不同，必须留在 skip 台账、不许回到镜像`);
+  }
   if (existsSync(SOURCE_PATH)) {
     const sha = createHash('sha256').update(readFileSync(SOURCE_PATH)).digest('hex');
     assert.equal(sha, doc.sourceSha256, '镜像来源与快照指纹不一致');

@@ -123,6 +123,13 @@ export function battleConfig() {
        数值未变：原包 troop_factor=1 单场 1 回合结束，四类战法来不及展开；
        0.45 让约 1.5 倍兵力能在回合上限内打崩小城，均势仍按未决处理。 */
     _cfg.troop_factor = 0.45;
+    /* ★ P59：普攻伤害率不再按 unit_id 从 83 条战法样本里哈希取一个。
+       旧实现 normalAttackEffect 用 crc32(unit_id) % 83 取样本（区间 7%~150%），
+       同一位置永久是同一个值：战报 9 里 a2 整场普攻 18.89%（每次掉 2 兵），
+       同队 a1 却是 130%。三名武将出手次数一样，伤害差 7 倍，玩家无从理解。
+       这里把样本数组填成同一个值，内核仍按原路径取，等于「普攻一律 100%」，
+       与战法描述里的伤害率基准同口径。 */
+    _cfg.damage_rates_pct = _cfg.damage_rates_pct.map(() => 100);
   }
   return _cfg;
 }
@@ -602,11 +609,17 @@ export function resolveBattle({
   const atkHead = beginSoldiers.reduce((s, n) => s + n, 0);
   const defHead = (defense.soldiers || []).reduce((s, n) => s + Math.max(0, Number(n) || 0), 0);
   const mass = attackerOddsMul(atkHead, defHead);
+  /* ★ P59：兵力系数按「该侧总兵力」算，不按单槽兵力。
+     旧口径每个 unit 各乘 troopStrikeMul(自己的兵)：3 支 740 兵（合计 2216）各得 0.958，
+     1 支 3515 兵守军得 2.257 —— 同样 2216 兵，拆成三队攻击力只有合一的 42%，
+     等于「分兵必吃亏」。战报 9 的 17 倍单次伤害差主要来自这一项（96 vs 190）。
+     改成整侧总兵力后，拆队不再额外受罚，添兵仍然有用（设计意图保留）。 */
+  const atkStrike = troopStrikeMul(atkHead);
   attackers.forEach(({ slot, g }, i) => {
     const uid = `a${i}`;
     idMap[uid] = g.id;
     const unit = makeUnit(uid, 1, g, cfg, beginSoldiers[slot], slot);
-    unit.hero.attack_base = Math.max(1, Math.round(unit.hero.attack_base * troopStrikeMul(beginSoldiers[slot]) * mass));
+    unit.hero.attack_base = Math.max(1, Math.round(unit.hero.attack_base * atkStrike * mass));
     buildLookup(uid, unit);
     units.push(unit);
   });
@@ -615,12 +628,14 @@ export function resolveBattle({
   const wall = siegeBattle ? wallDefMul(state, siegeWall) : 1;
   const terrain = String(defenseOverride?.terrain || '');
   const terrainMul = /山|险|隘/.test(terrain) ? 1.12 : 1;
+  /* ★ P59：守方与攻方同口径——兵力系数按整侧总兵力，避免「守军拆成三队反而更弱」。 */
+  const defStrike = troopStrikeMul(defHead);
   defenders.forEach((g, i) => {
     const uid = `d${i}`;
     idMap[uid] = g.id;
     const troops = defense.soldiers[i] ?? 0;
     const unit = makeUnit(uid, 2, g, cfg, troops, i);
-    unit.hero.attack_base = Math.max(1, Math.round(unit.hero.attack_base * troopStrikeMul(troops)));
+    unit.hero.attack_base = Math.max(1, Math.round(unit.hero.attack_base * defStrike));
     if (wall !== 1 || terrainMul !== 1) {
       unit.hero.defence_base = Math.max(1, Math.round(unit.hero.defence_base * wall * terrainMul));
     }
