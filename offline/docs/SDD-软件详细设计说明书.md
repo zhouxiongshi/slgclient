@@ -2596,6 +2596,18 @@ build/SLG-Offline-win32-x64/
 5. **整编弹窗**：从 `z-index:100004`（低于六府窗 100100，从六府点整编会被遮住）抬到确认框层 100820，运粮弹窗同步；视觉统一为「深底 + 金线 + 分区」的 `#slgFormupDlg`（页头/说明/摘要/三槽卡片/页脚），三槽 0 基下标与 `data-fup` 动画钩子不变。
 6. **回归**：新增 `tests/p55-team-permissions-and-map.test.js` 9 项，含真链路空槽兵复现/行军锁/敌城权限/在途令牌/残部重编/老档迁移/失败路径脏写/UI 静态断言。FIELD-CONTRACT 已登记。
 
+### 17.40 主公归队与队伍解散 P56（2026-11-24 用户反馈）
+
+**用户原话**：队伍中，主公这个武将丢失了，无法选择，无法组队。队伍也无法解散。
+
+1. **根因**：① 武将页「全选」把在编主公一并纳入批量调防，`applyDispatch` 按 P55 口径把他从槽位摘掉并改驻地；征兵页 `general.myGenerals {cityId}` 只列本城武将，主公于是从下拉里凭空消失。② 主公不在 `general.json`（880001 无配置行），`withGeneralNames` 与整编投影回退成 `武将880001`/`武将1000`，玩家也认不出来。③ 旧协议 `general.composeGeneral`/`convert` 无主角保护，可把人抹掉；启动逻辑对无主公的现代存档直接归档重开。④ 全仓库没有删除队伍的代码：逐槽下拉选「（空）」只清槽不动队伍对象，整编三槽全 0 被 `empty_formup` 拒绝，弹窗也没有解散按钮；P55 残部重编生成 4~99 号队伍，征兵页只渲染 1~3 号且 `army.dispose` 拒绝 order>3。
+2. **主公保底**：`world.js ensureProtagonist()` 在 `normalizeWorld` 中读档兜底，现代存档缺人原地补回（清掉指向已删武将的僵尸槽、重挂空队、重登 19001），不丢资源/城池/其他武将；真旧档（version<3 或缺 clock/strategy）仍按原逻辑归档重开。`composeGeneral/convert` 命中主公时拒绝并中文 `notify`。
+3. **姓名口径**：`handlers.js generalDisplayName()`、`domain/panels.js generalName()`、`domain/strategy.js generalDisplayName()` 统一回退角色昵称（默认「主公」），覆盖候选名单、整编下拉、调防/批量调防事件与推演面板，禁止露出内部 cfgId 拼名。
+4. **归队路径**：`general.myGenerals {cityId}` 额外下发 `protagonist:{id,name,cityId,cityName,inCity}`；征兵页看到主公在别城时显示所在城与「主公归队」按钮（走单人 `dispatchGeneral`，不改兵力）；武将页「全选」只选闲置且非主公，勾选框对主公禁用，批量派发前再过滤一次。
+5. **解散路径**：新增 `domain/formation.js disbandArmy()` 唯一口径——逐槽 `releaseSlot()` 退兵/清在途/`conToken++`，武将只解除占用（驻地不变），`syncGeneralOrders()` 后从 `state.armys` 删除，下发 `army.disband` 与 `general.push`；`marchId` 队伍拒绝。WS `army.disband` 与 HTTP `action:'disbandArmy'` 共用。征兵页每队卡头、整编弹窗页脚各提供一次确认式「解散此队」；4~99 号既有队伍也显示并可撤将/解散，新建仍限 1~3。
+6. **退兵兜底**：`army.disarm` 对齐 P55 的驻城兜底（驻城缺失退到玩家主城），避免兵静默蒸发；`ACTION_REASON_TEXT`/`REASON_TEXT` 补 `over_cap`/`empty_formup`/`no_home_city`/`protagonist_locked`，玩家不会看到英文 reason 或「点了没反应」。
+7. **回归**：新增 `tests/p56-lord-recover-and-disband.test.js` 7 项（命名/别城可见/主角保护/现代存档补人/解散退兵/行军锁与 WS 入口/两处 UI 静态断言）。FIELD-CONTRACT 已登记。
+
 **红线速查（改前必看）**：INV-01~INV-10（§1.4）、ADR-01/04/07/08/13/14（§1.2）、§7.15 键空间警告、§9.3 z-index 阶梯（含回放层 100700）、§10 确定性、§14.7 报告归属、§16.4 内核改法、§17 偏差登记。
 
 ---

@@ -340,7 +340,59 @@ export function createWorld(cfg, options = {}) {
 
 /** 序章以穿越者开局：没有主公（880001）的存档是改造前的旧档，不能直接续。 */
 export function hasProtagonist(state) {
-  return (state?.generals || []).some((g) => g.isProtagonist || g.cfgId === 880001);
+  return (state?.generals || []).some((g) => g.isProtagonist || Number(g.cfgId) === 880001);
+}
+
+/**
+ * ★ P56：主公是剧情主角，不允许被「合成/转化」等旧协议入口抹掉。
+ * 存档里真缺人时原地补回（保留城池/资源/其他武将），并清理指向已删武将的僵尸槽位；
+ * 只在补人时把他塞回一支空队，玩家主动调防/解散后的闲置状态不被覆盖。
+ */
+export function ensureProtagonist(state, cfg) {
+  if (!state) return null;
+  if (!Array.isArray(state.generals)) state.generals = [];
+  const known = new Set(state.generals.map((g) => Number(g.id)).filter((id) => id > 0));
+  for (const a of state.armys || []) {
+    a.generals = [0, 1, 2].map((i) => {
+      const id = Number(a.generals?.[i]) || 0;
+      return known.has(id) ? id : 0;
+    });
+  }
+  let hero = state.generals.find((g) => g?.isProtagonist || Number(g?.cfgId) === 880001);
+  let recreated = false;
+  if (!hero) {
+    state.counters = state.counters || {};
+    const maxGeneralId = Math.max(0, ...known);
+    state.counters.generalId = Math.max(Number(state.counters.generalId) || 0, maxGeneralId + 1);
+    const cityId = Number(state.strategy?.playerCity) || Number(state.citys?.[0]?.id) || 1;
+    hero = makeGeneral(cfg, nextId(state, 'generalId'), 880001, cityId, 1);
+    hero.isProtagonist = true;
+    hero.skills = [{ id: 19001, lv: 1, cfgId: 19001 }, null, null];
+    state.generals.unshift(hero);
+    state.skills = Array.isArray(state.skills) ? state.skills : [];
+    let skill = state.skills.find((s) => Number(s?.cfgId) === 19001);
+    if (!skill) {
+      skill = { id: 19001, cfgId: 19001, generals: [] };
+      state.skills.push(skill);
+    }
+    if (!Array.isArray(skill.generals)) skill.generals = [];
+    if (!skill.generals.includes(hero.id)) skill.generals.push(hero.id);
+    recreated = true;
+  } else {
+    hero.isProtagonist = true;
+  }
+  if (recreated && !(state.armys || []).some((a) => (a.generals || []).some((id) => Number(id) === Number(hero.id)))) {
+    const army = (state.armys || []).find((a) => !a.marchId && Number(a.cityId) === Number(hero.cityId))
+      || (state.armys || []).find((a) => !a.marchId);
+    if (army) {
+      const slot = army.generals.findIndex((id) => !Number(id));
+      if (slot >= 0) {
+        army.generals[slot] = Number(hero.id);
+        hero.cityId = Number(army.cityId) || Number(hero.cityId) || 1;
+      }
+    }
+  }
+  return hero;
 }
 
 export function loadWorld(savePath) {
@@ -398,6 +450,8 @@ export function normalizeWorld(state, cfg) {
   if (!state.chat) state.chat = [];
   if (!Array.isArray(state.warReports)) state.warReports = [];
   if (!state.counters) state.counters = {};
+  /* ★ P56：合成/转化旧协议曾能把主公从名册抹掉；启动时原地补回，不再归档整份存档。 */
+  ensureProtagonist(state, cfg);
   // ★ 试玩 P1-2：旧档里的兵种槽可能是 [100, null, null]（NaN 序列化）。
   //   统一补成 3 个非负整数，客户端读 soldiers[1] 不再拿到 null。
   for (const a of state.armys || []) {

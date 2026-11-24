@@ -748,7 +748,7 @@ export function panelState(state, cfg) {
           const gc = cfg.generalByCfg.get(Number(g.cfgId)) || {};
           return {
             id: g.id,
-            name: gc.name || `武将${g.id}`,
+            name: generalName(state, cfg, g),
             arms: ARMS_NAMES[i + 1] || '',
             apt: Math.round(armsApt({ force: gc.force, strategy: gc.strategy, defense: gc.defense }, i + 1) * 100),
             loyal: Math.round(g.loyal ?? 88),
@@ -756,9 +756,8 @@ export function panelState(state, cfg) {
         }),
       })),
       allGenerals: (state.generals || []).map((g) => {
-        const gc = cfg.generalByCfg.get(Number(g.cfgId)) || {};
         return {
-          id: g.id, name: gc.name || `武将${g.id}`,
+          id: g.id, name: generalName(state, cfg, g),
           /* ★ 2026-11-16：编队弹窗逐槽显示带兵上限（随官阶浮动） */
           rank: rankOfMerit(g.merit), slotCap: slotCapOf(g),
           /* ★ 2026-11-17：编队下拉标注所在城，避免把别城武将误拉进本队 */

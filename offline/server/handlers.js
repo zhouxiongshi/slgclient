@@ -50,7 +50,7 @@ import { noteIfGeneralDown } from './command.js';
 import { factionTraitOf, protagonistStat } from './domain/oath.js';
 import { conscriptNeed, checkSlotCaps, splitEven, affordableConscript, planDisarm, ARMS_NAMES } from './domain/conscript.js';
 /* ★ P54：编队资格（同城 / 一人一队 / 派生 order）唯一口径，与六府整编共用。 */
-import { formationGeneralCheck, syncGeneralOrders, releaseSlot } from './domain/formation.js';
+import { formationGeneralCheck, syncGeneralOrders, releaseSlot, disbandArmy } from './domain/formation.js';
 import { foundNation, foundStatus, playerIdentity } from './domain/faction-identity.js';
 
 const OK = 0;
@@ -440,11 +440,18 @@ function armyById(state, id) {
   return findArmy(state, Number(id));
 }
 
+/** 主公不在一般武将配置表里：统一用角色昵称兜底，别再露出「武将880001」。 */
+function generalDisplayName(state, cfg, g) {
+  if (!g) return '';
+  if (g.isProtagonist || Number(g.cfgId) === 880001) return state.role?.nickName || '主公';
+  return cfg.generalByCfg?.get?.(Number(g.cfgId))?.name || g.name || '';
+}
+
 /** 玩家已拥有技能 = 所有武将装配技能的去重集合（原 proto.Skill{id,cfgId,generals}）。 */
 function withGeneralNames(state, cfg, list) {
   return list.map((g) => ({
     ...g,
-    name: cfg.generalByCfg.get(g.cfgId)?.name || '',
+    name: generalDisplayName(state, cfg, g),
     star: g.star ?? 0,
     skills: (g.skills || []).map((s) => {
       if (!s) return null;
@@ -1035,7 +1042,18 @@ export function handleRequest(ctx, req) {
       const list = cityId > 0
         ? state.generals.filter((g) => Number(g.cityId) === cityId)
         : state.generals;
-      rsp.msg = { generals: withGeneralNames(state, cfg, clone(list)), cityId };
+      /* ★ P56：主公即使因旧批量调防去了别城也要让征兵页看得见「人在哪里」，
+         否则候选列表里凭空少一个人，玩家只会以为武将丢了。 */
+      const hero = state.generals.find((g) => g?.isProtagonist || Number(g?.cfgId) === 880001) || null;
+      const heroCity = Number(hero?.cityId) || 0;
+      rsp.msg = {
+        generals: withGeneralNames(state, cfg, clone(list)), cityId,
+        protagonist: hero ? {
+          id: Number(hero.id), name: generalDisplayName(state, cfg, hero),
+          cityId: heroCity, cityName: state.strategy?.cities?.[heroCity]?.name || cityNameOf(heroCity),
+          inCity: !cityId || heroCity === cityId,
+        } : null,
+      };
       break;
     }
     case 'general.drawGeneral': {
@@ -1199,6 +1217,14 @@ export function handleRequest(ctx, req) {
     }
     case 'general.composeGeneral': {
       const ids = (m.gIds || []).map(Number);
+      /* ★ P56：旧协议曾允许把主公当材料合成，一旦抹掉就无法再组队；这里硬拦并给中文回执。 */
+      if (ids.some((id) => (state.generals || []).some((g) => Number(g.id) === id
+        && (g.isProtagonist || Number(g.cfgId) === 880001)))) {
+        notify('主公不可作为合成材料', 'warn');
+        rsp.code = CODE.InvalidParam;
+        rsp.msg = { generals: [], reason: 'protagonist_locked' };
+        break;
+      }
       state.generals = state.generals.filter((g) => !ids.includes(g.id));
       const g = makeGeneral(cfg, nextId(state, 'generalId'), Number(m.compId) || [...cfg.generalByCfg.keys()][0], mainCity(state)?.cityId ?? 1, 1);
       state.generals.push(g);
@@ -1224,6 +1250,17 @@ export function handleRequest(ctx, req) {
     }
     case 'general.convert': {
       const ids = (m.gIds || []).map(Number);
+      /* ★ P56：同上，转卖武将也不能把剧情主角卖掉。 */
+      if (ids.some((id) => (state.generals || []).some((g) => Number(g.id) === id
+        && (g.isProtagonist || Number(g.cfgId) === 880001)))) {
+        notify('主公不可转卖', 'warn');
+        rsp.code = CODE.InvalidParam;
+        rsp.msg = {
+          gIds: [], gold: Math.floor(Number(state.roleRes?.gold) || 0), add_gold: 0,
+          reason: 'protagonist_locked',
+        };
+        break;
+      }
       const add = ids.length * 100;
       state.generals = state.generals.filter((g) => !ids.includes(g.id));
       state.roleRes.gold += add;
@@ -1347,9 +1384,9 @@ export function handleRequest(ctx, req) {
       const order = Number(m.order ?? 0);
       const pos = Number(m.position ?? 0);
       const gid = Math.max(0, Math.floor(Number(m.generalId ?? 0)));
-      // ★ 试玩 P1-4：原版只有 3 支队伍。旧逻辑对 order 不做校验，客户端发 order:0
-      //   就凭空造出第 4 支空队，同一武将还能同时挂在两支队伍里。
-      if (!Number.isInteger(order) || order < 1 || order > 3) {
+      // ★ 试玩 P1-4：新建队伍仍只准 1~3；★ P55 残部重编会产生 4~99 的既有队伍，
+      //   这些队伍必须能撤将/解散，否则玩家面对空壳队毫无操作手段。
+      if (!Number.isInteger(order) || order < 1 || order > 99) {
         rsp.code = CODE.InvalidParam;
         rsp.msg = { reason: 'bad_order', army: {} };
         break;
@@ -1368,6 +1405,11 @@ export function handleRequest(ctx, req) {
         break;
       }
       let army = state.armys.find((a) => a.cityId === cityId && a.order === order);
+      if (!army && order > 3) {
+        rsp.code = CODE.InvalidParam;
+        rsp.msg = { reason: 'bad_order', army: {} };
+        break;
+      }
       // ★ 试玩 bug-2：行军中的队伍不能改编制（否则等于边走边换将补兵）
       if (army && army.marchId) {
         rsp.code = CODE.InvalidParam;
@@ -1422,6 +1464,19 @@ export function handleRequest(ctx, req) {
       ctx.push('army.push', army);
       ctx.save();
       rsp.msg = { army: clone(army) };
+      break;
+    }
+    /* ★ P56：解散整队——按 armyId 定位，退兵/清在途/释放武将/删队一次完成。 */
+    case 'army.disband': {
+      const result = disbandArmy(state, ctx, { armyId: m.armyId });
+      if (!result.ok) {
+        rsp.code = CODE.InvalidParam;
+        rsp.msg = { ...result };
+        break;
+      }
+      ctx.save();
+      notify(`第 ${result.order} 军已解散，${result.returned} 兵退回驻城`, 'ok');
+      rsp.msg = result;
       break;
     }
     /* ★ 2026-11-19 P0-2：一键征满的可征数量由服务端权威给出。
@@ -1586,8 +1641,11 @@ export function handleRequest(ctx, req) {
       army.con_cnts = [0, 0, 0];
       army.con_times = [0, 0, 0];
       army.conToken = Math.floor(Number(army.conToken) || 0) + 1; // 作废在途征兵
-      const city = state.strategy?.cities?.[Number(army.cityId)];
-      const st = state.strategy;
+      const st = state.strategy || {};
+      /* ★ P56：驻城记录缺失时退到玩家主城，绝不让遣散的兵凭空蒸发。 */
+      const city = st.cities?.[Number(army.cityId)]
+        || st.cities?.[Number(st.playerCity)]
+        || Object.values(st.cities || {}).find((c) => c && c.owner === 'player');
       if (city) city.troops = Math.max(0, Math.floor(Number(city.troops) || 0) + plan.returnToCity);
       // 返还 30% 兵值金（与裁军同口径），走流水
       const r = state.roleRes;

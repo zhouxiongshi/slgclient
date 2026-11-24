@@ -68,6 +68,31 @@ export function releaseSlot(state, army, slot) {
   return back;
 }
 
+/**
+ * ★ P56：解散整支队伍的唯一口径。
+ * 与逐槽撤将共用 releaseSlot：每槽兵力/在途退回驻城并作废定时器，
+ * 武将只解除队伍占用（驻地不变），队号回收，队伍对象从名册移除。
+ * 行军中拒绝；找不到队伍直接拒绝，绝不新建空队。
+ */
+export function disbandArmy(state, ctx, { armyId } = {}) {
+  const id = idOf(armyId);
+  const army = (state?.armys || []).find((a) => idOf(a.id) === id);
+  if (!army) return { ok: false, reason: 'no_army' };
+  if (army.marchId) return { ok: false, reason: 'marching' };
+  const generals = (army.generals || []).map((gid) => idOf(gid)).filter(Boolean);
+  let returned = 0;
+  for (let i = 0; i < 3; i += 1) returned += releaseSlot(state, army, i);
+  const info = { id: army.id, cityId: idOf(army.cityId), order: idOf(army.order), returned };
+  state.armys = state.armys.filter((a) => a !== army);
+  syncGeneralOrders(state);
+  ctx?.push?.('army.disband', info);
+  for (const gid of generals) {
+    const g = (state.generals || []).find((x) => idOf(x.id) === gid);
+    if (g) ctx?.push?.('general.push', g);
+  }
+  return { ok: true, ...info, generals };
+}
+
 /** `g.order` 是队伍编号的派生字段：任何编队落账后都从此重算，避免残留旧编号。 */
 export function syncGeneralOrders(state) {
   for (const g of state.generals || []) g.order = 0;

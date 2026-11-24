@@ -4045,6 +4045,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     no_general: '找不到该武将', dup_general: '同一武将不能重复上阵',
     in_other_army: '该武将已在别的队伍，请先从原队撤下',
     general_other_city: '该武将不在本城，请先调防到本城再编队',
+    /* ★ P56：主公不能被旧协议合成/转卖；整编退兵必须有可入账的己方城。 */
+    protagonist_locked: '主公不可合成或转卖', no_home_city: '没有可接收余兵的己方城',
     busy: '这项还在办理', cooldown: '本旬已办过，下一旬再来',
     no_gold: '库金不足', no_disaster: '本城眼下无灾可赈',
     /* ★ P40：自立与存档端点也会回英文 reason，一律在同一张中文表里兜底。 */
@@ -6170,6 +6172,26 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         var armies = (rs[0].msg && rs[0].msg.armys) || [];
         var byOrder = {};
         armies.forEach(function (a) { byOrder[a.order] = a; });
+        /* ★ P56：批量调防曾把主公一并调走，本城名单里凭空少一人。给出所在城与一键归队。 */
+        var lord = (rs[3].msg && rs[3].msg.protagonist) || null;
+        if (lord && !lord.inCity) {
+          var lordRow = el('div', 'cost');
+          lordRow.style.cssText = 'margin:6px 0;padding:6px 9px;border:1px solid #7a6a42;background:#242820;';
+          lordRow.appendChild(el('span', '',
+            '主公「' + (lord.name || '主公') + '」现驻' + (lord.cityName || ('#' + lord.cityId))
+            + '，不在本城编队候选内。'));
+          var lordBack = mkBtn('主公归队', '', function () {
+            postJSON('/__slg/strategy/action', {
+              action: 'dispatchGeneral', generalId: lord.id, toCityId: cid,
+            }).then(function (r) {
+              toast(r.ok ? '主公已回到本城，可重新编队' : (r.text || '归队失败，请先确认目的城属我方'), !r.ok);
+              tabArmy(body, c);
+            });
+          });
+          lordBack.style.marginLeft = '8px';
+          lordRow.appendChild(lordBack);
+          body.appendChild(lordRow);
+        }
 
         /* ★ P11 兵役台账：妇孺老弱不征、一户一丁、一旬只征一次、先养人口。
            一键征兵把原来「每槽输数字 + 点征兵」的 6 次点击压到 1 次。 */
@@ -6328,14 +6350,39 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
           return;
         }
 
-        [1, 2, 3].forEach(function (order) {
+        /* ★ P56：默认仍显示 3 支；P55 残部重编产生的 4~99 号队伍也要可见，否则无入口解散。 */
+        var orders = [1, 2, 3];
+        armies.forEach(function (a) {
+          if (orders.indexOf(a.order) < 0) orders.push(Number(a.order));
+        });
+        orders.sort(function (x, y) { return x - y; }).forEach(function (order) {
           var a = byOrder[order] || {
             id: 0, order: order, generals: [0, 0, 0], soldiers: [0, 0, 0], con_times: [0, 0, 0],
           };
           var total = (a.soldiers || []).reduce(function (x, y) { return x + (Number(y) || 0); }, 0);
           var card = el('div', 'card');
-          card.innerHTML = '<div class="row" style="border:none;padding:0 0 2px">'
-            + '<b style="color:#f0d998">第 ' + order + ' 军</b><span>兵力 ' + fmt(total) + '</span></div>';
+          var head = el('div', 'row');
+          head.style.cssText = 'border:none;padding:0 0 2px';
+          head.innerHTML = '<b style="color:#f0d998">第 ' + order + ' 军</b><span>兵力 ' + fmt(total) + '</span>';
+          if (a.id) {
+            var dieBtn = mkBtn('解散此队', 'ghost', function () {
+              confirmBox('解散队伍', [
+                '第 ' + order + ' 军将撤销，武将转为闲置（驻地不变）。',
+                '现有 ' + fmt(total) + ' 兵与在途征兵全部退回驻城，此操作不可撤销。',
+              ], '确认解散', '取消', function () {
+                send('army.disband', { armyId: a.id }).then(function (rsp) {
+                  if (rsp.code === 0) toast('第 ' + order + ' 军已解散，余兵退回驻城', true);
+                  else toast('解散失败：' + errText(rsp), false);
+                  tabArmy(body, c);
+                });
+              });
+            });
+            dieBtn.style.marginLeft = 'auto';
+            dieBtn.title = '撤销整支队伍，武将归闲置，兵力与在途退回驻城';
+            dieBtn.disabled = !!a.marchId;
+            head.appendChild(dieBtn);
+          }
+          card.appendChild(head);
           [0, 1, 2].forEach(function (pos) {
             var gid = (a.generals || [])[pos] || 0;
             var soldiers = (a.soldiers || [])[pos] || 0;

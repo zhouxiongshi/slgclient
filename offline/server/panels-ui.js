@@ -180,6 +180,9 @@
     no_general: '找不到该武将', same_city: '该武将已在此城', no_city: '目标城不存在',
     /* ★ P54：编队拒绝原因与征兵页同源，玩家永远看不到英文协议码。 */
     general_other_city: '该武将不在本队驻城，请先调防',
+    /* ★ P56：整编/解散失败也要中文，别把 no_home_city 之类内部码弹给玩家。 */
+    over_cap: '有槽位超过带兵上限', empty_formup: '三槽全空不能整编，请直接解散队伍',
+    no_home_city: '没有可接收余兵的己方城', protagonist_locked: '主公不可合成或转卖',
     no_captive: '该俘虏已不在营中，请刷新名单后再试',
     refused: '对方拒绝归降，忠诚下降；本次未扣金',
     escaped: '对方宁死不降，趁夜越狱；本次未扣金',
@@ -262,6 +265,7 @@
       + '<div class="ffoot"><button data-fup="even" class="fbtn">按现兵平分</button>'
       + '<span class="fsp"></span>'
       + '<button data-fup="cancel" class="fbtn">取消</button>'
+      + '<button data-fup="disband" class="fbtn">解散此队</button>'
       + '<button data-fup="ok" class="fbtn primary">确认整编</button></div></div>';
     var readSlots = function () {
       var ids = [0, 1, 2].map(function (slot) { return Number(mask.querySelector('[data-fup="gen' + slot + '"]').value) || 0; });
@@ -317,6 +321,15 @@
         for (var j = 0; j < 3 && left > 0; j++) { var room = caps[j] - vals[j]; var add = Math.min(room, left); vals[j] += add; left -= add; }
         vals.forEach(function (v, i2) { mask.querySelector('[data-fup="troop' + i2 + '"]').value = v; });
         refresh();
+        return;
+      }
+      if (k === 'disband') {
+        /* ★ P56：整编弹窗也提供真正的解散入口，不再逼玩家把三槽清零（旧服务端会拒绝）。 */
+        confirmBox('解散第 ' + army.order + ' 军？', function () {
+          strategyAction({ action: 'disbandArmy', armyId: army.id }, function (r) {
+            if (r.ok) { toast('队伍已解散，余兵退回驻城', false); mask.remove(); }
+          });
+        });
         return;
       }
       if (k === 'ok') {
@@ -727,7 +740,9 @@
     }
     /* 勾选只认当前在册武将：换档/招降后不会残留看不见的旧勾选。 */
     ui.genPick = ui.genPick.filter(function (id) {
-      return (data.generals || []).some(function (g) { return g.id === Number(id); });
+      return (data.generals || []).some(function (g) {
+        return g.id === Number(id) && !g.isProtagonist;
+      });
     });
     var out = '<div class="genlist"><div class="genpickbar">'
       + '<button class="btn" data-act="genpickAll">全选</button>'
@@ -742,7 +757,8 @@
     data.generals.forEach(function (g) {
       out += '<div class="genrow' + (g.id === ui.genId ? ' on' : '') + '">'
         + '<input class="genpick" type="checkbox" data-act="genpick" data-id="' + g.id + '"'
-        + (ui.genPick.indexOf(Number(g.id)) >= 0 ? ' checked' : '') + ' title="勾选批量调防">'
+        + (g.isProtagonist ? ' disabled title="主公不参与批量调防，请单独派遣"' : ' title="勾选批量调防"')
+        + (ui.genPick.indexOf(Number(g.id)) >= 0 ? ' checked' : '') + '>'
         + '<button class="genmain" data-act="gen" data-id="' + g.id + '">'
         + portraitThumb(g)
         + esc(g.name) + ' <span class="tag">' + esc(g.state) + '</span><small>Lv' + g.level + ' · ★' + g.star
@@ -1702,12 +1718,19 @@
     /* ★ P51 批量调防：勾选走 change；这批按钮只处理批量动作。 */
     if (act === 'genpick') return;
     if (act === 'genpickAll') {
-      ui.genPick = (data.generals || []).map(function (g) { return Number(g.id); });
+      /* ★ P56：主公与在编武将不进「全选」。旧实现把全队一把调走，
+         主公离队后征兵页按城过滤就再也看不到他，玩家以为武将丢了。 */
+      ui.genPick = (data.generals || []).filter(function (g) {
+        return !g.isProtagonist && g.state !== '在编';
+      }).map(function (g) { return Number(g.id); });
       return render();
     }
     if (act === 'genpickClear') { ui.genPick = []; return render(); }
     if (act === 'dispatchPickCity') return openDispatchDialog();
     if (act === 'dispatchBatch') {
+      ui.genPick = ui.genPick.filter(function (id) {
+        return !(data.generals || []).some(function (g) { return g.id === Number(id) && g.isProtagonist; });
+      });
       if (!ui.genPick.length) return toast('请先勾选要调遣的武将', true);
       return openDispatchDialog();
     }

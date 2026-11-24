@@ -43,6 +43,8 @@ import {
   strategyConfirmBattle, strategyRetreatBattle, strategyDigestDone,
 } from './domain/strategy.js';
 import { panelState, panelAction, panelSelfCheck } from './domain/panels.js';
+/* ★ P56：整编弹窗的「解散此队」与 WS 征兵页共用同一退兵口径。 */
+import { disbandArmy } from './domain/formation.js';
 /* ★ 2026-11-16 俘虏处置后果：放归 / 处斩的态度落账走 diplomacy 唯一权威口 */
 import { adjustAttitudeByEvent, factionList } from './domain/diplomacy.js';
 /* ★ P12 操作回执：general.upSkill 等被原版客户端静默吞掉的拒绝，经此下发。 */
@@ -121,10 +123,15 @@ export async function startOfflineServer(options = {}) {
   const skillAssets = createSkillAssets(webDir);
   let loaded = loadWorld(savePath);
   if (loaded && !hasProtagonist(loaded)) {
-    // 序章改造前的旧档：没有穿越者，也没有游戏日。归档留底，重开新局。
-    const backup = `${savePath}.pre-prologue-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-    try { renameSync(savePath, backup); console.log(`[slg-offline:info] 旧档无穿越者主公，已归档为 ${backup}，重开序章`); } catch { /* 归档失败则不读旧档 */ }
-    loaded = null;
+    /* ★ P56：序章改造前的真旧档（无游戏日/战略层）仍归档重开；
+       本版本的存档若因旧协议误删主公，则保留进度，交给 normalizeWorld 原地补人。 */
+    if (Number(loaded.version) < 3 || !loaded.clock || !loaded.strategy) {
+      const backup = `${savePath}.pre-prologue-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+      try { renameSync(savePath, backup); console.log(`[slg-offline:info] 旧档无穿越者主公，已归档为 ${backup}，重开序章`); } catch { /* 归档失败则不读旧档 */ }
+      loaded = null;
+    } else {
+      console.log('[slg-offline:info] 存档缺主公，保留进度并在读档时补回穿越者');
+    }
   }
   let state = normalizeWorld(loaded || createWorld(cfg), cfg);
   /* ★ P11：登录态只存在于本次进程内存，不写存档。
@@ -691,6 +698,8 @@ export async function startOfflineServer(options = {}) {
         const act = String(body?.action || body?.act || '');
         let result;
         if (act === 'formup') result = strategyFormup(state, cfg, ctx, body);
+        /* ★ P56：解散整队（武将归闲置、兵力/在途退驻城、队伍从名册移除）。 */
+        else if (act === 'disbandArmy') result = disbandArmy(state, ctx, { armyId: Number(body?.armyId) });
         /* ★ 2026-11-17 武将调防：把闲置武将派往另一座己方城 */
         else if (act === 'dispatchGeneral') result = dispatchGeneral(state, cfg, ctx, {
           generalId: Number(body?.generalId),

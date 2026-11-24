@@ -78,6 +78,13 @@ import { loadFateGroups, fatesOfHero } from './fate-groups.js';
 export { diplomacyAct };
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+
+/** ★ P56：主公不在常规武将配置表，所有玩家可见事件/整编记录统一走这个名字口径。 */
+function generalDisplayName(state, cfg, g) {
+  if (!g) return '';
+  if (g.isProtagonist || Number(g.cfgId) === 880001) return state?.role?.nickName || '主公';
+  return cfg?.generalByCfg?.get?.(Number(g.cfgId))?.name || g.name || `武将${g.cfgId}`;
+}
 const MAP_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'map.json');
 const FACTIONS_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'factions.json');
 const SCENARIOS_DIR = resolve(ROOT, 'conf', 'campaign', 'strategy', 'scenarios');
@@ -2642,7 +2649,7 @@ export function strategyFormup(state, cfg, ctx, { armyId, generals, soldiers }) 
   syncGeneralOrders(state);   // ★ P54：g.order 是派生字段，换将后必须随队伍重算
   const names = slots.map((gid) => {
     const g = (state.generals || []).find((x) => x.id === gid);
-    return g ? (cfg?.generalByCfg?.get(g.cfgId)?.name || `武将${g.id}`) : '';
+    return g ? generalDisplayName(state, cfg, g) : '';
   });
   recordEvent(state, `整编队伍#${army.order}：${names.map((n, i) => n ? `${ARMS_NAMES[i + 1]}·${n}(${troops[i]})` : '').filter(Boolean).join('、') || '空编'}。${returnedToCity ? `余兵 ${returnedToCity} 退回驻城。` : ''}`);
   ctx.push?.('army.push', army);
@@ -2720,7 +2727,7 @@ export function dispatchGeneral(state, cfg, ctx, { generalId, toCityId, fromCity
   const check = dispatchCheck(state, st, g, to, Number(fromCityId) || 0);
   if (!check.ok) return check;
   const out = applyDispatch(state, ctx, g, to, check.from);
-  const gname = cfg?.generalByCfg?.get?.(Number(g.cfgId))?.name || g.name || `武将${gid}`;
+  const gname = generalDisplayName(state, cfg, g);
   recordEvent(state, `${gname}自${cityName(check.from)}调往${cityName(to)}。`);
   return { ok: true, ...out };
 }
@@ -2750,7 +2757,7 @@ export function dispatchGenerals(state, cfg, ctx, { generalIds, toCityId } = {})
     const g = (state.generals || []).find((x) => x.id === gid);
     const check = dispatchCheck(state, st, g, to);
     if (!check.ok) {
-      skipped.push({ generalId: gid, name: g?.name || `武将${gid}`, reason: check.reason });
+      skipped.push({ generalId: gid, name: generalDisplayName(state, cfg, g) || `武将${gid}`, reason: check.reason });
       continue;
     }
     moved.push({ g, check });
@@ -2764,7 +2771,7 @@ export function dispatchGenerals(state, cfg, ctx, { generalIds, toCityId } = {})
   for (const m of moved) rows.push(applyDispatch(state, ctx, m.g, to, m.check.from));
   const names = rows.map((r) => {
     const g = (state.generals || []).find((x) => x.id === r.generalId);
-    return cfg?.generalByCfg?.get?.(Number(g?.cfgId))?.name || g?.name || `武将${r.generalId}`;
+    return generalDisplayName(state, cfg, g) || `武将${r.generalId}`;
   });
   let text = `${names.length} 员武将调往${cityName(to)}：${names.join('、')}。`;
   if (skipped.length) {
@@ -3014,7 +3021,7 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
     .map((s) => (s && s.cfgId ? skillProfile(s.cfgId, s.lv || 1) : null))
     .filter(Boolean)
     .map((p) => ({ name: p.name, effect: p.effect, cls: p.cls, trigger: p.trigger }));
-  const genName = (g) => cfg.generalByCfg.get(g.cfgId)?.name || g.name || `武将${g.cfgId}`;
+  const genName = (g) => generalDisplayName(state, cfg, g);
   const myGenerals = (army.generals || [])
     .map((gid) => (state.generals || []).find((g) => g.id === gid))
     .filter(Boolean)
