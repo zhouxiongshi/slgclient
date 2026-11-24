@@ -15,11 +15,12 @@
     tab: 'general', genId: 0, genTab: 'skill',
     itemFilter: 'all', skillFilter: 'all', skillQuery: '', openSkill: 0, skillLimit: 24,
     selectedCity: 0, dockOpen: false, // 默认折叠：战略层已有左上按钮坞，六府只留右上角一枚小按钮，不割裂分层地图
+    genPick: [], dispatchTo: 0,       // ★ P51：批量调防的勾选与目标城
   };
   /* ★ 验收 #18：六府面板的选中对象与未完成输入（页签/选中武将/搜索词/筛选/选中城）
      跨切页、跨面板开关、跨刷新保持。白名单恢复——dockOpen 这类纯视觉开关不落盘。 */
   var UI_KEY = 'slg.panels.ui';
-  var UI_KEEP = ['tab', 'genId', 'genTab', 'itemFilter', 'skillFilter', 'skillQuery', 'openSkill', 'selectedCity', 'skillLimit'];
+  var UI_KEEP = ['tab', 'genId', 'genTab', 'itemFilter', 'skillFilter', 'skillQuery', 'openSkill', 'selectedCity', 'skillLimit', 'genPick', 'dispatchTo'];
   (function restoreUI() {
     try {
       var v = JSON.parse(window.sessionStorage.getItem(UI_KEY) || 'null');
@@ -29,6 +30,8 @@
       });
       /* 属性页已并入人物卡；老存档里残留的 attr 归一到战法页，避免空白。 */
       if (ui.genTab === 'attr') ui.genTab = 'skill';
+      if (!Array.isArray(ui.genPick)) ui.genPick = [];
+      ui.genPick = ui.genPick.map(Number).filter(function (v) { return v > 0; });
     } catch (e) { /* 隐私模式静默降级 */ }
   })();
   function persistUI() {
@@ -40,6 +43,8 @@
   }
 
   var dock = null, mask = null, toastEl = null;
+  /* ★ P51：武将页左右两栏各自的滚动位置，换人只重置详情，列表原地不动。 */
+  var genScroll = { list: 0, detail: 0, gid: 0, tab: '' };
   /* 资源内部键→玩家可见名。岗位产出键、流水兜底都走这里，禁止把 grain/gold 直接弹出。 */
   var POST_RES_LABEL = {
     wood: '木', iron: '铁', stone: '石', grain: '粮',
@@ -408,8 +413,21 @@
     '  padding:5px 13px;cursor:pointer;font:13px "Microsoft YaHei",sans-serif;}',
     '#slgPanelsWin .tabs button.on{background:#3a3325;border-color:#ba9a52;color:#ffe6a6;}',
     '#slgPanelsWin .genlist{width:218px;flex:0 0 218px;max-height:100%;overflow-y:auto;border-right:1px solid #33302a;padding-right:9px;}',
-    '#slgPanelsWin .genrow{display:block;width:100%;text-align:left;background:transparent;color:#c9bfa3;border:1px solid transparent;',
-    '  border-radius:5px;padding:7px 9px;margin-bottom:3px;cursor:pointer;font:13px "Microsoft YaHei",sans-serif;}',
+    /* ★ P51：武将页左右两栏各自独立滚动。旧结构只有 .body 一个真滚动容器，
+       列表滚到底会把详情一起带走；这里让两栏等高、各自成滚动区并切断滚动链。 */
+    '#slgPanelsWin .body.gen-body{display:flex;flex-direction:column;overflow:hidden;padding-bottom:12px;}',
+    '#slgPanelsWin .gen-body .cols{flex:1;min-height:0;overflow:hidden;align-items:stretch;}',
+    '#slgPanelsWin .gen-body .genlist{height:100%;max-height:none;overscroll-behavior:contain;}',
+    '#slgPanelsWin .gen-body .cols>.right{height:100%;overflow-y:auto;overscroll-behavior:contain;padding-right:8px;}',
+    '#slgPanelsWin .genpickbar{display:flex;flex-wrap:wrap;gap:5px;align-items:center;position:sticky;top:0;',
+    '  z-index:2;background:#151811;padding:4px 0 8px;border-bottom:1px solid #3a3325;margin-bottom:7px;}',
+    '#slgPanelsWin .genpickbar .btn{font-size:11px;padding:2px 7px;margin:0;}',
+    '#slgPanelsWin .genpickbar select{font-size:11px;padding:2px 4px;max-width:104px;}',
+    '#slgPanelsWin .genrow{display:flex;align-items:center;gap:4px;width:100%;text-align:left;background:transparent;color:#c9bfa3;border:1px solid transparent;',
+    '  border-radius:5px;padding:7px 9px;margin-bottom:3px;font:13px "Microsoft YaHei",sans-serif;}',
+    '#slgPanelsWin .genrow .genpick{flex:0 0 15px;width:15px;height:15px;accent-color:#ba9a52;cursor:pointer;margin:0;}',
+    '#slgPanelsWin .genrow .genmain{flex:1;min-width:0;background:transparent;border:0;color:inherit;',
+    '  font:inherit;text-align:left;cursor:pointer;padding:0;}',
     '#slgPanelsWin .genrow:hover{background:#20221c;}#slgPanelsWin .genrow.on{background:#3a3325;border-color:#ba9a52;color:#ffe6a6;}',
     '#slgPanelsWin .genrow small{color:#a49a84;display:block;font-size:11px;line-height:1.5;}',
     /* 人物卡：原版立绘主视觉 + 阵营色描边 + 史载五维条（不编造数值，取自 lore.historyStats） */
@@ -609,13 +627,36 @@
   }
 
   function genListHtml() {
-    var out = '<div class="genlist"><h4>帐下武将（' + data.generals.length + '）</h4>';
+    var ownCities = ((data.strategy || {}).cities || []).filter(function (c) {
+      return c.owner === 'player';
+    });
+    if (!ownCities.some(function (c) { return Number(c.id) === Number(ui.dispatchTo); })) {
+      ui.dispatchTo = ownCities.length ? Number(ownCities[0].id) : 0;
+    }
+    /* 勾选只认当前在册武将：换档/招降后不会残留看不见的旧勾选。 */
+    ui.genPick = ui.genPick.filter(function (id) {
+      return (data.generals || []).some(function (g) { return g.id === Number(id); });
+    });
+    var out = '<div class="genlist"><div class="genpickbar">'
+      + '<button class="btn" data-act="genpickAll">全选</button>'
+      + '<button class="btn" data-act="genpickClear">清空</button>'
+      + '<span class="muted">已选 ' + ui.genPick.length + ' 人</span>'
+      + (ownCities.length
+        ? '<select data-act="dispatchTo">' + ownCities.map(function (c) {
+          return '<option value="' + c.id + '"'
+            + (Number(c.id) === Number(ui.dispatchTo) ? ' selected' : '') + '>' + esc(c.name) + '</option>';
+        }).join('') + '</select><button class="btn" data-act="dispatchBatch">批量调防</button>'
+        : '<span class="muted">暂无其他己方城</span>')
+      + '</div><h4>帐下武将（' + data.generals.length + '）</h4>';
     data.generals.forEach(function (g) {
-      out += '<button class="genrow' + (g.id === ui.genId ? ' on' : '') + '" data-act="gen" data-id="' + g.id + '">'
+      out += '<div class="genrow' + (g.id === ui.genId ? ' on' : '') + '">'
+        + '<input class="genpick" type="checkbox" data-act="genpick" data-id="' + g.id + '"'
+        + (ui.genPick.indexOf(Number(g.id)) >= 0 ? ' checked' : '') + ' title="勾选批量调防">'
+        + '<button class="genmain" data-act="gen" data-id="' + g.id + '">'
         + portraitThumb(g)
         + esc(g.name) + ' <span class="tag">' + esc(g.state) + '</span><small>Lv' + g.level + ' · ★' + g.star
         + ' · <span style="color:' + (g.loyal >= 80 ? '#9ec97f' : g.loyal >= 70 ? '#d8b45a' : '#e07a5f') + '">忠' + (g.loyal != null ? g.loyal : 88) + '</span>'
-        + (g.appointed.length ? ' · 委任中' : '') + '</small></button>';
+        + (g.appointed.length ? ' · 委任中' : '') + ' · 驻' + esc(g.cityName || '—') + '</small></button></div>';
     });
     out += '<h4>在野名士（可招贤）<span class="muted" style="font-weight:normal;font-size:11px"> · 下列统率为史载五维 0~100</span></h4>';
     (data.prospects || []).forEach(function (p, i) {
@@ -1370,8 +1411,18 @@
       + ' · 物品 ' + data.items.length + ' · 战法 ' + data.library.length;
     var body = document.getElementById('slgPanelsBody');
     var scroll = body.scrollTop;
+    var lg0 = body.querySelector('.genlist'), rt0 = body.querySelector('.cols>.right');
+    if (lg0) genScroll.list = lg0.scrollTop;
+    if (rt0) genScroll.detail = rt0.scrollTop;
+    var sameHero = genScroll.gid === ui.genId && genScroll.tab === ui.genTab;
+    body.className = 'body' + (ui.tab === 'general' ? ' gen-body' : '');
     body.innerHTML = (VIEWS[ui.tab] || viewGeneral)();
-    body.scrollTop = scroll;
+    if (ui.tab === 'general') {
+      var lg1 = body.querySelector('.genlist'), rt1 = body.querySelector('.cols>.right');
+      if (lg1) lg1.scrollTop = genScroll.list;
+      if (rt1) rt1.scrollTop = sameHero ? genScroll.detail : 0;
+    } else body.scrollTop = scroll;
+    genScroll.gid = ui.genId; genScroll.tab = ui.genTab;
     persistUI();
     Array.prototype.forEach.call(dock.querySelectorAll('.pb'), function (b) {
       b.classList.toggle('on', b.getAttribute('data-id') === ui.tab && mask.style.display === 'flex');
@@ -1416,6 +1467,22 @@
       if (!to) return toast('请先选目标城', false);
       /* 走 /__slg/strategy/action 的 dispatchGeneral；成功自动刷新面板，失败给中文原因。 */
       return strategyAction({ action: 'dispatchGeneral', generalId: dgid, toCityId: to });
+    }
+    /* ★ P51 批量调防：勾选走 change；这批按钮只处理批量动作。 */
+    if (act === 'genpick') return;
+    if (act === 'genpickAll') {
+      ui.genPick = (data.generals || []).map(function (g) { return Number(g.id); });
+      return render();
+    }
+    if (act === 'genpickClear') { ui.genPick = []; return render(); }
+    if (act === 'dispatchBatch') {
+      if (!ui.genPick.length) return toast('请先勾选要调遣的武将', true);
+      var toBatch = Number(ui.dispatchTo) || 0;
+      if (!toBatch) return toast('请先选目标城', true);
+      return strategyAction({ action: 'dispatchGenerals', generalIds: ui.genPick.slice(), toCityId: toBatch },
+        function (r) {
+          if (r.ok) { ui.genPick = []; persistUI(); render(); }
+        });
     }
     if (act === 'gen') { ui.genId = Number(t.getAttribute('data-id')); return render(); }
     if (act === 'prospect') { ui.genId = -Number(t.getAttribute('data-i')) - 1; return render(); }
@@ -1529,6 +1596,18 @@
     if (act === 'appointAll') return post({ type: 'appointAll' });
     if (act === 'governorAutoFill') return post({ type: 'governorAutoFill' });
     if (act === 'citypick') { ui.selectedCity = Number(t.value); return render(); }
+    if (act === 'genpick') {
+      var gid = Number(t.getAttribute('data-id'));
+      var at = ui.genPick.indexOf(gid);
+      if (t.checked && at < 0) ui.genPick.push(gid);
+      if (!t.checked && at >= 0) ui.genPick.splice(at, 1);
+      persistUI();
+      /* 只改计数不整页重绘：否则勾选框失焦、详情跳回顶部。 */
+      var counter = document.querySelector('.genpickbar .muted');
+      if (counter) counter.textContent = '已选 ' + ui.genPick.length + ' 人';
+      return;
+    }
+    if (act === 'dispatchTo') { ui.dispatchTo = Number(t.value) || 0; persistUI(); return; }
   }
   function onInput(e) {
     var t = e.target.closest('[data-act]');

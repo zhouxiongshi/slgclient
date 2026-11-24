@@ -2650,23 +2650,25 @@ function syncGeneralsCity(state, army, cityId) {
  * 本函数是唯一调城口：只改 g.cityId（不改城池归属、不改兵力），并从原队伍摘除；
  * 行军中不可调（与 strategyFormup 同规则）。瞬发，不另算行程。
  */
-export function dispatchGeneral(state, cfg, ctx, { generalId, toCityId, fromCityId = 0 } = {}) {
-  const st = ensureStrategy(state);
-  const gid = Number(generalId) || 0;
-  const to = Number(toCityId) || 0;
-  const g = (state.generals || []).find((x) => x.id === gid);
+/* 调防的唯一校验口径：单人与批量共用，reason 只走协议，玩家文案由调用方给中文。 */
+function dispatchCheck(state, st, g, to) {
   if (!g) return { ok: false, reason: 'no_general' };
-  const from = Number(g.cityId) || Number(fromCityId) || st.playerCity || 0;
+  const from = Number(g.cityId) || st.playerCity || 0;
   if (!to) return { ok: false, reason: 'no_city' };
-  if (to === from) return { ok: false, reason: 'same_city', cityId: to };
+  if (to === from) return { ok: false, reason: 'same_city', cityId: to, from };
   const tstate = st.cities?.[to];
   if (!tstate) return { ok: false, reason: 'no_city' };
   if (tstate.owner !== 'player') return { ok: false, reason: 'not_own_city' };
   /* 行军中不可调：队伍在途时武将随军，与整编口径一致。 */
-  if ((state.armys || []).some((a) => a.marchId && (a.generals || []).includes(gid))) {
-    return { ok: false, reason: 'marching', generalId: gid };
+  if ((state.armys || []).some((a) => a.marchId && (a.generals || []).includes(Number(g.id)))) {
+    return { ok: false, reason: 'marching', generalId: Number(g.id) };
   }
-  /* 从原队伍摘除并回填 order（与 army.dispose 同口径），避免「人已走、队伍还挂着」。 */
+  return { ok: true, from };
+}
+
+/* 调防的唯一落账口径：从原队伍摘除并回填 order（与 army.dispose 同口径）。 */
+function applyDispatch(state, ctx, g, to, from) {
+  const gid = Number(g.id);
   for (const a of state.armys || []) {
     if ((a.generals || []).includes(gid)) {
       a.generals = (a.generals || []).map((id) => (Number(id) === gid ? 0 : id));
@@ -2674,10 +2676,73 @@ export function dispatchGeneral(state, cfg, ctx, { generalId, toCityId, fromCity
   }
   g.cityId = to;
   g.order = 0;
-  const gname = cfg?.generalByCfg?.get?.(Number(g.cfgId))?.name || g.name || `武将${gid}`;
-  recordEvent(state, `${gname}自${cityName(from)}调往${cityName(to)}。`);
   ctx.push?.('general.push', g);
-  return { ok: true, generalId: gid, from, to, fromName: cityName(from), toName: cityName(to) };
+  return { generalId: gid, from, to, fromName: cityName(from), toName: cityName(to) };
+}
+
+export function dispatchGeneral(state, cfg, ctx, { generalId, toCityId, fromCityId = 0 } = {}) {
+  const st = ensureStrategy(state);
+  const gid = Number(generalId) || 0;
+  const to = Number(toCityId) || 0;
+  const g = (state.generals || []).find((x) => x.id === gid);
+  if (!g) return { ok: false, reason: 'no_general' };
+  /* 兼容旧调用方显式给的出发城：仅在武将自身未记驻地时兜底。 */
+  if (!Number(g.cityId) && Number(fromCityId)) g.cityId = Number(fromCityId);
+  const check = dispatchCheck(state, st, g, to);
+  if (!check.ok) return check;
+  const out = applyDispatch(state, ctx, g, to, check.from);
+  const gname = cfg?.generalByCfg?.get?.(Number(g.cfgId))?.name || g.name || `武将${gid}`;
+  recordEvent(state, `${gname}自${cityName(check.from)}调往${cityName(to)}。`);
+  return { ok: true, ...out };
+}
+
+/**
+ * ★ P51 批量调防：一次把多名武将调往同一座己方城。
+ * 先整体校验再统一落账——出现任何不可调者只跳过该人并写明原因，
+ * 已选中的其余武将照常调；全体不可调时一人不动，避免"部分成功却看不出谁没走"。
+ */
+export function dispatchGenerals(state, cfg, ctx, { generalIds, toCityId } = {}) {
+  const st = ensureStrategy(state);
+  const to = Number(toCityId) || 0;
+  const ids = Array.isArray(generalIds)
+    ? [...new Set(generalIds.map((v) => Number(v)).filter((v) => v > 0))] : [];
+  if (!ids.length) return { ok: false, reason: 'no_general', text: '请先勾选要调遣的武将' };
+  const tstate = st.cities?.[to];
+  if (!tstate || tstate.owner !== 'player') {
+    return { ok: false, reason: 'not_own_city', text: '只能调往己方城池' };
+  }
+  const explain = {
+    no_general: '武将已不在营中', same_city: '已在此城',
+    marching: '行军中不可调', no_city: '目标城不存在', not_own_city: '目标城不属我方',
+  };
+  const moved = [];
+  const skipped = [];
+  for (const gid of ids) {
+    const g = (state.generals || []).find((x) => x.id === gid);
+    const check = dispatchCheck(state, st, g, to);
+    if (!check.ok) {
+      skipped.push({ generalId: gid, name: g?.name || `武将${gid}`, reason: check.reason });
+      continue;
+    }
+    moved.push({ g, check });
+  }
+  if (!moved.length) {
+    const why = skipped.map((s) => `${s.name}（${explain[s.reason] || '不可调'}）`).join('、');
+    return { ok: false, reason: 'all_skipped', moved: [], skipped, to,
+      text: `没有武将可调：${why}` };
+  }
+  const rows = [];
+  for (const m of moved) rows.push(applyDispatch(state, ctx, m.g, to, m.check.from));
+  const names = rows.map((r) => {
+    const g = (state.generals || []).find((x) => x.id === r.generalId);
+    return cfg?.generalByCfg?.get?.(Number(g?.cfgId))?.name || g?.name || `武将${r.generalId}`;
+  });
+  let text = `${names.length} 员武将调往${cityName(to)}：${names.join('、')}。`;
+  if (skipped.length) {
+    text += ` 未调 ${skipped.map((s) => `${s.name}（${explain[s.reason] || '不可调'}）`).join('、')}。`;
+  }
+  recordEvent(state, text);
+  return { ok: true, moved: rows, skipped, to, toName: cityName(to), text };
 }
 
 /** ★ P3 运输队：把粮从府库运往指定己方城城库，走行军队列按时抵达。

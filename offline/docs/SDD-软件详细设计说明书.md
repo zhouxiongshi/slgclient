@@ -2545,6 +2545,16 @@ build/SLG-Offline-win32-x64/
 4. **数值与联动**：`OFFICER_TICKS_TOP/OK`、KINDS 各项 cost/total/ticks 逐字不动；太守本人执行（`beginInteriorTask` 新增可选 `officerId`），太守不可用退驻城最高属性者，再退「太守亲办 ×1.5」；太守纳入 `loyaltyTick`「委任在岗」（+0.6/旬，FIELD-CONTRACT §太守制）。每一旬每城至多新开一单（赈灾另计），经济节奏与旧委任一致。
 5. **回归**：`tests/p50-governor.test.js` 9 项（任免/方针/同源扣金/缺金续办/赈灾边界/一键补任/迁移/视图/失城中止）；`p39-interior-ux` 重写为太守制断言；`m2-appoint`、`p45-material-task` 随模块删除；`p46`/`p47` 相应段落改写。
 
+### 17.35 武将页滚动解耦与批量调防 P51（2026-11-24 用户反馈）
+
+**用户原话**：武将页面，滚动鼠标，武将列表和详情同步滚动，体验很差；武将无法批量调遣，需要优化。
+
+1. **滚动根因**：旧武将页只有 `#slgPanelsBody .body` 一个真滚动容器；`.genlist{max-height:100%;overflow-y:auto}` 的百分比高度落在自动高度的 `.cols` 父级上被解析为 `auto`，左栏实际不能独立滚。鼠标停在左栏时滚动冒泡到 `.body`，把右详情一起带走。
+2. **修复**：武将页正文切到 `gen-body`（`display:flex;flex-direction:column;overflow:hidden`），`.cols` 占满剩余高度且自身不滚；左 `.genlist` 与右 `.right` 各设 `height:100%;overflow-y:auto;overscroll-behavior:contain`，成为两条独立滚动链。render 时双栏分别记 `genScroll.list/detail`，换武将只把详情归零、列表保持原位；勾选与目标城进 sessionStorage 白名单。
+3. **批量调防 UI**：左栏顶部常驻「全选 / 清空 / 已选 N 人 / 目标城 / 批量调防」，武将行加勾选框并在小字显示驻地；人物卡的单人「调防」保留作精调入口。两者共用同一份 `dispatchCheck`/`applyDispatch`，不存在第二套驻地口径。
+4. **领域口径**：新增 `strategy.dispatchGenerals`（端点 `dispatchGenerals`），先对全部勾选校验、去重，再统一落账；不可调者只跳过并在中文 `text` 写明原因（已在此城 / 行军中不可调 / 武将已不在营中），全体不可调返回 `all_skipped` 且一人不动。只改 `g.cityId`、`g.order`，从在编队伍摘除；不动兵力、城池归属、岗位委任；一次调遣只写一条汇总事件，不刷屏。FIELD-CONTRACT 已登记。
+5. **回归**：`tests/p51-general-panel.test.js` 8 项（双栏 CSS 与滚动记忆、批量 UI、批量成功/局部跳过/行军/全失败/单人回归/端点接线）；`p33`、`p41`、`p47`、`m4-a11y`、`hygiene`、`domain-coverage`、`http-endpoints`、`whitebox` 全绿。
+
 **红线速查（改前必看）**：INV-01~INV-10（§1.4）、ADR-01/04/07/08/13/14（§1.2）、§7.15 键空间警告、§9.3 z-index 阶梯（含回放层 100700）、§10 确定性、§14.7 报告归属、§16.4 内核改法、§17 偏差登记。
 
 ---

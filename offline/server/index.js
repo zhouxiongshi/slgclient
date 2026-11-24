@@ -31,7 +31,7 @@ import { dossierFor } from './domain/dossier.js';
 /* ★ M4-13：俘虏处置（放归 / 处斩），与招降共用同一份名册 */
 import { releaseCaptive, executeCaptive } from './domain/captives.js';
 import {
-  strategyViewState, oathOptions, chooseOath, strategyFormup, strategyTransport, dispatchGeneral,
+  strategyViewState, oathOptions, chooseOath, strategyFormup, strategyTransport, dispatchGeneral, dispatchGenerals,
   rewardGeneral, strategyInvest, recruitCaptive, strategyAttack, strategyRecallMarch, cancelInvest,
   previewAssault, strategyReorderMarch,
   diplomacyAct,
@@ -696,6 +696,11 @@ export async function startOfflineServer(options = {}) {
           generalId: Number(body?.generalId),
           toCityId: Number(body?.toCityId),
           fromCityId: Number(body?.fromCityId) || 0,
+        });
+        /* ★ P51 批量调防：勾选多名武将一次调往同一己方城 */
+        else if (act === 'dispatchGenerals') result = dispatchGenerals(state, cfg, ctx, {
+          generalIds: body?.generalIds,
+          toCityId: Number(body?.toCityId),
         });
         else if (act === 'transport') result = strategyTransport(state, cfg, ctx, body);
         else if (act === 'reward') result = rewardGeneral(state, cfg, ctx, body);
