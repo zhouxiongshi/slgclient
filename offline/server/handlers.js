@@ -50,7 +50,7 @@ import { noteIfGeneralDown } from './command.js';
 import { factionTraitOf, protagonistStat } from './domain/oath.js';
 import { conscriptNeed, checkSlotCaps, splitEven, affordableConscript, planDisarm, ARMS_NAMES } from './domain/conscript.js';
 /* ★ P54：编队资格（同城 / 一人一队 / 派生 order）唯一口径，与六府整编共用。 */
-import { formationGeneralCheck, syncGeneralOrders, releaseSlot, disbandArmy } from './domain/formation.js';
+import { formationGeneralCheck, syncGeneralOrders, releaseSlot, disbandArmy, normalizeArmyOrders } from './domain/formation.js';
 import { foundNation, foundStatus, playerIdentity } from './domain/faction-identity.js';
 
 const OK = 0;
@@ -356,6 +356,9 @@ function tryUseNeed(state, need, reason) {
  */
 export function settleWorld(ctx, now = Date.now()) {
   const { state, cfg } = ctx;
+  /* ★ P57：不依赖重启——老档同城重复队号在任意 WS 请求入口先拆开，
+     否则征兵页仍按 order 覆盖掉主公所在的真队伍。 */
+  normalizeArmyOrders(state);
   tickFacilities(state, cfg);
   totalYield(state, cfg);
   const settled = settleCampaign(state, cfg, ctx, now);

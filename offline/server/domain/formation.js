@@ -93,6 +93,35 @@ export function disbandArmy(state, ctx, { armyId } = {}) {
   return { ok: true, ...info, generals };
 }
 
+/**
+ * ★ P57：同城 `(cityId, order)` 必须唯一。老档（含 P54 之前创建的存档）会出现
+ * 同一座城两支 order=1：UI 按 order 建索引时后一支覆盖前一支，于是主公所在的
+ * 真队伍整队消失，下拉里主公又因「在编」被禁用——玩家看到的就是「主公丢了、
+ * 选不了、组不了队」。这里保留先建队伍的原编号，重复者顺延到首个空号并重算
+ * `g.order`；不搬将、不动兵、不改驻地。
+ */
+export function normalizeArmyOrders(state) {
+  const used = new Set();
+  const changed = [];
+  for (const a of state?.armys || []) {
+    if (!a) continue;
+    const city = idOf(a.cityId);
+    let order = idOf(a.order) || 1;
+    let key = `${city}:${order}`;
+    if (used.has(key)) {
+      let next = 1;
+      while (used.has(`${city}:${next}`)) next += 1;
+      order = next;
+      key = `${city}:${order}`;
+      changed.push({ armyId: idOf(a.id), from: idOf(a.order), to: order, cityId: city });
+    }
+    a.order = order;
+    used.add(key);
+  }
+  if (changed.length) syncGeneralOrders(state);
+  return changed;
+}
+
 /** `g.order` 是队伍编号的派生字段：任何编队落账后都从此重算，避免残留旧编号。 */
 export function syncGeneralOrders(state) {
   for (const g of state.generals || []) g.order = 0;

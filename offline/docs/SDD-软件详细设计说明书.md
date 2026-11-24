@@ -2608,6 +2608,16 @@ build/SLG-Offline-win32-x64/
 6. **退兵兜底**：`army.disarm` 对齐 P55 的驻城兜底（驻城缺失退到玩家主城），避免兵静默蒸发；`ACTION_REASON_TEXT`/`REASON_TEXT` 补 `over_cap`/`empty_formup`/`no_home_city`/`protagonist_locked`，玩家不会看到英文 reason 或「点了没反应」。
 7. **回归**：新增 `tests/p56-lord-recover-and-disband.test.js` 7 项（命名/别城可见/主角保护/现代存档补人/解散退兵/行军锁与 WS 入口/两处 UI 静态断言）。FIELD-CONTRACT 已登记。
 
+### 17.41 同城重复队号导致主公队伍消失 P57（2026-11-24 用户截图）
+
+**用户反馈**：征兵页第 1 军显示别人的武将，下拉里主公标「在编」无法选择，主公不在队伍中；修复半小时仍未解决。
+
+1. **根因**：玩家实际存档中濮阳城同时存在两支 `order=1`：`army#2000` 是主公所在真队伍（6037 兵），`army#2003` 是夏侯惇/夏侯惇（1231+2021 兵）。征兵页 `byOrder[a.order]=a` 后一支覆盖前一支，于是第 1 军显示别人的队；主公仍在 `army#2000`，在其他队伍视角下被 `busy` 判成「在编」并禁用。主公并未真正丢失，是**队伍索引被重复队号覆盖**。
+2. **单一口径**：新增 `domain/formation.js normalizeArmyOrders(state)`，按 `(cityId, order)` 去重，先建队伍保留原号，重复者顺延到首个空号并 `syncGeneralOrders`；不搬将、不动兵、不改驻地。
+3. **落账点**：`normalizeWorld()` 老档迁移末尾调用；`settleWorld()` 在任意 WS 请求入口（世界推进之前）也调用，因此已在运行中的存档下一次交互即自愈，不必等重启。HTTP 只读视图不在此处改状态。
+4. **玩家存档处理**：备份 `save.json.p57-*.bak` 后对现有存档执行同一归一，`army#2003` 从 order1 改为 4；第 1 军重新显示主公与 6037 兵，另一个队伍完整保留。
+5. **回归**：新增 `tests/p57-duplicate-order-visibility.test.js` 3 项（领域去重/读档修复/世界推进自愈），冻结「UI 按 order 索引前服务端必须保证同城队号唯一」。FIELD-CONTRACT 已登记。
+
 **红线速查（改前必看）**：INV-01~INV-10（§1.4）、ADR-01/04/07/08/13/14（§1.2）、§7.15 键空间警告、§9.3 z-index 阶梯（含回放层 100700）、§10 确定性、§14.7 报告归属、§16.4 内核改法、§17 偏差登记。
 
 ---

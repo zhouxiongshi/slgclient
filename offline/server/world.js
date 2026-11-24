@@ -12,7 +12,7 @@ import { ensureFates } from './domain/fate.js';
 import { ensureStrategy } from './domain/strategy.js';
 import { ensurePanels } from './domain/panels.js';
 import { applyGeneralExp } from './domain/general-progress.js';
-import { syncGeneralOrders } from './domain/formation.js';
+import { syncGeneralOrders, normalizeArmyOrders } from './domain/formation.js';
 import { loadOverrides, applyTileOverlay } from './gm/overrides.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -519,6 +519,8 @@ export function normalizeWorld(state, cfg) {
   const maxArmyId = (state.armys || []).reduce((m, a) => Math.max(m, Number(a.id) || 0), 0);
   state.counters = state.counters || {};
   state.counters.armyId = Math.max(Number(state.counters.armyId) || 0, maxArmyId + 1);
+  /* ★ P57：老档同城重复 order 必须先拆开，否则真队伍在征兵页被同号队伍覆盖。 */
+  normalizeArmyOrders(state);
   syncGeneralOrders(state);
   state.version = SAVE_VERSION;
   return state;
