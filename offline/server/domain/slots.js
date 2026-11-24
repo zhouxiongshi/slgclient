@@ -44,6 +44,48 @@ export function skillActionHint(reason, cost = 0, nextLv = 0) {
   return map[reason] || reason || '无法操作';
 }
 
+/**
+ * ★ P58：槽位解锁条件唯一口径。
+ * 旧实现把「需武将 Lv5 解锁」这种半句话散在 panels.js / panels-ui.js / skills.js 三处，
+ * 玩家只看到「空槽位」，看不到自己差几级、差哪一条——这就是「战法看不到解锁条件」。
+ * 这里一次算清 need / have / 差额 / 可读文案，UI 只渲染，不再各自拼门槛。
+ */
+export function slotUnlock(g, pos) {
+  const lv = Math.max(1, Math.trunc(Number(g?.level) || 1));
+  const innate = g?.skills?.[0] || null;
+  const innateLv = Math.max(0, Math.trunc(Number(innate?.lv) || 0));
+  const p = Math.trunc(Number(pos));
+
+  if (p === 0) {
+    return {
+      pos: 0, open: !!innate, replaceable: false, rules: [],
+      short: '自带 · 只可升级',
+      text: innate ? '自带战法入营即有，只能在本页升级，不能换成别的战法' : '该武将没有自带战法',
+    };
+  }
+  if (p !== 1 && p !== 2) {
+    return { pos: p, open: false, replaceable: false, rules: [], short: '无此槽位', text: '没有这个战法槽' };
+  }
+
+  const rules = p === 1
+    ? [{ key: 'general_level', label: '武将 Lv5', need: 5, have: lv }]
+    : [
+      { key: 'general_level', label: '武将 Lv10', need: 10, have: lv },
+      { key: 'innate_level', label: '自带战法 Lv10', need: 10, have: innateLv },
+    ];
+  const open = rules.every((r) => r.have >= r.need);
+  const short = p === 1 ? '需武将 Lv5' : '需武将 Lv10 且自带战法 Lv10';
+  let text;
+  if (open) text = '条件已满，可以装配';
+  else if (p === 2 && !innate) text = '该武将没有自带战法，觉醒槽开不了';
+  else {
+    text = rules.filter((r) => r.have < r.need)
+      .map((r) => `${r.label}（当前 Lv${r.have}，还差 ${r.need - r.have} 级）`)
+      .join('；');
+  }
+  return { pos: p, open, replaceable: true, rules, short, text };
+}
+
 export function slotBlock(g, pos, action) {
   if (pos < 0 || pos > 2) return 'slot_locked';
   if (pos === 0 && (action === 'replace' || action === 'remove')) return 'innate_locked';

@@ -2618,6 +2618,17 @@ build/SLG-Offline-win32-x64/
 4. **玩家存档处理**：备份 `save.json.p57-*.bak` 后对现有存档执行同一归一，`army#2003` 从 order1 改为 4；第 1 军重新显示主公与 6037 兵，另一个队伍完整保留。
 5. **回归**：新增 `tests/p57-duplicate-order-visibility.test.js` 3 项（领域去重/读档修复/世界推进自愈），冻结「UI 按 order 索引前服务端必须保证同城队号唯一」。FIELD-CONTRACT 已登记。
 
+### 17.42 战法解锁条件不可见 P58（2026-11-24 用户反馈）
+
+**用户原话**：战法看不到解锁条件。
+
+1. **根因**：槽位门槛散在三处各自拼文案——`panels.js` 的 `lockText`（「需武将 Lv5 解锁」）、`panels-ui.js` 的 `空槽位 · lockText`、`skills.js` 的「学习槽未开：武将要到 5 级」。三方都不带当前值，玩家看到的是「未开」，看不到「我 3 级、还差 2 级」；觉醒槽还漏了「自带战法 10 级」这条，被读成「升到 10 级就开」。另外战法库只给「投入 10 残卷研习」按钮，不显示现有残卷与进度差额，战法层门槛同样不可见。
+2. **单一口径**：`domain/slots.js slotUnlock(g,pos)` 返回 `{open, replaceable, rules:[{key,label,need,have}], short, text}`；`text` 形如「武将 Lv10（当前 Lv7，还差 3 级）；自带战法 Lv10（当前 Lv4，还差 6 级）」。`panels.js` 的 `lockText` 改为由 `unlock.text` 派生，`general.myGenerals` 下发 `slotRules` 供原客户端渲染。
+3. **目标槽选择**：六府武将页与战法库新增 `skillTargetSlot()`，按「已开且空」顺序（学习→觉醒）选槽。旧实现恒发 `pos:1`，「学习槽已满、觉醒槽空着」时会把已学会的战法静默顶掉；两槽都无可用时按钮置灰并写明原因（哪个占了、哪个还差什么）。
+4. **补卸下路径**：`panels.js` 新增 `type:'downSkill'`，与协议 `general.downSkill` 共用 `slotBlock(g,pos,'remove')`；学习/觉醒槽卡上「卸下此槽」（二次确认），自带槽拒绝。此前六府只能装不能卸，学习槽装满后再也换不了战法。
+5. **战法库两级门槛**：顶部加「兵书残卷 N 卷」，展开详情新增「解锁条件」卡：战法层写研习进度 need/progress 与「每次最多 10 卷、现有 N 卷」，槽位层写「学习槽 5 级 / 觉醒槽 10 级且自带 10 级」；残卷为 0 时研习按钮直接置灰说明来源。
+6. **回归**：新增 `tests/p58-skill-unlock-visibility.test.js` 5 项（口径与差额文案/面板结构化条件/目标槽与静态断言/learn+downSkill/协议 slotRules 同源）。FIELD-CONTRACT 已登记。
+
 **红线速查（改前必看）**：INV-01~INV-10（§1.4）、ADR-01/04/07/08/13/14（§1.2）、§7.15 键空间警告、§9.3 z-index 阶梯（含回放层 100700）、§10 确定性、§14.7 报告归属、§16.4 内核改法、§17 偏差登记。
 
 ---

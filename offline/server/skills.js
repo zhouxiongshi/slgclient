@@ -6562,22 +6562,26 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
           box.style.cssText = 'margin-top:8px;padding-top:6px;border-top:1px dashed #3a3428';
           if (!sk) {
             var innateLv = ((g.skills || [])[0] && g.skills[0].lv) || 0;
-            var rule = pos === 0
-              ? '这名武将没有自带战法。'
-              : pos === 1
-                ? (g.level >= 5 ? '学习槽已开。到六府「战法」页，从已解锁战法里装配。' : '学习槽未开：武将要到 5 级。')
-                : (g.level >= 10 && innateLv >= 10
-                  ? '觉醒槽已开。到六府「战法」页装配。'
-                  : '觉醒槽未开：武将 10 级，并且自带战法升到 10 级。');
-            box.innerHTML = '<span class="winTag">' + slotName[pos] + '</span> <span class="cost">' + rule + '</span>';
+            /* ★ P58：门槛与差额由本机核算统一下发（slotRules），这里只渲染。
+               旧版只写「学习槽未开：武将要到 5 级」，看不到自己现在几级、还差几级。 */
+            var slotRule = (g.slotRules || [])[pos] || null;
+            var open = slotRule ? !!slotRule.open
+              : (pos === 0 ? false : pos === 1 ? g.level >= 5 : (g.level >= 10 && innateLv >= 10));
+            var cond = slotRule ? slotRule.text
+              : (pos === 0 ? '该武将没有自带战法'
+                : pos === 1 ? '武将 Lv5' : '武将 Lv10 且自带战法 Lv10');
+            var head = pos === 0 ? cond : (open ? '槽已开启 · 空着，可以装配' : '槽未开启');
+            box.innerHTML = '<span class="winTag">' + slotName[pos] + '</span> <span class="cost">'
+              + esc(head) + '</span>'
+              + '<div class="cost" style="margin-top:2px">解锁条件：' + esc(cond)
+              + (open || pos === 0 ? '' : '（现在 Lv' + g.level + '）') + '</div>';
             /* ★ 2026-11-16：空的学习/觉醒槽此前只是一段文字，鼠标点上去毫无反应。
                用户反馈「点学习没反应也不能学」——这里补一个可点按钮：点了必给提示，
                槽未开直接说清条件；槽已开引导到六府战法页（真正的装配入口）。 */
             if (pos === 1 || pos === 2) {
-              var open = pos === 1 ? g.level >= 5 : (g.level >= 10 && innateLv >= 10);
               var lb = mkBtn(open ? '去学习 / 装配战法' : '为何不能学？', open ? '' : 'ghost', function () {
                 if (!open) {
-                  toast(pos === 1 ? '学习槽要武将升到 5 级才会开启，先出征积累经验。' : '觉醒槽要武将 10 级且自带战法升到 10 级。', false);
+                  toast(cond + '。先出征积累经验。', false);
                   return;
                 }
                 toast('请到六府「战法」页，在「装配已解锁战法」里点本武将的学习槽装配。', true);

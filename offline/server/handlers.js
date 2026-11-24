@@ -26,7 +26,7 @@ import { checkLevy, commitLevy, levyView, farmConflictOf } from './domain/levy.j
 import {
   chapterRules, settleCampaign, chooseChapter, onTileCleared, applyChoice, noticeRecruit,
 } from './domain/campaign.js';
-import { slotBlock, skillUpgradeCost, skillUpgradeBlock, SKILL_LEVEL_CAP, skillActionHint } from './domain/slots.js';
+import { slotBlock, slotUnlock, skillUpgradeCost, skillUpgradeBlock, SKILL_LEVEL_CAP, skillActionHint } from './domain/slots.js';
 import { grantBattleExp, levelUpSentence, generalProgress, takeBattlePromos } from './domain/general-progress.js';
 import { RANK_NAMES } from './domain/official-rank.js';
 /* ★ P12 操作回执：原版客户端 onUpSkill/onLvSkill/onDownSkill 只 console.log，
@@ -474,6 +474,10 @@ function withGeneralNames(state, cfg, list) {
       };
     }),
     progress: generalProgress(g),
+    /* ★ P58：原客户端「武将战法」页只显示「学习槽未开：武将要到 5 级」，
+       不显示当前等级与还差几级。这里把三个槽的门槛一起下发，
+       界面（skills.js）只渲染，门槛口径仍在 domain/slots.js 一处。 */
+    slotRules: [0, 1, 2].map((pos) => slotUnlock(g, pos)),
   }));
 }
 function syncOwnedSkills(state) {

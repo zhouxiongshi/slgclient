@@ -959,15 +959,43 @@
       + '相性影响登庸与忠诚判定，但不是唯一参数；本项为本作设定值，并非史实数据。</div></div>';
   }
 
+  /* ★ P58：装配目标槽 = 已开启且还空着的第一槽（学习 → 觉醒）。
+     旧实现永远发 pos=1，「学习槽已满、觉醒槽空着」时会反把已学会的战法顶掉；
+     两个槽都没开时按钮照发，玩家点了只得到一句失败提示，看不到缺什么。 */
+  function skillTargetSlot(g) {
+    var empty = [], filled = [], locked = [];
+    [1, 2].forEach(function (pos) {
+      var s = (g.slots || [])[pos] || {};
+      var un = s.unlock || {};
+      if (!un.open) { locked.push(pos); return; }
+      if (s.skill) filled.push(pos); else empty.push(pos);
+    });
+    var name = ['自带', '学习', '觉醒'];
+    if (empty.length) return { pos: empty[0], note: '', locked: locked, filled: filled };
+    var note;
+    if (filled.length && locked.length) {
+      note = name[filled[0]] + '槽已有战法，' + name[locked[0]] + '槽还没开（' + ((g.slots || [])[locked[0]] || {}).lockText + '）';
+    } else if (filled.length) note = '学习槽和觉醒槽都已有战法，先卸下一个';
+    else {
+      note = locked.map(function (pos) {
+        return name[pos] + '槽 ' + (((g.slots || [])[pos] || {}).lockText || '未开启');
+      }).join('；');
+    }
+    return { pos: -1, note: note, locked: locked, filled: filled };
+  }
+
   function genSkillHtml(g) {
     var guide = (data.interior && data.interior.output && data.interior.output.guide) || {};
+    var slotName = ['自带', '学习', '觉醒'];
     var out = '<h3>战法 · ' + esc(g.name) + '</h3>'
       + '<div class="card"><div class="muted">自带槽入营就有，不能换成别的战法，在这里升级。'
       + '学习槽要武将 5 级。觉醒槽要武将 10 级，并且自带战法升到 10 级。'
       + '每条战法的装配名额有限（1~6 人，以战法档案为准）。当前军工 <b class="v">' + fmt(guide.jungong || 0) + '</b>。'      + esc(guide.rule || '') + '</div></div>';
     g.slots.forEach(function (s) {
-      out += '<div class="card"><span class="tag ' + (s.skill ? 'ok' : s.locked ? 'no' : 'mid') + '">'
-        + ['自带', '学习', '觉醒'][s.pos] + '</span>';
+      var un = s.unlock || { open: true, text: '', short: '' };
+      out += '<div class="card"><span class="tag ' + (s.skill ? 'ok' : un.open ? 'mid' : 'no') + '">'
+        + slotName[s.pos] + '槽</span>'
+        + '<span class="tag ' + (un.open ? 'ok' : 'no') + '">' + (un.open ? '已开启' : '未开启') + '</span>';
       if (s.skill) {
         out += '<b class="v">' + esc(s.skill.name) + '</b> <span class="muted">Lv' + esc(s.skill.level)
           + ' · 发动率 ' + esc(s.skill.probability == null ? '—' : s.skill.probability + '%') + '</span>'
@@ -984,19 +1012,36 @@
               + '升级到 Lv' + (Number(s.skill.level) + 1) + '（军工 ' + esc(s.skill.upgradeCost) + '）</button>';
           }
         }
+        /* 学习/觉醒槽可以腾出来换别的战法；自带槽不能卸。 */
+        if (s.pos > 0) {
+          out += '<button class="btn warn" data-act="unskill" data-gid="' + g.id + '" data-pos="' + s.pos + '">'
+            + '卸下此槽</button>';
+        }
       } else {
-        out += '<span class="muted">空槽位 · ' + esc(s.lockText) + '</span>';
+        out += '<span class="muted">空槽位</span>';
       }
+      /* ★ P58：解锁条件必须每个槽都写出来（开着也写，玩家才知道下一步能干什么）。 */
+      out += '<div class="muted" style="margin-top:6px">解锁条件：'
+        + esc(un.text || '—')
+        + (un.open ? '' : '（现在 Lv' + esc(g.level) + '）') + '</div>';
       out += '</div>';
     });
+    var tgt = skillTargetSlot(g);
     var unlocked = data.library.filter(function (x) { return x.status === 'unlocked'; }).slice(0, 8);
     out += '<div class="card"><h3>装配已解锁战法</h3><div class="muted" style="margin-bottom:8px">'
+      + (tgt.pos > 0
+        ? '装到' + slotName[tgt.pos] + '槽。'
+        : '当前没有可用的空槽：' + esc(tgt.note) + '。')
       + '槽位规则：自带不可替换、Lv5 开学习槽、Lv10 且自带 10 级开觉醒槽；每条战法的装配名额有限（1~6 人，以战法档案为准）。</div>';
+    if (!unlocked.length) out += '<div class="muted">还没有已解锁的战法，先到战法库研习。</div>';
     unlocked.forEach(function (s) {
       out += '<div class="card"><b class="v">' + esc(s.name) + '</b>'
         + '<div style="margin-top:6px">' + esc(s.des || '没有效果说明') + '</div>'
-        + '<button class="btn" data-act="learn" data-gid="' + g.id + '" data-pos="1" data-cfg="' + s.cfgId + '">'
-        + esc(s.name) + ' → 学习槽</button></div>';
+        + (tgt.pos > 0
+          ? '<button class="btn" data-act="learn" data-gid="' + g.id + '" data-pos="' + tgt.pos
+            + '" data-cfg="' + s.cfgId + '">' + esc(s.name) + ' → ' + slotName[tgt.pos] + '槽</button>'
+          : '<button class="btn" disabled title="' + esc(tgt.note) + '">装不上 · ' + esc(tgt.note) + '</button>')
+        + '</div>';
     });
     out += '<div style="margin-top:8px"><button class="btn" data-act="tab" data-id="library">去战法库看全部 '
       + data.library.length + ' 条</button></div></div>';
@@ -1540,11 +1585,14 @@
     ui.skillLimit = Number(ui.skillLimit);
     var out = '<h3>战法库（势力级资产）</h3><div class="grid">'
       + [['全库', sm.total + ' 条'], ['已解锁', sm.unlocked + ' 条'], ['研习中', sm.researching + ' 条'],
-         ['≥2 条获取途径', sm.sourcesCovered + ' / ' + sm.total]].map(function (p) {
+         ['兵书残卷', (data.scrolls || 0) + ' 卷'], ['≥2 条获取途径', sm.sourcesCovered + ' / ' + sm.total]].map(function (p) {
         return '<div class="card"><span class="k">' + p[0] + '</span><div class="v" style="font-size:19px">' + p[1] + '</div></div>';
       }).join('') + '</div>';
     out += '<div class="card muted">全部配方开局公开：名称／类型／描述／数值均已在本作统一登记；'
-      + '没有随机、没有不可逆的意外、没有死路（每条至少两条路径，战功研习永久兜底）。</div>';
+      + '没有随机、没有不可逆的意外、没有死路（每条至少两条路径，战功研习永久兜底）。'
+      + '解锁条件分两层：<b>战法先要解锁</b>（研习或战功途径，见每条展开后的「如何获得」）；'
+      + '<b>解锁后还要有槽</b>——学习槽要武将 5 级，觉醒槽要武将 10 级且自带战法 10 级。'
+      + '兵书残卷现存 <b class="v">' + esc(data.scrolls || 0) + '</b> 卷。</div>';
 
     var fs = [['all', '全部'], ['unlocked', '已解锁'], ['researching', '研习中'], ['locked', '未解锁'],
               ['主战法', '主战法'], ['库战法', '库战法'], ['主动', '主动'], ['内政', '内政']];
@@ -1611,12 +1659,28 @@
           h += '<div class="bar"><i style="width:' + Math.min(100, s.research.progress / s.research.need * 100) + '%"></i></div>'
             + '<div class="muted">研习进度 ' + esc(s.research.progress) + ' / ' + esc(s.research.need) + '</div>';
         }
+        /* ★ P58：解锁条件写全 —— 战法层的「还差多少研习」+ 槽位层的「武将几级」，
+           旧版只给一个「投入 10 残卷研习」按钮，残卷不够时点了才报错。 */
+        h += '<div class="card muted" style="margin-top:9px"><b>解锁条件</b><div>'
+          + (s.status === 'unlocked'
+            ? '战法已解锁。还差一个空槽：学习槽要武将 5 级，觉醒槽要武将 10 级且自带战法 10 级。'
+            : '研习进度要满 ' + (s.research ? esc(s.research.need) : '100')
+              + (s.research ? '（现在 ' + esc(s.research.progress) + '，还差 ' + esc(Math.max(0, s.research.need - s.research.progress)) + '）' : '')
+              + '；每次最多投 10 卷，兵书残卷现有 ' + esc(data.scrolls || 0) + ' 卷。')
+          + '</div></div>';
         h += '<div style="margin-top:9px">';
         if (s.status === 'unlocked') {
-          h += '<button class="btn" data-act="learn" data-gid="' + (currentGeneral() ? currentGeneral().id : 0)
-            + '" data-pos="1" data-cfg="' + s.cfgId + '">装配给当前武将</button>';
+          var cg = currentGeneral();
+          var lt = cg ? skillTargetSlot(cg) : { pos: -1, note: '先在「武将」页选一名武将' };
+          h += lt.pos > 0
+            ? '<button class="btn" data-act="learn" data-gid="' + cg.id + '" data-pos="' + lt.pos
+              + '" data-cfg="' + s.cfgId + '">装配给 ' + esc(cg.name) + ' 的' + ['自带', '学习', '觉醒'][lt.pos] + '槽</button>'
+            : '<button class="btn" disabled title="' + esc(lt.note) + '">暂不能装 · ' + esc(lt.note) + '</button>';
+        } else if ((data.scrolls || 0) > 0) {
+          h += '<button class="btn" data-act="research" data-cfg="' + s.cfgId + '">投入残卷研习（一次最多 10 卷，现有 '
+            + esc(data.scrolls || 0) + ' 卷）</button>';
         } else {
-          h += '<button class="btn" data-act="research" data-cfg="' + s.cfgId + '">投入 10 残卷研习</button>';
+          h += '<button class="btn" disabled>兵书残卷不足：打胜仗、守城、斩将可获残卷</button>';
         }
         h += '</div></div>';
       }
@@ -1753,6 +1817,9 @@
       post({ type: 'dismantle', itemId: Number(t.getAttribute('data-item')) });
     });
     if (act === 'research') return post({ type: 'research', cfgId: Number(t.getAttribute('data-cfg')), amount: 10 });
+    if (act === 'unskill') return confirmBox('卸下这个槽的战法？卸下后战法回到战法库，可再装配给别人。', function () {
+      post({ type: 'downSkill', gId: Number(t.getAttribute('data-gid')), pos: Number(t.getAttribute('data-pos')) });
+    });
     if (act === 'learn') return post({ type: 'learn', gId: Number(t.getAttribute('data-gid')),
       pos: Number(t.getAttribute('data-pos')), cfgId: Number(t.getAttribute('data-cfg')) });
     if (act === 'lvskill') return post({ type: 'lvSkill', gId: Number(t.getAttribute('data-gid')),

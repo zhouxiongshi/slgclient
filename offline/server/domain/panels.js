@@ -11,7 +11,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { slotBlock, skillUpgradeCost, skillUpgradeBlock, SKILL_LEVEL_CAP, skillActionHint } from './slots.js';
+import { slotBlock, slotUnlock, skillUpgradeCost, skillUpgradeBlock, SKILL_LEVEL_CAP, skillActionHint } from './slots.js';
 import { generalProgress } from './general-progress.js';
 import { materialGuide } from './armory.js';
 /* ★ M4-10：属性一律走唯一派生层（0~100 百分制），面板不再自己读原表。 */
@@ -433,14 +433,14 @@ export function panelState(state, cfg) {
       const s = g.skills?.[pos];
       const cfgId = s && typeof s === 'object' ? s.cfgId : s;
       const conf = cfgId ? skillConfOf(cfgId) : null;
-      const block = slotBlock(g, pos, 'replace');
+      /* ★ P58：解锁条件走 slotUnlock 唯一口径，锁着也要说清「差几级」，
+         不再只给一句「需武将 Lv5 解锁」让玩家自己猜当前等级。 */
+      const unlock = slotUnlock(g, pos);
       return {
         pos,
-        locked: !!block,
-        lockText: block === 'innate_locked' ? '自带战法，不可替换'
-          : block === 'slot_locked' && pos === 1 ? '需武将 Lv5 解锁'
-            : block === 'slot_locked' ? '需 Lv10 且自带战法 10 级'
-              : '已开启',
+        locked: !unlock.open,
+        lockText: unlock.open ? (pos === 0 ? '自带战法，只能升级' : '已开启') : unlock.text,
+        unlock,
         skill: conf ? (() => {
           const lv = int(s?.lv, 1);
           const maxed = lv >= SKILL_LEVEL_CAP;
@@ -913,6 +913,20 @@ export function panelAction(state, cfg, action = {}) {
       if (by.length >= cap) return fail(`每条战法同时最多 ${cap} 人装配`);
       g.skills[pos] = { id: cfgId, cfgId, lv: 1 };
       return done(`${generalName(state, cfg, g)}学会了「${s.ui?.name ?? s.name}」`);
+    }
+
+    /* ★ P58：卸下战法。此前六府只能装不能卸，学习槽装满后玩家再也换不了战法，
+       只能看见「装不上」。口径与协议层 general.downSkill 同一条 slotBlock(remove)。 */
+    if (type === 'downSkill') {
+      needGeneral();
+      const pos = int(action.pos, -1);
+      const cur = g.skills?.[pos];
+      if (!cur) return fail('这个槽没有战法');
+      const block = slotBlock(g, pos, 'remove');
+      if (block) return fail(pos === 0 ? '自带战法不能卸下，只能升级' : '该槽当前不可卸下');
+      const title = cur.cfgId ? (skillConfOf(cur.cfgId)?.ui?.name ?? skillConfOf(cur.cfgId)?.name ?? '战法') : '战法';
+      g.skills[pos] = null;
+      return done(`已卸下「${title}」，这个槽空出来了，可以装别的战法`);
     }
 
     if (type === 'appoint') {
