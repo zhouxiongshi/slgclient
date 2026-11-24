@@ -135,6 +135,19 @@ const WALK = `(async function(){
     var title = document.getElementById('slgPanelsTitle');
     rec('panel.' + p[0], p[2], { visible: vis(body), text: txt(title) + ' ' + txt(body) });
 
+    /* ★ P58：此前审计只点「未选武将」的列表态页签，武将详情（战法/兵刃/经历）
+       从未真正渲染，战法槽的「解锁条件」文案也就没有取证。先点一名武将再点页签。 */
+    if (p[0] === 'general') {
+      var gbtn = document.querySelector('#slgPanelsBody button[data-act="gen"]');
+      if (gbtn) {
+        gbtn.click();
+        await sleep(600);
+        var gbody = document.getElementById('slgPanelsBody');
+        /* 这把锁要求「解锁条件」四个字真的出现在玩家眼前，而不只是存在于源码里。 */
+        rec('panel.general.detail', ['战法', '解锁条件'], { visible: vis(gbody), text: txt(gbody), note: '选中武将后的战法页' });
+      }
+    }
+
     // 内部页签（.tabs 里的按钮）逐个点
     var subCount = document.querySelectorAll('#slgPanelsBody .tabs button').length;
     for (var si = 0; si < subCount; si++) {
