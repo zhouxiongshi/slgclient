@@ -9,6 +9,11 @@
 import { grantMerit, MERIT_GAIN } from './official-rank.js';
 
 export const GENERAL_LEVEL_CAP = 10;
+/* ★ P61-S12：玩家显式「进阶」后才开放的 11~15 级。AI 与旧档仍按 10 级封顶，
+   避免既有成长曲线/事件指纹被动漂移；进阶不再抬五维上限，只给每级 2% 战斗加成。 */
+export const ADVANCED_LEVEL_CAP = 15;
+export const ADVANCED_BONUS_PER_LEVEL = 0.02;
+export const ADVANCE_COST_GOLD = 1200;
 /* ★ 2026-11-22：成长入口统一在这里定量，UI/战报只读不重算。
    内政由 5 点/旬提到 12 点/旬；出征增加参战底数，低折损仗也有成长。 */
 export const INTERIOR_EXP_PER_TICK = 12;
@@ -18,7 +23,14 @@ export const BATTLE_EXP_PARTICIPATION = 20;
 /** 从当前等级升到下一级需要的经验。1→2 为 40，9→10 为 360。 */
 export function expToAdvance(level) {
   const lv = Math.max(1, Math.trunc(Number(level) || 1));
+  if (lv >= GENERAL_LEVEL_CAP) return 600 + (lv - GENERAL_LEVEL_CAP) * 200;
   return 40 * lv;
+}
+
+/** 进阶等级带来的战斗加成（派生层，不改史载五维原表）。 */
+export function advancedBonus(level) {
+  return Math.max(0, Math.min(ADVANCED_LEVEL_CAP, Math.trunc(Number(level) || 1)) - GENERAL_LEVEL_CAP)
+    * ADVANCED_BONUS_PER_LEVEL;
 }
 
 /**
@@ -28,29 +40,32 @@ export function expToAdvance(level) {
 export function applyGeneralExp(g, add = 0) {
   const from = Math.max(1, Math.trunc(Number(g.level) || 1));
   let lv = from;
+  const cap = g.advanced ? ADVANCED_LEVEL_CAP : GENERAL_LEVEL_CAP;
   let exp = Math.max(0, Math.trunc(Number(g.exp) || 0)) + Math.max(0, Math.trunc(Number(add) || 0));
-  while (lv < GENERAL_LEVEL_CAP) {
+  while (lv < cap) {
     const need = expToAdvance(lv);
     if (exp < need) break;
     exp -= need;
     lv += 1;
   }
-  if (lv >= GENERAL_LEVEL_CAP) exp = 0;
+  if (lv >= cap) exp = 0;
   g.level = lv;
   g.exp = exp;
-  return { from, to: lv, exp, need: lv >= GENERAL_LEVEL_CAP ? 0 : expToAdvance(lv) };
+  return { from, to: lv, exp, need: lv >= cap ? 0 : expToAdvance(lv) };
 }
 
 /** 给界面用的进度。数字都在这里算，客户端只展示。 */
 export function generalProgress(g) {
   const level = Math.max(1, Math.trunc(Number(g?.level) || 1));
   const exp = Math.max(0, Math.trunc(Number(g?.exp) || 0));
-  const capped = level >= GENERAL_LEVEL_CAP;
+  const advanced = !!g?.advanced;
+  const cap = advanced ? ADVANCED_LEVEL_CAP : GENERAL_LEVEL_CAP;
+  const capped = level >= cap;
   const need = capped ? 0 : expToAdvance(level);
-  let next = '已满 10 级，五维成长到头';
+  let next = advanced ? '已至 15 级，进阶成长到头' : '已满 10 级，可花费 1200 金进阶，解锁 11~15 级';
   if (level < 5) next = '到 5 级开放学习槽';
   else if (level < GENERAL_LEVEL_CAP) next = '到 10 级，并且自带战法 10 级，开放觉醒槽';
-  return { level, exp, need, capped, next };
+  return { level, exp, need, capped, next, advanced, cap, tag: advanced ? '进阶' : '常规' };
 }
 
 /**

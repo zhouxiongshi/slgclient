@@ -639,8 +639,8 @@
       "speaker": "诸将",
       "text": ["连番失利，营中逃卒渐多，士卒私语：敌不可胜。", "此刻，军法与人心只能偏重一头。"],
       "choices": [
-        { "id": "law", "label": "严明军法，逃者斩", "preview": "士气 −10 / 恶名 +2", "effects": ["morale:-10", "fame:+2"] },
-        { "id": "care", "label": "抚恤士卒，亲巡营垒", "preview": "金 −300 / 士气 +10", "effects": ["gold:-300", "morale:+10"] }
+        { "id": "law", "label": "严明军法，逃者斩", "preview": "士气 −10 / 恶名 +2 / 前线驻军 −800", "effects": ["morale:-10", "fame:+2", "troops:frontline:-800"] },
+        { "id": "care", "label": "抚恤士卒，亲巡营垒", "preview": "金 −300 / 士气 +10 / 都城驻军 +600", "effects": ["gold:-300", "morale:+10", "troops:capital:+600"] }
       ],
       "source": { "id": "GDD §8.2 示例 4（本作设定）", "confidence": "中" },
       "reviewed": false
@@ -725,7 +725,7 @@
       "text": ["敌军围城，四野粮秣未收。", "坚壁清野可饿退敌军，然城外百姓先受其害。"],
       "choices": [
         { "id": "scorch", "label": "坚壁清野", "preview": "士气 −5 / 恶名 +2", "effects": ["morale:-5", "fame:+2"] },
-        { "id": "sally", "label": "出城邀击，速战速决", "preview": "士气 −10", "effects": ["morale:-10"] }
+        { "id": "sally", "label": "出城邀击，速战速决", "preview": "士气 −10 / 前线驻军 −1000", "effects": ["morale:-10", "troops:frontline:-1000"] }
       ],
       "source": { "id": "本作设定（守城决策面）", "confidence": "中" },
       "reviewed": false
@@ -758,7 +758,7 @@
       "speaker": "州吏",
       "text": ["邻境兵乱，流民数千扶老携幼而至，愿附籍屯垦。", "收之费粮，驱之伤名。"],
       "choices": [
-        { "id": "accept", "label": "附籍屯垦，编为民户", "preview": "金 −300 / 恶名 −2", "effects": ["gold:-300", "fame:-2"] },
+        { "id": "accept", "label": "附籍屯垦，编为民户", "preview": "金 −300 / 恶名 −2 / 都城驻军 +500", "effects": ["gold:-300", "fame:-2", "troops:capital:+500"] },
         { "id": "expel", "label": "遣回原籍，勿乱吾民", "preview": "恶名 +2", "effects": ["fame:+2"] }
       ],
       "source": { "id": "本作设定（内政决策面）", "confidence": "中" },
@@ -838,7 +838,7 @@
       "speaker": "周瑜",
       "text": ["周瑜荐鲁肃：「肃有王佐之资，宜亟召之。」", "鲁肃初见，即指家中两囷米：「一囷赠公。」"],
       "choices": [
-        { "id": "summon", "label": "即召鲁肃入幕", "preview": "鲁肃忠诚 +10", "effects": ["loyalty:鲁肃:+10"] },
+        { "id": "summon", "label": "即召鲁肃入幕", "preview": "鲁肃入队 / 忠诚 +10", "effects": ["join:鲁肃:capital", "loyalty:鲁肃:+10"] },
         { "id": "later", "label": "记名待用，暂不召见", "preview": "无", "effects": ["nothing"] }
       ],
       "source": { "id": "sgz.wu.9 鲁肃传", "confidence": "高" },

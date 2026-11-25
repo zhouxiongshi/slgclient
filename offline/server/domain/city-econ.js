@@ -19,6 +19,8 @@ import { supplyTick, armySupplyTick } from './supply.js';
 /* ★ P50 太守制（2026-11-23，对齐成熟 SLG 内政惯例）：旬界太守自动办政，替换旧长驻委任
    （appointment.js 已删）；走 interior-task 同源，产出与旧手动/委任完全一致。 */
 import { governorTick } from './governor.js';
+/* ★ P61-S1：方针真实改变产量配比；policy-effects 是零依赖叶子，不成环 */
+import { policyEffect } from './policy-effects.js';
 import { knobGet } from './knobs.js';
 /* ★ 2026-11-20：春征秋收惩罚的季节判定复用 levy 的唯一口径（零依赖叶子，无环）。 */
 import { seasonOf } from './levy.js';
@@ -132,8 +134,12 @@ export function cityYield(state, cityId) {
      这里把金产 20→60、粮产 30→38，使 5 城金产约 820/旬、粮产约 3300/旬，
      在扣掉 35% 城防俸饷与武将俸禄后仍为正循环（约 +150 金/旬）。
      只改派生系数，不动原表、不动战斗数值。 */
-  const grain = Math.round(38 * (e.devAgri / 50) * grainMod * besieged * moraleMod * cut * autumnPenalty);
-  const gold = Math.round(60 * (e.devTrade / 50) * besieged * moraleMod);
+  /* ★ P61-S1：太守方针改的是资源分配，不只是施工顺序。重农粮 +25% 金 −15%，
+     固防商税减半石 +25%……不同路线第 10 旬就有可测差距。NPC 城无太守记录，恒 auto。 */
+  const pol = policyEffect(state.strategy?.governors?.[cityId]?.policy);
+  const yieldOf = (key) => Number(pol.yields?.[key]) || 1;
+  const grain = Math.round(38 * (e.devAgri / 50) * grainMod * besieged * moraleMod * cut * autumnPenalty * yieldOf('grain'));
+  const gold = Math.round(60 * (e.devTrade / 50) * besieged * moraleMod * yieldOf('gold'));
   const extra = {};
   for (const sp of SPECIALTY_MAP) {
     if ((c.specialty || '').includes(sp.key)) extra[sp.res] = (extra[sp.res] || 0) + sp.add;
@@ -144,7 +150,7 @@ export function cityYield(state, cityId) {
      → 石产上升 → 再投石/修墙，形成闭环。不改原表（派生层计算），与木/铁特产同等量级偏低。 */
   const lv = Math.max(1, Math.min(3, Math.trunc(Number(c.level) || 1)));
   const stoneBase = Math.round(12 + lv * 8 + (Number(e.devDef ?? 50) / 50) * 16);
-  extra.stone = (extra.stone || 0) + stoneBase;
+  extra.stone = ((extra.stone || 0) + stoneBase) * yieldOf('stone');
   if (grainMod !== 1 && extra.grain) extra.grain = Math.round(extra.grain * grainMod);
   return {
     cityId: Number(cityId), grain, gold, extra, grainMod, besieged,
@@ -215,7 +221,9 @@ export function popTick(state, ctx) {
     const e = econ[id];
     if (!e) continue;
     // 民心 0~100 → 增长 2%~6%（民心高则流民来附，民心低则逃亡）
-    const rate = 0.02 + (Number(e.morale ?? 60) / 100) * 0.04;
+    /* ★ P61-B5：人口年增长从参数表读；默认 1.5% × (1 + 民心/100) = 2%~6%，
+       与原口径逐位一致，调参后立刻改变人口节奏。 */
+    const rate = knobGet(state, 'popGrowthYear') * (1 + (Number(e.morale ?? 60) / 100));
     e.pop = Math.min(1000000, Math.round(e.pop * (1 + rate)));   // ★ P13 上限 10 万 → 100 万
     const y = cityYield(state, id);
     e.store = Math.min(storeCapOf(e), e.store + 3 * (y?.grain || 0));

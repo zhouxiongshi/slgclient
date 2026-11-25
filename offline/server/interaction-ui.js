@@ -637,10 +637,24 @@
     }
     updateEventBadge();
     var cur = document.querySelector('.slgIx-modal.slgIxEvent');
-    if (cur && want && cur.dataset.evtId === want.id) return;
+    if (cur && want && cur.dataset.evtId === want.id && cur.dataset.due === String(want.dueTurn)) return;
     if (cur) { cur.remove(); var li = S.layers.indexOf(cur); if (li >= 0) S.layers.splice(li, 1); }
     if (!want) return;
     var mask = el('div', '', ''); mask.className = 'slgIx-modal slgIxEvent'; mask.dataset.evtId = want.id;
+    mask.dataset.due = String(want.dueTurn || 0);
+    function postEventAct(payload, okText) {
+      fetch(ACT, {
+        method: 'POST', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      }).then(function (res) {
+        if (res && res.ok === false) { toast('操作未生效：' + eventReasonText(res.reason), 'fail'); return; }
+        toast(okText, 'info'); loadState();
+      }).catch(function (err) { toast('操作失败：' + err.message, 'fail'); });
+    }
     var box = el('div', '', ''); box.className = 'box';
     var html = '<h3>【' + esc(LAYER_NAMES[want.layer] || '事件') + '】' + esc(want.title) + '</h3>';
     if (want.speaker) html += '<div class="muted" style="font-size:12px;margin-bottom:6px">' + esc(want.speaker) + '</div>';
@@ -657,6 +671,20 @@
       }).join('') + '</div>'
       + '<button data-evt-later="1" data-ix-allow="1" style="margin-top:10px;'
       + 'background:transparent;color:#a9a48f;border-color:#5c6b4e">稍后处理（不再自动弹出）</button>'
+      + '<div class="muted" style="font-size:11px;margin-top:10px">'
+      + '第 ' + esc(want.sinceTurn || 1) + ' 旬提出，第 ' + esc(want.dueTurn || 5) + ' 旬到期，尚余 '
+      + esc(want.leftTurns != null ? want.leftTurns : 4) + ' 旬。'
+      + (want.autoResolve === false
+        ? '已设为只顺延：逾期不会替你做选择。'
+        : '逾期将按保守项自动结案，不会替你隐瞒。')
+      + '</div>'
+      + '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">'
+      + '<button data-evt-defer="1" data-ix-allow="1" style="flex:1;min-width:130px;'
+      + 'background:transparent;color:#d8c99a;border-color:#7a6a42">暂缓一旬（倒计时重算）</button>'
+      + '<button data-evt-auto="1" data-ix-allow="1" style="flex:1;min-width:130px;'
+      + 'background:transparent;color:#d8c99a;border-color:#7a6a42">'
+      + (want.autoResolve === false ? '恢复逾期自动结案' : '关掉逾期自动结案')
+      + '</button></div>'
       + '<div class="muted" style="font-size:11px;margin-top:10px">抉择写入史册（结局回放可查）；'
       + '本旬事件至多两件，逐件处理。可先收起，游戏不会被弹窗挡住。</div>';
     box.innerHTML = html;
@@ -665,6 +693,16 @@
     S.layers.push(mask);
     on(box, 'click', function (e) {
       if (e.target.closest('[data-evt-later]')) { dismissEvent(want.id, mask); return; }
+      if (e.target.closest('[data-evt-defer]')) {
+        postEventAct({ act: 'eventDefer', id: want.id }, '已暂缓一旬，倒计时重新计起');
+        return;
+      }
+      if (e.target.closest('[data-evt-auto]')) {
+        var next = want.autoResolve === false;
+        postEventAct({ act: 'eventAutoResolve', enabled: next },
+          next ? '已恢复逾期自动结案' : '已关闭逾期自动结案，今后只顺延不替你选择');
+        return;
+      }
       var b = e.target.closest('[data-evt-choice]');
       if (!b || b.disabled) return;
       var btns = box.querySelectorAll('[data-evt-choice]');

@@ -23,10 +23,23 @@ export const PERSONA_AXES = {
   司马懿: { aggression: 0.55, economy: 0.65, risk: 0.20, tempo: 0.20, defense: 0.85 },
   董卓: { aggression: 0.80, economy: 0.25, risk: 0.75, tempo: 0.75, defense: 0.30 },
   公孙瓒: { aggression: 0.85, economy: 0.35, risk: 0.70, tempo: 0.95, defense: 0.35 },
+  /* ★ P61-S9：补齐常见诸侯人格，避免 72 城里的多数势力共用一条默认轴。 */
+  汉廷: { aggression: 0.20, economy: 0.55, risk: 0.15, tempo: 0.20, defense: 0.80 },
+  马腾: { aggression: 0.70, economy: 0.40, risk: 0.65, tempo: 0.70, defense: 0.45 },
+  韩遂: { aggression: 0.65, economy: 0.35, risk: 0.60, tempo: 0.60, defense: 0.40 },
+  刘表: { aggression: 0.25, economy: 0.80, risk: 0.20, tempo: 0.25, defense: 0.85 },
+  袁术: { aggression: 0.60, economy: 0.45, risk: 0.80, tempo: 0.65, defense: 0.35 },
+  公孙度: { aggression: 0.45, economy: 0.55, risk: 0.40, tempo: 0.35, defense: 0.75 },
+  陶谦: { aggression: 0.25, economy: 0.70, risk: 0.25, tempo: 0.30, defense: 0.70 },
+  张鲁: { aggression: 0.35, economy: 0.60, risk: 0.20, tempo: 0.30, defense: 0.80 },
 };
 
+const AXIS_POOL = Object.values(PERSONA_AXES);
+
 function blankMemory() {
-  return { goal: null, fails: {}, losses: [], grudges: {} };
+  /* ★ P60：failsTurn 与 fails 同键成对——fails 只记「败了几次」，failsTurn 记「最后一败第几旬」，
+     workable 据此把 8 旬前的旧败按过期处理。旧档没有 failsTurn 也合法（读档兜底 -999）。 */
+  return { goal: null, fails: {}, failsTurn: {}, losses: [], grudges: {} };
 }
 
 export function readBrainMemory(state, factionId) {
@@ -56,7 +69,13 @@ export function noteBattleOutcome(state, factionId, { cityId, ok, victim }) {
   const mem = state.strategy.memory[factionId] || (state.strategy.memory[factionId] = blankMemory());
   const key = String(cityId);
   if (ok) mem.fails[key] = 0;
-  else mem.fails[key] = (mem.fails[key] || 0) + 1;
+  else {
+    mem.fails[key] = (mem.fails[key] || 0) + 1;
+    /* ★ P60：记住败在第几旬，供 workable 的失败衰减判断。没有这行，
+       「败一次就永不再打这座城」会让 AI 对弱敌也永久放弃。 */
+    mem.failsTurn = mem.failsTurn || {};
+    mem.failsTurn[key] = Math.max(0, Number(state.strategy?.turn) || 0);
+  }
   if (victim && victim !== factionId && victim !== 'han' && victim !== 'player') {
     // 自己是进攻方，不在这里记仇
   }
@@ -79,7 +98,13 @@ function seasonOf(turn) {
 }
 
 function axesOf(persona) {
-  return PERSONA_AXES[persona] || PERSONA_AXES.曹操;
+  if (PERSONA_AXES[persona]) return PERSONA_AXES[persona];
+  /* ★ P61-S9：未配置的势力按人格名确定性地分配一条既有轴，
+     不再全体回退曹操——不同诸侯在同一局面下会做出不同决策。 */
+  const key = String(persona || '');
+  let h = 5381;
+  for (let i = 0; i < key.length; i += 1) h = ((h << 5) + h + key.charCodeAt(i)) >>> 0;
+  return AXIS_POOL[h % AXIS_POOL.length];
 }
 
 /**
@@ -197,7 +222,13 @@ function buildView(faction, snapshot, state, axes, mem) {
 
   function workable(city, needMul = 1, sendMul = 1) {
     if (!city || allies.has(city.owner)) return null;
-    const fails = mem.fails?.[String(city.id)] || 0;
+    /* ★ P60：失败记忆衰减——同一座城 8 旬前的败仗不再拦路。旧实现 fails 只在
+       自己打下该城时清零，而打不下又不会再打，形成死锁：AI 撞过一次南墙，
+       那怕对方只剩几百守军也永久绕道，表现就是「从不主动征服弱敌」。 */
+    const turnNow = viewTurn(snapshot);
+    const failN = Number(mem.fails?.[String(city.id)]) || 0;
+    const failAt = Number(mem.failsTurn?.[String(city.id)]);
+    const fails = failN > 0 && Number.isFinite(failAt) && turnNow - failAt > 8 ? 0 : failN;
     if (fails >= patience) return null;
     const stage = stageFor(city.id);
     if (!stage) return null;
@@ -206,12 +237,15 @@ function buildView(faction, snapshot, state, axes, mem) {
        （实测 30 旬只从 24 座降到 13 座，多数诸侯长期固守）。现在单独减压：
        门槛 ×0.28、多派六成、下限 400→250；difficultyAi 高档再放低门槛。 */
     const expansion = city.owner === 'han';
+    /* ★ P60：极弱城减压——守军 ≤300 的城与汉廷空城同一条出兵下限（250），
+       否则兵少的出发城凑不出 400 兵，眼睁睁看着嘴边的弱敌打不了。 */
+    const weakPrey = !expansion && Number(city.troops) <= 300;
     const sendFactor = sendMul * (expansion ? 1.6 : 1);
     const needFactor = (expansion ? 0.28 : 1) / aiMul;
     /* sendMul：制衡讨伐时 1.35（倾巢而出），常规出征 1（sendOf 基准） */
     const raw = Math.round((stage?.troops || 0) * (0.48 + axes.tempo * 0.22) * sendFactor);
     const send = Math.max(0, Math.min(raw, (stage?.troops || 0) - reserve));
-    if (send < (expansion ? 250 : 400)) return null;
+    if (send < (expansion || weakPrey ? 250 : 400)) return null;
     const ratio = odds(stage, city, send);
     if (ratio < need * needMul * needFactor) return null;
     const quote = quoteMarch(stage.id, city.id, send, stage.arms, {

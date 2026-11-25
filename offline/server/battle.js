@@ -25,7 +25,9 @@ import { garrisonCfgIds } from './domain/garrison.js';
 /* ★ 2026-11-16：官阶反哺统兵能力——统帅(defense)按官阶加成，史载原表不动 */
 import { effectiveStatOf } from './domain/general-stat.js';
 /* ★ 2026-11-22：出征经验定量统一在 general-progress.js，低折损仗也有参战底数 */
-import { BATTLE_EXP_PER_LOSS, BATTLE_EXP_PARTICIPATION } from './domain/general-progress.js';
+import {
+  BATTLE_EXP_PER_LOSS, BATTLE_EXP_PARTICIPATION, advancedBonus,
+} from './domain/general-progress.js';
 
 /** 本作设计：一方兵力降到开战时的这个比例及以下，算溃败。 */
 export const ROUT_RATIO = 0.1;
@@ -192,7 +194,8 @@ export function makeHero(g, cfg) {
   return {
     heroid: g.id,
     name: gc.name || `武将${g.cfgId}`,
-    level: g.level || 10,
+    /* ★ P61-S12：内核仍按 1~10 级读五维成长；进阶 11~15 只在派生层加战斗加成。 */
+    level: Math.min(10, Math.max(1, Number(g.level) || 10)),
     hero_type: ['normal', 'armor', 'chain'][(g.curArms || 1) % 3],
     hit_range: 1,
     country: '',
@@ -211,7 +214,7 @@ export function makeHero(g, cfg) {
   };
 }
 
-function makeUnit(unitId, side, general, cfg, troops, pos = 0) {
+function makeUnit(unitId, side, general, cfg, troops, pos = 0, day = 1) {
   const hero = makeHero(general, cfg);
   /* ★ M4-13：兵种适性从「只展示」变成「真进战斗」。
      取该武将五维在当前兵种上的适性系数（1.00~1.15），乘到攻/防基础值；
@@ -231,6 +234,19 @@ function makeUnit(unitId, side, general, cfg, troops, pos = 0) {
   if (Number.isFinite(loyal) && loyal < 80) {
     const loyalMul = 0.88 + Math.max(0, Math.min(80, loyal)) / 80 * 0.12;
     hero.attack_base = Math.max(1, Math.round(hero.attack_base * loyalMul));
+  }
+  /* ★ P61-S11：败仗负伤两旬，攻防各降 10%；到期自动复原，不死局也不白输。 */
+  const injured = Number(general?.injuredUntil) > Math.max(1, Math.floor(Number(day) || 1));
+  if (injured) {
+    hero.attack_base = Math.max(1, Math.round(hero.attack_base * 0.9));
+    hero.defence_base = Math.max(1, Math.round(hero.defence_base * 0.9));
+  }
+  /* ★ P61-S12：进阶加成只放派生层，不回改史载五维。 */
+  const advBonus = 1 + advancedBonus(general?.level);
+  if (advBonus > 1) {
+    hero.attack_base = Math.max(1, Math.round(hero.attack_base * advBonus));
+    hero.defence_base = Math.max(1, Math.round(hero.defence_base * advBonus));
+    hero.intel_base = Math.max(1, Math.round(hero.intel_base * advBonus));
   }
   return {
     unit_id: unitId,
@@ -618,7 +634,7 @@ export function resolveBattle({
   attackers.forEach(({ slot, g }, i) => {
     const uid = `a${i}`;
     idMap[uid] = g.id;
-    const unit = makeUnit(uid, 1, g, cfg, beginSoldiers[slot], slot);
+    const unit = makeUnit(uid, 1, g, cfg, beginSoldiers[slot], slot, Number(state?.clock?.day) || 1);
     unit.hero.attack_base = Math.max(1, Math.round(unit.hero.attack_base * atkStrike * mass));
     buildLookup(uid, unit);
     units.push(unit);
@@ -634,7 +650,7 @@ export function resolveBattle({
     const uid = `d${i}`;
     idMap[uid] = g.id;
     const troops = defense.soldiers[i] ?? 0;
-    const unit = makeUnit(uid, 2, g, cfg, troops, i);
+    const unit = makeUnit(uid, 2, g, cfg, troops, i, Number(state?.clock?.day) || 1);
     unit.hero.attack_base = Math.max(1, Math.round(unit.hero.attack_base * defStrike));
     if (wall !== 1 || terrainMul !== 1) {
       unit.hero.defence_base = Math.max(1, Math.round(unit.hero.defence_base * wall * terrainMul));

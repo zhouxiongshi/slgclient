@@ -118,7 +118,10 @@ export function selectEvents(events, ctx, state, opts = {}) {
 /**
  * 效果落账。api 由调用方注入（strategy 接线时给真实实现，测试给 mock）：
  *   { setFlag(name), clearFlag(name), addGold(n), addMorale(n),
- *     addLoyalty(generalName, n), addAttitude(factionId, n), addFame(n) }
+ *     addLoyalty(generalName, n), addAttitude(factionId, n), addFame(n),
+ *     setCityOwner(cityId, owner), addTroops(where, n), joinGeneral(name, cityId) }
+ * 硬效果由上层实现并返回可读摘要（如 {text, ...}）；返回 null 表示局势已变、
+ * 这次后果没有落账（例如城池不在玩家手里），UI 不应把它当成已生效。
  * 返回实际应用的效果列表（写进事件记录/战报，与预览同源）。
  */
 export function applyEffects(state, event, choiceId, api) {
@@ -137,6 +140,21 @@ export function applyEffects(state, event, choiceId, api) {
       case 'loyalty': api.addLoyalty(p.target, p.delta); applied.push({ kind: 'loyalty', target: p.target, delta: p.delta }); break;
       case 'attitude': api.addAttitude(p.target, p.delta); applied.push({ kind: 'attitude', target: p.target, delta: p.delta }); break;
       case 'fame': api.addFame(p.delta); applied.push({ kind: 'fame', delta: p.delta }); break;
+      case 'city': {
+        const r = api.setCityOwner ? api.setCityOwner(p.cityId, p.owner) : null;
+        if (r) applied.push({ kind: 'city', cityId: p.cityId, owner: p.owner, ...r });
+        break;
+      }
+      case 'troops': {
+        const r = api.addTroops ? api.addTroops(p.where, p.delta) : null;
+        if (r) applied.push({ kind: 'troops', where: p.where, delta: p.delta, ...r });
+        break;
+      }
+      case 'join': {
+        const r = api.joinGeneral ? api.joinGeneral(p.target, p.where) : null;
+        if (r) applied.push({ kind: 'join', target: p.target, where: p.where, ...r });
+        break;
+      }
       case 'nothing': applied.push({ kind: 'nothing' }); break;
       default: throw new Error(`未实现的效果类型: ${p.kind}`);
     }

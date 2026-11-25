@@ -23,7 +23,9 @@ import { rankName as meritRankName, RANK_NAMES, meritForRank, rankOfMerit, slotC
 import { oathOf, oathFactionOf, strategyCity, factionTraitOf } from './oath.js';
 import { ensureCityEcon, cityYield, armsApt, ARMS_NAMES, generalCapacity, salaryDueOf } from './city-econ.js';
 /* ★ 2026-11-20：里程碑常量放零依赖叶子，面板与结算同源（见 stage-goals 头注）。 */
-import { STAGE_GOALS, UNIFY_CITIES, SANDBOX_ENDING, nextStageGoal } from './stage-goals.js';
+import {
+  STAGE_GOALS, UNIFY_CITIES, SANDBOX_ENDING, GRAND_UNIFY_CITIES, nextStageGoal,
+} from './stage-goals.js';
 /* ★ M4-12：六府·内政的设施区段与 city.facilities 协议共用同一份生效清单。 */
 import { facilityView } from './facility-catalog.js';
 /* ★ 2026-11-17 城防：城墙耐久与战斗内用的是同一份公式（零依赖叶子，不成环） */
@@ -727,6 +729,10 @@ export function panelState(state, cfg) {
       unifyCities: UNIFY_CITIES,
       sandboxEnding: state.strategy?.sandboxEnding || null,
       endingTitle: SANDBOX_ENDING.title,
+      /* ★ P61-S6：终局史评与冻结状态（唯一真源 grandEnding），24 城只算阶段称帝 */
+      grandEnding: state.strategy?.grandEnding || null,
+      endGameFrozen: !!state.strategy?.endGameFrozen,
+      grandEndingCities: GRAND_UNIFY_CITIES,
       generalCount: (state.generals || []).length,
       generalCapacity: generalCapacity(state),
       salaryDue: salaryDueOf(state),

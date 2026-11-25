@@ -41,6 +41,11 @@ test('A1 · 100 组参数：预演与正式结算逐位一致', () => {
   const snapArmy = JSON.stringify(army);
   const snapCity = JSON.stringify(st.cities[target]);
   const snapEcon = JSON.stringify(st.cityEcon);
+  /* ★ P61-S11：败仗会让参战武将负伤 20 日，属真实存档状态；
+     100 组参数互不影响，必须把武将状态也纳入组间快照。 */
+  const snapGenerals = JSON.stringify(state.generals);
+  /* 战俘会改变守将候选排除表（defenseFor 的 exclude），同样必须组间复位。 */
+  const snapCaptives = JSON.stringify(state.captives || []);
   let checked = 0;
 
   for (let i = 0; i < 100; i += 1) {
@@ -48,6 +53,8 @@ test('A1 · 100 组参数：预演与正式结算逐位一致', () => {
     Object.assign(army, JSON.parse(snapArmy));
     st.cities[target] = JSON.parse(snapCity);
     st.cityEcon = JSON.parse(snapEcon);   /* 出征扣行军粮，不恢复会 no_grain */
+    state.generals = JSON.parse(snapGenerals);
+    state.captives = JSON.parse(snapCaptives);
     st.marches = [];
     state.warReports = [];
     state.battleLog = [];

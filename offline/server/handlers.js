@@ -386,6 +386,10 @@ export function settleWorld(ctx, now = Date.now()) {
 export function advanceToNextTurn(ctx, now = Date.now()) {
   const { state, cfg } = ctx;
   const st = ensureStrategy(state);
+  /* ★ P61-S6：终局史评出现后冻结回合，只有玩家显式「继续沙盘」才恢复。 */
+  if (st.endGameFrozen && st.grandEnding) {
+    return { ok: false, reason: 'ending_frozen', days: 0, ending: st.grandEnding };
+  }
   const turnDays = strategyTurnDays();
   const turnBefore = st.turn;
   const target = (st.lastTurnDay || 0) + turnDays;
@@ -940,7 +944,10 @@ export function handleRequest(ctx, req) {
       const interval = (cfg.basic.role?.collect_interval ?? 30) * 1000;
       const now = Date.now();
       const last = bucket.lastCollectTime || 0;
-      const sameDay = last > 0 && new Date(last).toDateString() === new Date(now).toDateString();
+      /* ★ P61-B3：征收次数改按游戏日（state.clock.day）重置，不再跟真实系统日期走。
+         改系统时间或长局跨真实次日都不再凭空刷新次数。CD 仍按真实秒数，避免挂机刷。 */
+      const dayNow = Math.max(1, Number(state.clock?.day) || 1);
+      const sameDay = Number(bucket.collectDay) === dayNow;
       if (!sameDay) bucket.collectTimes = 0;
       if ((bucket.collectTimes || 0) >= limit) {
         // ★ 修 bug-11：以前只回 code，玩家不知道是「次数用完」还是「冷却中」
@@ -964,6 +971,7 @@ export function handleRequest(ctx, req) {
       recordRes(state, 'gold', gold, cityBased ? `税赋征收·${cityName(wantCity)}` : '税赋征收');
       bucket.collectTimes = (bucket.collectTimes || 0) + 1;
       bucket.lastCollectTime = now;
+      bucket.collectDay = dayNow;
       ctx.push('roleRes.push', roleResOf(state));
       ctx.save();
       let nextTime;
@@ -978,6 +986,7 @@ export function handleRequest(ctx, req) {
         gold, limit, cityId: wantCity || 0,
         cur_times: bucket.collectTimes,
         next_time: nextTime,
+        next_day: dayNow + 1,
       };
       break;
     }
@@ -1007,22 +1016,28 @@ export function handleRequest(ctx, req) {
       }
       const from = m.from || [0, 0, 0, 0];
       const to = m.to || [0, 0, 0, 0];
-      /* ★ BUG审计P1-6：只禁净增产（用户裁决：不强制 1:1、不碰 transform_rate 比例口径）。
-       * 旧代码只校验「不扣成负」，单向 to 或 to>>from 可凭空复制资源。
-       * 原版语义要求 from/to 落在不同索引；此处保留该约束并禁止 to 总量 > from 总量。 */
-      const fSum = from.reduce((s, v) => s + Math.max(0, Number(v) || 0), 0);
-      const tSum = to.reduce((s, v) => s + Math.max(0, Number(v) || 0), 0);
-      const sameSlot = from.some((v, i) => Number(v) > 0 && Number(to[i]) > 0);
-      if (fSum <= 0 || tSum <= 0 || sameSlot || tSum > fSum) {
+      /* ★ P61-B4：服务端按 transform_rate 算产出，客户端只能指定「从哪种资源、换到哪种资源」。
+       * 旧实现信任客户端提交的 to 数值，只查总量不查比例，协议层可 1 木换 1 粮。
+       * 这里覆盖 P1-6 的「不碰比例」旧裁决：评估确认那是套利口子，改为唯一服务端口径。 */
+      const rate = Math.max(1, Math.min(100, Number(cfg.basic?.city?.transform_rate) ?? 50));
+      const src = from.findIndex((v) => Number(v) > 0);
+      const dst = to.findIndex((v) => Number(v) > 0);
+      const amount = src >= 0 ? Math.floor(Number(from[src])) : 0;
+      const extraFrom = from.filter((v, i) => i !== src && Number(v) > 0).length;
+      const extraTo = to.filter((v, i) => i !== dst && Number(v) > 0).length;
+      const out = dst >= 0 && amount > 0 ? Math.floor(amount * rate / 100) : 0;
+      if (src < 0 || dst < 0 || src === dst || extraFrom || extraTo || amount <= 0 || out <= 0) {
         rsp.code = CODE.InvalidParam;
-        rsp.msg = { reason: 'bad_transform', hint: '兑换不可凭空增产：产出总量不得超过投入总量' };
+        rsp.msg = {
+          reason: 'bad_transform',
+          hint: `集市只换一种资源到另一种资源，产出按兑换率 ${rate}% 由本机核算`,
+          rate,
+        };
         break;
       }
       const ret = [0, 0, 0, 0];
-      for (let i = 0; i < 4; i += 1) {
-        if (Number(from[i] || 0) > 0) ret[i] = -Number(from[i]);
-        else if (Number(to[i] || 0) > 0) ret[i] = Number(to[i]);
-      }
+      ret[src] = -amount;
+      ret[dst] = out;
       const r = state.roleRes;
       if (!ret.every((v, i) => (r[RES_KEYS[i]] || 0) + v >= 0)) {
         rsp.code = CODE.InvalidParam;
@@ -1037,7 +1052,7 @@ export function handleRequest(ctx, req) {
       }
       ctx.push('roleRes.push', roleResOf(state));
       ctx.save();
-      rsp.msg = {};
+      rsp.msg = { rate, fromIndex: src, toIndex: dst, spent: amount, gained: out };
       break;
     }
 

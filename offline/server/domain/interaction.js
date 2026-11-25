@@ -23,6 +23,8 @@ import { cityYield } from './city-econ.js';
 /* ★ U20 粮道（supply → march，不反向依赖本模块）；★ U14 内政任务状（interior-task → economy） */
 import { supplyMap } from './supply.js';
 import { interiorTaskView } from './interior-task.js';
+/* ★ P61-S10：玩家侧建言与「无事可做检测」独立叶子，不复用 NPC 决策脑 */
+import { evaluateAdvice } from './advice.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const MAP_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'map.json');
@@ -192,6 +194,26 @@ export function interactionState(state, cfg) {
       detail: '灾害每旬按 风险 × 政务官0.8 × 治安(0.7~1.0) 掷骰，政务官在岗可降 20% 概率。',
     });
   }
+  /* ★ P61-S10：四条全否时补一条「机会建言」，连续两旬全否写入 idleTurns 供断言。 */
+  const advice = evaluateAdvice(state, {
+    turn,
+    investReady: ready.length > 0,
+    canRecruit: Array.isArray(state.tavern?.people)
+      ? state.tavern.people.some((p) => !p.recruited) : false,
+    marchable: marchable.length,
+    cutCities: cutCities.length, lowGrain: lowGrain.length, lowLoyalty: lowLoyalty.length,
+  });
+  if (advice.idle) {
+    for (const c of advice.cards) {
+      push({
+        id: c.id, title: c.title, urgency: c.kind === 'warning' ? 1 : 7,
+        deadline: `${c.expires} 旬内`, source: c.source,
+        confidence: c.confidence === 'high' ? '高' : '中',
+        jump: { kind: 'agenda' }, action: c.title,
+        detail: `依据：${c.basis.join('；')}。连续无行动 ${advice.idleTurns} 旬。`,
+      });
+    }
+  }
   agenda.sort((a, b) => a.urgency - b.urgency);
 
   /* ---------- 回合推进预览（6.10 / P3） ---------- */
@@ -231,6 +253,8 @@ export function interactionState(state, cfg) {
 
   return {
     ok: true, day, turn, month,
+    /* ★ P61-S10：建言依据idleTurns 单一口径，UI/测试只读这份 */
+    advice,
     /* ★ M0-4（本作设计-3 / 验收 B1~B4）：撤销栈策略由服务端权威下发，前端不复算。
        depth：本旬可撤销步数（undoDepth，参数表 §9.2）；
        clearOnBattle / clearOnLoad：前端在检测到新战斗结算 / 读档回退时清空撤销栈；
@@ -273,13 +297,18 @@ export function interactionState(state, cfg) {
     /* ★ M3-6 事件弹窗（本作设计）：只读投影——strategyEventTick 已把待决事件排进
        st.pendingEvents（未决不堆叠），这里原样下发，点选走 /__slg/strategy/action
        eventChoice（落账在 strategy 层，本模块零 IO）。 */
-    pendingEvents: (Array.isArray(st.pendingEvents) ? st.pendingEvents : []).map((e) => ({
-      id: e.id, title: e.title, layer: e.layer || 'node', speaker: e.speaker || '',
-      text: Array.isArray(e.text) ? e.text : [String(e.text || '')],
-      choices: (Array.isArray(e.choices) ? e.choices : []).map((c) => ({
-        id: c.id, label: c.label, preview: c.preview || '',
-      })),
-    })),
+    pendingEvents: (Array.isArray(st.pendingEvents) ? st.pendingEvents : []).map((e) => {
+      const since = Math.max(1, num(e.sinceTurn, turn));
+      return {
+        id: e.id, title: e.title, layer: e.layer || 'node', speaker: e.speaker || '',
+        text: Array.isArray(e.text) ? e.text : [String(e.text || '')],
+        sinceTurn: since, dueTurn: since + 4, leftTurns: Math.max(0, since + 4 - turn),
+        autoResolve: st.eventAutoResolve !== false,
+        choices: (Array.isArray(e.choices) ? e.choices : []).map((c) => ({
+          id: c.id, label: c.label, preview: c.preview || '',
+        })),
+      };
+    }),
   };
 }
 

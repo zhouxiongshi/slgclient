@@ -58,7 +58,7 @@ test('行军粮按日计；冬季河路加耗；在途部队一旬吃 1 粮/兵'
   assert.equal(grainForTurn(state, 1000), 1000);
 });
 
-test('有城之后金产不再叠每天 1000，入账再扣三成五俸饷；政令按日回 2', () => {
+test('有城之后金产不再叠每天 1000，入账再扣三成五俸饷；政令改为旬预算', () => {
   const state = normalizeWorld(createWorld(cfg), cfg);
   ensureStrategy(state, cfg);
   const id = Object.keys(state.strategy.cities)[0];
@@ -71,9 +71,9 @@ test('有城之后金产不再叠每天 1000，入账再扣三成五俸饷；政
   state.roleRes.gold_yield = 100;
   state.roleRes.decree = 0;
   applyDays(state, cfg, 1, { decreePerDay: chapterRules().decreePerDay, upkeepPerSoldier: 0 });
-  assert.equal(chapterRules().decreePerDay, 2);
+  assert.equal(chapterRules().decreePerDay, 2, '旧章节参数保留兼容，但运行期不再按日发文');
   assert.equal(state.roleRes.gold, 65);
-  assert.equal(state.roleRes.decree, 2);
+  assert.equal(state.roleRes.decree, 0, 'P61-B：政令旬内不回，跨旬才补 8，上限 12');
   const grain = playerGrainYield(state, 1000, 0, 0);
   assert.ok(grain > 0 && grain < 400, `有城之后粮产不应再叠每天 1000，实际 ${grain}`);
 });

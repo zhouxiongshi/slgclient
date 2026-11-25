@@ -57,42 +57,32 @@ test('M2-5·变招：同 (seed, arriveDay) 恒同预案；三预案齐备', () =
   assert.ok(seen.size >= 2, `40 天窗口应出现 ≥2 种预案，实际 ${seen.size}`);
 });
 
-test('M2-5·情报区间：未侦察给区间线，精确档不给；推演不产生情报', () => {
+test('M2-5/P61·情报只影响一条推演线的风险提示，推演不枚举分支也不产生情报', () => {
   const { state, st, army, from, target } = battlefield();
-  // 情报 0：区间线应有两条（最坏/最好），文案声明未侦察
   const p0 = previewAssault(state, cfg, { cityId: target, fromCityId: from, armyId: army.id, frac: 1 });
   assert.equal(p0.ok, true);
   assert.equal(p0.intelTier, 0);
-  assert.equal(p0.spreadLines.length, 2, '未侦察应输出最坏/最好两条线');
+  assert.equal(p0.spreadLines, undefined, '不再下发最好/最坏对照线');
+  assert.equal(p0.variantLines, undefined, '不再下发全部变招对照线');
   assert.ok(p0.intelNote.includes('未侦察'));
-  // 区间线应真的不同（不是装饰）：最坏与最好的折损/胜负至少一项不同
-  const [worst, best] = p0.spreadLines;
-  assert.ok(worst.aLoss !== best.aLoss || worst.win !== best.win, '区间两条线必须可区分');
-  // 推演不得改情报档（#4 推演不产生情报）
+  assert.ok(p0.riskNotes.some((n) => n.includes('40%')), '未侦察只给风险提示');
   assert.equal(st.intel?.[target] ?? 0, 0, '推演不得写 st.intel');
-  // 侦察到精确档：不再给区间
   if (!st.intel) st.intel = {};
   st.intel[target] = 2;
   const p2 = previewAssault(state, cfg, { cityId: target, fromCityId: from, armyId: army.id, frac: 1 });
   assert.equal(p2.intelTier, 2);
-  assert.equal(p2.spreadLines.length, 0, '精确档不给区间（已知量才精确）');
+  assert.ok(p2.riskNotes.some((n) => n.includes('情报精确')));
   assert.ok(p2.intelNote.includes('精确'));
 });
 
-test('M2-5·变招对照线：推演下发「若敌方变招则…」，且预案真实影响战局', () => {
+test('M2-5/P61·变招只作风险提示：预案仍真实进入主线计算', () => {
   const { state, army, from, target } = battlefield();
   const p = previewAssault(state, cfg, { cityId: target, fromCityId: from, armyId: army.id, frac: 1 });
   assert.equal(p.ok, true);
   assert.ok(p.variant && p.variant.name, '推演应标明当前敌方预案');
-  assert.equal(p.variantLines.length, 2, '应给出另外两套预案的对照线');
-  /* 变招真实影响战局：对照线必须与主线在「上场守军」上就不同。
-     口径说明：只比折损/歼敌不够稳——攻方被打光时，守军多 12% 也未必改变
-     双方伤亡（伤害由攻方输出决定），三条线会出现完全相同的数字。
-     dStart（该预案真正上场的守军总数）才是变招进入计算链的直接证据。 */
-  const differs = p.variantLines.some((v) => v.dStart !== p.dStart
-    || v.aLoss !== p.aLoss || v.dLoss !== p.dLoss || v.code !== p.code);
-  assert.ok(differs, '变招对照线必须与主线有数值差异（不是装饰字段）');
+  assert.ok(p.riskNotes.some((n) => n.includes(p.variant.name) && n.includes('浮动')));
   assert.ok(p.dStart > 0 && p.dStart <= p.dTotal, '主线应给出实际参战守军，且不超过守军总数');
+  assert.ok(p.riskNotes.some((n) => n.includes('3 旬内战局槽锁定')));
 });
 
 test('M2-5·确认即锁：出征落 lockedSeed 且与推演种子同参一致', () => {

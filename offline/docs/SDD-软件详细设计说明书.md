@@ -2653,6 +2653,23 @@ build/SLG-Offline-win32-x64/
 
 **回归**：`tests/p59-battle-params.test.js` 6 项（侧总兵力口径/普攻率/一骑当千单体/同种子战果/抓俘摘要/属性上限）；`tests/p30-skill-mirror.test.js` 条目下限 10 → 8 并新增「机制形状不一致必须留在 skip 台账」断言。FIELD-CONTRACT 已登记。
 
+### 17.44 P60 评估后的全量修复 P61-A~F（2026-11-25 用户「全部修复」）
+
+**用户原话**：全部修复。
+
+| 批次 | 已修 | 权威口径 / 证据 |
+| --- | --- | --- |
+| P61-A | 坏档启动崩溃、州治死代码、征收按日、集市兑换率、事件逾期交互、AI 求援只认盟约 | `world.js repairArrayFields()`；`failstate.js` 从 `map.json provinceCapital` 读；`handlers.js` 服务端 `transform_rate`；`p61-a-robustness.test.js` 37/37 |
+| P61-B | 政令旬预算、金币沉淀税免税额 3 旬、石料堆腐 | `economy.js`；`p61-b-scarcity.test.js` 20/20 |
+| P61-C | 劝降改为献都城称臣、史实基础关系表替哈希 | `relations-factions.json` + `diplomacy.js`；`p61-c-diplomacy.test.js` 13/13 |
+| P61-D | 太守方针真实产量与互斥、推演单线 + 战局槽 | `policy-effects.js` + `governor.js` / `city-econ.js`；`p61-d-choices.test.js` 16/16 |
+| P61-E | 四档难度、24 城称帝/30 城终局史评、三结局合一、AI 人格扩至 16 轴 | `difficulties.json` / `stage-goals.js` / `strategy-brain.js`；`p61-e-difficulty-ending.test.js` 16/16 |
+| P61-F | 事件三类硬后果、事件上限读参、无事可做检测、败仗代价、进阶成长与战法组合标签 | `event-dsl.js` / `event-engine.js` / `advice.js` / `general-progress.js` / `strategy.js`；`p61-f-events-advice-growth.test.js` 6/6 |
+
+**全量回归补修（P61-D2）**：`npm test` 首跑暴露两处历史快照与战局槽改造的交叉问题：① 正式结算的敌方预案仍按 `mm.arriveDay` 逐日取，推演按 `seedSlotDay()` 的 3 旬槽取，跨日会给出不同守军折算 → 已把正式结算改为同槽；② 100 组预演一致性用例的组间快照漏了 `generals/captives`，P61-S11 败仗负伤与既有的战俘排除表会串组 → 已补齐快照。回归后 851/851 通过。
+
+**P61-B5 死参处置（登记，不粉饰）**：`eventPerTurnMax`、`adviceMax`、`popGrowthYear` 已从「存在即通过」变为真实消费点；`difficultyAi/difficultyRes/difficultyDiplo` 在 P61-E 已接。`devMax`、`postBonusMax`、`policyBonusMax`、`adjBonusMax`、`supplyLossPer100`、`battleJitter`、`recruitBase`、`loyaltyWarn`、`fateGroups`、`fireDamageMul` 仍只在参数表登记未接运行时：其中 `loyaltyWarn` 默认 30 与实装预警线 55 语义冲突，直接接线会改变既有叛逃节奏；`battleJitter` 若接入会漂黄金向量；其余需在各自公式上单独定标。本版保留参数表 30 项不变（发布闸锁数量），但按本条登记为**规划项**，不得对玩家描述为已生效机制。
+
 **红线速查（改前必看）**：INV-01~INV-10（§1.4）、ADR-01/04/07/08/13/14（§1.2）、§7.15 键空间警告、§9.3 z-index 阶梯（含回放层 100700）、§10 确定性、§14.7 报告归属、§16.4 内核改法、§17 偏差登记。
 
 ---

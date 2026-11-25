@@ -302,19 +302,18 @@ export function previewNarrative(p) {
 
   /* 胜负手：把真正决定这场仗的 2~3 条挑出来，而不是让玩家自己算 */
   const tips = [];
-  if (ratio < 1.25) {
-    tips.push(`兵力偏少：至少带 ${fmt(Math.ceil(dTotal * 1.25))} 兵（守军的 1.25 倍）再打更稳。`);
-  } else if (ratio >= 1.6) {
-    tips.push(`兵力占优：可以试着减少出兵比例，留住城防。`);
-  }
+  /* ★ P61-S2：不再给「带 N×兵必稳」的解方程提示。战局按 3 旬槽锁定，
+     玩家要做的是判断路线/阵容/情报，而不是把兵堆到某个阈值。 */
+  if (ratio < 1.25) tips.push('兵力偏少：先补兵、调将对位，或换一座小城；堆兵不是唯一解。');
+  else if (ratio >= 1.6) tips.push('兵力占优：可考虑降低出兵比例，把兵留在城防。');
   if (p.counter > 0) tips.push(`兵种克制在我：守军兵力已被折算 −13%，这是可以打的一场。`);
   if (p.counter < 0) tips.push(`兵种被克：守军兵力折算 +15%，换一支配盾/枪的队伍损失会小很多。`);
   if (Number(p.fateMul) > 1) tips.push(`宿命组合生效（守军 ×${p.fateMul.toFixed(2)}），本队武将有额外加成。`);
   if (p.intelTier < 2) tips.push(`守军数字是传闻估算。先派斥候侦察，区间会收窄到 ±15%，推演才靠得住。`);
-  if (p.spreadLines && p.spreadLines.length === 2) {
-    const w = p.spreadLines[0], b = p.spreadLines[1];
-    tips.push(`守军偏多时：${w.win ? '仍可下' : '打不动'}（折损 ${fmt(w.aLoss)}）；`
-      + `守军偏少时：${b.win ? '可下' : '仍勉强'}（折损 ${fmt(b.aLoss)}）。`);
+  /* ★ P61-S2：只给风险提示，不枚举最好/最坏/全部变招的结果。
+     这些文案由 strategy 层同源下发，玩家看到的就是唯一推演线的口径。 */
+  for (const note of (Array.isArray(p.riskNotes) ? p.riskNotes : []).slice(0, 2)) {
+    tips.push(note);
   }
   if (!win) tips.push('不打也可以：返回「集结 · 出击」换一座小城，或先补兵再来。推演与否都不影响出征。');
 

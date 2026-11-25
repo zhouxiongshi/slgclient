@@ -90,7 +90,8 @@ test('P40-② 集市兑换进府库流水，正负两侧都可审计', () => {
   }));
   assert.equal(r.code, 0);
   const rows = (state.resLedger || []).filter((x) => x.reason === '集市兑换');
-  assert.deepEqual(rows.map((x) => [x.res, x.delta]), [['wood', -500], ['grain', 500]]);
+  /* ★ P61-B4：兑换率由服务端核算，台账必须记真实落账的 250 粮而非客户端填的 500。 */
+  assert.deepEqual(rows.map((x) => [x.res, x.delta]), [['wood', -500], ['grain', 250]]);
 });
 
 test('P40-③ 玩家可见 reason 一律中文兜底，自立与存档不再直出内部码', () => {

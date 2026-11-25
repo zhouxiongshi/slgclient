@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "source": "《三国演义》可考的势力关系与本作相性设定",
+  "note": "只收玩家普遍知晓的成对关系；未收录的势力对一律按 0（素无往来）处理，不再用 id 哈希伪装成史实关系。数值为态度基础项，范围 -40~40。",
+  "pairs": {
+    "sili|yanzhou": { "value": -30, "label": "董卓擅权，曹操首倡讨伐", "source": "演义·第五回" },
+    "jizhou|sili": { "value": -25, "label": "袁绍为讨董盟主", "source": "演义·第五回" },
+    "bingzhou|sili": { "value": -20, "label": "吕布先附董卓后反目", "source": "演义·第九回" },
+    "bingzhou|xuzhou": { "value": -20, "label": "吕布夺刘备徐州", "source": "演义·第十九回" },
+    "xuzhou|yanzhou": { "value": -10, "label": "刘曹亦敌亦友，衣带诏后交恶", "source": "演义·第二十四回" },
+    "xuzhou|yangzhou": { "value": 25, "label": "孙刘联盟共抗北方", "source": "演义·第三十八回" },
+    "yanzhou|yangzhou": { "value": -20, "label": "曹孙争夺江东与荆州", "source": "演义·第四十四回" },
+    "jizhou|yanzhou": { "value": -25, "label": "袁曹官渡之争", "source": "演义·第三十回" },
+    "jizhou|youzhou": { "value": -25, "label": "公孙瓒与袁绍河北相攻", "source": "演义·第七回" },
+    "jingzhou|yanzhou": { "value": 10, "label": "司马氏旧属曹魏", "source": "本作设定" }
+  }
+}

@@ -88,9 +88,11 @@ export function applyDays(state, cfg, days, rules, ctx) {
   };
   const r = state.roleRes;
   const cap = r.depot_capacity || 1000000;
-  const limit = cfg.basic.role?.decree_limit ?? 20;
-  /* 缺省 2：上限 20 时，大约一旬才能攒满一次行动预算。30/日会让政令永远顶满。 */
-  const decreePerDay = rules.decreePerDay ?? 2;
+  /* ★ P61-B-S3① 政令旬预算：旧制每日 +2、上限 20，实测 72 旬恒 20，等于没有约束。
+     现在每跨一旬发 8 点、最多存 12 点，要塞（2~3 点）与审计（2 点）才成为真取舍。 */
+  const limit = Math.min(12, cfg.basic.role?.decree_limit ?? 20);
+  const decreePerTurn = 8;
+  const turnDaysForBudget = Math.max(1, Number(knobGet(state, 'turnDays')) || 10);
   /* 序章沿用章节军饷。玩家已有城之后改按参数表：每兵每天 0.1 粮，和城产对得上。 */
   const ownsCity = Object.values(state.strategy?.cities || {}).some((row) => row?.owner === 'player');
   const perSoldier = ownsCity
@@ -105,7 +107,8 @@ export function applyDays(state, cfg, days, rules, ctx) {
   let desertFirst = false;
   let desertPeriodic = false;
   let recovered = false;
-  const startDay = Math.floor(Number(state.clock?.day) || 1);
+  const endDay = Math.floor(Number(state.clock?.day) || 1);
+  const startDay = Math.max(1, endDay - Math.max(0, days) + 1);
   // ★ P1：委任岗位真实生效——resBonus[k] 为该资源产量加成百分比（panels.js 计算，红线 ≤30%）
   const resBonus = rules.resBonus || {};
   /* 修 U17：俸禄只由 city-econ.loyaltyTick 的「逐将旬俸」结算一次。
@@ -153,7 +156,14 @@ export function applyDays(state, cfg, days, rules, ctx) {
     const sal = Math.min(r.gold || 0, salaryPerDay);
     r.gold -= sal;
     salaryPaid += sal;
-    r.decree = Math.min(limit, (r.decree || 0) + decreePerDay);
+  }
+  const turn0 = Math.floor((startDay - 1) / turnDaysForBudget);
+  const turn1 = Math.floor((endDay - 1) / turnDaysForBudget);
+  const crossedTurns = Math.max(0, turn1 - turn0);
+  if (crossedTurns > 0) {
+    const decreeBefore = Math.max(0, Math.floor(Number(r.decree) || 0));
+    r.decree = Math.min(limit, decreeBefore + decreePerTurn * crossedTurns);
+    if (r.decree > decreeBefore) recordRes(state, 'decree', r.decree - decreeBefore, '旬预算', endDay);
   }
   /* 本作设计 固定支出闸：有城之后，城防与俸饷约占金产的 35%（落在 30%–45%）。 */
   let maintainPaid = 0;
@@ -175,23 +185,37 @@ export function applyDays(state, cfg, days, rules, ctx) {
   if (ownsCity && goldYielded > 0 && taxPct > 0) {
     const turnDays = Math.max(1, Number(knobGet(state, 'turnDays')) || 10);
     const perTurnYield = (goldYielded / days) * turnDays;
-    const exempt = Math.floor(perTurnYield * 10);
+    /* ★ P61-B-S3②：免税额 10 旬 → 3 旬。旧值让 17.5 万金平台值仍是单城投资的数百倍，
+       钱不再构成取舍；收紧后沉淀税真正随存量回收（GM 设 0 仍可关闭）。 */
+    const exempt = Math.floor(perTurnYield * 3);
     const excess = Math.max(0, (Number(r.gold) || 0) - exempt);
     hoardTaxPaid = Math.min(Number(r.gold) || 0,
       Math.floor(excess * (taxPct / 100) * (days / turnDays)));
     r.gold -= hoardTaxPaid;
+  }
+  /* ★ P61-B-S3③ 石料露天堆腐：石没有随存量增长的回收口，72 旬实测撞 20 万仓容。
+     超出「8 旬石毛产（至少 2 万）」的部分每旬堆腐 20%，形成温和的存量税，
+     鼓励转城防/折军工，而不是把石头堆到仓容上限。 */
+  let stoneRotPaid = 0;
+  const stoneExempt = Math.max(20000, Math.floor((Number(r.stone_yield) || 0) * 8));
+  const stoneExcess = Math.max(0, Math.floor(Number(r.stone) || 0) - stoneExempt);
+  if (stoneExcess > 0) {
+    stoneRotPaid = Math.min(stoneExcess, Math.floor(stoneExcess * 0.2 * (days / turnDaysForBudget)));
+    r.stone -= stoneRotPaid;
   }
   // 流水：按整段结算记净变化。gold 拆成「属地日产」与各项支出，
   //   之和恒等于实际净变化（满仓截断也如实入账）；其余资源记一笔净差。
   for (const k of STOCK) {
     let delta = (Number(r[k]) || 0) - before[k];
     if (k === 'gold') delta += salaryPaid + maintainPaid + hoardTaxPaid;
+    if (k === 'stone') delta += stoneRotPaid;
     if (delta) recordRes(state, k, delta, '属地日产', startDay);
   }
   if (upkeepPaid) recordRes(state, 'grain', -upkeepPaid, '军饷', startDay + days - 1);
   if (salaryPaid) recordRes(state, 'gold', -salaryPaid, '委任俸禄', startDay + days - 1);
   if (maintainPaid) recordRes(state, 'gold', -maintainPaid, '城防俸饷', startDay + days - 1);
   if (hoardTaxPaid) recordRes(state, 'gold', -hoardTaxPaid, '国库沉淀税', startDay + days - 1);
+  if (stoneRotPaid) recordRes(state, 'stone', -stoneRotPaid, '石料堆腐', startDay + days - 1);
   r.grainArrearsDays = arrearsDays;
   if (warnFirst) {
     arrearsNotice(state, ctx, '国库粮尽，军饷欠付。连续 3 旬无粮，驻军将逃散；请减兵、运粮或扩城。');
@@ -203,7 +227,7 @@ export function applyDays(state, cfg, days, rules, ctx) {
   }
   if (recovered) arrearsNotice(state, ctx, '粮仓复足，军饷恢复正常，逃散已止。');
   return {
-    days, upkeepPaid, salaryPaid, maintainPaid, hoardTaxPaid,
+    days, upkeepPaid, salaryPaid, maintainPaid, hoardTaxPaid, stoneRotPaid,
     soldiers: countSoldiers(state), arrearsDays, arrearsBefore, deserters,
   };
 }

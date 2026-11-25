@@ -20,9 +20,12 @@
  */
 
 import { beginInteriorTask, interiorTasks, officerStat, KINDS } from './interior-task.js';
+import { policyEffect } from './policy-effects.js';
 
-/** 城方针（玩家可见六选一；产出与旧手动/委任完全同源，只是谁来决定做哪件事的区别）。 */
-export const POLICIES = {
+/** 城方针（玩家可见六选一）。
+ *  ★ P61-S1：方针不再只是施工顺序——同时决定资源配比与互斥工程，
+ *  说明文字直接取 policy-effects 的同一份，玩家看到什么就真执行什么。 */
+export const POLICIES = Object.fromEntries(Object.entries({
   auto: {
     label: '太守自决', order: ['populate', 'agri', 'trade', 'barracks', 'defense'],
     desc: '按民生→农→商→兵→防自动补短板',
@@ -32,7 +35,10 @@ export const POLICIES = {
   military: { label: '强兵', order: ['barracks', 'defense', 'populate'], desc: '优先募兵整编，兼顾城防与民生' },
   defense: { label: '固防', order: ['defense', 'barracks', 'populate'], desc: '优先修筑城防，兼顾兵营与民生' },
   civil: { label: '安民', order: ['populate', 'agri', 'trade'], desc: '优先劝课生息，兼顾农桑商务' },
-};
+}).map(([key, p]) => {
+  const e = policyEffect(key);
+  return [key, { ...p, forbid: e.forbid, effectNote: e.note }];
+}));
 
 const clamp = (v) => Math.max(0, Math.trunc(Number(v) || 0));
 const dayOf = (state) => Math.max(1, Math.floor(Number(state?.clock?.day) || 1));
@@ -135,6 +141,9 @@ export function governorView(state, cfg, cityId) {
     policy: POLICIES[gv.policy] ? gv.policy : 'auto',
     policyLabel: P.label,
     policyDesc: P.desc,
+    /* ★ P61-S1：方针的真实收益与停工项必须和玩家看到的一致 */
+    policyEffect: P.effectNote,
+    forbid: (P.forbid || []).map((k) => KINDS[k]?.label || k),
     status: gv.status === 'blocked' ? 'blocked' : 'running',
     blockedReason: gv.blockedReason || null,
     doneCount: Number(gv.doneCount) || 0,
@@ -300,6 +309,9 @@ export function governorTick(state, cfg, ctx) {
     );
     for (const kind of P.order) {
       if (kind === 'relief' || activeKinds.has(kind)) continue;
+      /* ★ P61-S1：方针互斥——重农不练兵、固防商税减半、重商不修城。
+         玩家选方针时就能看到停工项，不再所有项目最终都做完。 */
+      if (Array.isArray(P.forbid) && P.forbid.includes(kind)) continue;
       const r = beginInteriorTask(state, cfg, ctx, {
         cityId: cid, kind, officerId: Number(gv.officerId) || 0,
       });

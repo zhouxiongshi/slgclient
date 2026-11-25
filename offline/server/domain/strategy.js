@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { makeBuild, makeGeneral, makeFacilityList, nextId, mainCity } from '../world.js';
 import { rngFor } from './strategy-rng.js';
 /* ★ M2-3 全局参数表（本作设计）：零依赖叶子，所有新数值一律从这里读 */
-import { knobGet } from './knobs.js';
+import { knobGet, knobSet } from './knobs.js';
 /* ★ M4-8：行军速度与战斗/内政/外交共用同一份武将属性基线 */
 import { gameStatOf } from './general-stat.js';
 /* ★ M2-3 失败态与结局（本作设计）：零依赖叶子 */
@@ -37,7 +37,10 @@ import { quoteMarch, openMonth, closeMonth, noteMove, noteCity, booksOf } from '
 import { onTileCleared, chapterRules, noticeRecruit } from './campaign.js';
 import { dayFraction, ensureTavern } from './tavern.js';
 import { recordRes } from './economy.js';
-import { grantBattleExp, levelUpSentence, takeBattlePromos } from './general-progress.js';
+import {
+  grantBattleExp, levelUpSentence, takeBattlePromos,
+  ADVANCE_COST_GOLD, ADVANCED_LEVEL_CAP,
+} from './general-progress.js';
 import {
   ensureCityEcon, consumeMarchGrain, deliverGrain, cityEconTick, cityName,
   cityYield, armsApt, armsCounter, ARMS_NAMES, devLevel, cityDevTick, storeCapOf,
@@ -417,6 +420,10 @@ export function oathOptions(state) {
       generals: (f.startGenerals || []).slice(0, 3),
       cities: candidateCities(state, f),
     })),
+    /* ★ P61-S5：难度四档随开局名录下发，选择后写 knobs */
+    difficulties: difficultyList().map((d) => ({
+      id: d.id, label: d.label, desc: d.desc, targetWinRate: d.targetWinRate,
+    })),
   };
 }
 
@@ -424,7 +431,32 @@ export function oathOptions(state) {
  * 择主定都：选中的诸侯名下城池全部易帜归 player，都城即玩家本城，
  * 初始武将团 3 员入营，势力特技自此生效（oath.js 提供数值面）。
  */
-export function chooseOath(state, cfg, ctx = {}, { lord, city } = {}) {
+/** ★ P61-S5：四档难度定义（只读配置）；未知名回落到常规档。 */
+let difficultyLevels = null;
+export function difficultyList() {
+  if (difficultyLevels) return difficultyLevels;
+  try {
+    const doc = JSON.parse(readFileSync(resolve(ROOT, 'conf', 'campaign', 'difficulties.json'), 'utf8'));
+    difficultyLevels = Array.isArray(doc.levels) ? doc.levels : [];
+  } catch {
+    difficultyLevels = [];
+  }
+  return difficultyLevels;
+}
+
+export function applyDifficulty(state, id) {
+  const levels = difficultyList();
+  const row = levels.find((x) => x.id === id) || levels.find((x) => x.id === 'normal');
+  if (!row) return { ok: false, reason: 'no_difficulty' };
+  state.difficulty = row.id;
+  const applied = {};
+  for (const [name, value] of Object.entries(row.knobs || {})) {
+    applied[name] = knobSet(state, name, value).value;
+  }
+  return { ok: true, id: row.id, label: row.label, knobs: applied };
+}
+
+export function chooseOath(state, cfg, ctx = {}, { lord, city, difficulty } = {}) {
   if (!oathPending(state)) return { ok: false, code: 1, reason: 'already_done' };
   const conf = factionConfFor(state);
   const f = conf.factions.find((x) => x.id === lord);
@@ -503,7 +535,12 @@ export function chooseOath(state, cfg, ctx = {}, { lord, city } = {}) {
     msg: `【天下】${f.name}举义！定都${target.name}，麾下众将誓师北望。`,
     time: Date.now(),
   });
-  return { ok: true, lord: f.id, lordName: f.name, city: target.name, cities: transferred, generals: added };
+  /* ★ P61-S5：举义时锁定难度，三个旋钮一次性写入存档，之后可在设置里重选。 */
+  const diff = applyDifficulty(state, difficulty || state.difficulty);
+  return {
+    ok: true, lord: f.id, lordName: f.name, city: target.name,
+    cities: transferred, generals: added, difficulty: diff.id, difficultyLabel: diff.label,
+  };
 }
 
 export function neighborsOf(cityId) {
@@ -1215,7 +1252,10 @@ export function spawnFactionAssault(state, cfg, ctx, faction, targetCity, troops
  */
 /* ★ 2026-11-20：常量搬到零依赖叶子 domain/stage-goals.js（panels 也要用）。
    注意：`export ... from` 只转出、不建立本地绑定，本文件内部要用必须同时 import。 */
-import { STAGE_GOALS, UNIFY_CITIES, SANDBOX_ENDING, nextStageGoal } from './stage-goals.js';
+import {
+  STAGE_GOALS, UNIFY_CITIES, SANDBOX_ENDING,
+  GRAND_UNIFY_CITIES, GRAND_ENDING, nextStageGoal,
+} from './stage-goals.js';
 export { STAGE_GOALS, UNIFY_CITIES, SANDBOX_ENDING, nextStageGoal };
 
 export function stageGoalTick(state, cfg, ctx) {
@@ -1268,7 +1308,44 @@ export function stageGoalTick(state, cfg, ctx) {
     });
     hit.push({ id: 'unify', title: SANDBOX_ENDING.title, at: owned });
   }
+  /* ★ P61-S6：真正的终局——30 城写唯一真源 grandEnding、生成史评并冻结回合。
+     24 城的「称帝」只是阶段里程碑，不再冒充结局。 */
+  if (owned >= GRAND_UNIFY_CITIES && !st.grandEnding) {
+    const decisions = (st.events || [])
+      .filter((e) => ['举义', '攻陷', '迁都', '背盟', '结盟', '裁军', '招抚'].some((k) => (e.text || '').includes(k)))
+      .slice(-5).map((e) => e.text);
+    st.grandEnding = {
+      id: GRAND_ENDING.id, title: GRAND_ENDING.title,
+      day, turn: st.turn ?? 0, cities: owned,
+      generals: (state.generals || []).length,
+      battles: Array.isArray(st.battleHistory) ? st.battleHistory.length : 0,
+      fame: Math.round(Number(st.fame) || 0),
+      decisions,
+      history: `第 ${day} 日，${owned} 城入版图，群雄尽退。帐下 ${(state.generals || []).length} 人，历经 ${st.battleHistory?.length || 0} 战，名望 ${Math.round(Number(st.fame) || 0)}。`,
+    };
+    st.endGameFrozen = true;
+    recordEvent(state, `【${GRAND_ENDING.title}】${st.grandEnding.history}`);
+    ctx.push?.('chat.push', {
+      rid: 0, nickName: '系统', type: 0,
+      msg: `【终局·${GRAND_ENDING.title}】${GRAND_ENDING.hint}`,
+      time: Date.now(),
+    });
+    hit.push({ id: GRAND_ENDING.id, title: GRAND_ENDING.title, at: owned });
+  }
   return hit;
+}
+
+/** ★ P61-S6：玩家在终局史评页显式选择「继续沙盘」才解除冻结，不自动续局。 */
+export function strategyContinueSandbox(state, ctx) {
+  const st = ensureStrategy(state);
+  if (!st.grandEnding) return { ok: false, reason: 'no_ending' };
+  st.endGameFrozen = false;
+  st.sandboxResumed = true;
+  recordEvent(state, '【终局·续局】主公决意继续经营沙盘，史评既定，岁月再启。');
+  ctx?.push?.('chat.push', {
+    rid: 0, nickName: '系统', type: 0, msg: '已解除回合冻结，可继续经营（史评保留）。', time: Date.now(),
+  });
+  return { ok: true, title: st.grandEnding.title };
 }
 
 /* ---------------------------------------------------------------- 围城压力
@@ -1855,6 +1932,14 @@ export function repairCityWalls(state) {
 /* ★ M2-5 张力守恒 #2（本作设计）：敌将有「临阵变招」——同一编队，抵达日不同
    敌方应对可能不同。变招由 rngFor(seed, arriveDay, 'counter') 决定，三套预案；
    推演会展示「若敌方变招则…」。注意这是确定性表，不是每旬换：同一抵达日恒同预案。 */
+/** ★ P61-S2：战局槽——同一目标 3 旬（30 游戏日）共用一个种子与敌方预案。
+ *  旧口径按 arriveDay 逐日取种，玩家换一天出发就能免费重试到全胜分支，
+ *  把「战前判断」变成「解方程」。现在出发日只能在槽内微调行程，不能刷结果。 */
+export function seedSlotDay(day) {
+  const d = Math.max(1, Math.floor(Number(day) || 1));
+  return Math.floor((d - 1) / 30) * 30 + 1;
+}
+
 export const COUNTER_VARIANTS = [
   { id: 'hold', name: '坚守不出', defMul: 1.12, note: '守军据城死守，兵力折算 +12%' },
   { id: 'rush', name: '出城逆袭', defMul: 0.88, note: '守军弃垒求战，兵力折算 −12%' },
@@ -1865,6 +1950,42 @@ export const COUNTER_VARIANTS = [
 export function counterVariantFor(state, cityId, arriveDay) {
   const r = rngFor(state?.seed ?? 20261110, Math.max(1, Math.floor(Number(arriveDay) || 1)), `counter:${cityId}`).random();
   return COUNTER_VARIANTS[Math.floor(r * COUNTER_VARIANTS.length) % COUNTER_VARIANTS.length];
+}
+
+/**
+ * ★ P61-S11：败仗代价（保留「不会卡死」底线）。
+ * 只扣一座出发城的部分存量仓储/府金，并让一名参战武将负伤两旬；
+ * 不清零、不夺城、不阵亡，避免单机存档被一次败仗摧毁。
+ */
+function applyDefeatCost(state, cfg, { army, aLoss, aTotal, day }) {
+  if (!(aLoss > 0) || !(aTotal > 0) || aLoss / aTotal < 0.25) return null;
+  const st = ensureStrategy(state);
+  const cityId = Number(army?.cityId) || Number(st.playerCity) || 0;
+  const e = ensureCityEcon(state)?.[cityId];
+  let storeLost = 0;
+  if (e && st.cities?.[cityId]?.owner === 'player') {
+    const before = Math.max(0, Math.round(Number(e.store) || 0));
+    storeLost = Math.min(before, Math.round(before * 0.12));
+    e.store = before - storeLost;
+  }
+  const r = state.roleRes || (state.roleRes = {});
+  const goldBefore = Math.max(0, Math.round(Number(r.gold) || 0));
+  const goldLost = Math.min(goldBefore, Math.round(goldBefore * 0.03));
+  if (goldLost > 0) {
+    r.gold = goldBefore - goldLost;
+    recordRes(state, 'gold', -goldLost, '败军损耗', day);
+  }
+  let injuredName = '';
+  if (aLoss / aTotal >= 0.35) {
+    const g = (army?.generals || []).map((id) => (state.generals || []).find((x) => x.id === id))
+      .find((x) => x && !(Number(x.injuredUntil) > day));
+    if (g) {
+      g.injuredUntil = day + 20;
+      injuredName = cfg?.generalByCfg?.get?.(Number(g.cfgId))?.name || g.name || `武将${g.cfgId}`;
+    }
+  }
+  if (!storeLost && !goldLost && !injuredName) return null;
+  return { cityId, storeLost, goldLost, injuredName, recoverDay: day + 20 };
 }
 
 /**
@@ -1923,6 +2044,12 @@ function settleArmyBattle(state, cfg, ctx, {
   const win = result.report.result === 2;
   const rec = recovered.reduce((s, n) => s + n, 0);
   const draw = result.report.result === 1;
+  /* ★ P61-S11：败仗代价与「下一旬怎么恢复」都必须写进同一份战报。 */
+  const defeatCost = (!win && !draw)
+    ? applyDefeatCost(state, cfg, {
+      army, aLoss, aTotal, day: Math.max(1, Math.floor(Number(state.clock?.day) || 1)),
+    })
+    : null;
   let summary = win
     ? `攻陷${place}：我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}，歼敌 ${dLoss}。`
     : draw
@@ -1931,7 +2058,10 @@ function settleArmyBattle(state, cfg, ctx, {
         + (rec > 0 ? `，溃兵 ${rec} 归营。` : '。')
         /* ★ 2026-11-19 玩法修复：战败后必须告诉玩家下一步怎么做。
            旧版只报数字，玩家 800 兵撞 1750 守军全灭后不知道原因。 */
-        + (dTotal > aTotal * 1.2 ? `守军兵力占优（${dTotal} 对 ${aTotal}），下次出征前先在城内征兵补足。` : '');
+        + (dTotal > aTotal * 1.2 ? `守军兵力占优（${dTotal} 对 ${aTotal}），下次出征前先在城内征兵补足。` : '')
+        + (defeatCost ? ` 败军代价：${cityName(defeatCost.cityId)}仓粮损 ${defeatCost.storeLost}、府金损 ${defeatCost.goldLost}`
+          + (defeatCost.injuredName ? `，${defeatCost.injuredName}负伤需至第 ${defeatCost.recoverDay} 日复原` : '')
+          + '。' : '');
   const counterNote = counter > 0
     ? `我军${ARMS_NAMES[atkArms]}克制守军${ARMS_NAMES[defArms]}（战力+15%）。`
     : (counter < 0 ? `守军${ARMS_NAMES[defArms]}克制我军${ARMS_NAMES[atkArms]}（战力-15%）。` : '');
@@ -1963,6 +2093,7 @@ function settleArmyBattle(state, cfg, ctx, {
     dRemain: result.endDefenseSoldiers || [0, 0, 0],
     counter, atkArms, defArms, counterNote,
     fateMul: fate.mul, fateNotes: fate.notes,
+    defeatCost,
   };
   /* ★ M3-4 事件条件 battleWon/battleLost 的台账（近 N 旬胜负窗） */
   const strat = state.strategy || ensureStrategy(state);
@@ -2237,7 +2368,7 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
     confirmBattle: !!confirmBattle, pendingBattle: false, confirmed: false,
     /* ★ M2-5 张力守恒 #3「确认即锁」：出征瞬间锁定种子——推演多少次都行，
        确认后不再重来；要重来只能撤军（有代价）。结算只读 lockedSeed。 */
-    lockedSeed: battleSeedFor(army.id, 8000 + id, 100 + Math.max(1, Math.min(3, target.level || 1)), departDay + marchDays),
+    lockedSeed: battleSeedFor(army.id, 8000 + id, 100 + Math.max(1, Math.min(3, target.level || 1)), seedSlotDay(departDay + marchDays)),
   };
   st.marches.push(row);
   army.marchId = row.id;   // 锁队：到达前不能再出征/清剿
@@ -2337,7 +2468,8 @@ export function strategyResolveMarches(state, cfg, ctx) {
     const level = Math.max(1, Math.min(3, target.level || 1));
     /* ★ M2-5 张力守恒 #2：实际战斗的守军折算按该抵达日的敌方预案（与推演同口径）。
        defMul 传给 settleArmyBattle 统一相乘，dLoss 基线保持 raw 守军数。 */
-    const variant = counterVariantFor(state, mm.to, mm.arriveDay);
+    /* ★ P61-D2：预案与 lockedSeed 同按 3 旬槽取，避免换出发日刷「守军逆袭」预案。 */
+    const variant = counterVariantFor(state, mm.to, seedSlotDay(mm.arriveDay));
     const defenseOverride = defenseFor(cfg, mm.to, target, tstate, level, state);
     defenseOverride.terrain = target.terrain || '';
     /* ★ 2026-11-17 城防：把该城当前的城墙耐久带进战斗——攻方攻城值（destroy）
@@ -2349,7 +2481,7 @@ export function strategyResolveMarches(state, cfg, ctx) {
       siegeWall: wall,
       /* ★ 验收 #10：种子按「到达日」算，战前推演能算出一模一样的种子。
          ★ 张力守恒 #3：优先用出征时锁定的 lockedSeed（确认即锁）。 */
-      seed: mm.lockedSeed ?? battleSeedFor(army.id, 8000 + mm.to, 100 + level, mm.arriveDay),
+      seed: mm.lockedSeed ?? battleSeedFor(army.id, 8000 + mm.to, 100 + level, seedSlotDay(mm.arriveDay)),
     });
     if (!fought.ok) continue;
     if (fought.siege) applySiegeResult(state, mm.to, fought.siege);
@@ -2836,6 +2968,25 @@ export function rewardGeneral(state, cfg, ctx, { generalId, amount }) {
   return { ok: true, loyal: g.loyal, gold: Math.floor(r.gold) };
 }
 
+/** ★ P61-S12：满 10 级武将显式进阶（唯一入口）。只解锁 11~15 级成长，
+ *  不回改五维原表；每级 2% 战斗加成在派生层生效。 */
+export function advanceGeneral(state, cfg, ctx, { generalId } = {}) {
+  const g = (state.generals || []).find((x) => x.id === Number(generalId));
+  if (!g) return { ok: false, reason: 'no_general' };
+  if (g.advanced) return { ok: false, reason: 'already_advanced' };
+  if ((Number(g.level) || 1) < 10) return { ok: false, reason: 'level_low' };
+  const r = state.roleRes || (state.roleRes = {});
+  if ((Number(r.gold) || 0) < ADVANCE_COST_GOLD) return { ok: false, reason: 'no_gold' };
+  r.gold -= ADVANCE_COST_GOLD;
+  g.advanced = true;
+  const name = cfg?.generalByCfg?.get?.(Number(g.cfgId))?.name || g.name || `武将${g.id}`;
+  const day = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  recordRes(state, 'gold', -ADVANCE_COST_GOLD, `进阶·${name}`, day);
+  recordEvent(state, `${name}进阶：解锁 11~${ADVANCED_LEVEL_CAP} 级成长，每级战斗加成 2%。`);
+  ctx?.push?.('general.push', g);
+  return { ok: true, id: g.id, cap: ADVANCED_LEVEL_CAP, gold: Math.floor(r.gold) };
+}
+
 /** ★ P6 城池内政 → ★ U14 改成任务对象：开垦/招商/募兵/修城/赈灾。
  *  派单逻辑（成本、执行武将、工期、每旬增量、状态）全部在 interior-task.js 里唯一实现，
  *  本函数只做旧接口兼容：老 UI 与老调用方仍走 `invest`，返回里多了 task 字段与完工日。
@@ -2914,6 +3065,9 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
   const days = plan.days;
   const today = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
   const arriveDay = today + days;
+  /* ★ P61-S2：种子与敌将预案按 3 旬槽取，不再按具体抵达日逐日刷新。
+     arriveDay 仍是真实到达日（粮耗/行军显示用），只有战局算进槽位。 */
+  const seedDay = seedSlotDay(arriveDay);
   /* 截击与正式抵达用同一 marchId / 到达日：先扣再乘出兵比例。只改影子队伍，不动存档。 */
   const shadow = { soldiers: before.slice() };
   tryFieldIntercept(state, { id: (st.marchSeq || 0) + 1, from, to, arriveDay }, shadow);
@@ -2936,7 +3090,7 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
   const intelTier = Math.max(0, Math.min(2, Number(st.intel?.[to]) || 0));
   const intelSpread = intelTier >= 2 ? 0 : intelTier === 1 ? 0.15 : 0.4;
   /* ★ #2 敌将变招：抵达日决定预案，推演给出「若敌方变招则…」两条对照线 */
-  const variant = counterVariantFor(state, to, arriveDay);
+  const variant = counterVariantFor(state, to, seedDay);
   const armsMul = counter > 0 ? 0.87 : counter < 0 ? 1.15 : 1;
   /* ★ M3-4 宿命组合加成：与 settleArmyBattle 同调 fateComboDefMul（描述=计算=战报同源） */
   const fate = fateComboDefMul(state, cfg, army);
@@ -2946,7 +3100,7 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
   });
   const dTotal = defense.soldiers.reduce((s2, n) => s2 + n, 0);
 
-  const seed = battleSeedFor(army.id, 8000 + to, 100 + level, arriveDay);
+  const seed = battleSeedFor(army.id, 8000 + to, 100 + level, seedDay);
   /* ★ 张力守恒 #3「确认即锁」：正式战斗的种子在 strategyAttack 出征时已写进
      march 行（lockedSeed）；推演用同一 arriveDay 推同一 seed，所以
      「今天出发」的推演与正式结算逐位一致——变招只发生在抵达日变化时。 */
@@ -2981,22 +3135,16 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
   };
   const mainDef = mkDef(1, variant.defMul);
   const result = runB(mainDef);
-  /* 区间与变招对照线（未侦察才有区间；精确档不重复开打） */
-  let spreadLines = [];
-  if (intelSpread > 0) {
-    const worstDef = mkDef(1 + intelSpread, variant.defMul);
-    const bestDef = mkDef(1 - intelSpread, variant.defMul);
-    spreadLines = [
-      readB(runB(worstDef), '最坏', worstDef),
-      readB(runB(bestDef), '最好', bestDef),
-    ];
-  }
-  const variantLines = COUNTER_VARIANTS
-    .filter((v) => v.id !== variant.id)
-    .map((v) => {
-      const d2 = mkDef(1, v.defMul);
-      return { variant: v.name, note: v.note, ...readB(runB(d2), v.name, d2) };
-    });
+  /* ★ P61-S2：只给一条当前情报档允许的推演线。变招/士气/地形改为风险提示，
+     不再枚举全部变招与最好/最坏结果——否则玩家换出发日就能解出全胜分支。 */
+  const riskNotes = [
+    `敌军预案「${variant.name}」：${variant.note}。守军可能因变招在 0.88~1.12 倍间浮动。`,
+    '兵种克制、城墙与士气以正式战报为准；推演不列出所有分支，请按最坏情形留余量。',
+    intelSpread > 0
+      ? `情报仅 ±${Math.round(intelSpread * 100)}%：先侦察可收窄守军区间。`
+      : '情报精确：守军按已知量推演。',
+    '同一目标 3 旬内战局槽锁定，换出发日不会再换战报；如需重来只能撤军（有代价）。',
+  ];
   const remain = result.endAttackSoldiers || [0, 0, 0];
   const dRemain = result.endDefenseSoldiers || [0, 0, 0];
   const aLoss = Math.max(0, aTotal - remain.reduce((s2, n) => s2 + n, 0));
@@ -3057,7 +3205,7 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
       ? '情报·精确：守军按已知量推演'
       : (intelTier === 1 ? '情报·估算：守军按 ±15% 区间推演' : '未侦察：守军为 ±40% 传闻估算，先侦察可收窄区间'),
     variant: { id: variant.id, name: variant.name, note: variant.note },
-    spreadLines, variantLines,
+    seedDay, riskNotes,
     /* ★ 2026-11-17 城防：推演必须告诉玩家「城墙还剩多少、这一波能打掉多少」，
        否则攻城属性与城防属性在界面上依然是两个看不见的数字。 */
     wall: forecastWall ? {
@@ -3331,6 +3479,11 @@ export function strategyEventTick(state) {
      结算并落账，事件系统继续向前。 */
   const turnNow = Math.max(1, Number(st.turn) || 1);
   const stale = (st.pendingEvents || []).filter((e) => turnNow - (Number(e.sinceTurn) || turnNow) >= 4);
+  /* ★ P61-B6：玩家可关掉自动结案。关闭后逾期事件只顺延倒计时，绝不替玩家做没点过的选择。 */
+  if (stale.length && st.eventAutoResolve === false) {
+    for (const e of stale) e.sinceTurn = turnNow;
+    return { pending: st.pendingEvents.length, deferred: stale.length, autoResolve: false };
+  }
   if (stale.length) {
     for (const e of stale) {
       const last = (e.choices || []).length ? e.choices[e.choices.length - 1] : null;
@@ -3352,7 +3505,11 @@ export function strategyEventTick(state) {
    *  （190 剧本 day=1 → ctx.year=190，否则 184 黄巾会立即触发）。 */
   const y0 = st.scenarioYear || 184;
   const pool = (y0 > 184) ? events.filter((e) => (e.when?.yearMin ?? 184) >= y0) : events;
-  const { selected, deferred } = selectEvents(pool, ctx, { events: st.eventSys });
+  /* ★ P61-S7/B5：每旬事件上限从参数表读，不再写死 2。条件事件另受降噪间隔约束。 */
+  const { selected, deferred } = selectEvents(pool, ctx, {
+    events: st.eventSys,
+    maxPerTurn: Math.max(1, Math.round(Number(knobGet(state, 'eventPerTurnMax')) || 2)),
+  });
   st.pendingEvents = selected.map((e) => ({
     id: e.id, title: e.title, layer: e.layer, priority: e.priority,
     sinceTurn: turnNow,
@@ -3380,9 +3537,99 @@ function describeEventEffects(applied, state) {
       case 'loyalty': return `${a.target || '军中'}忠诚 ${signed(a.delta)}`;
       case 'attitude': return `对${otherName(state, a.target)}态度 ${signed(a.delta)}`;
       case 'fame': return `名望 ${signed(a.delta)}`;
+      case 'city': return `${cityName(a.cityId)}归${a.owner === 'player' ? '我军' : (otherName(state, a.owner))}`;
+      case 'troops': return a.text || `${cityName(a.resolvedCity || 0)}驻军 ${signed(a.delta)}`;
+      case 'join': return `${a.target}来投`;
       default: return `局势变化 ${signed(a.delta)}`;
     }
   }).join('、');
+}
+
+/** ★ P61-B6：事件手动暂缓一旬（只重置倒计时，不落任何效果）。 */
+export function strategyEventDefer(state, ctx, { id } = {}) {
+  const st = ensureStrategy(state);
+  const ev = (st.pendingEvents || []).find((e) => e.id === id);
+  if (!ev) return { ok: false, reason: 'no_pending' };
+  const turnNow = Math.max(1, Number(st.turn) || 1);
+  ev.sinceTurn = turnNow;
+  ev.deferred = (Number(ev.deferred) || 0) + 1;
+  ctx?.push?.('chat.push', {
+    rid: 0, nickName: '系统', type: 0,
+    msg: `【事件·暂缓】「${ev.title}」倒计时重新计起，四旬后再提醒。`,
+    time: Date.now(),
+  });
+  return { ok: true, id, untilTurn: turnNow + 4 };
+}
+
+/** ★ P61-B6：设置「逾期是否自动按保守项结案」，关掉后只顺延、不替玩家选择。 */
+export function strategySetEventAutoResolve(state, ctx, { enabled } = {}) {
+  const st = ensureStrategy(state);
+  st.eventAutoResolve = enabled !== false;
+  const turnNow = Math.max(1, Number(st.turn) || 1);
+  for (const e of (st.pendingEvents || [])) e.sinceTurn = turnNow;
+  return { ok: true, autoResolve: st.eventAutoResolve };
+}
+
+/**
+ * ★ P61-S7：事件硬效果的三个落账口。只在玩家当前仍持有相关城池时生效，
+ * 局势已经变了就返回 null —— 叙事不能覆盖玩家真实打出来的结果。
+ */
+function eventSetCityOwner(state, cityId, owner) {
+  const st = ensureStrategy(state);
+  const row = st.cities?.[Number(cityId)];
+  if (!row || row.owner === owner) return null;
+  if (owner !== 'player' && owner !== 'neutral'
+    && !factionConfFor(state).factions.some((f) => f.id === owner)) return null;
+  const before = row.owner;
+  noteCityCaptured(state, PLAYER_ID, before);
+  row.owner = owner;
+  if (owner === 'player') {
+    if (!st.everOwned.includes(Number(cityId))) st.everOwned.push(Number(cityId));
+    row.troops = Math.max(500, Math.round(Number(row.troops) || 500));
+  } else {
+    row.troops = 0;
+  }
+  const e = ensureCityEcon(state)?.[Number(cityId)];
+  if (e) e.morale = Math.max(0, (Number(e.morale) || 60) - 8);
+  recordEvent(state, `【事件·局势】${cityName(cityId)}易主：${before === 'player' ? '我军' : before} → ${owner === 'player' ? '我军' : owner}。`);
+  return { text: `${cityName(cityId)}易主` };
+}
+
+function eventAddTroops(state, where, delta) {
+  const st = ensureStrategy(state);
+  const owned = Object.entries(st.cities || {}).filter(([, row]) => row.owner === 'player');
+  let cityId = Number(where);
+  if (where === 'capital') cityId = Number(st.playerCity) || 0;
+  if (where === 'frontline') {
+    const allIds = Object.keys(st.cities || {}).map(Number);
+    const front = owned.find(([id]) => marchableNeighbors(Number(id), allIds)
+      .some((n) => st.cities?.[n] && st.cities[n].owner !== 'player'));
+    cityId = Number(front?.[0]) || 0;
+  }
+  const row = st.cities?.[cityId];
+  if (!row || row.owner !== 'player') return null;
+  const before = Math.max(0, Math.round(Number(row.troops) || 0));
+  row.troops = Math.max(0, before + Math.trunc(delta));
+  return { resolvedCity: cityId, text: `${cityName(cityId)}驻军 ${before} → ${row.troops}` };
+}
+
+function eventJoinGeneral(state, name, where) {
+  const st = ensureStrategy(state);
+  const cityId = where === 'capital' ? Number(st.playerCity) || 0 : Number(where);
+  if (!st.cities?.[cityId] || st.cities[cityId].owner !== 'player') return null;
+  const names = cfgGeneralNames(state);
+  let cfgId = [...names.entries()].find(([, n]) => n === name)?.[0];
+  if (!cfgId) return null;
+  const exists = (state.generals || []).find((g) => Number(g.cfgId) === Number(cfgId));
+  if (exists) {
+    if (Number(exists.cityId) === Number(cityId)) return null;
+    exists.cityId = Number(cityId);
+    return { text: `${name}赴${cityName(cityId)}报到` };
+  }
+  const g = makeGeneral(loadConfig(), nextId(state, 'generalId'), Number(cfgId), Number(cityId), 1);
+  g.loyal = 85;
+  state.generals.push(g);
+  return { text: `${name}来投（${cityName(cityId)}）` };
 }
 
 /** 玩家点选事件（index.js 路由 strategy/action eventChoice）。效果词白名单落账。 */
@@ -3431,6 +3678,9 @@ export function strategyEventChoice(state, cfg, ctx, { id, choice, quiet } = {})
     },
     addAttitude: (factionId, delta) => { adjustAttitudeByEvent(state, String(factionId), clampInt(delta)); },
     addFame: (delta) => { st.fame = (st.fame || 0) + clampInt(delta); },
+    setCityOwner: (cityId, owner) => eventSetCityOwner(state, cityId, owner),
+    addTroops: (where, delta) => eventAddTroops(state, where, delta),
+    joinGeneral: (name, cityId) => eventJoinGeneral(state, name, cityId),
     turn: () => st.turn || 0,
   };
   let applied;
@@ -3476,7 +3726,24 @@ export function fateComboDefMul(state, cfg, army) {
       notes.push(`宿命「${g.title}」同队（守军折算 ×0.95）`);
     }
   }
-  return { mul, notes };
+  /* ★ P61-S12：战法标签组合。控制 / 爆发 / 续航三类凑齐两类，
+     守军折算再 ×0.96——搭配本身有收益，但远小于兵力与宿命，不会变成唯一解。 */
+  const tags = new Set();
+  for (const gid of (army?.generals || [])) {
+    const g = state.generals?.find((x) => x.id === gid);
+    for (const s of (g?.skills || [])) {
+      const k = skillById(s?.cfgId)?.kernel;
+      if (!k) continue;
+      if (k.control_state || Number(k.control_probability) > 0 || /CONTROL|DEBUFF/i.test(k.effect_type || '')) tags.add('控制');
+      else if (/HEAL|RECOVER|RESTORE|BUFF/i.test(k.effect_type || '')) tags.add('续航');
+      else if (/DAMAGE/i.test(k.effect_type || '')) tags.add('爆发');
+    }
+  }
+  if (tags.size >= 2 && notes.length < 3) {
+    mul *= 0.96;
+    notes.push(`战法组合【${[...tags].slice(0, 3).join('·')}】（守军折算 ×0.96）`);
+  }
+  return { mul, notes, tags: [...tags] };
 }
 
 /** 玩家已招募武将的宿命组合视图（六府/关系网展示用）。 */

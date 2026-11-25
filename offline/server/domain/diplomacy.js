@@ -25,10 +25,13 @@ import { rngFor } from './strategy-rng.js';
 import { gameStatOf } from './general-stat.js';
 /* ★ 2026-11-18：玩家势力身份唯一权威（举义去重 / 建国后放开），零环叶子 */
 import { diplomacyExcluded } from './faction-identity.js';
+/* ★ P61-S5：外交压力倍率首次接入运行时——难度档越高，劝降门槛越苛刻 */
+import { knobGet } from './knobs.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const FACTIONS_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'factions.json');
 const MAP_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'map.json');
+const FACTION_RELATIONS_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'relations-factions.json');
 
 export const PLAYER_ID = 'player';
 
@@ -55,8 +58,9 @@ export const ACTIONS = {
     desc: '付定金请对方出兵打指定敌对势力（盟友免门槛）', fail: '口头答应但可能不出兵（betray 标记）',
   },
   surrender: {
-    label: '劝降', gate: 0, cost: 0,
-    desc: '兵力比 ≥ 3:1 且态度 ≥ 0 时可劝其举城归附；拒绝则开战', fail: '拒绝则开战（war + attitude −10）',
+    label: '劝降', gate: 60, cost: 0,
+    desc: '兵力比 ≥ 5:1、态度 ≥ 60、对方仅余 1~2 城且未交战，可劝其献都城称臣；余城仍在，留有复国之路',
+    fail: '拒绝则开战（war + attitude −10）',
   },
   sow: {
     label: '离间', gate: 0, cost: 800,
@@ -159,12 +163,39 @@ function frictionOf(state, a, b) {
   return n;
 }
 
-/** 基础史实关系（占位口径：id 稳定哈希 ∈ [-40, 40]，等史实关系表落地后替换这一处）。 */
-function baseOf(a, b) {
-  const key = pairKey(a, b);
-  let h = 5381;
-  for (let i = 0; i < key.length; i++) h = ((h << 5) + h + key.charCodeAt(i)) >>> 0;
-  return (h % 81) - 40;
+/* ★ P61-S8：基础关系改读真实配置表。旧实现用势力 id 的 djb2 哈希冒充「史实关系」，
+   同一对势力换个 id 就翻脸，理由链却标成史实。未收录的势力对一律 0（素无往来）。 */
+let factionRelTable = null;
+function factionRelations() {
+  if (factionRelTable) return factionRelTable;
+  factionRelTable = {};
+  try {
+    const raw = JSON.parse(readFileSync(FACTION_RELATIONS_PATH, 'utf8'));
+    for (const [key, row] of Object.entries(raw.pairs || {})) {
+      const k = String(key).split('|').sort().join('|');
+      factionRelTable[k] = {
+        value: Math.max(-40, Math.min(40, Math.round(Number(row.value) || 0))),
+        label: String(row.label || ''),
+        source: String(row.source || ''),
+      };
+    }
+  } catch {
+    factionRelTable = {};
+  }
+  return factionRelTable;
+}
+
+/** 玩家在史实关系表中的替身：举义势力即玩家，未举义/已建国时按「素无往来」。 */
+function historicalId(state, id) {
+  if (id !== PLAYER_ID) return id;
+  return diplomacyExcluded(state)[0] || id;
+}
+
+/** 基础史实关系：查表；未收录返回 { value:0, known:false }。 */
+function baseOf(state, a, b) {
+  const row = factionRelations()[pairKey(historicalId(state, a), historicalId(state, b))];
+  if (!row || !row.value) return { value: 0, known: false };
+  return { value: row.value, known: true, label: row.label, source: row.source };
 }
 
 /** 与 a 交战中的势力集合（war 标记）。 */
@@ -187,8 +218,9 @@ export function attitudeOf(state, a, b) {
   const p = pairData(state, a, b);
   const factors = [];
   const add = (label, delta) => { if (delta) factors.push({ label, delta }); };
-  const base = baseOf(a, b);
-  add('基础(史实关系)', base);
+  const base = baseOf(state, a, b);
+  /* ★ P61-S8：没配史实关系就明说「素无往来」，不再把哈希值包装成史实。 */
+  factors.push({ label: base.known ? '基础(史实关系)' : '基础(素无往来)', delta: base.value });
   add('履约', p.fulfill * 5);
   add('背约', -p.betray * 10);
   add('联姻', p.marriage ? 15 : 0);
@@ -278,7 +310,15 @@ function canPass(state, action, factionId, ctx = null) {
   const A = ACTIONS[action];
   if (!A) return { ok: false, reason: 'bad_action' };
   if (action === 'requestAttack') return { ok: C.value >= A.gate || pairData(state, PLAYER_ID, factionId).ally };
-  if (action === 'surrender') return { ok: C.value >= 0 && C.myTroops >= C.hisTroops * 3 };
+  /* ★ P61-S4：劝降不再一照面吞掉对方全境。只接受「兵威压倒 + 态度归心 + 对方已是残局 + 未交战」。 */
+  if (action === 'surrender') {
+    const dm = Math.max(0.8, Math.min(1.3, Number(knobGet(state, 'difficultyDiplo')) || 1));
+    const hisCities = Object.values(state.strategy?.cities || {}).filter((r) => r.owner === factionId).length;
+    return {
+      ok: C.value >= Math.round(60 * dm) && C.myTroops >= C.hisTroops * 5 * dm
+        && hisCities > 0 && hisCities <= 2 && !pairData(state, PLAYER_ID, factionId).war,
+    };
+  }
   if (action === 'sow') return { ok: true };
   if (action === 'gift') return { ok: true };
   return { ok: C.value >= A.gate };
@@ -385,9 +425,19 @@ export function diplomacyAct(state, cfg, ctx, { action, faction, target, gold })
     const gateOk = att.value >= A.gate || p.ally;
     if (!gateOk) return reject(state, fid, action, A.gate, att);
   } else if (action === 'surrender') {
-    if (att.value < 0 || myTroops < hisTroops * 3) {
-      const r = reject(state, fid, action, '兵力比 3:1 且态度 0', att);
-      r.text = `${factionNameOf(fid)}拒绝归附：我军兵力 ${myTroops} 对其 ${hisTroops}（需 3:1）；${att.value < 0 ? `态度 ${att.value}，未达 0。` : '兵威不足，其主尚有底气。'}`;
+    const hisCities = Object.values(st.cities).filter((r) => r.owner === fid).length;
+    const dm = Math.max(0.8, Math.min(1.3, Number(knobGet(state, 'difficultyDiplo')) || 1));
+    const gate = Math.round(60 * dm);
+    const needRatio = 5 * dm;
+    const eligible = att.value >= gate && myTroops >= hisTroops * needRatio
+      && hisCities > 0 && hisCities <= 2 && !p.war;
+    if (!eligible) {
+      const r = reject(state, fid, action, `兵力比 ${needRatio}:1、态度 ${gate}、对方 1~2 城且未交战`, att);
+      const why = att.value < gate ? `态度 ${att.value}，未达 ${gate}（赠礼最多 +30，需联姻或共同敌人）。`
+        : myTroops < hisTroops * needRatio ? `兵力 ${myTroops} 对其 ${hisTroops}，未达 ${needRatio}:1。`
+          : p.war ? '两家正在交战，须先停战。'
+            : hisCities > 2 ? `对方尚有 ${hisCities} 城，未有亡国之危。` : '对方已无城可献。';
+      r.text = `${factionNameOf(fid)}拒绝称臣：${why}`;
       p.war = true;   // 拒绝则开战（本作设计门槛表）
       const after = attitudeOf(state, PLAYER_ID, fid);
       recordEvent(state, `劝降${factionNameOf(fid)}被拒，两方自此交恶。`);
@@ -445,19 +495,27 @@ export function diplomacyAct(state, cfg, ctx, { action, faction, target, gold })
       break;
     }
     case 'surrender': {
-      // 举城归附：兵力与城防保留（善待降城，民心不坠）
+      /* ★ P61-S4：只献都城称臣，余城保留——战争仍是拿下全境的必经之路。
+         兵力与城防保留（善待降城，民心不坠）；vassal 标记留作后续复国/朝贡钩子。 */
+      const ownedIds = Object.keys(st.cities).filter((id) => st.cities[id].owner === fid);
+      const homeId = homeCityOf(state, fid);
+      const capital = ownedIds.includes(String(homeId)) ? String(homeId) : ownedIds[0];
       let cities = 0;
-      for (const row of Object.values(st.cities)) {
-        if (row.owner === fid) { row.owner = PLAYER_ID; cities += 1; }
+      if (capital) {
+        st.cities[capital].owner = PLAYER_ID;
+        cities = 1;
       }
+      const rest = ownedIds.length - cities;
       p.war = false;
       p.ally = true;
+      p.vassal = true;
       st.relations = st.relations || {};
       st.relations[pairKey(PLAYER_ID, fid)] = 'ally';
-      recordEvent(state, `${line}见我军兵威与恩义，举${cities}城归附！`);
+      const text = `${line}见我军兵威与恩义，献都城称臣（${cities} 城）；余${rest}城由其自守，若我军势衰仍可复国。`;
+      recordEvent(state, text);
       ctx?.push?.('chat.push', {
         rid: 0, nickName: '系统', type: 0,
-        msg: `【天下】${line}举城归附我军（${cities} 城）！`,
+        msg: `【天下】${text}`,
         time: Date.now(),
       });
       break;

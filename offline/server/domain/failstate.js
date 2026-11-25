@@ -9,7 +9,30 @@
  * ★ BUG审计P1-1：结局守卫改为调 oathPending(state)（oath.js 是零环叶子），
  *   不再读从未写入的 st.oathPending——剧本未举义时 owned=0 曾被误判「败亡」。
  */
+import { readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { oathPending } from './oath.js';
+/* ★ P61-S6/B8：终局门槛与 stage-goals 同源，避免「三个结局系统各说各话」 */
+import { GRAND_UNIFY_CITIES } from './stage-goals.js';
+
+/* ★ P61-B2：州治表此前只读 state.strategyMapCache.capitals，但全仓没有任何写入点，
+   文档写的「占领全部州治」判定从未生效。这里从权威地图配置直接取 provinceCapital，
+   外部注入仍优先（便于测试与 GM 剧本）；文件缺失才退回纯势力数近似口径。 */
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+let CAPITAL_IDS = null;
+function capitalIds() {
+  if (CAPITAL_IDS) return CAPITAL_IDS;
+  try {
+    const map = JSON.parse(readFileSync(join(ROOT, 'conf', 'campaign', 'strategy', 'map.json'), 'utf8'));
+    CAPITAL_IDS = (map.cities || [])
+      .filter((c) => c.provinceCapital === true || c.provinceCapital === 1)
+      .map((c) => Number(c.id)).filter((id) => Number.isFinite(id) && id > 0);
+  } catch {
+    CAPITAL_IDS = [];
+  }
+  return CAPITAL_IDS;
+}
 /* ★ P47#2：紧急征兵不再凭空 +N 兵。levy.js 是零依赖叶子，不会与 failstate 成环；
    这里只读 quota 做门禁，成功后 commitLevy 把人口/已征户落账，防止同一旬反复抽。 */
 import { levyView, commitLevy } from './levy.js';
@@ -249,6 +272,14 @@ const KEY_DECISION_KINDS = ['举义', '攻陷', '迁都', '背盟', '结盟', '�
 export function evaluateEnding(state) {
   const st = state?.strategy;
   if (!st || oathPending(state)) return null;
+  /* ★ P61-S6/B8：grandEnding 是唯一终局真源；沙盘里程碑与章节开关都不再冒充结局。 */
+  if (st.grandEnding) {
+    return {
+      type: 'unified', title: st.grandEnding.title,
+      text: st.grandEnding.history || st.grandEnding.hint || '',
+      decisions: st.grandEnding.decisions || [],
+    };
+  }
   const owned = ownedCities(st);
   const factionsWithLand = new Set(Object.values(st.cities)
     .map((v) => v.owner)
@@ -267,12 +298,14 @@ export function evaluateEnding(state) {
     };
   }
   // 统一：占领全部州治 + 主要势力全部出局
-  const capitals = state.strategyMapCache?.capitals || null;   // 兜底：视图层注入
+  const injected = state.strategyMapCache?.capitals;
+  const capitals = (Array.isArray(injected) && injected.length ? injected : capitalIds());
   let unified = false;
   if (Array.isArray(capitals) && capitals.length > 0) {
-    unified = capitals.every((id) => st.cities[id]?.owner === 'player') && factionsWithLand.size === 0;
+    unified = owned.length >= GRAND_UNIFY_CITIES
+      && capitals.every((id) => st.cities[id]?.owner === 'player') && factionsWithLand.size === 0;
   } else {
-    unified = factionsWithLand.size === 0 && owned.length >= 8;  // 无州治表时的近似口径
+    unified = factionsWithLand.size === 0 && owned.length >= GRAND_UNIFY_CITIES;  // 无州治表时只按城数
   }
   if (unified) {
     return {

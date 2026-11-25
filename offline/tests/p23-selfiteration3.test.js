@@ -53,19 +53,26 @@ test('劝降兵力比计入在编部队（旧口径只算城守军，2 万兵等
   assert.equal(after - before, 3000 - old, '在编兵力的增量必须计入我军总兵力');
 });
 
-test('兵力够 3:1 时劝降判定放行（理由链仍保留）', () => {
+test('兵力够 5:1、态度够、对方仅余残局时劝降称臣（旧 3:1 全境吞并捷径已堵）', () => {
   const { state, ctx } = fresh();
   const f = diplomacyView(state).factions.find((x) => x.troops > 0);
   assert.ok(f, '应有一个有兵力的 NPC 势力');
   const army = state.armys[0];
-  army.soldiers = [Math.ceil(f.troops * 4), 0, 0];
+  army.soldiers = [Math.ceil(f.troops * 6), 0, 0];
   state.roleRes.gold = 1e6;
-  // 赠礼把态度拉到非负，再验门槛（占城/摩擦惩罚仍逐条留在 factors 里）
+  // 缩成 1 城残局；赠礼仍留理由链，态度再补到 60 以上
+  const owned = Object.keys(state.strategy.cities)
+    .filter((id) => state.strategy.cities[id].owner === f.id);
+  for (const id of owned) if (id !== String(f.homeCity)) state.strategy.cities[id].owner = 'han';
   diplomacyAct(state, cfg, ctx, { action: 'gift', faction: f.id, gold: 20000 });
+  const key = ['player', f.id].sort().join('|');
+  const p = state.strategy.diplomacy.pairs[key];
+  p.eventAdj = 100;
+  p.war = false;
   const again = diplomacyView(state).factions.find((x) => x.id === f.id);
-  assert.ok(again.gates.surrender.ok, '兵力 3:1 且态度非负应可劝降');
+  assert.ok(again.gates.surrender.ok, '新门槛齐备才可劝降');
   const r = diplomacyAct(state, cfg, ctx, { action: 'surrender', faction: f.id });
-  assert.equal(r.ok, true);
+  assert.equal(r.ok, true, r.text);
   assert.ok(Array.isArray(r.factors), '理由链不能因为成功就消失');
 });
 

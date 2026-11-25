@@ -137,7 +137,8 @@ test('interior.transform：无集市拒绝(58)，有集市按 from/to 跨资源�
   const r = handleRequest(ctx, req('interior.transform', { from: [500, 0, 0, 0], to: [0, 0, 0, 500] }));
   assert.equal(r.code, 0);
   assert.equal(state.roleRes.wood, w0 - 500);
-  assert.equal(state.roleRes.grain, g0 + 500);
+  /* ★ P61-B4：产出由服务端按 transform_rate 核算，客户端填的 to 数值不再作数。 */
+  assert.equal(state.roleRes.grain, g0 + Math.floor(500 * cfg.basic.city.transform_rate / 100));
   assert.equal(handleRequest(ctx, req('interior.transform', { from: [99999999, 0, 0, 0] })).code, 1);
 });
 
@@ -218,7 +219,7 @@ test('nationMap.build：资源不足返回 16，要塞达到上限返回 49', ()
   assert.equal(handleRequest(ctx, req('nationMap.build', { x: b.x, y: b.y, type: 56 })).code, 49);
 });
 
-test('资源按游戏日产出、政令恢复、仓库封顶', () => {
+test('资源按游戏日产出、政令旬预算、仓库封顶', () => {
   const state = createWorld(cfg);
   const ctx = makeCtx(state);
   tick(ctx);
@@ -232,7 +233,8 @@ test('资源按游戏日产出、政令恢复、仓库封顶', () => {
   const d0 = state.roleRes.decree = 0;
   tick(ctx);
   assert.ok(state.roleRes.wood >= w0 + expectedWoodYield * 2 - 1);
-  assert.equal(state.roleRes.decree, Math.min(cfg.basic.role.decree_limit, d0 + 2 * chapterRules().decreePerDay));
+  /* ★ P61-B-S3①：政令改旬预算，旬内两天不回；跨旬才发 8、上限 12。 */
+  assert.equal(state.roleRes.decree, 0);
   // 爆仓封顶
   const cap = state.roleRes.depot_capacity;
   state.roleRes.wood = cap;

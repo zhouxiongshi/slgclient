@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "note": "四档难度：开局择都页选择，写入存档 knobs 的三个难度旋钮。目标胜率为设计基线（用于对照，不在运行时判定胜负）。",
+  "default": "normal",
+  "levels": [
+    {
+      "id": "chrono", "label": "史实", "targetWinRate": 0.75,
+      "desc": "诸侯按史Book节奏行事，府库宽裕，适合第一次上手。",
+      "knobs": { "difficultyAi": 0.8, "difficultyRes": 1.2, "difficultyDiplo": 0.85 }
+    },
+    {
+      "id": "normal", "label": "常规", "targetWinRate": 0.55,
+      "desc": "标准资源配置与诸侯压力，推荐使用。",
+      "knobs": { "difficultyAi": 1.0, "difficultyRes": 1.0, "difficultyDiplo": 1.0 }
+    },
+    {
+      "id": "challenge", "label": "挑战", "targetWinRate": 0.35,
+      "desc": "诸侯用兵更主动，府库收紧，外交更难。",
+      "knobs": { "difficultyAi": 1.15, "difficultyRes": 0.9, "difficultyDiplo": 1.15 }
+    },
+    {
+      "id": "conquest", "label": "霸业", "targetWinRate": 0.20,
+      "desc": "诸侯倾巢而出，资源拮据，劝降几乎无门。",
+      "knobs": { "difficultyAi": 1.3, "difficultyRes": 0.8, "difficultyDiplo": 1.3 }
+    }
+  ]
+}

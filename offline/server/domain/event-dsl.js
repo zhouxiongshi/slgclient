@@ -20,7 +20,14 @@ export const WHEN_FIELDS = [
 ];
 export const OPS = ['=', '!=', '>', '>=', '<', '<=', 'in', 'not_in'];
 export const LAYERS = ['史实节点', '条件', '关系'];
-export const EFFECT_KINDS = ['flag', 'flag-', 'gold', 'morale', 'loyalty', 'attitude', 'fame', 'nothing'];
+/* ★ P61-S7：事件后果必须能改变局面，不只是加减名望/金钱。
+   city:城号:势力   → 城池易主（改史的硬后果）
+   troops:城号:±n   → 驻军增减（败仗/援军的可感后果）
+   join:武将名:城号 → 武将携部入队（招揽类事件的兑现） */
+export const EFFECT_KINDS = [
+  'flag', 'flag-', 'gold', 'morale', 'loyalty', 'attitude', 'fame', 'nothing',
+  'city', 'troops', 'join',
+];
 
 /* ------------------------------------------------------------------ */
 /* 单算子对象比较：value 形如 {">=": 500}，只允许一个键                  */
@@ -249,9 +256,24 @@ export function parseEffect(fx) {
     if (!Number.isFinite(n) || n === 0) return null;
     return { kind, delta: n };
   }
-  // loyalty:武将名:±n / attitude:势力id:±n
-  if (parts.length !== 3) return null;
+  if (parts.length !== 3 || !parts[1]) return null;
+  // city:城号:势力（势力为字面量，不是数字）
+  if (kind === 'city') {
+    if (!/^\d+$/.test(parts[1]) || !parts[2]) return null;
+    return { kind, cityId: Number(parts[1]), owner: parts[2] };
+  }
+  // join:武将名:城号（城号可为 capital，由上层按当前都城解析）
+  if (kind === 'join') {
+    if (!/^(\d+|capital)$/.test(parts[2])) return null;
+    return { kind, target: parts[1], where: /^\d+$/.test(parts[2]) ? Number(parts[2]) : 'capital' };
+  }
   const n = Number(parts[2]);
   if (!Number.isFinite(n) || n === 0) return null;
-  return { kind, target: parts[1], delta: n };
+  // troops:城号:±n（城号可为 capital / frontline，由上层按当前局势解析）
+  if (kind === 'troops') {
+    if (!/^(\d+|capital|frontline)$/.test(parts[1])) return null;
+    return { kind, where: /^\d+$/.test(parts[1]) ? Number(parts[1]) : parts[1], delta: Math.trunc(n) };
+  }
+  // loyalty:武将名:±n / attitude:势力id:±n
+  return { kind, target: parts[1], delta: Math.trunc(n) };
 }

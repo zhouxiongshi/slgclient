@@ -32,11 +32,12 @@ import { dossierFor } from './domain/dossier.js';
 import { releaseCaptive, executeCaptive } from './domain/captives.js';
 import {
   strategyViewState, oathOptions, chooseOath, strategyFormup, strategyTransport, dispatchGeneral, dispatchGenerals,
-  rewardGeneral, strategyInvest, recruitCaptive, strategyAttack, strategyRecallMarch, cancelInvest,
+  strategyContinueSandbox,
+  rewardGeneral, advanceGeneral, strategyInvest, recruitCaptive, strategyAttack, strategyRecallMarch, cancelInvest,
   previewAssault, strategyReorderMarch,
   diplomacyAct,
   /* ★ M3-4 事件系统：旬 tick 触发进 pendingEvents，玩家点选走 eventChoice */
-  strategyEventChoice,
+  strategyEventChoice, strategyEventDefer, strategySetEventAutoResolve,
   /* ★ M3-5 剧本切换 */
   strategySetScenario,
   /* ★ P11 / 本作设计 门 4→6：遭遇待决 / 确认开战 / 临阵撤军 / 新城消化 */
@@ -133,7 +134,16 @@ export async function startOfflineServer(options = {}) {
       console.log('[slg-offline:info] 存档缺主公，保留进度并在读档时补回穿越者');
     }
   }
-  let state = normalizeWorld(loaded || createWorld(cfg), cfg);
+  /* ★ P61-B1：读档归一化是启动单点，任何未预见脏字段都不能把服务整个打挂。
+     失败时归档原档并用新档启动，日志留痕供排查。 */
+  let state;
+  try {
+    state = normalizeWorld(loaded || createWorld(cfg), cfg);
+  } catch (err) {
+    console.error(`[slg-offline:error] 存档归一化失败，已归档并重开新档：${err?.stack || err}`);
+    try { renameSync(savePath, `${savePath}.normalize-failed-${new Date().toISOString().replace(/[:.]/g, '-')}.json`); } catch { /* 归档失败不阻断启动 */ }
+    state = normalizeWorld(createWorld(cfg), cfg);
+  }
   /* ★ P11：登录态只存在于本次进程内存，不写存档。
      UI 注入层据此在「未登录」阶段隐藏全部面板——旧档/新档都以真实 WS 登录为准。 */
   const session = { loggedInAt: 0, enteredAt: 0, username: '', logoutAt: 0 };
@@ -713,6 +723,8 @@ export async function startOfflineServer(options = {}) {
         });
         else if (act === 'transport') result = strategyTransport(state, cfg, ctx, body);
         else if (act === 'reward') result = rewardGeneral(state, cfg, ctx, body);
+        /* ★ P61-S12：满级武将进阶（11~15 级） */
+        else if (act === 'advanceGeneral') result = advanceGeneral(state, cfg, ctx, body);
         else if (act === 'invest') result = strategyInvest(state, cfg, ctx, body);
         /* ★ U14 撤销在施内政任务（已投入不退，界面必须写明） */
         else if (act === 'cancelInvest') result = cancelInvest(state, ctx, { taskId: String(body?.taskId || '') });
@@ -794,6 +806,10 @@ export async function startOfflineServer(options = {}) {
         else if (act === 'eventChoice') result = strategyEventChoice(state, cfg, ctx, {
           id: String(body.id || ''), choice: String(body.choice || ''),
         });
+        /* ★ P61-B6：事件倒计时可见、可暂缓；玩家也能彻底关掉「逾期自动替你选」。 */
+        else if (act === 'continueSandbox') result = strategyContinueSandbox(state, ctx);
+        else if (act === 'eventDefer') result = strategyEventDefer(state, ctx, { id: String(body.id || '') });
+        else if (act === 'eventAutoResolve') result = strategySetEventAutoResolve(state, ctx, { enabled: body.enabled !== false });
         /* ★ 验收 #10 战前推演：与正式结算同一 resolveBattle / defenseFor / battleSeedFor，
            纯只读沙盒，可无限次回退重试；不能 save()，否则反复推演会把存档反复落盘。 */
         /* ★ 验收 #23：行军队列重排（同日抵达按队列顺序结算，所以顺序是真决策） */

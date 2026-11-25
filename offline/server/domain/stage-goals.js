@@ -23,12 +23,19 @@ export const STAGE_GOALS = [
     gold: 24000, fame: 8, seats: 4 },
 ];
 
-/** 沙盘终局线：全图 72 城的 1/3。
- *  ★ 2026-11-20：原为 45 城（62.5%），实测任何玩法都够不到（主动 400 旬峰值 24 城）。
- *  24 城是「会打 + 会管理」玩家在 400 旬内确实能摸到的线。
- *  这是**沙盘终局**不是全图统一：达成记 sandboxEnding，不硬中断，可继续经营。 */
+/** 阶段称帝线：全图 72 城的 1/3。
+ *  ★ 2026-11-20 定为 24 城；★ P61-S6 改为**阶段里程碑**而非终局——
+ *  旧实现把它当终局，达成后不收束、无史评，玩家不知道自己赢在哪。
+ *  真正的终局是 GRAND_UNIFY_CITIES（30 城）写 grandEnding，冻结回合并给史评。 */
 export const UNIFY_CITIES = 24;
-export const SANDBOX_ENDING = { id: 'unify', title: '定鼎', hint: '二十四城在手，天下格局已定。可继续经营，完成真正的四海归一。' };
+export const SANDBOX_ENDING = { id: 'unify', title: '称帝', hint: '二十四城在手，可立国称帝。这不是终点，四海归一尚待完成。' };
+
+/** ★ P61-S6：真正的终局线。30 城是「会打 + 会管理」玩家能摸到、又不至于一统来得太快的台阶。 */
+export const GRAND_UNIFY_CITIES = 30;
+export const GRAND_ENDING = {
+  id: 'grand_unify', title: '四海归一',
+  hint: '三十城尽归版图，主要诸侯出局。写史评、列关键抉择，回合收束；玩家可显式选择继续沙盘。',
+};
 
 /** 下一个未达成的阶段目标（纯展示用；已全达成返回终点线）。 */
 export function nextStageGoal(owned, stages = {}) {

@@ -42,20 +42,20 @@ test('参数表仍 30 项：删掉零消费的 moraleRout，换成生效的 gold
   assert.equal(KNOBS.goldHoardTaxPct.min, 0, '0 = 关闭阀门，必须允许');
 });
 
-test('国库沉淀税：超出 10 旬周转金才收，且每笔进府库流水', () => {
+test('国库沉淀税：超出 3 旬周转金才收，且每笔进府库流水', () => {
   const s = world(200000);
   const r = applyDays(s, cfg, 10, RULES);
   assert.ok(r.hoardTaxPaid > 0, '高存量必须触发回收');
   const rows = (s.resLedger || []).filter((x) => x.reason === '国库沉淀税');
   assert.equal(rows.length, 1, '支出必须可查，不能凭空消失');
   assert.equal(rows[0].delta, -r.hoardTaxPaid);
-  /* 免税额 = 10 × 每旬金毛产 = 40,000；税基是超出部分而非全额 */
-  const expected = Math.floor((200000 + 4000 - 0 - Math.round(4000 * 0.35) - 40000) * 0.04);
+  /* P61-B：免税额收紧为 3 × 每旬金毛产 = 12,000；税基是超出部分而非全额 */
+  const expected = Math.floor((200000 + 4000 - 0 - Math.round(4000 * 0.35) - 12000) * 0.04);
   assert.ok(Math.abs(r.hoardTaxPaid - expected) <= 2, `税基应只取沉淀部分，实收 ${r.hoardTaxPaid} / 期望 ${expected}`);
 });
 
 test('国库沉淀税：开局周转金内免税，不惩罚早期节奏', () => {
-  const s = world(10000);
+  const s = world(6000);
   const r = applyDays(s, cfg, 10, RULES);
   assert.equal(r.hoardTaxPaid, 0);
   assert.equal((s.resLedger || []).some((x) => x.reason === '国库沉淀税'), false);

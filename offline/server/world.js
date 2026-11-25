@@ -57,7 +57,8 @@ function makeRoleRes(cfg) {
     stone: r.stone ?? 10000,
     grain: r.grain ?? 10000,
     gold: r.gold ?? 10000,
-    decree: r.decree ?? 20,
+    /* ★ P61-B-S3① 开局政令按旬预算上限 12（旧为 20），避免首旬直接顶满。 */
+    decree: Math.min(12, r.decree ?? 12),
     wood_yield: r.wood_yield ?? 1000,
     iron_yield: r.iron_yield ?? 1000,
     stone_yield: r.stone_yield ?? 1000,
@@ -395,6 +396,32 @@ export function ensureProtagonist(state, cfg) {
   return hero;
 }
 
+/* ★ P61-B1：存档字段白名单。旧代码直接 for...of 这些字段，手改档把数组写成对象
+   会在启动归一化时抛 TypeError，整个服务起不来。核心字段坏则归档坏档重开，
+   非核心字段坏只清空该字段，尽量保住玩家进度。 */
+const CORE_ARRAY_FIELDS = ['citys', 'builds', 'generals', 'armys'];
+const SOFT_ARRAY_FIELDS = [
+  'skills', 'warReports', 'posTags', 'chat', 'pending', 'battleLog',
+  'garrisons', 'chronicle', 'resLedger',
+];
+const ALL_ARRAY_FIELDS = [...CORE_ARRAY_FIELDS, ...SOFT_ARRAY_FIELDS];
+
+/** 归一化数组字段形状；返回被修复的核心字段名（空数组表示没有致命损坏）。 */
+export function repairArrayFields(state) {
+  const brokenCore = [];
+  for (const key of ALL_ARRAY_FIELDS) {
+    if (state[key] === undefined || state[key] === null) continue;
+    if (Array.isArray(state[key])) continue;
+    if (CORE_ARRAY_FIELDS.includes(key)) {
+      brokenCore.push(key);
+      state[key] = [];
+    } else {
+      state[key] = [];
+    }
+  }
+  return brokenCore;
+}
+
 export function loadWorld(savePath) {
   if (!existsSync(savePath)) return null;
   try {
@@ -403,6 +430,12 @@ export function loadWorld(savePath) {
     // v1 是旧战斗系统存档：保留资源/城池/武将，自动换成新战法体系
     // v2 没有游戏日和序章字段，读入后由 normalizeWorld 补上
     if (data.version !== 1 && data.version !== 2 && data.version !== SAVE_VERSION) return null;
+    const broken = repairArrayFields(data);
+    if (broken.length) {
+      const backup = `${savePath}.corrupt-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+      try { renameSync(savePath, backup); console.log(`[slg-offline:warn] 存档字段损坏（${broken.join('、')}），已归档为 ${backup}，重开新档`); } catch { /* 归档失败则不读旧档 */ }
+      return null;
+    }
     if (data.version === 1) assignInitialSkills(data);
     data.version = SAVE_VERSION;
     return data;
@@ -417,6 +450,9 @@ export function loadWorld(savePath) {
  *  - op_level=0 且无工期的非要塞建筑视为「空闲」，避免被误判成拆除中。
  */
 export function normalizeWorld(state, cfg) {
+  /* ★ P61-B1：兜底再修一次形状——直接调 normalizeWorld 的测试/GM 工具/旧档
+     也走同一条防线，不再因为对象型数组字段崩溃。 */
+  repairArrayFields(state);
   for (const b of state.builds || []) {
     // ★ 旧存档用 level=0 标记「建造中」，客户端 npc.levels 只有 1~10，
     //   下发后地形详情面板会越界崩溃；统一纠正为合法等级并补 building 标记。

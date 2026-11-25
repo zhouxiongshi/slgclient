@@ -315,8 +315,9 @@ export function aiAidRequest(state, conf, faction, turn, st) {
   for (const f of conf.factions || []) {
     if (f.id === faction.id) continue;
     const rel = st.relations?.[`${faction.id}|${f.id}`];
-    const fax = conf?.personas?.[f.persona] || {};
-    if (rel === 'ally' || (fax.economy ?? 0.5) >= 0.7) friends.push(f.id);
+    /* ★ P61-B7：旧实现把「高经济势力」也当朋友，派出去的援军抵达时才发现不是盟友，
+       粮饷全损、只退七成兵，AI 反复做必亏动作。求援只认真实盟约。 */
+    if (rel === 'ally') friends.push(f.id);
   }
   if (!friends.length) return null;
   // 冷却：同一势力 6 旬内不求第二次

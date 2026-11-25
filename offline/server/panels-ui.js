@@ -715,10 +715,14 @@
     return '<div class="hcState"><div class="card"><h3>本局状态</h3>'
       + '<div class="grid">'
       + '<div><span class="k">所在城</span> <b class="v">' + esc(g.cityName || '—') + '</b>　' + cityPickHtml(g) + '</div>'
-      + '<div><span class="k">体力 / 等级</span> <b class="v">' + esc(g.physical) + ' / Lv' + esc(g.level) + '</b></div>'
-      + '<div><span class="k">经验</span> <b class="v">' + (progress.capped ? '已满 10 级'
+      + '<div><span class="k">体力 / 等级</span> <b class="v">' + esc(g.physical) + ' / Lv' + esc(g.level)
+        + (progress.advanced ? ' <span class="tag">进阶</span>' : '') + '</b></div>'
+      + '<div><span class="k">经验</span> <b class="v">' + (progress.capped ? ('已满 ' + esc(progress.cap || 10) + ' 级')
         : fmt(progress.exp != null ? progress.exp : g.exp) + '/' + fmt(progress.need || 0)) + '</b>'
-      + (progress.next ? '<div class="muted">' + esc(progress.next) + '</div>' : '') + '</div>'
+      + (progress.next ? '<div class="muted">' + esc(progress.next) + '</div>' : '')
+      + (progress.advanced ? '' : (Number(g.level) >= 10
+        ? '<button class="btn" data-act="advance" data-id="' + g.id + '">进阶（1200 金）</button>' : ''))
+      + '</div>'
       + '<div><span class="k">在编岗位</span> <b class="v">' + (g.appointed && g.appointed.length ? esc(g.appointed.join('、')) : '无') + '</b></div>'
       + '<div><span class="k">状态</span> <b class="v">' + esc(g.state) + '</b></div>'
       + '<div><span class="k">忠诚 / 旬俸</span> <b class="v" style="color:'
@@ -1208,9 +1212,9 @@
         + (s.sandboxEnding ? '　<b style="color:#9ec97f">已达成「' + esc(s.endingTitle || '天下一统') + '」</b>'
           + '（第 ' + fmt(s.sandboxEnding.day) + ' 日 · ' + fmt(s.sandboxEnding.cities) + ' 城）' : '')
         + '</h3><div class="muted" style="margin-bottom:8px">'
-        + (s.sandboxEnding ? '结局已记录，仍可继续经营。'
+        + (s.sandboxEnding ? '阶段称帝已记录；真正的终局是「四海归一」。'
           : '下一目标：<b>' + esc(ng.title || '—') + '</b>（还差 ' + fmt(ng.need == null ? 0 : ng.need) + ' 城）　' + esc(ng.hint || ''))
-        + '　一统线 ' + fmt(s.unifyCities) + ' 城</div>'
+        + '　称帝线 ' + fmt(s.unifyCities) + ' 城　终局线 ' + fmt(s.grandEndingCities || 30) + ' 城</div>'
         + '<div style="display:flex;gap:6px;flex-wrap:wrap">'
         + s.stages.map(function (st) {
           return '<span class="winTag" style="opacity:' + (st.done ? 1 : 0.55) + '">'
@@ -1218,6 +1222,20 @@
             + (st.done && st.day ? '（第' + fmt(st.day) + '日）' : '') + '</span>';
         }).join('')
         + '</div></div>';
+    }
+    /* ★ P61-S6：真正的终局史评——唯一真源 grandEnding；24 城「称帝」只是阶段。 */
+    if (s.grandEnding) {
+      out += '<div class="card" style="border-color:#e8c670"><h3>终局 · ' + esc(s.grandEnding.title) + '</h3>'
+        + '<div style="line-height:1.8;margin-bottom:8px">' + esc(s.grandEnding.history || s.grandEnding.hint || '') + '</div>'
+        + '<div class="muted" style="font-size:11px;margin-bottom:8px">关键抉择：'
+        + ((s.grandEnding.decisions || []).length
+          ? esc((s.grandEnding.decisions || []).join('；')) : '此局未有载入史册的大事') + '</div>'
+        + '<div class="muted" style="font-size:11px;margin-bottom:8px">终局线 '
+        + fmt(s.grandEndingCities || 30) + ' 城 · 达成于第 ' + fmt(s.grandEnding.day) + ' 日</div>'
+        + (s.endGameFrozen
+          ? '<button class="btn" data-act="continueSandbox">继续沙盘（保留史评，解除回合冻结）</button>'
+          : '<span class="tag ok">已选择继续沙盘，史评保留</span>')
+        + '</div>';
     }
 
     /* ★ P47#14：两处都读 state.roleRes（全局府库），不是逐城 cityEcon；
@@ -1761,6 +1779,7 @@
     var act = t.getAttribute('data-act'), id = t.getAttribute('data-id');
     if (act === 'close') return close();
     if (act === 'refresh') return fetchState();
+    if (act === 'continueSandbox') return strategyAction({ action: 'continueSandbox' });
     if (act === 'tab') {
       /* ★ 出征是独立作战面板（出击/行军队列/战报），不在六府这套 DOM 里渲染 */
       if (id === 'war') {
@@ -1855,6 +1874,12 @@
       });
       return;
     }
+    if (act === 'advance') {
+      var g1 = data.generals.find(function (x) { return x.id === Number(id); });
+      return confirmBox('进阶 ' + (g1 ? g1.name : '武将') + '？花费 1200 金，解锁 11~15 级成长（每级战斗加成 2%）。', function () {
+        strategyAction({ action: 'advanceGeneral', generalId: Number(id) });
+      });
+    }
     if (act === 'captiveFocus') {
       var box0 = document.getElementById('slgCaptivePanel');
       if (box0 && box0.scrollIntoView) box0.scrollIntoView({ block: 'nearest' });
@@ -1947,6 +1972,9 @@
   /* ★ P7：举义页切城后「另择明主」要能回退——lords 原先只是 renderOathLords 的局部变量，
      在 renderOathCities 的回调里根本取不到（冒烟报 ReferenceError）。 */
   var oathLords = [];
+  /* ★ P61-S5：开局难度四档，默认常规；选中的档位随举义请求写入存档 knobs */
+  var oathDifficulties = [];
+  var oathDifficulty = 'normal';
   function showOath() {
     if (oathEl) return;
     oathEl = document.createElement('div');
@@ -1986,6 +2014,7 @@
       .then(function (v) {
         if (!v || !v.ok) throw new Error('无法读取诸侯名录');
         if (v.done) { hideOath(); return; }
+        oathDifficulties = v.difficulties || [];
         renderOathLords(v.lords || []);
       })
       .catch(function (e) {
@@ -2048,7 +2077,26 @@
         + '<div style="margin-top:10px;color:#b9ac8f;font-size:12px;">定都于此，' + esc(f.name) + '名下城池尽归主公，初始武将团即日入营。</div>'
         + '</div>';
     }).join('');
-    box.innerHTML = head + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">' + cards + '</div>';
+    /* ★ P61-S5：难度选择行——档位与预期胜率公开，不再是纸面设计 */
+    var diffRow = '<div style="margin:0 0 16px;padding:10px 12px;border:1px solid #4b422e;border-radius:8px;background:rgba(255,255,255,.02)">'
+      + '<div style="color:#c9bb95;font-size:12px;margin-bottom:7px">难度（开局锁定后写入存档，可在设置里重选）</div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+      + oathDifficulties.map(function (d) {
+        return '<button type="button" data-difficulty="' + esc(d.id) + '" class="slgOathDiff" '
+          + 'style="flex:1;min-width:120px;text-align:left;padding:7px 10px;border-radius:5px;cursor:pointer;'
+          + 'border:1px solid ' + (d.id === oathDifficulty ? '#e8c670' : '#4b422e') + ';'
+          + 'background:' + (d.id === oathDifficulty ? 'rgba(232,198,112,.14)' : 'transparent') + ';'
+          + 'color:' + (d.id === oathDifficulty ? '#f0d998' : '#a9a48f') + '">'
+          + '<b>' + esc(d.label) + '</b> <span style="opacity:.7;font-size:11px">目标胜率 ' + Math.round((d.targetWinRate || 0) * 100) + '%</span>'
+          + '<div style="font-size:11px;opacity:.75;margin-top:3px">' + esc(d.desc || '') + '</div></button>';
+      }).join('') + '</div></div>';
+    box.innerHTML = head + diffRow + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">' + cards + '</div>';
+    Array.prototype.forEach.call(box.querySelectorAll('[data-difficulty]'), function (btn) {
+      btn.addEventListener('click', function () {
+        oathDifficulty = btn.getAttribute('data-difficulty');
+        renderOathCities(f);
+      });
+    });
     document.getElementById('slgOathBack').addEventListener('click', function () { renderOathLords(oathLords); });
     Array.prototype.forEach.call(box.querySelectorAll('.slgOathCity'), function (card) {
       card.addEventListener('mouseenter', function () { card.style.borderColor = '#e8c670'; card.style.transform = 'translateY(-3px)'; });
@@ -2058,7 +2106,7 @@
         card.style.pointerEvents = 'none';
         fetch('/__slg/oath/choose', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ lord: f.id, city: city }),
+          body: JSON.stringify({ lord: f.id, city: city, difficulty: oathDifficulty }),
         }).then(function (r) { return r.json(); }).then(function (r) {
           if (!r || !r.ok) {
             toast(r && r.reason === 'bad_city' ? '该城不可定都' : '举义失败', true);

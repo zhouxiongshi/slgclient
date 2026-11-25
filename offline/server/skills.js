@@ -4858,16 +4858,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         + '　守军据城加成 ×' + r.wall.defMul
         + (wf ? '　本波攻城值打掉 ' + fmt(wf.damage) + '，战后 ' + (wf.breached ? '破城' : Math.round(wf.hpAfter / Math.max(1, r.wall.max) * 100) + '%') : ''));
     }
-    if (r.spreadLines && r.spreadLines.length === 2) {
-      var w0 = r.spreadLines[0], b0 = r.spreadLines[1];
-      detail.push('守军区间：最坏折 ' + fmt(w0.aLoss) + '（' + (w0.win ? '可下' : '难下') + '）'
-        + '　最好折 ' + fmt(b0.aLoss) + '（' + (b0.win ? '可下' : '难下') + '）');
-    }
-    if (r.variantLines && r.variantLines.length) {
-      detail.push('若敌方变招：' + r.variantLines.map(function (v) {
-        return v.variant + (v.win ? ' 我胜' : ' 我负') + '（折 ' + fmt(v.aLoss) + '）';
-      }).join('　'));
-    }
+    /* ★ P61-S2：推演只给一条线与风险提示，不再枚举全部分支供玩家挑全胜解。 */
+    (r.riskNotes || []).forEach(function (t) { detail.push(t); });
     if (r.lockNote) detail.push(r.lockNote);
     if (r.caveat) detail.push(r.caveat);
     html += '<details class="warpv-detail"><summary>演算明细（战报码 / 种子 / 区间）</summary>'
@@ -5594,6 +5586,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
           : '<span style="color:#a9e2a0">自动办政中 · 已办 ' + (gv.doneCount || 0) + ' 单</span>';
         var head = el('div', 'row', '<span><b style="color:#f0d998">方针：' + esc(gv.policyLabel) + '</b>'
           + '<span class="cost">　' + esc(gv.policyDesc) + '</span><br>'
+          + '<span class="cost" style="color:#e8bd7a">取舍：' + esc(gv.policyEffect || '无增减')
+          + (gv.forbid && gv.forbid.length ? '　停工：' + esc(gv.forbid.join('、')) : '') + '</span><br>'
           + '<span class="cost">太守：' + (gv.officer ? (esc(gv.officer) + (gv.officerStat ? '（治政 ' + gv.officerStat + '）' : '')) : '无太守 · 由太守亲办，工期 ×1.5')
           + '　' + stTxt
           + (gv.active.length ? ('　在办：' + gv.active.map(function (t) { return esc(t.label); }).join('、')) : '')
