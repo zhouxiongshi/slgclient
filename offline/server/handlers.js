@@ -43,7 +43,7 @@ import { refusalLine, failLine } from './domain/recruit-refusal.js';
 import {
   strategyTick, strategyAttack, strategyTurnDays, ensureStrategy, clearThreat,
   strategyResolveMarches, strategyRecallMarch, recordEvent, factionReliefTick,
-  assaultEscalationTick, stageGoalTick,
+  assaultEscalationTick, stageGoalTick, clashTick,
 } from './domain/strategy.js';
 import { createHash } from 'node:crypto';
 import { noteIfGeneralDown } from './command.js';
@@ -363,8 +363,11 @@ export function settleWorld(ctx, now = Date.now()) {
   totalYield(state, cfg);
   const settled = settleCampaign(state, cfg, ctx, now);
   // ★ P2：行军到达结算（在诸侯推演之前，保证当天抵达当天开打；战报与播报由内部推）
-  // ★ P14：驰援感知在到达结算**之前**跑——玩家大军在途时守方就有机会派援军
+  /* ★ P14：驰援感知在到达结算**之前**跑——玩家大军在途时守方就有机会派援军
+     ★ P62：相遇判定排在驰援之后、抵达结算之前——先记「两军撞上了」，
+       再让当天抵达的部队按既有流程结算，顺序反了就会漏掉最后一天的遭遇。 */
   factionReliefTick(state, cfg, ctx);
+  clashTick(state, cfg, ctx);
   strategyResolveMarches(state, cfg, ctx);
   /* ★ 2026-11-19：来犯军围城推进。旧版来犯军摆在家门口没有任何后果，
      世界对玩家零压力；现在 40 日不清剿就围城，围城每旬掉守军/民心。 */

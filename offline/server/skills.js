@@ -1779,6 +1779,21 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       inView: x > 20 && y > 20 && x < rect.right - 20 && y < rect.bottom - 20,
     };
   };
+  /* ★ P62：出征选目标 → 沙盘上画出进军路线（金色流动虚线 + 终点旗）。
+     只做预览：不选中城、不关六府。沙盘没开时顺手打开——玩家点目标就应该「看见」要打哪。
+     传 (0,0) 或任一空值即清除（关出征窗、改出发城时调用）。 */
+  window.__slgWarRoutePreview = function (fromId, toId) {
+    var f = Number(fromId) || 0, t = Number(toId) || 0;
+    warRoute = (f && t) ? { from: f, to: t } : null;
+    if (!warRoute) {
+      if (lastState) draw(lastState);
+      return false;
+    }
+    var ov = document.getElementById('slgStrategyOverlay');
+    if (ov && ov.style.display === 'none') showMap();
+    if (lastState) draw(lastState);
+    return true;
+  };
   window.__slgZoom = function (dir) {
     var rect = canvas.getBoundingClientRect();
     var zoom = Math.max(1, Math.min(4, view.zoom * (dir > 0 ? 1.25 : 0.8)));
@@ -1797,6 +1812,8 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
   };
 
   var lastFetchAt = 0;   // ★ P2：动画与服务器时钟对齐（拉取时刻起本地外推）
+  var clashToasted = {}; // ★ P62：已提示过的相遇，避免逐帧重复弹同一条军情
+  var warRoute = null;   // ★ P62：出征页选中的目标城，沙盘据此画进军路线（只预览）
   var rafId = null;      // ★ P2：行军动画帧句柄
   var lastRafAt = 0;
   var lastPendingCount = -1;   // -1 = 首次拉取，不把「本来就有待决」误报成刚抵达
@@ -2413,6 +2430,116 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     var org = origin(rect);
     var ox = org[0], oy = org[1];
     function P(p) { return [ox + p[0] * scale, oy + p[1] * scale]; }
+    /* ★ P62：一支部队要「看得出是部队」——旗、队、尘三件套。
+       旗杆立在徽章左后侧、旗面朝行进方向飘；兵卒按兵力量级排成横队在徽章后方踏步；
+       队尾扬尘随相位后移淡出。玩家金 / 诸侯赤，颜色由调用方给，画法完全共用。
+       返回标签基线 y，避免每个调用点自己猜棋子的视觉高度。 */
+    function drawTroopToken(sx, sy, o) {
+      var sc = o.scale || 1;
+      /* ★ P62：1× 视野下地图被缩到 ~0.45，旧的 11px 徽章放大三倍才看得清，
+         旗和兵卒更是被徽章整块盖住。现在基准抬到 14px，兵卒移到徽章外，
+         旗杆抬高一档——远看是「一支部队」，近看能数出兵种。 */
+      var t = o.tang || [1, 0];
+      var tl = Math.hypot(t[0], t[1]) || 1;
+      var dx = t[0] / tl, dy = t[1] / tl;          /* 前进方向 */
+      var px = -dy, py = dx;                        /* 横队方向 */
+      var ph = o.ph || 0;
+      var R = Math.max(14, 16 * sc);
+      var rgb = o.rgb;
+      var wave = Math.sin(ph * Math.PI * 2);
+      var rank = o.troops >= 20000 ? 5 : (o.troops >= 6000 ? 4 : (o.troops >= 1500 ? 3 : 2));
+      var i, j;
+      /* 队尾扬尘 */
+      for (i = 0; i < 3; i += 1) {
+        var k = (ph + i * 0.33) % 1;
+        var cx = sx - dx * (R * 1.5 + k * R * 1.5);
+        var cy = sy - dy * (R * 1.5 + k * R * 1.5) + (i - 1) * R * 0.22;
+        g.beginPath();
+        g.arc(cx, cy, R * 0.16 + k * R * 0.22, 0, 6.2832);
+        g.fillStyle = 'rgba(158,136,104,' + (0.28 * (1 - k)).toFixed(3) + ')';
+        g.fill();
+      }
+      /* 呼吸光环 */
+      var pulse = wave * 0.5 + 0.5;
+      g.beginPath();
+      g.arc(sx, sy, R + 3 + pulse * 12, 0, 6.2832);
+      g.strokeStyle = 'rgba(' + rgb + ',' + (0.5 * (1 - pulse)).toFixed(3) + ')';
+      g.lineWidth = 2;
+      g.stroke();
+      /* 兵卒横队：必须画在徽章外（旧版压在徽章内侧，等于白画） */
+      for (j = 0; j < rank; j += 1) {
+        var off = (j - (rank - 1) / 2) * R * 0.52;
+        var step = Math.sin(ph * Math.PI * 4 + j * 0.9) * R * 0.14;
+        var bx = sx - dx * R * 1.38 + px * off;
+        var by = sy - dy * R * 1.38 + py * off + step;
+        g.beginPath();
+        g.arc(bx, by, Math.max(2.4, R * 0.22), 0, 6.2832);
+        g.fillStyle = 'rgba(' + rgb + ',.96)';
+        g.fill();
+        g.lineWidth = 1;
+        g.strokeStyle = 'rgba(28,20,10,.6)';
+        g.stroke();
+      }
+      /* 旗杆 + 旗面 */
+      var poleX = sx + px * R * 0.78;
+      var tipY = sy - R * 0.6 - R * 1.5;
+      g.beginPath();
+      g.moveTo(poleX, sy + R * 1.0);
+      g.lineTo(poleX, tipY);
+      g.strokeStyle = 'rgba(38,30,18,.95)';
+      g.lineWidth = Math.max(1.6, R * 0.13);
+      g.stroke();
+      var flap = R * 0.46 + wave * R * 0.07;
+      g.beginPath();
+      g.moveTo(poleX, tipY);
+      g.quadraticCurveTo(poleX + dx * R * 0.62 + px * flap * 0.3, tipY + R * 0.18,
+        poleX + dx * R * 1.06 + px * flap, tipY + R * 0.46);
+      g.lineTo(poleX + dx * R * 0.9 + px * flap * 0.7, tipY + R * 0.86);
+      g.lineTo(poleX, tipY + R * 0.72);
+      g.closePath();
+      g.fillStyle = o.flag;
+      g.fill();
+      g.strokeStyle = 'rgba(30,24,14,.62)';
+      g.lineWidth = 1;
+      g.stroke();
+      /* 落地投影，让棋子从水墨底图里跳出来 */
+      g.beginPath(); g.arc(sx + 2, sy + 2.5, R, 0, 6.2832);
+      g.fillStyle = 'rgba(24,16,8,.26)'; g.fill();
+      /* 兵力牌 */
+      g.beginPath(); g.arc(sx, sy, R, 0, 6.2832);
+      g.fillStyle = 'rgba(16,14,8,.9)'; g.fill();
+      g.lineWidth = Math.max(2, R * 0.16); g.strokeStyle = o.flag; g.stroke();
+      g.beginPath(); g.arc(sx, sy, R + 1.6, 0, 6.2832);
+      g.lineWidth = 1; g.strokeStyle = 'rgba(250,244,228,.55)'; g.stroke();
+      var tmsg = o.troops >= 10000 ? (o.troops / 10000).toFixed(1) + '万' : String(o.troops);
+      g.fillStyle = o.flag;
+      g.font = 'bold ' + Math.max(10, Math.min(14, R * 0.82)).toFixed(1) + 'px "Microsoft YaHei",sans-serif';
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(tmsg, sx, sy + 0.5);
+      /* 方向箭头 */
+      var ax = sx + dx * (R + 12), ay = sy + dy * (R + 12);
+      g.beginPath();
+      g.moveTo(ax + dx * 9, ay + dy * 9);
+      g.lineTo(ax - dy * 5.5 - dx * 3.4, ay + dx * 5.5 - dy * 3.4);
+      g.lineTo(ax + dy * 5.5 - dx * 3.4, ay - dx * 5.5 - dy * 3.4);
+      g.closePath();
+      g.fillStyle = o.flag; g.fill();
+      /* 抵城：旗子插地，落地脉冲 + 两字提示 */
+      if (o.arrived) {
+        var land = (Date.now() % 1200) / 1200;
+        g.beginPath();
+        g.arc(sx, sy + R * 0.55, R * (0.9 + land * 1.5), 0, 6.2832);
+        g.strokeStyle = 'rgba(' + rgb + ',' + (0.55 * (1 - land)).toFixed(3) + ')';
+        g.lineWidth = 2;
+        g.stroke();
+        g.font = 'bold ' + Math.max(10, 11 * sc).toFixed(1) + 'px "Microsoft YaHei",sans-serif';
+        g.textAlign = 'center'; g.textBaseline = 'bottom';
+        g.lineWidth = 3; g.strokeStyle = 'rgba(250,244,228,.9)';
+        g.strokeText('抵城', sx, sy - R * 2.1);
+        g.fillStyle = o.flag; g.fillText('抵城', sx, sy - R * 2.1);
+      }
+      return { labelY: sy + R * 1.42 + 4 };
+    }
     g.imageSmoothingEnabled = true;
     g.imageSmoothingQuality = 'high';
     g.fillStyle = '#e4d3c6';
@@ -2520,6 +2647,64 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
 
     // 旧「十三州部古名」层（layer_zhou）已废弃，不再绘制
     drawLayer('road');
+
+    /* ★ P62：出征路线预览。选目标城时在沙盘上画金色流动虚线 + 终点小旗，
+       玩家在出征窗里点一座城，就能同时在地图上看到「从哪走、打到哪」。
+       画在路网之上、城池之下，不遮挡城名与军标；关窗即收。 */
+    if (warRoute && s.cities) {
+      var wf = null, wt = null, wi;
+      for (wi = 0; wi < s.cities.length; wi += 1) {
+        if (Number(s.cities[wi].id) === warRoute.from) wf = s.cities[wi];
+        if (Number(s.cities[wi].id) === warRoute.to) wt = s.cities[wi];
+      }
+      if (wf && wt) {
+        var wpts = [[wf.x, wf.y], [wt.x, wt.y]];
+        var wrts = s.routes || [];
+        for (wi = 0; wi < wrts.length; wi += 1) {
+          var rt2 = wrts[wi];
+          if ((Number(rt2.from) === warRoute.from && Number(rt2.to) === warRoute.to)
+            || (Number(rt2.from) === warRoute.to && Number(rt2.to) === warRoute.from)) {
+            if (rt2.points && rt2.points.length >= 2) wpts = rt2.points;
+            break;
+          }
+        }
+        g.save();
+        g.strokeStyle = 'rgba(232,198,112,.95)';
+        g.lineWidth = Math.max(2, 2.6 * scale);
+        g.setLineDash([9 * scale, 6 * scale]);
+        g.lineDashOffset = -((Date.now() / 40) % (15 * scale));
+        g.beginPath();
+        var wq0 = P(wpts[0]);
+        g.moveTo(wq0[0], wq0[1]);
+        for (wi = 1; wi < wpts.length; wi += 1) {
+          var wqj = P(wpts[wi]);
+          g.lineTo(wqj[0], wqj[1]);
+        }
+        g.stroke();
+        g.setLineDash([]);
+        g.lineDashOffset = 0;
+        var wqT = P([wt.x, wt.y]);
+        g.beginPath();
+        g.arc(wqT[0], wqT[1], Math.max(14, 18 * scale), 0, 6.2832);
+        g.strokeStyle = 'rgba(232,198,112,.9)';
+        g.lineWidth = Math.max(1.6, 2 * scale);
+        g.stroke();
+        g.beginPath();
+        g.moveTo(wqT[0] + 6 * scale, wqT[1] - 8 * scale);
+        g.lineTo(wqT[0] + 6 * scale, wqT[1] - 26 * scale);
+        g.strokeStyle = '#6b4a12';
+        g.lineWidth = Math.max(1.4, 1.8 * scale);
+        g.stroke();
+        g.beginPath();
+        g.moveTo(wqT[0] + 6 * scale, wqT[1] - 26 * scale);
+        g.lineTo(wqT[0] + 23 * scale, wqT[1] - 22 * scale);
+        g.lineTo(wqT[0] + 6 * scale, wqT[1] - 17 * scale);
+        g.closePath();
+        g.fillStyle = '#e8c670';
+        g.fill();
+        g.restore();
+      }
+    }
 
     // 城池按原大贴上。选中只染这一座插画，裁剪不放大，免得把邻城一起染红。
     var cityImg = drawLayer('city');
@@ -2700,62 +2885,10 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
           var L = Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]);
           segs.push(L); total += L;
         }
-        /* ★ P41：诸侯军不做逐帧移动画面——静态红线 + 固定位置兵力徽章 + 方向箭头 +
-           「势力 → 目标城 · 第 N 日抵达」。玩家军仍走下方插值/流光动画，互不干扰。 */
-        if (isFoe) {
-          var fLen = total * 0.62, fAcc = 0;
-          var fCur = [pts[0][0], pts[0][1]], fTang = null;
-          for (var fi = 0; fi < segs.length; fi++) {
-            var fL = segs[fi];
-            if (fAcc + fL >= fLen || fi === segs.length - 1) {
-              var ft = fL > 0 ? (fLen - fAcc) / fL : 0;
-              ft = Math.max(0, Math.min(1, ft));
-              fCur = [pts[fi][0] + (pts[fi + 1][0] - pts[fi][0]) * ft,
-                pts[fi][1] + (pts[fi + 1][1] - pts[fi][1]) * ft];
-              fTang = [pts[fi + 1][0] - pts[fi][0], pts[fi + 1][1] - pts[fi][1]];
-              break;
-            }
-            fAcc += fL;
-          }
-          g.save();
-          g.strokeStyle = 'rgba(225,92,72,.9)';
-          g.lineWidth = Math.max(1.8, 2.6 * scale);
-          g.beginPath();
-          var fq0 = P(pts[0]); g.moveTo(fq0[0], fq0[1]);
-          for (var fj = 1; fj < pts.length; fj++) {
-            var fqj = P(pts[fj]); g.lineTo(fqj[0], fqj[1]);
-          }
-          g.stroke();
-          var qf = P(fCur), fR = Math.max(11, 13 * scale);
-          g.beginPath(); g.arc(qf[0], qf[1], fR, 0, 6.2832);
-          g.fillStyle = 'rgba(16,14,8,.9)'; g.fill();
-          g.lineWidth = 2; g.strokeStyle = '#e15c48'; g.stroke();
-          var fSum = Math.max(0, Number(mm.troops) || 0);
-          var fTxt = fSum >= 10000 ? (fSum / 10000).toFixed(1) + '万' : String(fSum);
-          g.fillStyle = '#ffb9a8';
-          g.font = 'bold ' + Math.max(9, Math.min(12, fR * 0.8)).toFixed(1) + 'px "Microsoft YaHei",sans-serif';
-          g.textAlign = 'center'; g.textBaseline = 'middle';
-          g.fillText(fTxt, qf[0], qf[1] + 0.5);
-          if (fTang) {
-            var ftl = Math.hypot(fTang[0], fTang[1]) || 1;
-            var fdx = fTang[0] / ftl, fdy = fTang[1] / ftl;
-            var fax = qf[0] + fdx * (fR + 9), fay = qf[1] + fdy * (fR + 9);
-            g.beginPath();
-            g.moveTo(fax + fdx * 8, fay + fdy * 8);
-            g.lineTo(fax - fdy * 5 - fdx * 3, fay + fdx * 5 - fdy * 3);
-            g.lineTo(fax + fdy * 5 - fdx * 3, fay - fdx * 5 - fdy * 3);
-            g.closePath(); g.fillStyle = '#e15c48'; g.fill();
-          }
-          var fLabel = (mm.factionName || '诸侯军') + ' → ' + (mm.toName || b.name || '')
-            + ' · 第 ' + Math.max(1, Math.floor(Number(mm.arriveDay) || 1)) + ' 日抵达';
-          g.font = Math.max(10, 11.5 * scale).toFixed(1) + 'px "Microsoft YaHei",sans-serif';
-          g.textAlign = 'center'; g.textBaseline = 'top';
-          g.lineWidth = 3; g.strokeStyle = 'rgba(250,244,228,.88)';
-          g.strokeText(fLabel, qf[0], qf[1] + fR + 5);
-          g.fillStyle = '#9e2b1c'; g.fillText(fLabel, qf[0], qf[1] + fR + 5);
-          g.restore();
-          return;
-        }
+        /* ★ P62：诸侯军不再画成「静态红线 + 固定位置徽章」。
+           玩家反馈「地图上看不出部队在动」，而援军/来犯军恰恰是最该被看见的威胁。
+           现在两边共用下方同一套插值移动 + 部队棋子，只是配色不同；
+           性能由「沙盘可见 + 20fps 上限」控制，不做逐帧 requestAnimationFrame 空转。 */
         var walked = p * total;
         var cur = [pts[0][0], pts[0][1]];
         var acc = 0, closed = false, tang = null;
@@ -2800,57 +2933,111 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
         g.setLineDash([]);
         g.lineDashOffset = 0;
         /* ★ 用户 ⑤：「在地图上看不到在途行军部队，需要动画效果」。
-           原实现只有一支 12px 小旗 + 3px 圆点，1× 视野下几乎看不见，而且是静止的。
-           现在换成：呼吸光环（脉冲）+ 兵力徽章 + 行进方向箭头 + 「→ 城名 · 余 N 日」标签，
-           由 Date.now() 驱动相位 —— 20fps 重绘时是连续动画，静帧也停在合理相位，
-           不依赖 requestAnimationFrame 是否在跑，也不会因为掉帧而闪。 */
+           ★ P62：从「呼吸光环 + 圆徽章」升级为真正的部队棋子——
+           旗杆旗面 + 按兵力量级排出的兵卒横队 + 踏步起伏 + 队尾扬尘 + 方向箭头。
+           玩家军金色、诸侯军赤红，共用同一套画法；相位由 Date.now() 驱动，
+           20fps 重绘即连续动画，静帧也停在合理相位，不依赖 rAF 是否在跑。 */
         var qm = P(cur);
-        var ph = (Date.now() % 1500) / 1500;
-        var pulse = Math.sin(ph * Math.PI * 2) * 0.5 + 0.5;
-        var R = Math.max(11, 13 * scale);
-        var rgb = isFoe ? '225,92,72' : '232,198,112';
-        /* 呼吸光环 */
-        g.beginPath();
-        g.arc(qm[0], qm[1], R + 3 + pulse * 11, 0, 6.2832);
-        g.strokeStyle = 'rgba(' + rgb + ',' + (0.55 * (1 - pulse)).toFixed(3) + ')';
-        g.lineWidth = 2;
-        g.stroke();
-        /* 徽章底盘 */
-        g.beginPath(); g.arc(qm[0], qm[1], R, 0, 6.2832);
-        g.fillStyle = 'rgba(16,14,8,.86)'; g.fill();
-        g.lineWidth = 2; g.strokeStyle = cFlag; g.stroke();
-        /* 徽章里的兵力（万级压缩，字号跟着缩放走） */
+        var ph = (Date.now() % 1600) / 1600;
         var tsum = Math.max(0, Number(mm.troops) || 0);
-        var tmsg = tsum >= 10000 ? (tsum / 10000).toFixed(1) + '万' : String(tsum);
-        g.fillStyle = cFlag;
-        g.font = 'bold ' + Math.max(9, Math.min(12, R * 0.8)).toFixed(1) + 'px "Microsoft YaHei",sans-serif';
-        g.textAlign = 'center'; g.textBaseline = 'middle';
-        g.fillText(tmsg, qm[0], qm[1] + 0.5);
-        /* 方向箭头：沿当前所在路段切线，告诉玩家「往哪走」 */
-        if (tang) {
-          var tl = Math.hypot(tang[0], tang[1]) || 1;
-          var dx = tang[0] / tl, dy = tang[1] / tl;
-          var ax = qm[0] + dx * (R + 10), ay = qm[1] + dy * (R + 10);
-          g.beginPath();
-          g.moveTo(ax + dx * 8, ay + dy * 8);
-          g.lineTo(ax - dy * 5 - dx * 3, ay + dx * 5 - dy * 3);
-          g.lineTo(ax + dy * 5 - dx * 3, ay - dx * 5 - dy * 3);
-          g.closePath();
-          g.fillStyle = cFlag; g.fill();
-        }
-        /* 标签：我方「→ 目标城 · 余 N 日」，敌方前置势力名 */
         var restDay = Math.max(0, Math.ceil(mm.arriveDay - dayNow));
+        /* ★ P62：相遇中的两军沿「垂直于行军方向」分开，形成两阵对峙，
+           不再让两枚徽章和文字挤在同一点上。偏移只在 clash 存在时生效。 */
+        var biasX = 0, biasY = 0;
+        if (mm.clash && tang) {
+          var tl2 = Math.hypot(tang[0], tang[1]) || 1;
+          var bd = Math.max(20, 24 * scale) * (isFoe ? 1 : -1);
+          biasX = (-tang[1] / tl2) * bd;
+          biasY = (tang[0] / tl2) * bd;
+        }
+        var tok = drawTroopToken(qm[0] + biasX, qm[1] + biasY, {
+          scale: scale, ph: ph, tang: tang,
+          rgb: isFoe ? '225,92,72' : '232,198,112',
+          flag: cFlag, troops: tsum, arrived: p >= 0.995
+        });
+        /* 标签：我方「→ 目标城 · 余 N 日」，敌方前置势力名 */
         var head = isFoe ? ((mm.factionName || '诸侯军') + ' ') : '';
         var label = head + (mm.recalled ? '撤回 ' : '→ ') + (mm.toName || '')
           + ' · 余 ' + restDay + ' 日';
         g.font = Math.max(10, 11.5 * scale).toFixed(1) + 'px "Microsoft YaHei",sans-serif';
         g.textAlign = 'center'; g.textBaseline = 'top';
         g.lineWidth = 3; g.strokeStyle = 'rgba(250,244,228,.88)';
-        g.strokeText(label, qm[0], qm[1] + R + 5);
+        g.strokeText(label, qm[0] + biasX, tok.labelY);
         g.fillStyle = isFoe ? '#9e2b1c' : '#6b4a12';
-        g.fillText(label, qm[0], qm[1] + R + 5);
+        g.fillText(label, qm[0] + biasX, tok.labelY);
         g.restore();
       });
+      /* ★ P62：相遇/会战在地图上触发。
+         两支军的 clash 指向同一场遭遇，按「日 + 坐标」去重后只画一次。
+         会战日前后播交叉刀光、扩张冲击环与火星；平日只留一个红点，
+         避免整张图长期闪烁。纯表现层——战果仍由抵达结算决定，不改任何数值。 */
+      if (s.marches.length) {
+        var seenClash = {};
+        var clashList = [];
+        s.marches.forEach(function (mm) {
+          var c = mm.clash;
+          if (!c || !c.at) return;
+          var ck = (c.kind || '') + ':' + Math.round(Number(c.day) || 0) + ':'
+            + Math.round(c.at.x) + ',' + Math.round(c.at.y);
+          if (seenClash[ck]) return;
+          seenClash[ck] = 1;
+          clashList.push(c);
+        });
+        clashList.forEach(function (c) {
+          var q = P([c.at.x, c.at.y]);
+          var hot = Math.abs(dayNow - (Number(c.day) || 0)) < 1.1;
+          g.save();
+          if (hot) {
+            var ct = (Date.now() % 1100) / 1100;
+            g.beginPath();
+            g.arc(q[0], q[1], 10 + ct * 34 * Math.max(1, scale * 0.8), 0, 6.2832);
+            g.strokeStyle = 'rgba(255,186,120,' + (0.75 * (1 - ct)).toFixed(3) + ')';
+            g.lineWidth = Math.max(2, 3 * scale);
+            g.stroke();
+            var sw = Math.max(9, 14 * scale);
+            var cw = Math.sin(ct * Math.PI * 2) * 0.25;
+            g.strokeStyle = 'rgba(255,244,214,.92)';
+            g.lineWidth = Math.max(1.6, 2.2 * scale);
+            g.beginPath();
+            g.moveTo(q[0] - sw * Math.cos(cw), q[1] - sw * Math.sin(cw));
+            g.lineTo(q[0] + sw * Math.cos(cw), q[1] + sw * Math.sin(cw));
+            g.moveTo(q[0] - sw * Math.cos(-cw), q[1] - sw * Math.sin(-cw));
+            g.lineTo(q[0] + sw * Math.cos(-cw), q[1] + sw * Math.sin(-cw));
+            g.stroke();
+            for (var si = 0; si < 4; si += 1) {
+              var sa = ct * 6.2832 + si * 1.5708;
+              g.beginPath();
+              g.arc(q[0] + Math.cos(sa) * (8 + ct * 22), q[1] + Math.sin(sa) * (8 + ct * 22),
+                Math.max(1.2, 2 * scale), 0, 6.2832);
+              g.fillStyle = 'rgba(255,206,138,' + (0.9 * (1 - ct)).toFixed(3) + ')';
+              g.fill();
+            }
+          } else {
+            g.beginPath();
+            g.arc(q[0], q[1], Math.max(3, 4 * scale), 0, 6.2832);
+            g.fillStyle = 'rgba(190,64,44,.72)'; g.fill();
+          }
+          /* 相遇徽标：红底交叉刀，比一长串字省地方，也不会压住两边的兵力牌 */
+          var bR = Math.max(9, 10 * scale);
+          g.beginPath(); g.arc(q[0], q[1], bR, 0, 6.2832);
+          g.fillStyle = 'rgba(150,36,26,.94)'; g.fill();
+          g.lineWidth = Math.max(1.4, 1.6 * scale); g.strokeStyle = '#ffcf9a'; g.stroke();
+          var bl = bR * 0.6;
+          g.beginPath();
+          g.moveTo(q[0] - bl, q[1] - bl); g.lineTo(q[0] + bl, q[1] + bl);
+          g.moveTo(q[0] - bl, q[1] + bl); g.lineTo(q[0] + bl, q[1] - bl);
+          g.strokeStyle = '#fff2d6'; g.lineWidth = Math.max(1.4, 1.8 * scale); g.stroke();
+          var tag = c.kind === 'city' ? '会战' : '遭遇';
+          var bob = hot ? Math.sin(((Date.now() % 600) / 600) * Math.PI) * 3 : 0;
+          g.font = 'bold ' + Math.max(10, 11.5 * scale).toFixed(1) + 'px "Microsoft YaHei",sans-serif';
+          g.textAlign = 'center'; g.textBaseline = 'top';
+          g.lineWidth = 3; g.strokeStyle = 'rgba(44,14,8,.92)';
+          g.strokeText(tag, q[0], q[1] + bR + 3 + bob);
+          g.fillStyle = '#ffe2b0';
+          g.fillText(tag, q[0], q[1] + bR + 3 + bob);
+          g.restore();
+        });
+      }
     }
     if (logOpen && logTab === 'plan' && s.plans) {
       s.plans.forEach(function (p) {
@@ -2892,6 +3079,18 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     }
 
     /* 势力图例/面板：内容只在变化时重建（详见 renderLegend 的头注） */
+    /* ★ P62：相遇是新军情——地图上画出来的同时，用一条提示把玩家叫过来看一眼。
+       同一场遭遇只提示一次（键含日与对方标签），逐帧重绘不会刷屏。 */
+    var clashTip = null;
+    (s.marches || []).forEach(function (mm) {
+      var c = mm.clash;
+      if (!c || mm.side === 'faction') return;
+      var ck = (c.kind || '') + ':' + Math.round(Number(c.day) || 0) + ':' + (c.withLabel || '');
+      if (clashToasted[ck]) return;
+      clashToasted[ck] = 1;
+      if (!clashTip) clashTip = c.text || '';
+    });
+    if (clashTip && window.__slgToast) window.__slgToast('两军相遇：' + clashTip, false);
     renderLegend(s);
     // 事件与回合
     var camp = s.campaign || {};
@@ -2911,7 +3110,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     if (foeEl) {
       var foes = (s.marches || []).filter(function (mm) { return !!mm.side && mm.side !== 'player' && !mm.resolved; });
       var foeTxt = foes.length
-        ? '诸侯动向 ' + foes.length + ' 支：红线与箭头为静态标记，不逐帧移动' : '';
+        ? '诸侯动向 ' + foes.length + ' 支：赤旗为在途敌军，正沿路线移动' : '';
       foeEl.textContent = foeTxt;
       foeEl.style.display = foeTxt ? 'block' : 'none';
     }
@@ -2950,19 +3149,19 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     /* ★ #18：draw 是所有视口/选中变更的唯一收口，落盘放这里不会漏事件 */
     saveView();
 
-    /* ★ P41：只有玩家行军才驱动 ~20fps 连续重绘；诸侯军是静态地图标记，
-       不再让整张沙盘为了 AI 行军逐帧闪动。状态刷新时 draw 一次，标记照样出现。 */
-    var playerMarching = function (st) {
+    /* ★ P62：玩家军与诸侯军共用同一套移动绘制，所以「有在途部队」就要驱动重绘。
+       仍然只在沙盘可见时跑、50ms 一帧；没有行军时完全停下，不做空转。 */
+    var anyMarching = function (st) {
       return !!(st && st.marches && st.marches.some(function (mm) {
-        return !mm.resolved && (!mm.side || mm.side === 'player');
+        return !mm.resolved && !mm.recalled;
       }));
     };
-    if (playerMarching(s) && overlay && overlay.style.display !== 'none' && !rafId) {
+    if (anyMarching(s) && overlay && overlay.style.display !== 'none' && !rafId) {
       rafId = requestAnimationFrame(function loop(ts) {
         rafId = null;
         if (!lastState || (overlay && overlay.style.display === 'none')) return;
         if (ts - lastRafAt > 50) { lastRafAt = ts; draw(lastState); }
-        if (playerMarching(lastState)) rafId = requestAnimationFrame(loop);
+        if (anyMarching(lastState)) rafId = requestAnimationFrame(loop);
       });
     }
   }
@@ -4338,6 +4537,9 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
   window.__slgWarClose = function () {
     var w = document.getElementById('slgWarWin');
     if (w) w.remove();
+    /* ★ P62：关掉出征窗就把路线预览一起收掉，别让沙盘一直挂着一条虚线。
+       预览状态住在沙盘注入层（draw 要用），这里只能通过它的公开入口清。 */
+    if (window.__slgWarRoutePreview) window.__slgWarRoutePreview(0, 0);
     document.documentElement.removeAttribute('data-slg-window');
   };
   window.__slgWarWindow = function (opts) {
@@ -4515,16 +4717,16 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
 
   function warGoPanel(s, fromCity, idle, body) {
     var own = warOwnCities(s);
-    /* ★ 出征向导：选出发城 → 选队伍/目标 → 看补给（推演可选）→ 确认。
-       用户明确要求：推演不是强制前置，不看也能直接打。 */
-    var rail = el('div', 'card',
-      '<h4 style="margin-top:0">出征三步 · 选好就能打</h4>'
-      + '<div class="cost" style="line-height:1.9">'
-      + '① 选出发城与队伍　→　② 选目标城与出兵比例　→　③ 确认出征'
-      + '<br><span style="opacity:.8">「战前推演」是可选参谋：想先看会死多少人再打就点一次；'
-      + '不想看直接出征也完全可以。抵达后先进入「遭遇」页，可再次推演、确认开战或收兵。</span></div>');
-    body.appendChild(rail);
-    var fromCard = el('div', 'card', '<h4 style="margin-top:0">出发城</h4>');
+    /* ★ P62：出征页从「规则说明书」改回「点将台」。
+       旧版把同一件事讲了三遍——三步卡、站位射程卡、粮道卡、概览卡，一屏塞不下，
+       玩家得边滚边找按钮。实际要决定的只有三件：谁去、打哪、带多少。
+       现在主屏只留三步提示与两张点将卡；粮道、站位、射程、推演一律收进
+       文末「军议详情」，想推演再展开，不展开也能直接出师。 */
+    body.appendChild(el('div', 'card',
+      '<h4 style="margin-top:0">出征三步 · 点将 · 定策 · 出师</h4>'
+      + '<div class="cost">① 点将（城与队伍）　→　② 定策（目标与兵力）　→　③ 出师。'
+      + '粮道、站位、射程、战前推演都在文末「军议详情」里，不看也能打。</div>'));
+    var fromCard = el('div', 'card', '<h4 style="margin-top:0">① 出发城</h4>');
     if (own.length > 1) {
       var selFrom = document.createElement('select');
       selFrom.style.cssText = 'background:#101208;color:#e2d6b8;border:1px solid #4a4436;'
@@ -4551,23 +4753,6 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     fromCard.appendChild(el('div', 'cost',
       '驻城兵力 ' + fmt(fromCity.troopSum || 0) + ' · 城防守军 ' + fmt(fromCity.troops || 0)
       + ' · 城库存粮 ' + fmt(fromCity.store || 0) + ' · 可派队伍 ' + idle.length + ' 支'));
-    /* ★ U20 粮道：出征前就把「补给怎么走、断没断、能撑几天」说清楚 */
-    var sup = fromCity.supply || null;
-    if (sup) {
-      var supOk = sup.connected !== false;
-      var daily = Math.max(1, (fromCity.troopSum || 0) * 0.1);
-      var hold = Math.floor((fromCity.store || 0) / daily);
-      fromCard.appendChild(el('div', 'cost',
-        '粮道：' + (supOk
-          ? '<span style="color:#9ec97f">通 · ' + sup.hops + ' 跳 · 约 ' + sup.km + ' 里</span>'
-            + (sup.via && sup.via.length ? '（经 ' + esc(sup.via.join(' → ')) + '）' : '（本城即都城）')
-          : '<span style="color:#e07a5f">断绝 ' + (sup.days || 0) + ' 日 · 粮产仅五成、民心每旬 −3</span>')
-        + '　城库可支撑约 ' + hold + ' 日'));
-      if (sup.cut) {
-        fromCard.appendChild(el('div', 'cost', '<span style="color:#e07a5f">'
-          + '此刻出征，回来可能连补给点都没了：先打通通路或放弃这座飞地。</span>'));
-      }
-    }
     body.appendChild(fromCard);
 
     var armyCard = el('div', 'card', '<h4 style="margin-top:0">可派队伍</h4>');
@@ -4610,15 +4795,17 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       row.setAttribute('data-army-index', String(ai + 1));
       row.setAttribute('data-army-id', String(a.id));
       if (on) row.setAttribute('data-army-selected', '1');
-      row.style.cssText = 'cursor:pointer;padding:8px;border-radius:5px;'
-        + (on ? 'background:rgba(240,217,152,.10);border:1px solid #8a7038;' : 'border:1px solid #33302a;');
+      /* ★ P62：点选态改用左侧色条 + 底纹表达，去掉右侧「点选/已选」小标签。
+         整行本来就是可点的，再挂一个标签只是噪声；键盘 1–3 的槽位标记留在队号前。 */
+      row.style.cssText = 'cursor:pointer;padding:6px 8px;border-radius:5px;'
+        + 'border-left:3px solid ' + (on ? '#e8c670' : 'transparent') + ';'
+        + (on ? 'background:rgba(240,217,152,.10);' : '');
       row.innerHTML = '<span><b style="color:' + (on ? '#ffe9b0' : '#e2d6b8') + '">'
         + (ai < 3 ? '［' + (ai + 1) + '］' : '') + '队伍#' + a.order + '</b>'
         + '<span class="cost">　盾 ' + fmt(a.soldiers[0]) + ' / 弓 ' + fmt(a.soldiers[1])
         + ' / 骑 ' + fmt(a.soldiers[2]) + '　合计 <b style="color:#f0d998">' + fmt(warTroops(a))
         + '</b> 兵 · 队速 ' + Math.round(a.speed || 100) + '</span>'
         + '<div class="cost">' + warGenLine(a) + '</div></span>';
-      row.appendChild(el('span', 'chip', on ? '已选' : '点选'));
       row.onclick = function () { war.armyId = a.id; renderWar(cache); };
       armyCard.appendChild(row);
     });
@@ -4627,6 +4814,9 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     var army = idle.filter(function (a) { return a.id === war.armyId; })[0] || null;
     /* ★ M4-13：距离与适性在出征前就要看得见、能据此换将。
        过去只在编队页有一行小字，战报里又完全不提，玩家自然觉得这条规则没意义。 */
+    /* ★ P62：站位/射程/适性从主屏挪进「军议详情」。这是换将时才需要的参谋信息，
+       不是每次出征都要读一遍的规则；内容一字不删，只是默认收起。 */
+    var standHtml = '';
     if (army) {
       var posNames = ['前锋', '中军', '大营'];
       var standRows = (army.generals || []).map(function (g, i) {
@@ -4634,19 +4824,17 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         var ad = atkDistOf(g);
         var reach = ad >= i + 3 ? '可及敌大营' : (ad >= i + 2 ? '可及敌中军' : '仅及敌前锋');
         var weak = ad < i + 2;
-        return '<div style="padding:3px 0"><b style="color:#f0d998">' + posNames[i] + '</b> · '
+        return '<div style="padding:2px 0"><b style="color:#f0d998">' + posNames[i] + '</b> · '
           + esc(g.name || '武将') + '<span class="cost">　适性 ' + (g.apt || 100)
           + '%（已计入攻防） · 攻距 ' + ad + ' · '
           + (weak ? '<span style="color:#ff9d6b">' + reach + '</span>' : reach) + '</span></div>';
       }).join('');
-      body.appendChild(el('div', 'card',
-        '<h4 style="margin-top:0">站位 · 射程 · 适性</h4>' + standRows
-        + '<div class="cost" style="margin-top:6px;line-height:1.8">'
+      standHtml = '<div style="padding:6px 0 2px"><b style="color:#e8c670">站位 · 射程 · 适性</b></div>'
+        + standRows
+        + '<div class="cost" style="margin-top:4px;line-height:1.7">'
         + '槽位即战位（一=前锋 0 / 二=中军 1 / 三=大营 2）；跨阵营距离 = 我方槽位 + 敌方槽位 + 1（1~5）。'
-        + '攻距不足会打空普攻，战法「有效距离」不足会只命中部分敌军或完全落空——'
-        + '短手将放前锋、弓兵与远射战法放中军大营，才打满输出。'
-        + '适性百分比与战斗结算同源，直接乘进该将攻防；战报会写明每次「弓矢不及」与「仅及 N/M 人」。'
-        + '</div>'));
+        + '攻距不足会打空普攻，战法「有效距离」不足会只命中部分敌军——短手将放前锋、弓兵与远射放中军大营。'
+        + '适性百分比与战斗结算同源，直接乘进该将攻防。</div>';
     }
     var routes = (fromCity.marchRoutes || []).filter(function (r) {
       var t = cityOf(s, r.id);
@@ -4657,10 +4845,15 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     }
     if (!war.target && routes.length) war.target = routes[0].id;
 
-    var tgtCard = el('div', 'card', '<h4 style="margin-top:0">可攻目标</h4>');
+    /* ★ P62：目标从「一条一行的长列表」改成紧凑城卡网格。
+       每个邻城一张卡：城名、势力、守军、里程与日程、胜算色标。
+       一屏能扫完所有可打方向，不用上下滚——这才是选战场的节奏。 */
+    var tgtCard = el('div', 'card', '<h4 style="margin-top:0">② 可攻目标 · 定策</h4>');
     if (!routes.length) {
       tgtCard.appendChild(el('div', 'empty', '此城周边没有可通行又能打的邻城（关隘封锁或已被我军占据）。'));
     }
+    var tgtGrid = el('div', '');
+    tgtGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:6px;';
     routes.forEach(function (r) {
       var t = cityOf(s, r.id);
       if (!t) return;
@@ -4669,20 +4862,28 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       var their = Number(t.troops) || 0;
       var on = Number(t.id) === Number(war.target);
       var odds = !army ? '<span class="cost">未选队伍</span>'
-        : mine >= their * 1.25 ? '<span style="color:#a9e2a0">兵力占优</span>'
-          : mine >= their * 0.9 ? '<span style="color:#e0c56a">胜负参半</span>'
-            : '<span style="color:#ff6b5e">兵力偏少</span>';
-      var row = el('div', 'row');
-      row.style.cssText = 'cursor:pointer;padding:8px;border-radius:5px;'
-        + (on ? 'background:rgba(240,217,152,.10);border:1px solid #8a7038;' : 'border:1px solid #33302a;');
-      row.innerHTML = '<span><span class="dot" style="background:' + t.color + '"></span>'
+        : mine >= their * 1.25 ? '<span style="color:#a9e2a0">占优</span>'
+          : mine >= their * 0.9 ? '<span style="color:#e0c56a">参半</span>'
+            : '<span style="color:#ff6b5e">偏少</span>';
+      var card = el('div', '');
+      card.style.cssText = 'cursor:pointer;padding:6px 7px;border-radius:5px;line-height:1.55;'
+        + (on ? 'background:rgba(240,217,152,.12);border:1px solid #b08a3c;'
+          : 'background:rgba(0,0,0,.14);border:1px solid #33302a;');
+      card.innerHTML = '<div><span class="dot" style="background:' + t.color + '"></span>'
         + '<b style="color:' + (on ? '#ffe9b0' : '#e2d6b8') + '">' + esc(t.name) + '</b>'
-        + '<span class="cost">　' + esc(t.province) + '·' + esc(t.ownerName) + '·守军约 ' + fmt(their) + '</span>'
-        + '<div class="cost">程 ' + fmt(r.km) + ' 里 · 预计 ' + days + ' 日 · ' + odds + '</div></span>';
-      row.appendChild(el('span', 'chip', on ? '已选' : '点选'));
-      row.onclick = function () { war.target = t.id; renderWar(cache); };
-      tgtCard.appendChild(row);
+        + '<span class="cost">　' + esc(t.ownerName) + '</span></div>'
+        + '<div class="cost">守军 ' + fmt(their) + ' · ' + fmt(r.km) + ' 里</div>'
+        + '<div class="cost">' + days + ' 日 · ' + odds + '</div>';
+      card.onclick = function () {
+        war.target = t.id;
+        war.grainCost = null;
+        /* ★ P62：选目标时顺手在沙盘上把进军路线画出来，玩家知道自己在打哪。 */
+        if (window.__slgWarRoutePreview) window.__slgWarRoutePreview(fromCity.id, t.id);
+        renderWar(cache);
+      };
+      tgtGrid.appendChild(card);
     });
+    tgtCard.appendChild(tgtGrid);
     body.appendChild(tgtCard);
 
     var target = war.target ? cityOf(s, war.target) : null;
@@ -4701,11 +4902,14 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     var grainTxt = war.grainCost != null
       ? fmt(war.grainCost) + ' 斛（本机核算）'
       : '按 ' + fmt(deploy) + ' 兵 × ' + days + ' 日 × 0.1 粮/兵/日结算（推演可查实数）';
-    var sum = el('div', 'card', '<h4 style="margin-top:0">出兵概览</h4>');
-
+    var sum = el('div', 'card', '<h4 style="margin-top:0">③ 出师</h4>');
+    /* ★ P62：摘要压成两行——实出/留守/日程/军粮在一行，守军对比在下一行。
+       旧版把同样的信息拆成四段，中间还夹着比例条，眼睛要来回找。 */
     sum.appendChild(el('div', 'cost',
-      '队伍#' + army.order + ' 共 <b style="color:#f0d998">' + fmt(total) + '</b> 兵，本役实出 '
-      + '<b style="color:#f0d998">' + fmt(deploy) + '</b> 兵，留守 ' + fmt(total - deploy) + '。'));
+      '实出 <b style="color:#f0d998">' + fmt(deploy) + '</b> / 留守 ' + fmt(total - deploy)
+      + ' · <b style="color:#f0d998">' + days + '</b> 日抵（第 ' + (s.day + days) + ' 日）'
+      + ' · 行军粮 <span id="slgWarGrain">' + grainTxt + '</span>'
+      + (days >= 10 ? '　<span class="cost">长途，途中休整 ' + Math.floor(days / 10) + ' 次</span>' : '')));
 
     var seg = el('div', 'seg');
     [['all', '全军', 1], ['half', '半军', 0.5], ['third', '三成', 0.34]].forEach(function (m) {
@@ -4715,18 +4919,13 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       b.onclick = function () { war.frac = m[2]; war.grainCost = null; renderWar(cache); };
       seg.appendChild(b);
     });
-    var segRow = el('div', 'row', '<span>出兵比例</span>');
+    var segRow = el('div', 'row', '<span>带多少兵</span>');
     segRow.appendChild(seg);
     sum.appendChild(segRow);
 
-    sum.appendChild(el('div', 'cost',
-      '行军：程 <b style="color:#f0d998">' + fmt(route.km) + '</b> 里 · 队速 ' + Math.round(army.speed)
-      + ' · 预计 <b style="color:#f0d998">' + days + '</b> 日抵达（约第 ' + (s.day + days) + ' 日）'
-      + ' · 行军粮 <span id="slgWarGrain">' + grainTxt + '</span>'
-      + (days >= 10 ? '　<span class="cost">长途：途中需 ' + Math.floor(days / 10) + ' 次休整</span>' : '')));
     var theirs = Number(target.troops) || 0;
     sum.appendChild(el('div', 'cost',
-      '目标守军约 ' + fmt(theirs) + '　'
+      '守军约 ' + fmt(theirs) + '　'
       + (deploy >= theirs * 1.25 ? '<span style="color:#a9e2a0">兵力占优</span>'
         : deploy >= theirs * 0.9 ? '<span style="color:#e0c56a">胜负参半，看武将与兵种</span>'
           : '<span style="color:#ff6b5e">兵力偏少，建议先增兵或换小城</span>')));
@@ -4742,9 +4941,35 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     atkBtn.setAttribute('data-ix-allow', '1');
     sum.appendChild(atkBtn);
     sum.appendChild(el('div', 'cost',
-      '直接点「出征」即可，不必先推演；推演只用来提前看折损。'));
+      '抵城下先进「遭遇」待命：可再推演、确认开战或收兵；途中可在「行军队列」撤回。'));
     body.appendChild(sum);
-    body.appendChild(warPreviewCard(s, fromCity, army, target));
+
+    /* ★ P62：军议详情——粮道、站位射程、战前推演，默认收起。
+       想算细账的玩家点开就有全部信息，不想算的直接按上面的大按钮出师。 */
+    var det = document.createElement('details');
+    det.className = 'card';
+    det.style.cssText = 'background:rgba(0,0,0,.18);';
+    det.innerHTML = '<summary style="cursor:pointer;color:#e8c670;font-weight:bold;outline:none">'
+      + '军议详情 · 粮道 / 站位射程 / 战前推演</summary>';
+    var sup = fromCity.supply || null;
+    if (sup) {
+      var supOk = sup.connected !== false;
+      var daily = Math.max(1, (fromCity.troopSum || 0) * 0.1);
+      var hold = Math.floor((fromCity.store || 0) / daily);
+      det.appendChild(el('div', 'cost',
+        '粮道：' + (supOk
+          ? '<span style="color:#9ec97f">通 · ' + sup.hops + ' 跳 · 约 ' + sup.km + ' 里</span>'
+            + (sup.via && sup.via.length ? '（经 ' + esc(sup.via.join(' → ')) + '）' : '（本城即都城）')
+          : '<span style="color:#e07a5f">断绝 ' + (sup.days || 0) + ' 日 · 粮产仅五成、民心每旬 −3</span>')
+        + '　城库可支撑约 ' + hold + ' 日'));
+      if (sup.cut) {
+        det.appendChild(el('div', 'cost', '<span style="color:#e07a5f">'
+          + '此刻出征，回来可能连补给点都没了：先打通通路或放弃这座飞地。</span>'));
+      }
+    }
+    if (standHtml) det.appendChild(el('div', '', standHtml));
+    det.appendChild(warPreviewCard(s, fromCity, army, target));
+    body.appendChild(det);
   }
 
   /* ★ 验收 #10 战前推演：服务端 previewAssault 走 structuredClone 沙盒 + 与正式结算同一套

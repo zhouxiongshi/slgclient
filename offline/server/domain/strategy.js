@@ -27,6 +27,8 @@ import { defectRate, FAME_DEFECT_CAP } from './captive-reputation.js';
 import { canMarchBetween, marchableNeighbors, marchGraph } from './march.js';
 /* ★ 验收 #22：地图标注分级（哪座城算要城只有这一处口径） */
 import { cityLabelRank, labelPolicy } from './map-lod.js';
+/* ★ P62：行军相遇（城下会战 / 道中遭遇）的唯一判定口径，只产出表现数据 */
+import { detectClashes } from './clash.js';
 /* ★ P11 兵役制：城池视图与战略动作只从 levy.js 取兵源数字，禁止另算一份 */
 import { levyView, checkLevy, commitLevy } from './levy.js';
 import { resolveBattle, battleSeedFor, wallMaxOf, wallDefMul, WALL } from '../battle.js';
@@ -277,6 +279,8 @@ export function ensureStrategy(state, cfgArg = null) {
     if (!st.flags) st.flags = {};
     if (!Array.isArray(st.everOwned)) st.everOwned = [];
     if (!Array.isArray(st.battleHistory)) st.battleHistory = [];
+    /* ★ P62：相遇军情（沙盘对撞表现与「军情」回看都读这一份） */
+    if (!Array.isArray(st.clashes)) st.clashes = [];
     return st;
   }
   /* ★ M3-5：剧本归属（本作设计）——state.scenarioId 在建档前设置时，
@@ -1761,6 +1765,38 @@ function resolveReliefArrival(state, ctx, mm, map) {
     }
     noteCity(state, targetId, { kind: '驰援', text: `${who}驰援扑空（城已易主）。` });
   }
+}
+
+/* ---------------------------------------------------------------- 相遇
+ * ★ P62：把「两军撞上了」做成地图上看得见的事，而不是只在面板里写一行字。
+ *
+ * 判定在 domain/clash.js（零依赖纯函数）：城下会战 = 援军与玩家军同指一城、
+ * 抵达日相近；道中遭遇 = 两军走同一段路相向而行、时间窗交叠。
+ * 这里只负责两件事：新相遇记一条军情（按「日 + 双方 id」去重，不会每次请求刷屏）、
+ * 留最近 20 条供军情页回看。
+ *
+ * 刻意不扣兵、不改战果：援军抵达后已并进守军折算（defenseFor），来犯军的压力由
+ * 围城推进承担；相遇如果再扣一次，同一支部队就被算了两次。
+ */
+export function clashTick(state, cfg, ctx) {
+  const st = ensureStrategy(state);
+  if (!Array.isArray(st.marches) || st.marches.length < 2) return [];
+  const map = strategyMap();
+  const cities = {};
+  for (const c of map.cities) cities[c.id] = c;
+  const today = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  const list = detectClashes({ marches: st.marches, cities, routes: map.routes, today });
+  if (!list.length) return [];
+  if (!Array.isArray(st.clashes)) st.clashes = [];
+  const seen = new Set(st.clashes.map((c) => c.key));
+  const fresh = list.filter((c) => !seen.has(c.key));
+  if (!fresh.length) return [];
+  st.clashes = [...st.clashes, ...fresh].slice(-20);
+  for (const c of fresh) {
+    recordEvent(state, `${c.text}（第 ${c.day} 日）`);
+    ctx?.push?.('march.clash', c);
+  }
+  return fresh;
 }
 
 /** 选出征队伍：优先指定 armyId，否则挑兵力最多的那支（界面只传城时也能打）。
@@ -3967,7 +4003,34 @@ export function strategyViewState(state, cfg = null) {
     // ★ P2：行军队列与日内进度（客户端据此画行军线与移动军标）
     // ★ P7：带 km/speed，客户端按「剩余里程 ÷ 剩余日」画，远近军标速度才一致
     // ★ 出征面板：带 armyId / 兵力 / 两端城名 / 剩余日，行军队列可直接操作撤回
-    marches: (st.marches || []).map((mm) => {
+    /* ★ P62：相遇判定只算一次，逐支行军与顶层军情共用。前端据此在相遇点画对撞，
+       玩家不必再从文字里猜「援军到了没」。 */
+    marches: (() => {
+      const cityById = {};
+      for (const c of map.cities) cityById[c.id] = c;
+      const todayView = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+      const clashList = detectClashes({
+        marches: st.marches || [], cities: cityById, routes: map.routes, today: todayView,
+      });
+      const clashByMarch = {};
+      for (const c of clashList) { clashByMarch[c.aId] = c; clashByMarch[c.bId] = c; }
+      const clashViewOf = (mm) => {
+        const c = clashByMarch[mm.id];
+        if (!c) return null;
+        const mine = c.aId === mm.id;
+        const foeLabel = mine ? c.bLabel : c.aLabel;
+        const toName = cityById[Number(mm.to)]?.name || cityName(mm.to);
+        const fromName = cityById[Number(mm.from)]?.name || cityName(mm.from);
+        return {
+          kind: c.kind, day: c.day, at: c.at, cityId: c.cityId,
+          withLabel: foeLabel,
+          withTroops: mine ? c.bTroops : c.aTroops,
+          text: c.kind === 'road'
+            ? `${foeLabel}迎面而来，两军于${fromName}—${toName}道中相遇`
+            : `${foeLabel}亦抵${/城$/.test(toName) ? `${toName}下` : `${toName}城下`}，两军会战`,
+        };
+      };
+      return (st.marches || []).map((mm) => {
       const a = (state.armys || []).find((x) => x.id === mm.armyId);
       const today = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
       return {
@@ -3995,13 +4058,21 @@ export function strategyViewState(state, cfg = null) {
         remainDays: Math.max(0, Number(mm.arriveDay) - today),
         progress: Math.max(0, Math.min(1, (today - Number(mm.departDay))
           / Math.max(1, Number(mm.arriveDay) - Number(mm.departDay)))),
+        /* ★ P62：这支军在途中有没有撞上谁。没有就是 null，前端不画对撞。 */
+        clash: clashViewOf(mm),
+        /* ★ P62：兵种编成，沙盘按盾/弓/骑画出不同的兵卒队列 */
+        order: (a?.order || 0),
+        soldiers: a ? (a.soldiers || []).map((v) => Math.max(0, Number(v) || 0)) : null,
       };
-    }),
+      });
+    })(),
     dayFrac: dayFraction(state, chapterRules().realMsPerDay),
     msPerDay: Math.max(1000, Math.round(chapterRules().realMsPerDay / (state.clock?.scale || 1))),
     gates: Object.entries((marchGraph() && marchGraph().gateStatus) || {})
       .map(([name, status]) => ({ name, status })),
     routes: map.routes.map((r) => ({ id: r.id, from: r.from, to: r.to, points: r.points, sea: r.sea })),
+    /* ★ P62：最近的相遇军情（实时在途的相遇另见 marches[].clash） */
+    clashes: (st.clashes || []).slice(-20),
     factions: conf.factions.map((f) => ({ id: f.id, name: f.name, color: f.color })),
     neutral: { id: conf.neutral.id, name: conf.neutral.name, color: conf.neutral.color },
     events: [...st.events].slice(-40).reverse()

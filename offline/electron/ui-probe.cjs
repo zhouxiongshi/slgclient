@@ -665,6 +665,95 @@ async function runProbe(win, server, app) {
     report.scenarios.scroll = await wc.executeJavaScript(SCENARIO_SCROLL, true);
     report.scenarios.scrollShot = await shot(wc, outDir, `probe-scroll-${tag}.png`);
 
+    /* ★ 场景 G（P62）：沙盘行军棋子 + 两军相遇。
+       先真出征一次并让沙盘露出来，抓一张「部队在途」；再推进两旬，
+       守方按 P14 驰援规则会派援军，与玩家军同指一城就在地图上出现「会战」。
+       两张图分别留证：路上有部队在走 / 两军撞上了。 */
+    report.scenarios.marchGo = await wc.executeJavaScript(`(async function(){
+      try {
+        var st = await (await fetch('/__slg/strategy/state', { cache:'no-store' })).json();
+        var own = (st.cities || []).filter(function (c) { return c.owner === 'player'; });
+        if (!own.length) return { ok:false, reason:'no own city' };
+        var from = own[0].id;
+        var idle = (st.armies || []).filter(function (a) {
+          return Number(a.cityId) === Number(from) && !a.marching
+            && (a.generals || []).some(function (g) { return !!g; })
+            && (a.soldiers || []).reduce(function (s, v) { return s + Math.max(0, Number(v) || 0); }, 0) > 0;
+        });
+        if (!idle.length) {
+          /* 前面的场景已经把队伍派出去/打完了：至少有沙盘可看，路上有没有兵也一并记下 */
+          if (window.__slgStrategyShow) window.__slgStrategyShow();
+          return { ok: (st.marches || []).length > 0, reason:'no idle army',
+            onRoad:(st.marches || []).length };
+        }
+        var tgt = (st.marchable || []).find(function (id) {
+          return st.cities[String(id)] && st.cities[String(id)].owner !== 'player';
+        });
+        if (!tgt) return { ok:false, reason:'no target' };
+        var r = await (await fetch('/__slg/strategy/action', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ action:'attack', cityId: tgt, fromCityId: from,
+            armyId: idle[0].id, frac: 1, confirmBattle: true }),
+        })).json();
+        if (window.__slgWarClose) window.__slgWarClose();
+        if (window.__slgStrategyShow) window.__slgStrategyShow();
+        return { ok: !!(r && r.ok), from: from, target: tgt, arriveDay: r && r.arriveDay, reason: r && r.reason };
+      } catch (e) { return { ok:false, error:String(e && e.stack || e) }; }
+    })()`, true);
+    await sleep(1800);
+    report.scenarios.marchShot = await shot(wc, outDir, `probe-march-${tag}.png`);
+
+    report.scenarios.marchTick = await wc.executeJavaScript(`(async function(){
+      try {
+        /* 相遇画面在真实对局里依赖「援军刚好同旬抵达」，探针不能靠等。
+           这里只在前端包一层 fetch，给沙盘喂两支相向而行的军（含 clash），
+           用来看清楚「两军撞上」的地图表现；不改存档、不改后端。 */
+        var st = await (await fetch('/__slg/strategy/state', { cache:'no-store' })).json();
+        var own = (st.cities || []).filter(function (c) { return c.owner === 'player'; });
+        var foe = (st.cities || []).find(function (c) { return c.owner !== 'player'; });
+        if (!own.length || !foe) return { ok:false, reason:'no pair' };
+        var a = own[0], day = st.day || 1;
+        var mid = { x:(Number(a.x) + Number(foe.x)) / 2, y:(Number(a.y) + Number(foe.y)) / 2 };
+        var fake = [
+          { id:-901, side:'player', kind:'attack', from:a.id, to:foe.id,
+            fromName:a.name, toName:foe.name, departDay:day - 1, arriveDay:day + 3,
+            troops:900, soldiers:[520, 300, 80], order:1, factionName:'',
+            clash:{ kind:'road', day:day, at:mid, cityId:foe.id, withLabel:'曹军', withTroops:700,
+              text:'曹军迎面而来，两军于' + a.name + '—' + foe.name + '道中相遇' } },
+          { id:-902, side:'faction', kind:'assault', from:foe.id, to:a.id,
+            fromName:foe.name, toName:a.name, departDay:day - 1, arriveDay:day + 4,
+            troops:700, factionName:'曹军', intel:'precise',
+            clash:{ kind:'road', day:day, at:mid, cityId:a.id, withLabel:'我军', withTroops:900,
+              text:'我军迎面而来，两军于' + foe.name + '—' + a.name + '道中相遇' } },
+        ];
+        var orig = window.fetch;
+        window.fetch = function (u) {
+          var p = orig.apply(window, arguments);
+          var url = String(u && u.url ? u.url : u);
+          if (url.indexOf('/__slg/strategy/state') < 0) return p;
+          return p.then(function (r) {
+            return r.text().then(function (txt) {
+              var j = null;
+              try { j = JSON.parse(txt); } catch (e) { return new Response(txt, { status:r.status }); }
+              j.marches = fake;
+              return new Response(JSON.stringify(j), {
+                status:r.status, headers:{ 'Content-Type':'application/json' },
+              });
+            });
+          });
+        };
+        /* 城池内政页是整屏的，会盖住沙盘；截图前先退出去。入门向导浮卡也压在地图中央。 */
+        try { if (window.__slgCityClose) window.__slgCityClose(); } catch (e) {}
+        try { if (window.__slgPanels) window.__slgPanels.close(); } catch (e) {}
+        var skip = document.querySelector('[data-act="skip"]');
+        if (skip) skip.click();
+        if (window.__slgStrategyShow) window.__slgStrategyShow();
+        return { ok:true, pair:[a.name, foe.name], day:day, at:mid };
+      } catch (e) { return { ok:false, error:String(e && e.stack || e) }; }
+    })()`, true);
+    await sleep(2200);
+    report.scenarios.clashShot = await shot(wc, outDir, `probe-clash-${tag}.png`);
+
     report.pageErrors = pageErrors.concat(await wc.executeJavaScript('window.__slgErrors || []', true));
     report.consoleErrors = consoleErrors;
   } catch (err) {

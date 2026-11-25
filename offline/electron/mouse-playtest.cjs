@@ -488,6 +488,11 @@ async function runMousePlaytest(win, server, app) {
     /* 推演按钮：给一次性标记，避免选择器踩到别的同名按钮。
        注意出征按钮文案是「先推演一次再出征」，也含「推演一次」，所以这里必须精确匹配，
        否则会命中那个本来就 disabled 的按钮，把产品判定成「按钮被禁用」。 */
+    /* ★ P62：推演收进了「军议详情」折叠区，鼠标测试要点它得先展开——
+       玩家想推演也是这么做的（点一下摘要即可）。这不是绕过界面，而是走同一路径。 */
+    await js(`(function(){ var ds=document.querySelectorAll('#slgWarWin details');
+      for (var i=0;i<ds.length;i++) ds[i].open = true; return ds.length; })()`);
+    await sleep(200);
     await js(`(function(){ var bs=Array.prototype.slice.call(document.querySelectorAll('#slgWarWin button'));
       var b=bs.find(function(x){ var t=(x.textContent||'').trim(); return t==='推演一次' || t==='再推演一次'; });
       if(b) b.setAttribute('data-mouse-target','preview'); return !!b; })()`);
