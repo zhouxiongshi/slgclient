@@ -171,8 +171,23 @@ const WALK = `(async function(){
           visible: vis(rbox), text: rtxt,
           note: '战法研习对话框：只展示战法/效果/进度/委派，不许有风险失败态',
         });
+        /* ★ P64：玩家截图暴露的真 bug——点「委派研习」后又被通用预览套一层。
+           上次审计只查研习框开没开，没查点委派按钮的结果，所以漏检。
+           这里真点 data-ract="assign"，断言不再冒出 .slgIxPV。 */
+        var rassign = rbox && rbox.querySelector('[data-ract="assign"]');
+        var pvAfterAssign = false;
+        if (rassign) {
+          rassign.click();
+          await sleep(420);
+          pvAfterAssign = !!document.querySelector('.slgIxPV');
+          var pvTxt = pvAfterAssign ? txt(document.querySelector('.slgIxPV')) : '';
+          rec('panel.research.no-double-preview', [], {
+            visible: !pvAfterAssign, text: pvTxt ? pvTxt.slice(0, 200) : '点击委派后未弹通用预览',
+            note: pvAfterAssign ? 'FAIL: 委派按钮被二次拦截' : '委派按钮直达协议层',
+          });
+        }
         var rcancel = rbox && rbox.querySelector('[data-ract="close"]');
-        if (rcancel) rcancel.click();
+        if (rcancel && rbox.isConnected) rcancel.click();
         await sleep(250);
       } else {
         rec('panel.research.assign', ['委派武将', '研习进度'], { visible: false, text: '', note: 'no-research-button' });

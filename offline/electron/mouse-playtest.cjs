@@ -192,7 +192,7 @@ async function runMousePlaytest(win, server, app) {
         var m = mods[i];
         var bs = Array.prototype.slice.call(m.querySelectorAll('button, [data-ix-allow="1"]'));
         var b = bs.find(function (x) { return x.dataset && x.dataset.act === 'ok'; })
-          || bs.find(function (x) { return /确认执行|确定|接受|采纳|继续|跳过/.test(x.textContent || ''); })
+          || bs.find(function (x) { return /准奏|确认执行|确定|接受|采纳|继续|跳过/.test(x.textContent || ''); })
           || bs.find(function (x) { return /关闭|取消/.test(x.textContent || ''); })
           || bs[0];
         if (b) { b.setAttribute('data-mouse-target', 'blocker-' + i);

@@ -131,6 +131,35 @@ test('P63-⑧ 通用决策预览不再拦截研习按钮', () => {
   assert.match(ix, /el0\.dataset\.act === 'research'/);
 });
 
+/* ---------------- P64：玩家截图回归——委派按钮被二次拦截 + 全局军议化 ---------------- */
+
+test('P64-① 研习框的 data-ract 按钮不再被通用预览二次拦截', () => {
+  const ix = read('server/interaction-ui.js');
+  /* 上次只放行 data-act，玩家点「委派研习」仍弹出通用预览框 */
+  assert.match(ix, /if \(el0\.dataset\.ract\) return null;/);
+  assert.match(ix, /closest\('\.slgIx-modal, \.slgResearchMask, #slgUIv2 \.modal'\)/);
+  const ui = read('server/panels-ui.js');
+  const box = ui.slice(ui.indexOf('function researchBox'), ui.indexOf('function askText'));
+  assert.match(box, /data-ract="assign"/);
+  assert.match(box, /data-ract="unassign"/);
+});
+
+test('P64-② 通用预览全局军议化：界面源码不含玩家点名的四个字样', () => {
+  const ix = read('server/interaction-ui.js');
+  /* 只看生成 innerHTML 的可见文案段，注释里的历史留痕不算玩家可见 */
+  const visible = ix.slice(ix.indexOf('function previewFor'), ix.indexOf('function interceptCosts'));
+  const body = visible.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  for (const word of ['决策前预览', '会发生什么', '风险与失败态', '数值依据']) {
+    assert.doesNotMatch(body, new RegExp(word), `预览界面不应出现「${word}」`);
+  }
+  assert.match(body, /军\s*议/);
+  assert.match(body, /所需/);
+  assert.match(body, /准奏/);
+  assert.match(body, /data-act="ok"/);
+  assert.match(body, /data-act="cancel"/);
+  assert.match(body, /data-act="fold"/);
+});
+
 test('P63-⑨ 每旬结算接入委派研习推进', () => {
   const src = read('server/domain/strategy.js');
   assert.match(src, /researchTick\(state, cfg, ctx\)/, 'strategyTick 每旬推进委派研习');

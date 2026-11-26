@@ -104,8 +104,8 @@ test('P11 · 层级阶梯：主窗口 > 浮窗，弹窗 > 主窗口', () => {
 
 test('P11 · 交互层不得拦截弹窗内的确认按钮', () => {
   const ix = read('server/interaction-ui.js');
-  assert.ok(/closest\('\.slgIx-modal, #slgUIv2 \.modal'\)\)\s*return;/.test(ix),
-    'interceptCosts 必须跳过弹窗内按钮，否则「出征」会被预览二次拦截');
+  assert.ok(/closest\('\.slgIx-modal, \.slgResearchMask, #slgUIv2 \.modal'\)\)\s*return;/.test(ix),
+    'interceptCosts 必须跳过弹窗与研习框内按钮，否则「出征 / 委派研习」会被预览二次拦截');
   /* 事件卡选项、出征按钮都要显式放行，避免再套一层预览 */
   assert.ok(/data-evt-choice="' \+ esc\(c\.id\) \+ '" data-ix-allow="1"/.test(ix),
     '事件卡选项按钮必须带 data-ix-allow');

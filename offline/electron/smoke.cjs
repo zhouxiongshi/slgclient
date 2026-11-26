@@ -783,7 +783,9 @@ async function runSmoke(win, server, app) {
             await new Promise(function(r){ setTimeout(r, 500); });
             var vis = Array.from(document.querySelectorAll('.slgIx-modal'))
               .filter(function(m){ return getComputedStyle(m).display !== 'none'; });
-            previewOk = vis.length > 0 && /决策前预览|消耗/.test(vis[0].textContent || '');
+            /* P64：预览已军议化，锚点改为「军议 / 所需 / 准奏」，不再允许开发者拆解词 */
+            previewOk = vis.length > 0 && /军\s*议|所需|准奏/.test(vis[0].textContent || '')
+              && !/风险与失败态|会发生什么|数值依据|决策前预览/.test(vis[0].textContent || '');
             IX.closeAll();
           }
         }

@@ -767,7 +767,8 @@
     { re: /运输|运粮/, title: '运输粮草', cost: '出发城城库粮', term: 'yunshu', reversible: true },
     { re: /赏赐/, title: '赏赐武将', cost: '金', term: 'zhongcheng', reversible: false },
     { re: /编队|整编|配置/, title: '编队整编', cost: '无（重分配兵力）', term: 'biandui', reversible: true },
-    { re: /研习/, title: '战法研习', cost: '10 残卷', term: 'zhanfa', reversible: false },
+    /* ★ P64：/研习/ 已移除——研习有专属游戏化对话框，任何含「研习」字样的按钮
+       都不得再被通用预览命中（玩家点「委派研习」弹出决策前预览就是这条规则害的）。 */
     { re: /开发|屯田|农田|市集|兵营|城防|治安/, title: '内政开发', cost: '全局金 → 逐城开发度', term: 'neizheng', reversible: false },
     { re: /推演一月|推进|结束回合|下一回合/, title: '时间推进', cost: '本回合结算（不可逆）', term: 'duilie', reversible: false },
   ];
@@ -775,9 +776,11 @@
     if (!el0) return null;
     if (el0.dataset.ixCost) return { title: el0.dataset.ixCost, cost: el0.dataset.ixCostValue || '见预览', term: '', reversible: false };
     if (el0.dataset.ixAllow) return null;
-    /* ★ P63：战法研习走六府自己的游戏化对话框（展示战法/效果/进度/委派武将），
-       不再套通用「决策前预览」——那套「会发生什么 / 风险与失败态 / 数值依据」
-       对一个纯正向的投卷涨进度操作毫无意义，玩家反馈就是这张截图。 */
+    /* ★ P63 回归修复：研习框里的按钮是 data-ract，不是 data-act。
+       上次只放行了 data-act，玩家点「委派研习」仍被 /研习/ 命中，
+       在游戏化对话框上面又套了一层通用预览——正是玩家截图那张。
+       本层一律不拦 data-ract（弹窗自己的按钮自带确认环节）。 */
+    if (el0.dataset.ract) return null;
     if (el0.dataset.act === 'research' || el0.dataset.act === 'assignResearch'
       || el0.dataset.act === 'openResearch') return null;
     /* ★ P11：页签 / 导航不是「有代价的操作」。
@@ -812,8 +815,10 @@
     var mask = el('div', '', ''); mask.className = 'slgIx-modal';
     var box = el('div', '', ''); box.className = 'box';
     var parts = [];
-    parts.push({ k: '直接消耗', v: m.cost });
-    if (m.term && BY_ID[m.term]) parts.push({ k: '规则', v: String(BY_ID[m.term].简述 || '').slice(0, 110) });
+    /* ★ 军议化：旧版「直接消耗 / 规则 / 失败态 · xx」是开发者拆解表，
+       玩家不需要看「本地校验拦截」这种实现术语。保留信息本身，换军令口吻。 */
+    parts.push({ k: '所需', v: m.cost });
+    if (m.term && BY_ID[m.term]) parts.push({ k: '规制', v: String(BY_ID[m.term].简述 || '').slice(0, 110) });
     if (isTurn) {
       (tp.willHappen || []).forEach(function (x, i) { parts.push({ k: '将发生 ' + (i + 1), v: x }); });
       parts.push({ k: '推进方式', v: tp.note || '正式回合结算' });
@@ -840,9 +845,8 @@
       var needGold = (String(m.cost).match(/(\d+)\s*金/) || [0, 0])[1];
       var needGrain = (String(m.cost).match(/(\d+)\s*粮/) || [0, 0])[1];
       if (Number(needGold) > 0 && tw < Number(needGold)) {
-        parts.push({ k: '失败态 · 资源不足', v: '需要 ' + needGold + ' 金，府库现有 ' + tw
-          + ' 金。点了会怎样：本地校验拦截（资源不足），不扣费、状态不变；'
-          + '建议先招商/等田赋或降级做更便宜的任务。', bad: true });
+        parts.push({ k: '库银不足', v: '需 ' + needGold + ' 金，府库现 ' + tw
+          + ' 金。此时下令不会被受理，钱粮原封不动；可先招商、待田赋，或改办省钱的军务。', bad: true });
       }
       if (isTurn && d.treasury && Number(d.treasury.grain) < 3000) {
         parts.push({ k: '府库粮紧', v: '府库粮只有 ' + fmt(d.treasury.grain)
@@ -859,8 +863,8 @@
         }
       }
       if (Number(needGrain) > 0 && d.treasury && Number(needGrain) > (d.treasury.grain || 0)) {
-        parts.push({ k: '失败态 · 粮不足', v: '需要 ' + needGrain + ' 粮，现有 ' + (d.treasury.grain || 0)
-          + ' 粮。同上：本地校验拦截，不扣粮。可先屯田/调运。', bad: true });
+        parts.push({ k: '仓粮不足', v: '需 ' + needGrain + ' 粮，现有 ' + (d.treasury.grain || 0)
+          + ' 粮。下令不会被受理，粮草不扣；可先屯田或从别城调运。', bad: true });
       }
       /* ② 粮道断：出征/运输类动作 + 存在断粮城 */
       if (/出征|进军|运输|运粮/.test(m.title) && d.alerts && d.alerts.supplyCut && d.alerts.supplyCut.length) {
@@ -869,21 +873,21 @@
            第 3 旬起守军逃散 2%/旬。旧文案写「士气 −5」会让玩家误以为存在
            尚未实装的军队士气系统（OP-02 已决定本版不实装）。
            注释必须放在表达式外：夹在字符串拼接的中间会踩 P11 的「一元加号」老坑。 */
-        parts.push({ k: '失败态 · 粮道断', v: cut.name + ' 粮道已断 ' + (cut.days || 10)
+        parts.push({ k: '粮道断', v: cut.name + ' 粮道已断 ' + (cut.days || 10)
           + ' 日（粮产 ×0.55）。从此城出发的部队行军粮更紧，粮尽后每旬民心 −3、治安 −1，第 3 旬起守军逃散 2%/旬。'
-          + '建议先修粮道（夺回关隘）或换后方城出发。', bad: true });
+          + '宜先夺回关隘复通粮道，或改从后方城出兵。', bad: true });
       }
       /* ③ 超时：可逆窗口只有 0.9 秒；时间推进的结算有 2.5 秒判据 */
       if (m.reversible) {
-        parts.push({ k: '失败态 · 超时', v: '确认后 0.9 秒内不按 Ctrl+Z 即视为最终提交，'
-          + '此后只能读档回退。提交动画超过 2.5 秒视为卡顿 bug（请反馈）。', bad: false });
+        parts.push({ k: '反悔时限', v: '令出 0.9 秒内可按 Ctrl+Z 收回成命，'
+          + '过时便只能读档。', bad: false });
       } else if (isTurn && (tp.need || 0) > 10) {
-        parts.push({ k: '失败态 · 超时', v: '本次推进需结算 ' + tp.need + ' 日（>10 日长结算），'
-          + '期间输入会被排队，完成后统一刷新；不是卡死。', bad: false });
+        parts.push({ k: '结算耗时', v: '本次推进需结算 ' + tp.need + ' 日，'
+          + '期间指令依次处理，完成即统一刷新。', bad: false });
       }
     })();
-    parts.push({ k: '间接连锁', v: isTurn ? '结算后本回合作废，只能读档或看回合报告' : '成功后相关面板刷新，选中对象与地图视口保持不变' });
-    parts.push({ k: '可逆性', v: m.reversible ? '可逆：提交前 2 秒可按 Ctrl+Z 撤销' : (isTurn ? '本月结算后，可用读档回到更早的进度' : '已提交结算，需读档回退') });
+    parts.push({ k: '后续', v: isTurn ? '结算后本回合作废，可看回合报告或读档' : '事成后面板自行刷新，选中目标与地图视角不变' });
+    parts.push({ k: '可否收回', v: m.reversible ? '令出 2 秒内可按 Ctrl+Z 收回' : (isTurn ? '本月结算后，可凭档案回到先前进度' : '此令已定，需凭档案回退') });
     /* ★ P11 预览重做：以前是一列 20 行灰字，视觉上像日志，玩家根本读不下去。
        现在改成「顶部结论条 + 左收益 / 右风险」两栏，风险单独着色，底部固定操作区。 */
     box.className = 'box slgIxPV';
@@ -897,28 +901,31 @@
       return '<div class="pv-row' + (p.final ? ' final' : '') + '">'
         + '<div class="pv-k">' + esc(p.k) + '</div><div class="pv-v">' + esc(p.v) + '</div></div>';
     };
+    /* ★ 玩家反馈：游戏就是游戏，不要「决策前预览 / 会发生什么 / 风险与失败态 /
+       数值依据」这套开发者拆解词。改成军议口吻——玩家看到的是「主公下令，
+       利弊条陈」，不是一张验收表。按钮 data-act 与 .pv-* 类名全部保留，探针锚点不破。 */
     box.innerHTML = ''
-      + '<div class="pv-head"><div class="pv-eyebrow">决策前预览</div>'
+      + '<div class="pv-head"><div class="pv-eyebrow">军 议</div>'
       + '<div class="pv-title">' + esc(m.title) + '</div>'
-      + '<div class="pv-sub">点确认之前就知道会发生什么；数值按「基础 → 加成项 → 最终」拆解。</div>'
+      + '<div class="pv-sub">此令利害，条陈于下。请主公裁断。</div>'
       + '<span class="pv-badge ' + (m.reversible ? 'ok' : 'warn') + '">'
-      + (m.reversible ? '可逆 · 2 秒内 Ctrl+Z' : (isTurn ? '本月结算' : '需读档回退')) + '</span></div>'
+      + (m.reversible ? '令可收回' : (isTurn ? '本月结算' : '此令难改')) + '</span></div>'
       + '<div class="pv-strip">'
-      + '<div class="pv-stat"><small>直接消耗</small><b>' + esc(m.cost) + '</b></div>'
-      + '<div class="pv-stat"><small>府库现金</small><b>' + fmt((d.treasury && d.treasury.gold) || 0) + ' 金</b></div>'
-      + '<div class="pv-stat"><small>数值依据</small><b>' + (d.ok ? '当前存档实值' : '规则推算') + '</b></div>'
+      + '<div class="pv-stat"><small>所需</small><b>' + esc(m.cost) + '</b></div>'
+      + '<div class="pv-stat"><small>府库金</small><b>' + fmt((d.treasury && d.treasury.gold) || 0) + ' 金</b></div>'
+      + '<div class="pv-stat"><small>仓中粮</small><b>' + fmt((d.treasury && d.treasury.grain) || 0) + ' 石</b></div>'
       + '</div>'
       + '<div class="pv-cols">'
-      + '<section class="pv-col"><h4>会发生什么</h4>' + (normal.length ? normal.map(row).join('') : '<div class="pv-empty">本操作无额外结算项</div>') + '</section>'
-      + '<section class="pv-col risk"><h4>风险与失败态</h4>'
-      + (risks.length ? risks.map(row).join('') : '<div class="pv-empty">当前无已知风险：资源充足、粮道通畅。</div>')
+      + '<section class="pv-col"><h4>此令所及</h4>' + (normal.length ? normal.map(row).join('') : '<div class="pv-empty">无额外结算</div>') + '</section>'
+      + '<section class="pv-col risk"><h4>隐忧</h4>'
+      + (risks.length ? risks.map(row).join('') : '<div class="pv-empty">未见阻碍，钱粮充裕、粮道通畅。</div>')
       + '</section></div>'
       + (m.term && BY_ID[m.term] ? '<div class="pv-term"><button data-act="term" data-id="' + esc(m.term)
-        + '">查看术语「' + esc(BY_ID[m.term].名称) + '」说明 →</button></div>' : '')
+        + '">查阅「' + esc(BY_ID[m.term].名称) + '」条陈 →</button></div>' : '')
       + '<div class="acts"><button class="foldbtn" data-act="fold">'
-      + (pvFolded ? '▣ 展开明细' : '◱ 收起明细') + '</button>'
-      + '<button data-act="cancel">取消 (Esc)</button>'
-      + '<button class="go" data-act="ok">确认执行 →</button></div>';
+      + (pvFolded ? '▣ 展开详情' : '◱ 收起详情') + '</button>'
+      + '<button data-act="cancel">作罢 (Esc)</button>'
+      + '<button class="go" data-act="ok">准奏 →</button></div>';
     mask.appendChild(box);
     (document.getElementById('slgIxRoot') || document.body).appendChild(mask);
     S.layers.push(mask);
@@ -929,7 +936,7 @@
       if (b.dataset.act === 'fold') {
         var nowFolded = !box.classList.contains('folded');
         box.classList.toggle('folded', nowFolded);
-        b.textContent = nowFolded ? '▣ 展开明细' : '◱ 收起明细';
+        b.textContent = nowFolded ? '▣ 展开详情' : '◱ 收起详情';
         try { localStorage.setItem('slgPVFolded', nowFolded ? '1' : '0'); } catch (e) { /* ignore */ }
         return;
       }
@@ -944,7 +951,9 @@
       if (!t) return;
       /* ★ P11：弹窗内的按钮本身就是「确认」环节，再拦一次就会套娃——
          玩家的观感是「点出征没反应，又多出一个窗」，这是桌面杂乱的主因之一。 */
-      if (t.closest('.slgIx-modal, #slgUIv2 .modal')) return;
+      /* ★ P63 回归修复：研习框（.slgResearchMask）自己的按钮也是「确认」环节，
+         不能再被通用预览套一层；否则玩家点「委派研习」看到的是决策前预览。 */
+      if (t.closest('.slgIx-modal, .slgResearchMask, #slgUIv2 .modal')) return;
       var m = matchCost(t);
       if (!m) return;
       /* 捕获阶段拦截：先预览，确认后才放行原点击（纯前端，不改协议） */
