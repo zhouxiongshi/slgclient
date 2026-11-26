@@ -247,7 +247,14 @@ function buildView(faction, snapshot, state, axes, mem) {
     const send = Math.max(0, Math.min(raw, (stage?.troops || 0) - reserve));
     if (send < (expansion || weakPrey ? 250 : 400)) return null;
     const ratio = odds(stage, city, send);
-    if (ratio < need * needMul * needFactor) return null;
+    /* ★ P63 弱敌优先：守军明显薄于己方可派兵（≤7 成）的城，是「该顺手拿下」的猎物。
+       旧口径要求 1.2~1.4 倍兵力碾压才出兵，稳健派（risk 0.2~0.35）面对嘴边弱城
+       也算不出胜算，表现就是玩家看到的「AI 宁可固守也不征服弱敌」。
+       弱敌门槛降到 1.0（打平即可，内核 atk 有 ±12% 波动，仍非稳赢），
+       但绝不降到 1.0 以下去送兵；粮饷硬闸与「不打盟友」照旧。 */
+    const weakFoe = !expansion && city.troops > 0 && city.troops <= send * 0.7;
+    const gate = weakFoe ? Math.min(need, 1.0) : need;
+    if (ratio < gate * needMul * needFactor) return null;
     const quote = quoteMarch(stage.id, city.id, send, stage.arms, {
       grain: Math.max(0, grain - recruitBudget),
       gold,
@@ -425,13 +432,24 @@ function hanOption(view) {
   return best;
 }
 
+/**
+ * ★ P63 弱敌评分（诸侯城统一口径，越大越该先打）：
+ *   守军越薄分越高、己方胜算越大分越高、城号做确定性平手裁决。
+ *   不用「离己方远近」——reachOf 已把可达性挡在 workable 之外，距离不再重复计价。
+ */
+function preyScore(plan) {
+  const troops = Math.max(1, Number(plan.city.troops) || 1);
+  return Math.round(plan.ratio * 1000) + Math.round(20000 / troops) - Number(plan.city.id) / 1000;
+}
+
 function peerOption(view) {
   let best = null;
   for (const c of view.foreign) {
     if (c.owner === 'han' || c.owner === 'player') continue;
     const plan = view.workable(c);
     if (!plan) continue;
-    if (!best || plan.ratio > best.ratio || (plan.ratio === best.ratio && plan.city.id < best.city.id)) best = plan;
+    const score = preyScore(plan);
+    if (!best || score > best.score) best = { ...plan, score };
   }
   return best;
 }

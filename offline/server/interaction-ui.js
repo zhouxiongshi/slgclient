@@ -43,7 +43,7 @@
      并在出征关直接给「我军 / 守军 / 建议兵力」的对比口径。 */
   var GUIDE = [
     { id: 'g0', title: '举义起兵', hint: '先在「举义」页选一位主公与起始城——这是整个游戏的第一块可点屏幕。选定后你才拥有一座城与第一批武将。', term: 'juyi', jump: 'strategy' },
-    { id: 'g1', title: '选城与内政', hint: '点开一座己方城，看「人口 / 城库 / 灾害风险」，再点「内政」做一次开发。开发度越高，逐旬产量越高。', term: 'neizheng', jump: 'city', done: 'cityOpened' },
+    { id: 'g1', title: '选城与内政', hint: '点开都城。若没有太守，先委任糜竺管内政，再做一次开发。开发度越高，逐旬产量越高。', term: 'neizheng', jump: 'city', done: 'cityOpened' },
     { id: 'g2', title: '委任与报告', hint: '在武将页委任一名官员。开发度逐旬推进，回合报告会写清「谁让哪座城涨了多少」。', term: 'weiren', jump: 'general', done: 'appointed' },
     { id: 'g3', title: '探索登庸', hint: '在酒馆探索在野贤才。对方可能婉拒——多登门几次，精诚所至或有转机。', term: 'dengyong', jump: 'tavern', done: 'explored' },
     { id: 'g4', title: '征兵与钱粮', hint: '出征之前先补兵：人口 → 兵役 → 征兵。每座城每旬有征兵名额，兵力不足时开战必败。采石场产石 → 修墙/城防，逐城产量汇入府库、俸禄影响忠诚。', term: 'renkou', jump: 'city', done: 'economyRead' },
@@ -640,6 +640,8 @@
     if (cur && want && cur.dataset.evtId === want.id && cur.dataset.due === String(want.dueTurn)) return;
     if (cur) { cur.remove(); var li = S.layers.indexOf(cur); if (li >= 0) S.layers.splice(li, 1); }
     if (!want) return;
+    var battleOn = document.getElementById('slgBattleOverlay');
+    if (battleOn && battleOn.style.display !== 'none') return;
     var mask = el('div', '', ''); mask.className = 'slgIx-modal slgIxEvent'; mask.dataset.evtId = want.id;
     mask.dataset.due = String(want.dueTurn || 0);
     function postEventAct(payload, okText) {
@@ -773,6 +775,11 @@
     if (!el0) return null;
     if (el0.dataset.ixCost) return { title: el0.dataset.ixCost, cost: el0.dataset.ixCostValue || '见预览', term: '', reversible: false };
     if (el0.dataset.ixAllow) return null;
+    /* ★ P63：战法研习走六府自己的游戏化对话框（展示战法/效果/进度/委派武将），
+       不再套通用「决策前预览」——那套「会发生什么 / 风险与失败态 / 数值依据」
+       对一个纯正向的投卷涨进度操作毫无意义，玩家反馈就是这张截图。 */
+    if (el0.dataset.act === 'research' || el0.dataset.act === 'assignResearch'
+      || el0.dataset.act === 'openResearch') return null;
     /* ★ P11：页签 / 导航不是「有代价的操作」。
        「征兵」「自本城出征」这些只是切页或开面板的按钮，以前被 COST_WORDS
        的 /征兵|出征/ 命中 → 弹一屏决策预览并吞掉原点击，玩家点了没反应、
@@ -837,6 +844,20 @@
           + ' 金。点了会怎样：本地校验拦截（资源不足），不扣费、状态不变；'
           + '建议先招商/等田赋或降级做更便宜的任务。', bad: true });
       }
+      if (isTurn && d.treasury && Number(d.treasury.grain) < 3000) {
+        parts.push({ k: '府库粮紧', v: '府库粮只有 ' + fmt(d.treasury.grain)
+          + '。本月若再征兵或出征，可能征完就断粮。', bad: true });
+      }
+      if (isTurn && d.marches && d.marches.length) {
+        var arriving = d.marches.filter(function (mv) {
+          return Number(mv.remain) <= Math.max(1, tp.need || 10);
+        });
+        if (arriving.length) {
+          parts.push({ k: '本月会抵达', v: arriving.slice(0, 3).map(function (mv) {
+            return (mv.fromName || '') + '→' + (mv.toName || '') + '（剩 ' + mv.remain + ' 日）';
+          }).join('；') + '。抵达城下会停下来等你开战或收兵。', bad: true });
+        }
+      }
       if (Number(needGrain) > 0 && d.treasury && Number(needGrain) > (d.treasury.grain || 0)) {
         parts.push({ k: '失败态 · 粮不足', v: '需要 ' + needGrain + ' 粮，现有 ' + (d.treasury.grain || 0)
           + ' 粮。同上：本地校验拦截，不扣粮。可先屯田/调运。', bad: true });
@@ -862,7 +883,7 @@
       }
     })();
     parts.push({ k: '间接连锁', v: isTurn ? '结算后本回合作废，只能读档或看回合报告' : '成功后相关面板刷新，选中对象与地图视口保持不变' });
-    parts.push({ k: '可逆性', v: m.reversible ? '可逆：提交前 2 秒可按 Ctrl+Z 撤销' : '不可逆：已提交结算，需读档回退' });
+    parts.push({ k: '可逆性', v: m.reversible ? '可逆：提交前 2 秒可按 Ctrl+Z 撤销' : (isTurn ? '本月结算后，可用读档回到更早的进度' : '已提交结算，需读档回退') });
     /* ★ P11 预览重做：以前是一列 20 行灰字，视觉上像日志，玩家根本读不下去。
        现在改成「顶部结论条 + 左收益 / 右风险」两栏，风险单独着色，底部固定操作区。 */
     box.className = 'box slgIxPV';
@@ -881,7 +902,7 @@
       + '<div class="pv-title">' + esc(m.title) + '</div>'
       + '<div class="pv-sub">点确认之前就知道会发生什么；数值按「基础 → 加成项 → 最终」拆解。</div>'
       + '<span class="pv-badge ' + (m.reversible ? 'ok' : 'warn') + '">'
-      + (m.reversible ? '可逆 · 2 秒内 Ctrl+Z' : '不可逆 · 需读档回退') + '</span></div>'
+      + (m.reversible ? '可逆 · 2 秒内 Ctrl+Z' : (isTurn ? '本月结算' : '需读档回退')) + '</span></div>'
       + '<div class="pv-strip">'
       + '<div class="pv-stat"><small>直接消耗</small><b>' + esc(m.cost) + '</b></div>'
       + '<div class="pv-stat"><small>府库现金</small><b>' + fmt((d.treasury && d.treasury.gold) || 0) + ' 金</b></div>'
@@ -1224,6 +1245,15 @@
   /* ---------------- 10. 6.11 渐进引导（不阻塞 / 可跳过 / 可重看 / 情境触发） ----------------
      ★ 2026-11-18 重做：每关「看说明 → 去操作 → 我已完成」闭环，
      去操作按钮直接跳到对应面板（复用 jumpTo），玩家真能照着做，而不是读 6 句话点确认。 */
+  window.__slgGuideMark = function (id) {
+    if (S.guideDismissed) return;
+    var i = -1;
+    for (var gi = 0; gi < GUIDE.length; gi++) if (GUIDE[gi].id === id) i = gi;
+    if (i < 0 || S.guideStep !== i) return;
+    S.guideStep = i + 1;
+    persist();
+    buildGuide();
+  };
   function buildGuide() {
     var old = document.getElementById('slgIxGuide'); if (old) old.remove();
     if (S.guideDismissed || S.guideStep >= GUIDE.length) return;
@@ -1259,6 +1289,34 @@
       }
     });
     scanTerms(box);
+  }
+  function slgPlayerBusy() {
+    function shown(id) {
+      var n = document.getElementById(id);
+      if (!n || n.style.display === 'none') return false;
+      var r = n.getBoundingClientRect();
+      return r.width > 2 && r.height > 2;
+    }
+    if (document.documentElement.getAttribute('data-slg-phase') === 'login') return true;
+    var map = document.getElementById('slgStrategyOverlay');
+    if (!map || map.style.display === 'none') return true;
+    var battle = document.getElementById('slgBattleOverlay');
+    if (battle && battle.style.display === 'block') return true;
+    if (shown('slgCityPage') || shown('slgWarWin') || shown('slgPanelsWin')
+      || shown('slgOath') || shown('slgMarchPop')) return true;
+    if (document.querySelector('.slgIx-modal')) return true;
+    return false;
+  }
+  function slgSyncClock() {
+    fetch('/__slg/clock/hold', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paused: slgPlayerBusy() }),
+    }).catch(function () {});
+  }
+  if (!window.__slgClockHoldTimer) {
+    slgSyncClock();
+    window.__slgClockHoldTimer = setInterval(slgSyncClock, 1500);
   }
 
   /* ---------------- 11. 快捷键 / 设置 / 无障碍 ---------------- */
@@ -1393,6 +1451,9 @@
   }
   /* 下一旬：与城内页/沙盘共用同一个 __slgTick，绝不另写一份推进逻辑 */
   function nextTurn() {
+    /* ★ P63 修：沙盘虽已自动走日（为了看见行军动画），但手动推演仍是玩家的基本权利，
+       空格 / 推演按钮必须照旧能推进一旬。P62 红线：与沙盘共用同一个 __slgTick，
+       绝不另写一份推进逻辑。 */
     if (typeof window.__slgTick === 'function') { window.__slgTick(); return; }
     var b = document.getElementById('slgStratTick');
     if (b) { b.click(); return; }

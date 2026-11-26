@@ -132,6 +132,25 @@ export function interactionState(state, cfg) {
       detail: '断粮每旬：民心 −3、治安 −1、守军逃散 2%、粮产 ×0.55。粮道 = 沿己方城与未封锁关隘能走到都城。',
     });
   }
+  const poolGrain = Math.floor(num(roleRes.grain));
+  if (poolGrain < 3000) {
+    push({
+      id: 'grain:pool', title: `府库粮仅 ${poolGrain}，再征兵或出征会断粮`,
+      urgency: 0, deadline: '现在', source: '府库粮（精确）', confidence: '高',
+      jump: { kind: 'city', id: (cityRows[0] && cityRows[0].id) || 0 }, action: '先屯田或运粮，再征兵',
+      detail: '征兵按每兵约 10 粮计。按钮上的可征人数是资源够买的数量，不是户役名额。',
+    });
+  }
+  const waitingBattles = (st.marches || []).filter((m) => m.side === 'player' && m.pendingBattle && !m.resolved);
+  if (waitingBattles.length) {
+    const w0 = waitingBattles[0];
+    push({
+      id: 'battle:wait', title: `${waitingBattles.length} 支军队已抵城下，等你开战或收兵`,
+      urgency: 0, deadline: '现在', source: '行军抵达（精确）', confidence: '高',
+      jump: { kind: 'war' }, action: '在沙盘军标上推演、开战或收兵',
+      detail: `${cityNameOf(w0.to)} 城下有一支待决。时间在你做决定之前不会自己把仗打完。`,
+    });
+  }
   for (const c of lowGrain) {
     push({
       id: `grain:${c.id}`, title: `${c.name}存粮仅够 ${c.supportDays} 日`,
@@ -226,7 +245,7 @@ export function interactionState(state, cfg) {
       `日产结算（金 / 粮 / 木 / 铁 / 石 / 命令书）`,
       `军饷与俸禄 ${salaryTotal} 金`,
       `在途队伍 ${marches.length} 支，其中 ${marches.filter((m) => m.arriveDay <= nextTurnDay).length} 支预计抵达`,
-      `逐旬事件：灾害 / 忠诚 / 俘虏 / 在野出仕（确定性种子）`,
+      `逐旬事件：灾害、忠诚、俘虏与在野出仕`,
     ],
   };
 

@@ -884,8 +884,38 @@ export async function startOfflineServer(options = {}) {
       }
       return;
     }
+    if (urlPath === '/__slg/clock/hold' && req.method === 'POST') {
+      /* paused:true 操作界面开着，日子停住。paused:false 回到沙盘，约 2 秒走 1 日。
+         旧客户端不带正文时仍按暂停处理。4 秒不续期就按上一次的走日速度恢复。 */
+      readJson(req, 1024, (body) => {
+        let paused = true;
+        if (state.clock) {
+          paused = !body || body.paused !== false;
+          if (paused) {
+            state.clock.uiHoldUntil = Date.now() + 4000;
+          } else {
+            /* 沙盘每 1.5 秒续一次「在走」。只有从暂停恢复时才拨回时钟，
+               否则累计不满 2 秒就被清掉，日子永远不进。 */
+            const wasHeld = (state.clock.uiHoldUntil || 0) > Date.now();
+            state.clock.uiHoldUntil = 0;
+            state.clock.mapMsPerDay = 2000;
+            if (wasHeld || !state.clock.lastRealMs) {
+              state.clock.lastRealMs = Date.now();
+              state.clock.accMs = 0;
+            }
+          }
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+        res.end(JSON.stringify({ ok: true, paused, day: state.clock?.day || 0 }));
+      });
+      return;
+    }
     if (urlPath === '/__slg/strategy/tick' && req.method === 'POST') {
       // ★ 试玩 P0-1：推演一月必须真的推进 10 天并跑一次诸侯决策，而不是只发个空 tick
+      /* ★ P63 修：玩家显式点「推演一月」/空格就是要推进，必须无视界面暂停。
+         自动走日的 uiHoldUntil 若没清，快进的 rewindDays+settleWorld 会被
+         advanceClock 挡成 days=0，turn 永远不涨（审计 key.space-tick 0→0）。 */
+      if (state.clock) { state.clock.uiHoldUntil = 0; state.clock.decisionHold = false; }
       const result = advanceToNextTurn(ctx, Date.now());
       save();
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });

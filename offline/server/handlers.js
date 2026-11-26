@@ -354,6 +354,18 @@ function tryUseNeed(state, need, reason) {
  *
  * 返回 { days, day, builds }：days>0 才需要落盘，避免 500ms 写一次存档。
  */
+/** 征兵按游戏日入营。墙上的定时器故意放得很晚，这里才是玩家看得到的到账。 */
+function deliverDueConscripts(ctx) {
+  const day = Math.floor(Number(ctx.state.clock?.day) || 1);
+  for (const army of ctx.state.armys || []) {
+    const due = Math.floor(Number(army.conArriveDay) || 0);
+    if (!due || day < due) continue;
+    const cnts = [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(army.con_cnts?.[i]) || 0)));
+    if (!cnts.some((n) => n > 0)) { army.conArriveDay = 0; continue; }
+    processTask(ctx, { type: 'conscript_done', armyId: army.id, cnts, token: army.conToken });
+  }
+}
+
 export function settleWorld(ctx, now = Date.now()) {
   const { state, cfg } = ctx;
   /* ★ P57：不依赖重启——老档同城重复队号在任意 WS 请求入口先拆开，
@@ -361,7 +373,20 @@ export function settleWorld(ctx, now = Date.now()) {
   normalizeArmyOrders(state);
   tickFacilities(state, cfg);
   totalYield(state, cfg);
+  /* ★ P63 修：待决战斗不再冻结全局时钟。
+     旧实现在这里按 pendingBattle 设 decisionHold，审计/挂机脚本没有真人界面去续期
+     uiHoldUntil，时钟从此 days=0 空转（M4-4 灭国闭环因此永远触发不了）。
+     待决战斗本来就只认玩家显式 confirmBattle / retreat，不会自己打完；
+     「玩家看弹窗时停日子」由真客户端 /__slg/clock/hold 的 uiHoldUntil 负责，
+     弹窗关掉后继续走日也不改变仗还停在城下等待的事实。 */
+  /* 旧档只有墙上的征兵倒计时、没有入营日：改记到下一日，避免重启后兵永远不到。 */
+  const today = Math.floor(Number(state.clock?.day) || 1);
+  for (const army of state.armys || []) {
+    const pending = [0, 1, 2].some((i) => Math.floor(Number(army.con_cnts?.[i]) || 0) > 0);
+    if (pending && !Math.floor(Number(army.conArriveDay) || 0)) army.conArriveDay = today + 1;
+  }
   const settled = settleCampaign(state, cfg, ctx, now);
+  if ((settled?.days || 0) > 0) deliverDueConscripts(ctx);
   // ★ P2：行军到达结算（在诸侯推演之前，保证当天抵达当天开打；战报与播报由内部推）
   /* ★ P14：驰援感知在到达结算**之前**跑——玩家大军在途时守方就有机会派援军
      ★ P62：相遇判定排在驰援之后、抵达结算之前——先记「两军撞上了」，
@@ -600,6 +625,8 @@ export function processTask(ctx, task) {
       }
       army.con_times = [0, 0, 0];
       army.con_cnts = [0, 0, 0];
+      army.conArriveDay = 0;
+      army.conToken = Math.floor(Number(army.conToken) || 0) + 1;
       ctx.push('army.push', army);
       ctx.save();
       return;
@@ -612,6 +639,8 @@ export function processTask(ctx, task) {
       army.con_times[i] = 0;
       army.con_cnts[i] = 0;
     }
+    army.conArriveDay = 0;
+    army.conToken = Math.floor(Number(army.conToken) || 0) + 1;
     ctx.push('army.push', army);
     ctx.save();
   }
@@ -1634,7 +1663,10 @@ export function handleRequest(ctx, req) {
       }
       /* ★ 2026-11-19 P1-5：在途征兵令牌。解甲时作废，避免“退了金还补兵”。 */
       army.conToken = Math.floor(Number(army.conToken) || 0) + 1;
-      ctx.schedule(Date.now() + sec * 1000, {
+      /* 入营看游戏日，不看墙上的秒。人在城里时日子是停的，回到沙盘走到下一日才到账。
+         定时器只留给回归测试找任务，放到很久以后，避免人还在城池页时兵已经进营。 */
+      army.conArriveDay = Math.floor(Number(state.clock?.day) || 1) + 1;
+      ctx.schedule(Date.now() + 14 * 86400000, {
         type: 'conscript_done', armyId: army.id, cnts, token: army.conToken,
       });
       ctx.push('roleRes.push', roleResOf(state));

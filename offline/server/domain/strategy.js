@@ -27,13 +27,16 @@ import { defectRate, FAME_DEFECT_CAP } from './captive-reputation.js';
 import { canMarchBetween, marchableNeighbors, marchGraph } from './march.js';
 /* ★ 验收 #22：地图标注分级（哪座城算要城只有这一处口径） */
 import { cityLabelRank, labelPolicy } from './map-lod.js';
-/* ★ P62：行军相遇（城下会战 / 道中遭遇）的唯一判定口径，只产出表现数据 */
+/* ★ P62：城下会战的唯一判定口径，只产出表现数据（道中拦截已按用户要求撤掉） */
 import { detectClashes } from './clash.js';
 /* ★ P11 兵役制：城池视图与战略动作只从 levy.js 取兵源数字，禁止另算一份 */
 import { levyView, checkLevy, commitLevy } from './levy.js';
+import { affordableConscript } from './conscript.js';
 import { resolveBattle, battleSeedFor, wallMaxOf, wallDefMul, WALL } from '../battle.js';
 import { repairCostOf } from './city-wall.js';
 import { planCampaign, commitBrainGoal, noteBattleOutcome, noteCityLost, PERSONA_AXES } from './strategy-brain.js';
+/* ★ P63：委派武将自动研习（零依赖叶子，每旬由 strategyTick 推进）。 */
+import { researchTick } from './research.js';
 import { loadConfig } from '../config.js';
 import { quoteMarch, openMonth, closeMonth, noteMove, noteCity, booksOf } from './strategy-log.js';
 import { onTileCleared, chapterRules, noticeRecruit } from './campaign.js';
@@ -482,6 +485,13 @@ export function chooseOath(state, cfg, ctx = {}, { lord, city, difficulty } = {}
     .map(([id]) => Number(id));
   st.everOwned = [...new Set([...(st.everOwned || []), ...gainedIds])];
   st.playerCity = cid;
+  /* 举义划来的空城留一支小守军。都城仍用原兵力，其余 0 兵城补到 400，
+     避免一上来就有四座空城只能干等。 */
+  for (const [id, row] of Object.entries(st.cities)) {
+    if (row.owner !== 'player' || Number(id) === cid) continue;
+    if ((Number(row.troops) || 0) > 0) continue;
+    row.troops = 400;
+  }
   /* ★ 修 bug-6/21：举义时给拿到的每座城各建一套设施（键 s<战略城id>），
      分城从此有设施可升；本地主城那份键仍是数字 id，两套编号互不覆盖。 */
   state.facilities = state.facilities || {};
@@ -649,6 +659,13 @@ export function strategyTick(state, cfg, ctx, now = Date.now()) {
   st.lastTurnDay = state.clock.day;
   st.turn += 1;
   openMonth(state);
+  /* ★ P63：委派武将自动研习每旬推进（零依赖叶子，失败只影响战法库，不碰战局）。 */
+  try {
+    const researchEvents = researchTick(state, cfg, ctx);
+    for (const ev of researchEvents || []) {
+      noteMove(state, { kind: '研习', faction: 'player', who: '六府', result: ev.unlocked ? '成' : '进', text: ev.text });
+    }
+  } catch { /* 研习失败不影响回合推进 */ }
   // ★ P2/P3 城市经营：旬灾害（蝗/瘟/丰收）+ 旬忠诚/俸禄/叛逃 + 30日人口增长
   cityEconTick(state, cfg, ctx);
   /* ★ P50：物资任务层已删，物资去处回归 armory 即时动作；旬结算里不再有 advanceMaterialTasks。 */
@@ -1771,12 +1788,14 @@ function resolveReliefArrival(state, ctx, mm, map) {
  * ★ P62：把「两军撞上了」做成地图上看得见的事，而不是只在面板里写一行字。
  *
  * 判定在 domain/clash.js（零依赖纯函数）：城下会战 = 援军与玩家军同指一城、
- * 抵达日相近；道中遭遇 = 两军走同一段路相向而行、时间窗交叠。
- * 这里只负责两件事：新相遇记一条军情（按「日 + 双方 id」去重，不会每次请求刷屏）、
+ * 抵达日相差不超过 CLASH_CITY_WINDOW。
+ * 2026-11-25 按用户要求撤掉「道中遭遇」：野外相向而过不算相遇、不开打、不扣兵，
+ * 玩家在沙盘上看到两支军各走各的路，仗只在城下打。
+ * 这里只负责两件事：新会战记一条军情（按「日 + 双方 id」去重，不会每次请求刷屏）、
  * 留最近 20 条供军情页回看。
  *
  * 刻意不扣兵、不改战果：援军抵达后已并进守军折算（defenseFor），来犯军的压力由
- * 围城推进承担；相遇如果再扣一次，同一支部队就被算了两次。
+ * 围城推进承担；会战如果再扣一次，同一支部队就被算了两次。
  */
 export function clashTick(state, cfg, ctx) {
   const st = ensureStrategy(state);
@@ -1785,7 +1804,7 @@ export function clashTick(state, cfg, ctx) {
   const cities = {};
   for (const c of map.cities) cities[c.id] = c;
   const today = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
-  const list = detectClashes({ marches: st.marches, cities, routes: map.routes, today });
+  const list = detectClashes({ marches: st.marches, cities, today });
   if (!list.length) return [];
   if (!Array.isArray(st.clashes)) st.clashes = [];
   const seen = new Set(st.clashes.map((c) => c.key));
@@ -3089,7 +3108,20 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
   if (tstate.owner === 'player') return { ok: false, reason: 'own_city' };
   const road = canMarchBetween(from, to);
   if (!road.ok) return { ok: false, reason: road.reason || 'no_road' };
-  const army = pickArmy(state, armyId, from);
+  let army = pickArmy(state, armyId, from);
+  /* 抵达待决的队伍 marchId 仍锁着，pickArmy 会当成「不在城」。
+     推演必须用城下这支，不能再报「没有可用队伍」。 */
+  let lockedMarch = null;
+  if (!army && armyId) {
+    lockedMarch = (st.marches || []).find((mm) => mm.side === 'player' && !mm.resolved
+      && mm.pendingBattle && Number(mm.armyId) === Number(armyId) && Number(mm.to) === to) || null;
+    if (lockedMarch) {
+      army = (state.armys || []).find((a) => a.id === Number(armyId)) || null;
+    } else {
+      const raw = (state.armys || []).find((a) => a.id === Number(armyId));
+      if (raw?.marchId) return { ok: false, reason: 'marching' };
+    }
+  }
   if (!army) return { ok: false, reason: 'no_army' };
   const before = [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(army.soldiers?.[i]) || 0)));
   const f = Math.min(1, Math.max(0.05, Number(frac) || 1));
@@ -3103,10 +3135,12 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
   const arriveDay = today + days;
   /* ★ P61-S2：种子与敌将预案按 3 旬槽取，不再按具体抵达日逐日刷新。
      arriveDay 仍是真实到达日（粮耗/行军显示用），只有战局算进槽位。 */
-  const seedDay = seedSlotDay(arriveDay);
+  const seedDay = seedSlotDay(lockedMarch ? (Number(lockedMarch.arriveDay) || arriveDay) : arriveDay);
   /* 截击与正式抵达用同一 marchId / 到达日：先扣再乘出兵比例。只改影子队伍，不动存档。 */
   const shadow = { soldiers: before.slice() };
-  tryFieldIntercept(state, { id: (st.marchSeq || 0) + 1, from, to, arriveDay }, shadow);
+  if (!lockedMarch) {
+    tryFieldIntercept(state, { id: (st.marchSeq || 0) + 1, from, to, arriveDay }, shadow);
+  }
   const commit = shadow.soldiers.map((v) => Math.max(0, Math.round(v * f)));
   const aTotal = commit.reduce((s2, n) => s2 + n, 0);
   if (aTotal <= 0) return { ok: false, reason: 'no_troops' };
@@ -3136,7 +3170,9 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
   });
   const dTotal = defense.soldiers.reduce((s2, n) => s2 + n, 0);
 
-  const seed = battleSeedFor(army.id, 8000 + to, 100 + level, seedDay);
+  const seed = (lockedMarch && lockedMarch.lockedSeed)
+    ? lockedMarch.lockedSeed
+    : battleSeedFor(army.id, 8000 + to, 100 + level, seedDay);
   /* ★ 张力守恒 #3「确认即锁」：正式战斗的种子在 strategyAttack 出征时已写进
      march 行（lockedSeed）；推演用同一 arriveDay 推同一 seed，所以
      「今天出发」的推演与正式结算逐位一致——变招只发生在抵达日变化时。 */
@@ -3179,7 +3215,7 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
     intelSpread > 0
       ? `情报仅 ±${Math.round(intelSpread * 100)}%：先侦察可收窄守军区间。`
       : '情报精确：守军按已知量推演。',
-    '同一目标 3 旬内战局槽锁定，换出发日不会再换战报；如需重来只能撤军（有代价）。',
+    '同一目标本月战局已定，换出发日不会再换结果；要重来须先撤军。',
   ];
   const remain = result.endAttackSoldiers || [0, 0, 0];
   const dRemain = result.endDefenseSoldiers || [0, 0, 0];
@@ -3852,6 +3888,7 @@ export function strategyViewState(state, cfg = null) {
       // ★ P7：队伍行军速度（队内最慢武将），客户端据此预算行军日
       speed: armySpeed(state, cfg, a),
       soldiers: [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(a.soldiers?.[i]) || 0))),
+      conArriveDay: Math.floor(Number(a.conArriveDay) || 0),
       armsNames: [ARMS_NAMES[1], ARMS_NAMES[2], ARMS_NAMES[3]],
       generals: (a.generals || []).map((gid, i) => {
         const g = (state.generals || []).find((x) => x.id === gid);
@@ -3863,6 +3900,11 @@ export function strategyViewState(state, cfg = null) {
           loyal: Math.round(g.loyal ?? 88),
         };
       }),
+    })),
+    officers: (state.generals || []).map((g) => ({
+      id: g.id,
+      cityId: Number(g.cityId) || st.playerCity || 0,
+      name: cfg?.generalByCfg?.get(Number(g.cfgId))?.name || `武将${g.id}`,
     })),
     cities: map.cities.map((c) => ({
       id: c.id, name: c.name, province: c.province, provinceId: c.provinceId,
@@ -3911,6 +3953,22 @@ export function strategyViewState(state, cfg = null) {
           }));
         return {
           pop: e.pop, store: e.store,
+          levyAfford: (() => {
+            const army = (state.armys || []).find((a) => Number(a.cityId) === Number(c.id) && !a.marchId
+              && (a.generals || []).some(Boolean));
+            if (!army) return 0;
+            const levy = checkLevy(state, Number(c.id), 1, {
+              strict: true, rate: cfg?.basic?.conscriptRate ?? 0.06,
+            });
+            if (!levy?.quota) return 0;
+            return affordableConscript(
+              levy.quota, army,
+              (gid) => (state.generals || []).find((g) => g.id === gid),
+              state.roleRes || {},
+              cfg?.basic?.conscript || {},
+              {},
+            );
+          })(),
           yieldGrain: y?.grain || 0, yieldGold: y?.gold || 0,
           disaster: e.disaster || null,
           modUntil: mod?.until || 0, modGrain: mod?.grain || 1,
@@ -4010,7 +4068,7 @@ export function strategyViewState(state, cfg = null) {
       for (const c of map.cities) cityById[c.id] = c;
       const todayView = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
       const clashList = detectClashes({
-        marches: st.marches || [], cities: cityById, routes: map.routes, today: todayView,
+        marches: st.marches || [], cities: cityById, today: todayView,
       });
       const clashByMarch = {};
       for (const c of clashList) { clashByMarch[c.aId] = c; clashByMarch[c.bId] = c; }
@@ -4020,14 +4078,11 @@ export function strategyViewState(state, cfg = null) {
         const mine = c.aId === mm.id;
         const foeLabel = mine ? c.bLabel : c.aLabel;
         const toName = cityById[Number(mm.to)]?.name || cityName(mm.to);
-        const fromName = cityById[Number(mm.from)]?.name || cityName(mm.from);
         return {
           kind: c.kind, day: c.day, at: c.at, cityId: c.cityId,
           withLabel: foeLabel,
           withTroops: mine ? c.bTroops : c.aTroops,
-          text: c.kind === 'road'
-            ? `${foeLabel}迎面而来，两军于${fromName}—${toName}道中相遇`
-            : `${foeLabel}亦抵${/城$/.test(toName) ? `${toName}下` : `${toName}城下`}，两军会战`,
+          text: `${foeLabel}亦抵${/城$/.test(toName) ? `${toName}下` : `${toName}城下`}，两军会战`,
         };
       };
       return (st.marches || []).map((mm) => {
@@ -4067,7 +4122,12 @@ export function strategyViewState(state, cfg = null) {
       });
     })(),
     dayFrac: dayFraction(state, chapterRules().realMsPerDay),
-    msPerDay: Math.max(1000, Math.round(chapterRules().realMsPerDay / (state.clock?.scale || 1))),
+    clockPaused: !!(state.clock?.decisionHold) || (state.clock?.uiHoldUntil || 0) > Date.now(),
+    msPerDay: Math.max(400, Math.round(
+      Number(state.clock?.mapMsPerDay) > 0
+        ? Number(state.clock.mapMsPerDay)
+        : (chapterRules().realMsPerDay / (state.clock?.scale || 1)),
+    )),
     gates: Object.entries((marchGraph() && marchGraph().gateStatus) || {})
       .map(([name, status]) => ({ name, status })),
     routes: map.routes.map((r) => ({ id: r.id, from: r.from, to: r.to, points: r.points, sea: r.sea })),

@@ -5,7 +5,7 @@
   "levels": [
     {
       "id": "chrono", "label": "史实", "targetWinRate": 0.75,
-      "desc": "诸侯按史Book节奏行事，府库宽裕，适合第一次上手。",
+      "desc": "诸侯按史实节奏行事，府库宽裕，适合第一次上手。",
       "knobs": { "difficultyAi": 0.8, "difficultyRes": 1.2, "difficultyDiplo": 0.85 }
     },
     {

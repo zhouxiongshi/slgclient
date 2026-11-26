@@ -14,6 +14,8 @@ import { fileURLToPath } from 'node:url';
 import { slotBlock, slotUnlock, skillUpgradeCost, skillUpgradeBlock, SKILL_LEVEL_CAP, skillActionHint } from './slots.js';
 import { generalProgress } from './general-progress.js';
 import { materialGuide } from './armory.js';
+/* ★ P63：委派自动研习（零依赖叶子，只读 conf 两张表，不成环）。 */
+import { assignResearch, unassignResearch, researchView, researchCandidatesView } from './research.js';
 /* ★ M4-10：属性一律走唯一派生层（0~100 百分制），面板不再自己读原表。 */
 import { toPercentFromRaw } from './general-stat.js';
 /* ★ 2026-11-16：官阶名称单一口径（零依赖叶子），功勋晋升由 official-rank 统一 */
@@ -113,6 +115,8 @@ export function ensurePanels(state, cfg = {}) {
   if (!state.skillbook || typeof state.skillbook !== 'object') state.skillbook = {};
   if (!state.skillbook.unlocked || typeof state.skillbook.unlocked !== 'object') state.skillbook.unlocked = {};
   if (!state.skillbook.research || typeof state.skillbook.research !== 'object') state.skillbook.research = {};
+  /* ★ P63：委派自动研习（谁在研哪条战法），旧档缺字段时补空对象。 */
+  if (!state.skillbook.assign || typeof state.skillbook.assign !== 'object') state.skillbook.assign = {};
 
   const posts = {};
   for (const p of PANEL_CONF.posts.posts) posts[p.id] = 0;
@@ -685,6 +689,12 @@ export function panelState(state, cfg) {
     items,
     scrolls: scrollCount(state),
     library,
+    /* ★ P63：委派研习视图 —— 已委派谁研哪条 + 可委派的闲置武将（含每旬速度/耗卷）。 */
+    researchAssignments: researchView(state, cfg),
+    /* 研习是文职委任，与带兵不冲突（三国志式「委任研究」），在编武将也可研习；
+       下拉标注状态，让玩家自己权衡。速度由 researchCandidatesView 唯一口径算，
+       UI 只读不自己拼数值（守「数值显示不在 UI 复算」红线）。 */
+    researchCandidates: researchCandidatesView(state, cfg),
     librarySummary: {
       total: library.length,
       unlocked: library.filter((x) => x.status === 'unlocked').length,
@@ -885,6 +895,18 @@ export function panelAction(state, cfg, action = {}) {
         return done(`「${s.ui?.name ?? s.name}」研习完成，已解锁`, { unlocked: true });
       }
       return done(`投入残卷 ${used}，研习进度 ${row.progress}/${need}`, { progress: row.progress, need });
+    }
+
+    /* ★ P63：委派武将自动研习（三国志式「委任研究」）。一人一职、一条一将，
+       每旬由 strategyTick 调 researchTick 推进；这里只登记/撤回，不改进度。 */
+    if (type === 'assignResearch') {
+      const r = assignResearch(state, cfg, { cfgId: action.cfgId, generalId: action.generalId });
+      return r.ok ? done(r.text, r) : fail(r.reason === 'already_unlocked' ? '该战法已解锁'
+        : r.reason === 'no_general' ? '找不到该武将' : '战法不存在');
+    }
+    if (type === 'unassignResearch') {
+      const r = unassignResearch(state, { cfgId: action.cfgId });
+      return r.ok ? done(r.text, r) : fail('这条战法没有委派中的武将');
     }
 
     if (type === 'lvSkill') {

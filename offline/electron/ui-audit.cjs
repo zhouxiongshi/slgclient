@@ -148,6 +148,37 @@ const WALK = `(async function(){
       }
     }
 
+    /* ★ P63：战法研习对话框要真的打开，并确认它只展示玩家决策需要的东西。
+       旧实现套通用「决策前预览」——满屏「会发生什么 / 风险与失败态 / 数值依据」，
+       对一个投卷涨进度的操作毫无意义。这里锁新对话框的「委派武将」在真实 DOM 出现。 */
+    if (p[0] === 'library') {
+      /* 研习按钮只在「未解锁且残卷>0」的战法详情里；逐条展开找第一条可研习的。
+         每展开一条前先收起上一条（skilldetail 是 toggle），避免 openSkill 被反复置 0。 */
+      for (var di = 0; di < 12; di++) {
+        var dets = document.querySelectorAll('#slgPanelsBody [data-act="skilldetail"]');
+        if (!dets[di]) break;
+        dets[di].click();
+        await sleep(240);
+        if (document.querySelector('#slgPanelsBody button[data-act="openResearch"]')) break;
+      }
+      var rbtn = document.querySelector('#slgPanelsBody button[data-act="openResearch"]');
+      if (rbtn) {
+        rbtn.click();
+        await sleep(500);
+        var rbox = document.querySelector('.slgResearchBox');
+        var rtxt = rbox ? txt(rbox) : '';
+        rec('panel.research.assign', ['委派武将', '研习进度'], {
+          visible: vis(rbox), text: rtxt,
+          note: '战法研习对话框：只展示战法/效果/进度/委派，不许有风险失败态',
+        });
+        var rcancel = rbox && rbox.querySelector('[data-ract="close"]');
+        if (rcancel) rcancel.click();
+        await sleep(250);
+      } else {
+        rec('panel.research.assign', ['委派武将', '研习进度'], { visible: false, text: '', note: 'no-research-button' });
+      }
+    }
+
     // 内部页签（.tabs 里的按钮）逐个点
     var subCount = document.querySelectorAll('#slgPanelsBody .tabs button').length;
     for (var si = 0; si < subCount; si++) {

@@ -220,9 +220,8 @@ export function popTick(state, ctx) {
     if (row.owner !== 'player') continue;
     const e = econ[id];
     if (!e) continue;
-    // 民心 0~100 → 增长 2%~6%（民心高则流民来附，民心低则逃亡）
-    /* ★ P61-B5：人口年增长从参数表读；默认 1.5% × (1 + 民心/100) = 2%~6%，
-       与原口径逐位一致，调参后立刻改变人口节奏。 */
+    /* 每 10 日结一次。默认 3%×(1+民心/100)，民心 60 时大约每旬 +4.8%。
+       沙盘一天约 2 秒，坐一分钟就能看见人丁，不再像按年才涨一次。 */
     const rate = knobGet(state, 'popGrowthYear') * (1 + (Number(e.morale ?? 60) / 100));
     e.pop = Math.min(1000000, Math.round(e.pop * (1 + rate)));   // ★ P13 上限 10 万 → 100 万
     const y = cityYield(state, id);
@@ -534,7 +533,7 @@ export function cityEconTick(state, cfg, ctx) {
   const dev = day % 10 === 0 ? cityDevTick(state, cfg, ctx) : { gains: [], upsets: [] };
   const fired = day % 10 === 0 ? disasterTick(state, cfg, ctx) : [];
   const loyalty = day % 10 === 0 ? loyaltyTick(state, cfg, ctx) : null;
-  if (day % 30 === 0) popTick(state, ctx);
+  if (day % 10 === 0) popTick(state, ctx);
   // 开发有实感时才播报（每旬每城最多一条），避免日志被 +0.3 刷屏
   const notable = dev.gains.filter((g) => g.gain >= 1);
   if (notable.length && ctx?.push) {

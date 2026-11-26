@@ -66,16 +66,31 @@ export function garrisonCfgIds(cfg, {
   const pool = garrisonPool(cfg, { preferNames, exclude });
   /* 极端兜底：配置缺失时仍返回可用名单，不让战斗崩掉。 */
   if (!pool.length) return [100002, 100003, 100004].slice(0, count);
-  const start = hash32(`${Number(cityId) || 0}:${owner}:${Number(level) || 1}`) % pool.length;
+  /* 有势力名将时只在该势力班底里抽，不足再补低阶常备。
+     旧逻辑把名将排到池首，哈希起点却落在全表 500 人里，孙权的城会守出于禁。 */
+  const prefer = new Set((preferNames || []).map(String));
+  const named = pool.filter((g) => prefer.has(String(g.name)));
+  let source = pool;
+  if (named.length) {
+    const generics = pool.filter((g) => {
+      const id = Number(g.cfgId);
+      return id >= 100002 && id <= 100030 && !prefer.has(String(g.name));
+    });
+    source = named.concat(generics);
+    if (source.length < count) {
+      source = named.concat(pool.filter((g) => !named.some((n) => Number(n.cfgId) === Number(g.cfgId))));
+    }
+  }
+  const start = hash32(`${Number(cityId) || 0}:${owner}:${Number(level) || 1}`) % source.length;
   const stride = 37;                     // 质数步长，同城三将不相邻、跨城起点分散
   const used = new Set();
   const out = [];
   for (let k = 0; k < count && out.length < pool.length; k += 1) {
-    let idx = (start + k * stride) % pool.length;
-    for (let guard = 0; guard < pool.length; guard += 1) {
-      const id = Number(pool[idx].cfgId);
+    let idx = (start + k * stride) % source.length;
+    for (let guard = 0; guard < source.length; guard += 1) {
+      const id = Number(source[idx].cfgId);
       if (!used.has(id)) { used.add(id); out.push(id); break; }
-      idx = (idx + 1) % pool.length;
+      idx = (idx + 1) % source.length;
     }
   }
   return out;

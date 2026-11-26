@@ -705,26 +705,31 @@ async function runProbe(win, server, app) {
 
     report.scenarios.marchTick = await wc.executeJavaScript(`(async function(){
       try {
-        /* 相遇画面在真实对局里依赖「援军刚好同旬抵达」，探针不能靠等。
-           这里只在前端包一层 fetch，给沙盘喂两支相向而行的军（含 clash），
-           用来看清楚「两军撞上」的地图表现；不改存档、不改后端。 */
+        /* 会战画面在真实对局里依赖「援军刚好同旬抵达」，探针不能靠等。
+           这里只在前端包一层 fetch，给沙盘喂两支同指一城的军（含 clash），
+           用来看清楚「两军城下会战」的地图表现；不改存档、不改后端。
+           道中拦截已撤掉，所以不能再拿相向而行的两支军当样本。 */
         var st = await (await fetch('/__slg/strategy/state', { cache:'no-store' })).json();
         var own = (st.cities || []).filter(function (c) { return c.owner === 'player'; });
         var foe = (st.cities || []).find(function (c) { return c.owner !== 'player'; });
         if (!own.length || !foe) return { ok:false, reason:'no pair' };
         var a = own[0], day = st.day || 1;
-        var mid = { x:(Number(a.x) + Number(foe.x)) / 2, y:(Number(a.y) + Number(foe.y)) / 2 };
+        var relief = (st.cities || []).find(function (c) {
+          return c.owner !== 'player' && String(c.id) !== String(foe.id);
+        }) || a;
+        var under = /城$/.test(String(foe.name)) ? foe.name + '下' : foe.name + '城下';
+        var at = { x:Number(foe.x), y:Number(foe.y) };
         var fake = [
           { id:-901, side:'player', kind:'attack', from:a.id, to:foe.id,
-            fromName:a.name, toName:foe.name, departDay:day - 1, arriveDay:day + 3,
+            fromName:a.name, toName:foe.name, departDay:day - 3, arriveDay:day,
             troops:900, soldiers:[520, 300, 80], order:1, factionName:'',
-            clash:{ kind:'road', day:day, at:mid, cityId:foe.id, withLabel:'曹军', withTroops:700,
-              text:'曹军迎面而来，两军于' + a.name + '—' + foe.name + '道中相遇' } },
-          { id:-902, side:'faction', kind:'assault', from:foe.id, to:a.id,
-            fromName:foe.name, toName:a.name, departDay:day - 1, arriveDay:day + 4,
+            clash:{ kind:'city', day:day, at:at, cityId:foe.id, withLabel:'曹军', withTroops:700,
+              text:'曹军亦抵' + under + '，两军会战' } },
+          { id:-902, side:'faction', kind:'relief', from:relief.id, to:foe.id,
+            fromName:relief.name, toName:foe.name, departDay:day - 4, arriveDay:day,
             troops:700, factionName:'曹军', intel:'precise',
-            clash:{ kind:'road', day:day, at:mid, cityId:a.id, withLabel:'我军', withTroops:900,
-              text:'我军迎面而来，两军于' + foe.name + '—' + a.name + '道中相遇' } },
+            clash:{ kind:'city', day:day, at:at, cityId:foe.id, withLabel:'我军', withTroops:900,
+              text:'我军亦抵' + under + '，两军会战' } },
         ];
         var orig = window.fetch;
         window.fetch = function (u) {
@@ -748,7 +753,7 @@ async function runProbe(win, server, app) {
         var skip = document.querySelector('[data-act="skip"]');
         if (skip) skip.click();
         if (window.__slgStrategyShow) window.__slgStrategyShow();
-        return { ok:true, pair:[a.name, foe.name], day:day, at:mid };
+        return { ok:true, pair:[a.name, foe.name], day:day, at:at, city:foe.name };
       } catch (e) { return { ok:false, error:String(e && e.stack || e) }; }
     })()`, true);
     await sleep(2200);

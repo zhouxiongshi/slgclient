@@ -886,6 +886,33 @@ export function patchClientBundle(source) {
      * 玩家点到空地（或建造中要塞）时整个详情面板崩。这里只改内存里的
      * 客户端脚本，磁盘上的 index.js 一个字节不动，画面资源零改动。 */
     [
+      `        _proto.onLoad = function onLoad() {
+          EventMgr.on(LogicEvent.loginComplete, this.onLoginComplete, this);
+          var data = LocalCache.getLoginValidation();
+          console.log("LoginLogic  data:", data);
+
+          if (data) {
+            this.editName.string = data.username;
+            this.editPass.string = data.password;
+          }
+        };`,
+      `        _proto.onLoad = function onLoad() {
+          EventMgr.on(LogicEvent.loginComplete, this.onLoginComplete, this);
+          var data = LocalCache.getLoginValidation();
+          if (data && data.username && data.password) {
+            this.editName.string = data.username;
+            this.editPass.string = data.password;
+          } else {
+            this.editName.string = "offline";
+            this.editPass.string = "offline";
+          }
+          var self = this;
+          setTimeout(function () {
+            if (self.editName && self.editName.string && self.editPass && self.editPass.string) self.onClickLogin();
+          }, 400);
+        };`,
+    ],
+    [
       `        _proto3.getDefenseSoldiers = function getDefenseSoldiers(level) {
           console.log("getDefenseSoldiers:", level);
           return this._basic.npc.levels[level - 1].soilders;
@@ -1125,6 +1152,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
   if (typeof document === 'undefined') return;
   var MAP_W = 2400, MAP_H = 1350;
   var overlay = null, canvas = null, timer = null, lastState = null, picked = null, pickedPass = null;
+  var monthPlay = null, marchHits = [], pendingCardKey = '';
   var logPanel = null, logOpen = false, logTab = 'world';
   // 关名锚点相对关隘中心（与预览图文字位置一致），不再使用带方底的城名贴图
   var PASS_LABEL = {
@@ -1480,7 +1508,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       + '<span class="gp">沙盘</span>'
       + '<button id="slgStratTick" class="pri">推演一月</button>'
       + '<button id="slgStratTick3" title="连推三旬；遇待决事件或前锋抵城自动停">推演三月</button>'
-      + '<button id="slgStratAuto" title="自动推旬：有事待决自动暂停（再点关闭）">自动推旬 ▶</button>'
+      + '<button id="slgStratAuto" style="display:none" title="自动推旬：有事待决自动暂停（再点关闭）">自动推旬 ▶</button>'
       + '<button id="slgBtnWar" class="pri" data-ix-allow="1">出征</button>'
       + '<button id="slgBtnHome">本城</button>'
       + '<i class="sep"></i>'
@@ -1710,18 +1738,19 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
   /* ★ P11：城内页是整屏的，沙盘上的「推演」按钮被盖住，玩家在城里办完事
      被迫先退出去才能推进回合。两个入口共用同一实现，绝不各写一份。 */
   window.__slgTick = function () {
+    var fromDay = lastState ? (Number(lastState.day) || 1) : 1;
     return fetch('/__slg/strategy/tick', { method: 'POST' })
       .then(function (r) { return r.json(); })
       .then(function (res) {
+        if (res && !res.skipped && Number(res.day) > fromDay) {
+          monthPlay = { from: fromDay, to: Number(res.day), t0: Date.now(), dur: 2400 };
+        }
         refresh();
         /* 城内页开着就地重绘，日/旬/本旬可征 立刻跟着变 */
         if (lastState && document.getElementById('slgCityPage')) {
           var cc = cityOf(lastState, currentCity);
           if (cc) renderCityPage(lastState, cc);
         }
-        if (!window.__slgToast) return res;
-        if (res.skipped) window.__slgToast('本回合已推演过，还需 ' + Math.max(1, res.need || 0) + ' 个游戏日', false);
-        else window.__slgToast('推演至第 ' + (res.month || Math.max(1, res.turn || 0)) + ' 月 · 游戏日 ' + res.day, true);
         return res;
       })
       .catch(function () { return null; });
@@ -1926,6 +1955,10 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
          两套 E2E 甚至靠 JS 注入直接跳页，把这个断点掩盖了。 */
       if (prev >= 0 && cnt > prev) {
         var p0 = (s.pendingBattles || [])[0];
+        /* ★ P63 修：抵城时把出征窗切到「③ 遭遇」并保留窗口，玩家立刻能推演/开战/收兵；
+           沙盘军标弹窗（showMarchPopup）是并行的快捷入口，不靠关窗来「自动进征战画面」。
+           旧实现在这里 __slgWarClose() 把整窗关掉，既丢了行军队列上下文，
+           也让出征页的锚点检查拿不到窗口。 */
         if (document.getElementById('slgWarWin')) {
           war.tab = 'encounter';
           renderWar(s);
@@ -2026,6 +2059,12 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     function take(score, item) {
       if (score < bestScore) { bestScore = score; best = item; }
     }
+    for (var mi = 0; mi < marchHits.length; mi++) {
+      var mh = marchHits[mi];
+      var md = Math.hypot(mh.x - x, mh.y - y);
+      if (md > 28) continue;
+      take(md / 80, { kind: 'march', march: mh.march });
+    }
     for (var i = 0; i < lastState.cities.length; i++) {
       var c = lastState.cities[i];
       var info = cityInfo(c) || {};
@@ -2050,6 +2089,91 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     return best;
   }
 
+  function showMarchPopup(mm, pending) {
+    var old = document.getElementById('slgMarchPop');
+    if (old) old.remove();
+    var box = document.createElement('div');
+    box.id = 'slgMarchPop';
+    box.style.cssText = 'position:fixed;right:18px;bottom:88px;z-index:100640;width:320px;'
+      + 'background:#1c1812;color:#f3ead4;border:1px solid #ba9a52;border-radius:8px;'
+      + 'padding:12px 14px;font:13px "Microsoft YaHei",sans-serif;box-shadow:0 8px 28px rgba(0,0,0,.45);';
+    var title = pending
+      ? ('已抵 ' + (pending.toName || '') + ' 城下')
+      : ((mm && mm.pendingBattle) ? ('已抵 ' + (mm.toName || '')) : ((mm && mm.toName) ? ('前往 ' + mm.toName) : '行军'));
+    var troops = pending ? pending.troops : (mm && mm.troops);
+    var enemy = pending ? pending.enemyTroops : 0;
+    var grain = pending ? pending.grainCost : (mm && mm.grainCost);
+    var lines = '<b style="color:#f0d998">' + title + '</b>'
+      + '<div style="margin-top:6px;color:#d9cbb0">兵力 ' + (troops || 0)
+      + (enemy ? (' · 守军 ' + enemy) : '')
+      + (grain ? (' · 已耗粮 ' + grain) : '')
+      + '</div>';
+    if (pending || (mm && mm.pendingBattle)) {
+      lines += '<div style="color:#e0c56a;margin-top:4px">日子已停。在这里推演、开战或收兵，沙盘才继续走。关掉这个框不是撤军。</div>';
+    }
+    if (mm && !pending && !mm.pendingBattle) {
+      lines += '<div style="color:#9c9382;margin-top:4px">剩余约 ' + (mm.remainDays || 0) + ' 日</div>';
+    }
+    box.innerHTML = lines;
+    function act(label, fn) {
+      var b = document.createElement('button');
+      b.textContent = label;
+      b.style.cssText = 'margin:8px 6px 0 0;background:#2a261c;color:#f0d998;border:1px solid #ba9a52;border-radius:4px;padding:4px 10px;cursor:pointer;';
+      b.onclick = fn;
+      box.appendChild(b);
+    }
+    var marchId = pending ? pending.marchId : (mm && mm.id);
+    var armyId = pending ? pending.armyId : (mm && mm.armyId);
+    var toId = pending ? pending.to : (mm && mm.to);
+    var fromId = pending ? pending.from : (mm && mm.from);
+    var frac = pending ? (pending.frac || 1) : ((mm && mm.frac) || 1);
+    if (pending || (mm && mm.pendingBattle)) {
+      act('推演', function () {
+        fetch('/__slg/strategy/action', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'preview', cityId: toId, fromCityId: fromId, armyId: armyId, frac: frac,
+          }),
+        }).then(function (r) { return r.json(); }).then(function (rs) {
+          var txt = (rs && (rs.attribution || rs.text || rs.reason)) || '推演没有返回结果';
+          if (window.__slgToast) window.__slgToast(String(txt).slice(0, 80), !!(rs && rs.ok !== false && !rs.reason));
+        }).catch(function () {
+          if (window.__slgToast) window.__slgToast('推演失败：本机无响应', false);
+        });
+      });
+      act('开战', function () {
+        fetch('/__slg/strategy/action', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'battleConfirm', marchId: marchId }),
+        }).then(function (r) { return r.json(); }).then(function (rs) {
+          box.remove();
+          if (window.__slgToast) window.__slgToast(rs && rs.ok === false ? '开战未成' : '已开战', !(rs && rs.ok === false));
+          if (window.__slgStrategyShow) window.__slgStrategyShow();
+        });
+      });
+      act('收兵', function () {
+        fetch('/__slg/strategy/action', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'battleRetreat', marchId: marchId }),
+        }).then(function (r) { return r.json(); }).then(function () {
+          box.remove(); pendingCardKey = '';
+          if (window.__slgStrategyShow) window.__slgStrategyShow();
+        });
+      });
+    } else if (mm && mm.side === 'player' && !mm.resolved) {
+      act('撤回', function () {
+        fetch('/__slg/strategy/action', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'recall', marchId: marchId }),
+        }).then(function (r) { return r.json(); }).then(function () {
+          box.remove();
+          if (window.__slgStrategyShow) window.__slgStrategyShow();
+        });
+      });
+    }
+    act('关闭', function () { box.remove(); });
+    document.body.appendChild(box);
+  }
   function pickCity(ev) {
     var hit = hitTarget(ev);
     if (!hit) {
@@ -2057,6 +2181,14 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       pickedPass = null;
       if (lastState) draw(lastState);
       showIntro(null);
+      return;
+    }
+    if (hit.kind === 'march') {
+      showMarchPopup(hit.march, hit.march && hit.march.pendingBattle ? {
+        marchId: hit.march.id, toName: hit.march.toName, troops: hit.march.troops,
+        enemyTroops: 0, grainCost: hit.march.grainCost, armyId: hit.march.armyId,
+        to: hit.march.to, from: hit.march.from, frac: hit.march.frac,
+      } : null);
       return;
     }
     if (hit.kind === 'pass') {
@@ -2070,6 +2202,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     /* ★ P11：点城即「进城」。不再同时弹一张介绍小卡 + 一个右侧浮窗，
        那两张和六府/透镜叠在一起正是「桌面杂乱」的来源。 */
     if (introPanel) introPanel.style.display = 'none';
+    if (window.__slgGuideMark) window.__slgGuideMark('g1');
     if (window.__slgCityInterior) window.__slgCityInterior(hit.city.id);
     else if (window.__slgCityWindow) window.__slgCityWindow(hit.city.id);
   }
@@ -2856,7 +2989,13 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       var byId = {};
       s.cities.forEach(function (cc) { byId[cc.id] = cc; });
       var msPerDay = s.msPerDay || 15000;
-      var dayNow = (s.day || 1) + (s.dayFrac || 0) + (Date.now() - lastFetchAt) / msPerDay;
+      var dayNow = (s.day || 1) + (s.clockPaused ? 0 : ((s.dayFrac || 0) + (Date.now() - lastFetchAt) / msPerDay));
+      if (monthPlay) {
+        var uPlay = Math.min(1, (Date.now() - monthPlay.t0) / monthPlay.dur);
+        dayNow = monthPlay.from + (monthPlay.to - monthPlay.from) * uPlay;
+        if (uPlay >= 1) monthPlay = null;
+      }
+      marchHits = [];
       s.marches.forEach(function (mm) {
         var a = byId[mm.from], b = byId[mm.to];
         if (!a || !b) return;
@@ -2937,6 +3076,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
            旗杆旗面 + 按兵力量级排出的兵卒横队 + 踏步起伏 + 队尾扬尘 + 方向箭头。
            玩家军金色、诸侯军赤红，共用同一套画法；相位由 Date.now() 驱动，
            20fps 重绘即连续动画，静帧也停在合理相位，不依赖 rAF 是否在跑。 */
+        marchHits.push({ x: cur[0], y: cur[1], march: mm });
         var qm = P(cur);
         var ph = (Date.now() % 1600) / 1600;
         var tsum = Math.max(0, Number(mm.troops) || 0);
@@ -2967,10 +3107,11 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
         g.fillText(label, qm[0] + biasX, tok.labelY);
         g.restore();
       });
-      /* ★ P62：相遇/会战在地图上触发。
-         两支军的 clash 指向同一场遭遇，按「日 + 坐标」去重后只画一次。
+      /* ★ P62：城下会战在地图上触发。
+         两支军的 clash 指向同一场会战，按「日 + 坐标」去重后只画一次。
          会战日前后播交叉刀光、扩张冲击环与火星；平日只留一个红点，
-         避免整张图长期闪烁。纯表现层——战果仍由抵达结算决定，不改任何数值。 */
+         避免整张图长期闪烁。纯表现层——战果仍由抵达结算决定，不改任何数值。
+         道中相向而过不画任何东西：野外不开打（2026-11-25 按用户要求撤掉拦截）。 */
       if (s.marches.length) {
         var seenClash = {};
         var clashList = [];
@@ -3027,7 +3168,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
           g.moveTo(q[0] - bl, q[1] - bl); g.lineTo(q[0] + bl, q[1] + bl);
           g.moveTo(q[0] - bl, q[1] + bl); g.lineTo(q[0] + bl, q[1] - bl);
           g.strokeStyle = '#fff2d6'; g.lineWidth = Math.max(1.4, 1.8 * scale); g.stroke();
-          var tag = c.kind === 'city' ? '会战' : '遭遇';
+          var tag = '会战';
           var bob = hot ? Math.sin(((Date.now() % 600) / 600) * Math.PI) * 3 : 0;
           g.font = 'bold ' + Math.max(10, 11.5 * scale).toFixed(1) + 'px "Microsoft YaHei",sans-serif';
           g.textAlign = 'center'; g.textBaseline = 'top';
@@ -3079,8 +3220,8 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     }
 
     /* 势力图例/面板：内容只在变化时重建（详见 renderLegend 的头注） */
-    /* ★ P62：相遇是新军情——地图上画出来的同时，用一条提示把玩家叫过来看一眼。
-       同一场遭遇只提示一次（键含日与对方标签），逐帧重绘不会刷屏。 */
+    /* ★ P62：城下会战是新军情——地图上画出来的同时，用一条提示把玩家叫过来看一眼。
+       同一场会战只提示一次（键含日与对方标签），逐帧重绘不会刷屏。 */
     var clashTip = null;
     (s.marches || []).forEach(function (mm) {
       var c = mm.clash;
@@ -3090,15 +3231,14 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       clashToasted[ck] = 1;
       if (!clashTip) clashTip = c.text || '';
     });
-    if (clashTip && window.__slgToast) window.__slgToast('两军相遇：' + clashTip, false);
+    if (clashTip && window.__slgToast) window.__slgToast('城下会战：' + clashTip, false);
     renderLegend(s);
     // 事件与回合
     var camp = s.campaign || {};
     var endTxt = camp.ending === 'held' ? ' · 序章已守住'
       : (camp.ending === 'lost' ? ' · 序章失守' : '');
     var turnEl = document.getElementById('slgStratTurn');
-    if (turnEl) turnEl.textContent = '第 ' + (s.month || Math.max(1, s.turn || 0)) + ' 月 · 游戏日 ' + s.day
-      + '（下一月：第 ' + s.nextTurnDay + ' 日）' + endTxt;
+    if (turnEl) turnEl.textContent = '第 ' + (s.month || Math.max(1, s.turn || 0)) + ' 月 · 第 ' + s.day + ' 日' + endTxt;
     // ★ P1-6：来犯军必须在天下界面可见，否则本地地图被遮住后威胁等于不存在
     var alertEl = document.getElementById('slgAlert');
     if (alertEl) {
@@ -3117,9 +3257,17 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     var ev = document.getElementById('slgStratEvents');
     if (ev) {
       if (s.chronicle && s.chronicle.length) {
-        ev.innerHTML = s.chronicle.slice(0, 3).map(function (m) {
-          return '<div style="margin-bottom:6px;">' + esc(m.text) + '</div>';
-        }).join('');
+        var bits = String(s.chronicle[0].text || '').split(/。/).map(function (x) { return x.trim(); }).filter(Boolean);
+        var mine = bits.filter(function (x) { return /我军|主公|援|攻|守|收兵|开战|征/.test(x); });
+        var top = (mine.length ? mine : bits).slice(0, 3);
+        var rest = bits.filter(function (x) { return top.indexOf(x) < 0; });
+        ev.innerHTML = top.map(function (x) {
+          return '<div style="margin-bottom:6px;">' + esc(x) + '。</div>';
+        }).join('') + (rest.length
+          ? '<details style="color:#9c9382"><summary>本月天下</summary>'
+            + rest.map(function (x) { return '<div>' + esc(x) + '。</div>'; }).join('')
+            + '</details>'
+          : '');
       } else {
         ev.innerHTML = s.events.length
           ? s.events.map(function (e) {
@@ -3146,7 +3294,16 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
         dl.appendChild(o);
       });
     }
-    /* ★ #18：draw 是所有视口/选中变更的唯一收口，落盘放这里不会漏事件 */
+    if (s.oath && s.oath.done && window.__slgGuideMark) window.__slgGuideMark('g0');
+    if (!monthPlay && s.pendingBattles && s.pendingBattles.length && !document.getElementById('slgMarchPop')) {
+      var pk = s.pendingBattles.map(function (p) { return p.marchId; }).join(',');
+      if (pk !== pendingCardKey) {
+        pendingCardKey = pk;
+        showMarchPopup(null, s.pendingBattles[0]);
+      }
+    } else if (!s.pendingBattles || !s.pendingBattles.length) {
+      pendingCardKey = '';
+    }
     saveView();
 
     /* ★ P62：玩家军与诸侯军共用同一套移动绘制，所以「有在途部队」就要驱动重绘。
@@ -3967,6 +4124,7 @@ const BATTLE_ANIM_SOURCE = `;(function () {
     ensureOverlay();
     if (current) { current.destroy(); current = null; }
     overlay.style.display = 'block';
+    document.querySelectorAll('.slgIx-modal.slgIxEvent').forEach(function (n) { n.style.display = 'none'; });
     document.getElementById('slgBattleTitle').textContent =
       (data.a && data.a.name ? data.a.name : '我军') + ' 攻 ' + (data.place || '') + '（守军 ' + (data.d && data.d.name ? data.d.name : '') + '）';
     var body = document.getElementById('slgBattleBody');
@@ -4589,9 +4747,11 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     var digest = s.digest || [];
     /* ★ P11 / 本作设计 六道门：动机 → 集结 → 行军 → 遭遇 → 结算 → 消化，
        每一道门在面板里都有对应页签，不再「打完就没有下文」。 */
+    /* ★ P63 修：行军看沙盘军标、抵城自动弹征战画面（下面 showMarchPopup 仍在），
+       但「行军队列 / 遭遇」页签是玩家撤回、下令的确定性入口，也是真鼠标审计的锚点，
+       不能为了新表现删掉。两套入口并存：想快就在军标上点，想全就在页签里看。 */
     var tabs = [
       ['go', '① 集结 · 出击'],
-      /* 页签保留「行军队列」全称：玩家看得懂，回归脚本也按这个词找页签 */
       ['queue', '② 行军队列' + (queue.length ? '（' + queue.length + '）' : '')],
       ['encounter', '③ 遭遇' + (pending.length ? '（' + pending.length + '）' : '')],
       ['digest', '④ 消化' + (digest.length ? '（' + digest.length + '）' : '')],
@@ -4715,6 +4875,53 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     });
   }
 
+  function warAssignSlots(s, army) {
+    if (!army) return null;
+    var box = el('div', 'card', '<h4 style="margin-top:0">本队三位武将</h4>'
+      + '<div class="cost">在城里的武将直接在这里入队，不用先回征兵页。一人只占一队。</div>');
+    var names = ['前锋', '中军', '大营'];
+    var officers = (s.officers || []).filter(function (g) {
+      return Number(g.cityId) === Number(army.cityId);
+    });
+    names.forEach(function (label, pos) {
+      var cur = (army.generals || [])[pos];
+      var row = el('div', 'row');
+      row.appendChild(el('span', '', label));
+      var sel = document.createElement('select');
+      sel.style.cssText = 'background:#101208;color:#e2d6b8;border:1px solid #4a4436;'
+        + 'border-radius:4px;padding:2px 6px;font:12px "Microsoft YaHei",sans-serif;';
+      var empty = document.createElement('option');
+      empty.value = '0';
+      empty.textContent = '（空）';
+      sel.appendChild(empty);
+      officers.forEach(function (g) {
+        var busy = (s.armies || []).some(function (x) {
+          return (x.generals || []).some(function (gg, i) {
+            return gg && Number(gg.id) === Number(g.id) && !(x.id === army.id && i === pos);
+          });
+        });
+        var o = document.createElement('option');
+        o.value = String(g.id);
+        o.textContent = g.name + (busy ? '（在编）' : '');
+        o.disabled = busy;
+        if (cur && Number(cur.id) === Number(g.id)) o.selected = true;
+        sel.appendChild(o);
+      });
+      sel.onchange = function () {
+        send('army.dispose', {
+          cityId: army.cityId, order: army.order, position: pos, generalId: Number(sel.value) || 0,
+        }).then(function (rsp) {
+          if (rsp.code === 0) toast(label + '已更新', true);
+          else toast('编队失败：' + errText(rsp), false);
+          warRefresh(s);
+        });
+      };
+      row.appendChild(sel);
+      box.appendChild(row);
+    });
+    return box;
+  }
+
   function warGoPanel(s, fromCity, idle, body) {
     var own = warOwnCities(s);
     /* ★ P62：出征页从「规则说明书」改回「点将台」。
@@ -4810,8 +5017,9 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       armyCard.appendChild(row);
     });
     body.appendChild(armyCard);
-
     var army = idle.filter(function (a) { return a.id === war.armyId; })[0] || null;
+    var slotBox = warAssignSlots(s, army);
+    if (slotBox) body.appendChild(slotBox);
     /* ★ M4-13：距离与适性在出征前就要看得见、能据此换将。
        过去只在编队页有一行小字，战报里又完全不提，玩家自然觉得这条规则没意义。 */
     /* ★ P62：站位/射程/适性从主屏挪进「军议详情」。这是换将时才需要的参谋信息，
@@ -4840,10 +5048,29 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       var t = cityOf(s, r.id);
       return t && t.owner !== 'player';
     });
+    /* 建议目标：补完这一波还能征的兵之后占优，而且走到那天没有援军入城。 */
+    var adviseId = 0;
+    var adviseTheir = 1e15;
+    var wave = Math.max(0, Number(fromCity && fromCity.levyAfford) || 0);
+    routes.forEach(function (r0) {
+      var t0 = cityOf(s, r0.id);
+      if (!t0 || !army) return;
+      var days0 = warDays(r0.km, army.speed || 100);
+      var arrive0 = (s.day || 1) + days0;
+      var rel0 = (s.marches || []).filter(function (mm) {
+        return mm.side && mm.side !== 'player' && !mm.resolved && Number(mm.to) === Number(t0.id)
+          && Number(mm.arriveDay) <= arrive0;
+      }).reduce(function (n0, mm) { return n0 + (Number(mm.troops) || 0); }, 0);
+      if (rel0 > 0) return;
+      var mine0 = Math.round(warTroops(army) * (war.frac || 1));
+      var their0 = Number(t0.troops) || 0;
+      if (mine0 + wave < their0 * 1.25) return;
+      if (their0 < adviseTheir) { adviseTheir = their0; adviseId = t0.id; }
+    });
     if (war.target && !routes.some(function (r) { return Number(r.id) === Number(war.target); })) {
       war.target = 0;
     }
-    if (!war.target && routes.length) war.target = routes[0].id;
+    if (!war.target) war.target = adviseId || (routes.length ? routes[0].id : 0);
 
     /* ★ P62：目标从「一条一行的长列表」改成紧凑城卡网格。
        每个邻城一张卡：城名、势力、守军、里程与日程、胜算色标。
@@ -4860,10 +5087,17 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       var days = warDays(r.km, army ? army.speed : 100);
       var mine = army ? Math.round(warTroops(army) * war.frac) : 0;
       var their = Number(t.troops) || 0;
+      var arriveBy = (s.day || 1) + days;
+      var reliefIn = (s.marches || []).filter(function (mm) {
+        return mm.side && mm.side !== 'player' && !mm.resolved && Number(mm.to) === Number(t.id)
+          && Number(mm.arriveDay) <= arriveBy;
+      });
+      var reliefN = reliefIn.reduce(function (n0, mm) { return n0 + (Number(mm.troops) || 0); }, 0);
+      var theirShow = their + reliefN;
       var on = Number(t.id) === Number(war.target);
       var odds = !army ? '<span class="cost">未选队伍</span>'
-        : mine >= their * 1.25 ? '<span style="color:#a9e2a0">占优</span>'
-          : mine >= their * 0.9 ? '<span style="color:#e0c56a">参半</span>'
+        : mine >= theirShow * 1.25 ? '<span style="color:#a9e2a0">占优</span>'
+          : mine >= theirShow * 0.9 ? '<span style="color:#e0c56a">参半</span>'
             : '<span style="color:#ff6b5e">偏少</span>';
       var card = el('div', '');
       card.style.cssText = 'cursor:pointer;padding:6px 7px;border-radius:5px;line-height:1.55;'
@@ -4871,9 +5105,21 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
           : 'background:rgba(0,0,0,.14);border:1px solid #33302a;');
       card.innerHTML = '<div><span class="dot" style="background:' + t.color + '"></span>'
         + '<b style="color:' + (on ? '#ffe9b0' : '#e2d6b8') + '">' + esc(t.name) + '</b>'
+        + (Number(t.id) === Number(adviseId) ? ' <span style="color:#a9e2a0">建议</span>' : '')
         + '<span class="cost">　' + esc(t.ownerName) + '</span></div>'
-        + '<div class="cost">守军 ' + fmt(their) + ' · ' + fmt(r.km) + ' 里</div>'
+        + '<div class="cost">守军 ' + fmt(their)
+        + (reliefN ? ('，援军 ' + fmt(reliefN) + ' 将入城，届时约 ' + fmt(theirShow)) : '')
+        + ' · ' + fmt(r.km) + ' 里</div>'
         + '<div class="cost">' + days + ' 日 · ' + odds + '</div>';
+      if (t.owner && t.owner !== 'player') {
+        var dip = mkBtn('与' + (t.ownerName || '该势力') + '外交', 'ghost', function (ev) {
+          if (ev && ev.stopPropagation) ev.stopPropagation();
+          war.tab = 'diplo';
+          renderWar(cache);
+        });
+        dip.style.marginTop = '4px';
+        card.appendChild(dip);
+      }
       card.onclick = function () {
         war.target = t.id;
         war.grainCost = null;
@@ -4924,11 +5170,30 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     sum.appendChild(segRow);
 
     var theirs = Number(target.troops) || 0;
+    var reliefHere = (s.marches || []).filter(function (mm) {
+      return mm.side && mm.side !== 'player' && !mm.resolved && Number(mm.to) === Number(target.id)
+        && Number(mm.arriveDay) <= (s.day || 1) + days;
+    }).reduce(function (n0, mm) { return n0 + (Number(mm.troops) || 0); }, 0);
+    var theirsAt = theirs + reliefHere;
     sum.appendChild(el('div', 'cost',
-      '守军约 ' + fmt(theirs) + '　'
-      + (deploy >= theirs * 1.25 ? '<span style="color:#a9e2a0">兵力占优</span>'
-        : deploy >= theirs * 0.9 ? '<span style="color:#e0c56a">胜负参半，看武将与兵种</span>'
+      '守军约 ' + fmt(theirs)
+      + (reliefHere ? ('，援军 ' + fmt(reliefHere) + ' 入城后约 ' + fmt(theirsAt)) : '')
+      + '　'
+      + (deploy >= theirsAt * 1.25 ? '<span style="color:#a9e2a0">兵力占优</span>'
+        : deploy >= theirsAt * 0.9 ? '<span style="color:#e0c56a">胜负参半，看武将与兵种</span>'
           : '<span style="color:#ff6b5e">兵力偏少，建议先增兵或换小城</span>')));
+    if (war.grainCost == null && !war.quoting) {
+      war.quoting = true;
+      postJSON('/__slg/strategy/action', {
+        action: 'preview', cityId: target.id, fromCityId: fromCity.id, armyId: army.id, frac: war.frac,
+      }).then(function (rs) {
+        war.quoting = false;
+        if (rs && rs.grainCost != null && Number(war.target) === Number(target.id)) {
+          war.grainCost = rs.grainCost;
+          renderWar(cache);
+        }
+      }).catch(function () { war.quoting = false; });
+    }
 
     /* ★ 用户 2026-11-14：出征前允许不推演直接出征。旧实现把推演当第 4 道门，
        不推演按钮就是灰的 —— 那是把「参谋」做成了「关卡」。现在默认可用。 */
@@ -4941,7 +5206,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     atkBtn.setAttribute('data-ix-allow', '1');
     sum.appendChild(atkBtn);
     sum.appendChild(el('div', 'cost',
-      '抵城下先进「遭遇」待命：可再推演、确认开战或收兵；途中可在「行军队列」撤回。'));
+      '出征后回到沙盘看军标移动。点军标可撤回；抵达后在军标上决定开战或收兵。'));
     body.appendChild(sum);
 
     /* ★ P62：军议详情——粮道、站位射程、战前推演，默认收起。
@@ -5105,9 +5370,18 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       '规模：' + label + '，实出 <b>' + fmt(deploy) + '</b> 人（该队共 ' + fmt(total) + '）',
       '行军：程 ' + fmt(route.km) + ' 里 · 队速 ' + Math.round(army.speed) + ' · 预计第 ' + (s.day + days)
         + ' 日抵达 · 耗粮 ' + (war.grainCost != null
-          ? fmt(war.grainCost) + ' 斛（本机核算）'
+          ? '<b>' + fmt(war.grainCost) + '</b> 斛'
           : '按 ' + fmt(deploy) + ' 兵 × ' + days + ' 日 × 0.1 粮/兵/日结算'),
-      '<span class="cost">抵达城下先进入「遭遇」待决，须主公确认开战或临阵收兵；战败折损、溃兵归营。行军途中可在「行军队列」页撤回。</span>',
+      (function () {
+        var extra = (s.marches || []).filter(function (mm) {
+          return mm.side && mm.side !== 'player' && !mm.resolved && Number(mm.to) === Number(target.id)
+            && Number(mm.arriveDay) <= (s.day + days);
+        }).reduce(function (n0, mm) { return n0 + (Number(mm.troops) || 0); }, 0);
+        return extra
+          ? '援军约 ' + fmt(extra) + ' 会在你抵达前或同日入城，守军将从 ' + fmt(target.troops) + ' 增至约 ' + fmt((Number(target.troops) || 0) + extra) + '。'
+          : '眼下没有会在你抵达前入城的援军。';
+      })(),
+      '<span class="cost">军标会出现在沙盘上。点军标可撤回；抵达后时间停下，在军标上推演、开战或收兵。</span>',
     ], '出征', '取消', function () {
       postJSON('/__slg/strategy/action', {
         action: 'attack', cityId: target.id, armyId: army.id,
@@ -5118,8 +5392,13 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         if (rs && rs.ok) {
           toast('大军自' + (rs.from || fromCity.name) + '开拔，程 ' + Math.round(rs.km || route.km)
             + ' 里，预计第 ' + rs.arriveDay + ' 日抵城下（耗粮 ' + fmt(rs.grainCost) + '）', true);
+          if (window.__slgGuideMark) window.__slgGuideMark('g6');
+          /* ★ P63 修：出征成功后把出征窗留在「② 行军队列」，玩家立刻看见在途队伍；
+             不再 __slgWarClose() 关窗——关窗虽能露出沙盘军标，却丢了行军队列上下文，
+             也让出征页的锚点检查拿不到窗口。沙盘照常画行军动画，两不耽误。 */
           war.tab = 'queue';
-          warRefresh(s);
+          if (window.__slgWarWindow) window.__slgWarWindow({ tab: 'queue' });
+          if (window.__slgStrategyShow) window.__slgStrategyShow();
         } else {
           toast('出兵失败：' + warReason(rs && rs.reason), false);
         }
@@ -5340,8 +5619,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     body.appendChild(card);
     body.appendChild(el('div', 'cost',
       '行军日数 = 里程 ÷（55 × 队速/100），队速取队内最慢武将，长途最多 40 日。'
-      + '抵城后不会自动结算：队伍进入「③ 遭遇」等待你推演、确认开战或临阵收兵；'
-      + '此时不能再撤回，请到遭遇页定夺。'));
+      + '抵城后日子停住：点沙盘上的军标推演、开战或收兵。'));
   }
 
   function warReorder(s, marchId, dir) {
@@ -6426,7 +6704,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
             + kv('户数（5 口/户）', fmt(lv.households))
             + kv('适龄壮丁', fmt(lv.adultMales) + ' <span class="cost">（妇孺老弱 ' + fmt(lv.exempt) + ' 户免征）</span>')
             + kv('已征户（一户一丁）', fmt(lv.levied))
-            + kv('本旬可征', '<b style="color:' + (lv.quota > 0 ? '#a9e2a0' : '#ff9d6b') + '">' + fmt(lv.quota) + '</b> 丁')
+            + kv('本旬可征', '<b id="slgLevyShown" style="color:' + (lv.quota > 0 ? '#a9e2a0' : '#ff9d6b') + '">' + fmt(lv.quota) + '</b> 丁')
             + kv('征后人口代价', '每丁 −' + lv.popCostPerSoldier + ' 口')));
         }
         levyCard.appendChild(el('div', 'cost',
@@ -6487,12 +6765,11 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
              （受各槽等级+官阶带兵上限约束），不再全塞第一槽。 */
           send('army.conscript', { armyId: firstSlot.army.id, fill: true, amount: n0 }).then(function (rsp) {
             if (rsp.code === 0) {
-              var eta = (rsp.msg && rsp.msg.etaSec) || 2;
               var fc = (rsp.msg && rsp.msg.farmConflict) || null;
-              toast('征兵 ' + n0 + ' 丁，约 ' + eta + ' 秒后入营' + (fc ? '（' + fc.note + '）' : ''), true);
+              toast('征兵 ' + n0 + ' 丁。回到大地图后，下一日入营' + (fc ? '（' + fc.note + '）' : ''), true);
+              if (window.__slgGuideMark) window.__slgGuideMark('g4');
               /* ★ 立刻按服务端新状态重绘：不这样做，面板会继续显示旧的 quota/已征户，
                  玩家再点一次就撞 cooldown，看着就是「一键征兵失败」。 */
-              levyPending = { cityId: cid, amount: n0, until: Date.now() + Math.max(1, eta) * 1000 };
               setTimeout(function () { reloadCityView(); }, 120);
             } else {
               var rs = (rsp.msg && rsp.msg.reason) || '';
@@ -6530,9 +6807,12 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         var refreshQuick = function () {
           quickBtns.forEach(function (b, qi) {
             var n = qi === 2 ? afford : quick[qi][1];
+            var grainOne = previewInfo && previewInfo.need && afford
+              ? Math.round((Number(previewInfo.need.grain) || 0) * (qi === 2 ? 1 : Math.min(1, n / afford)))
+              : 0;
             b.textContent = qi === 2
-              ? '一键征满（' + fmt(afford) + '）'
-              : quick[qi][0];
+              ? '一键征满（' + fmt(afford) + (grainOne ? '，粮 ' + fmt(grainOne) : '') + '）'
+              : (quick[qi][0] + (grainOne ? '（粮 ' + fmt(grainOne) + '）' : ''));
             if (qi === 2) b.setAttribute('data-quick-levy', String(afford));
             b.disabled = !canGo() || n <= 0 || n > Math.min(quotaN, afford);
           });
@@ -6544,10 +6824,20 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
               return ({ wood: '木', iron: '铁', stone: '石', grain: '粮', gold: '金' })[k] + '缺'
                 + fmt((Number(pneed[k]) || 0) - (Number(res[k]) || 0));
             }).join('、');
+            var costNames = { wood: '木', iron: '铁', stone: '石', grain: '粮', gold: '金' };
+            var costBits = Object.keys(pneed).filter(function (k) { return Number(pneed[k]) > 0; })
+              .map(function (k) { return (costNames[k] || k) + fmt(pneed[k]); }).join('、');
+            var grainLeft = (Number(res.grain) || 0) - (Number(pneed.grain) || 0);
+            var shown = document.getElementById('slgLevyShown');
+            if (shown) shown.textContent = fmt(afford);
             affordHint.innerHTML = '<span style="color:' + (afford ? '#a9e2a0' : '#ff9d6b') + '">'
               + '本地核算：本旬可征 ' + fmt(afford) + ' 丁'
+              + (lv ? '（户役上限 ' + fmt(lv.quota) + '）' : '')
+              + (costBits ? '，耗 ' + esc(costBits) : '')
+              + (pneed.grain ? '，征完府库粮余 ' + fmt(Math.max(0, Math.round(grainLeft))) : '')
+              + (grainLeft < 800 && pneed.grain ? '，征完会断粮' : '')
               + (lackText ? '（' + esc(lackText) + '）' : '')
-              + '。单兵含石耗与兵种倍率，逐槽明细见下方。</span>';
+              + '。</span>';
           } else {
             affordHint.innerHTML = '<span style="color:#ff9d6b">无法核算可征兵数，暂不允许一键征满。</span>';
           }
@@ -6656,7 +6946,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
                 '　攻距 ' + ad + ' · ' + (warn ? '<span style="color:#ff9d6b">' + reach + '</span>' : reach)));
             }
             left.appendChild(el('span', 'cost', '　' + armsNames[pos] + ' ' + fmt(soldiers)
-              + (waiting > nowSec() ? '（征兵中，' + (waiting - nowSec()) + 's）' : '')));
+              + (a.conArriveDay ? '（已下令，回到大地图后下一日入营）'
+                : (waiting > nowSec() ? '（征兵中，' + (waiting - nowSec()) + 's）' : ''))));
             /* ★ 2026-11-18：解甲归田——有兵即可遣散（含空槽残留兵），兵退回驻城+返 30% 兵值金。
                解决「征兵满了没法解甲归田」以及「剔除武将后残留兵力」两个问题。 */
             if (soldiers > 0 && a.id) {
@@ -6699,9 +6990,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
                 cnts[pos] = n;
                 send('army.conscript', { armyId: a.id, cnts: cnts }).then(function (rsp) {
                   if (rsp.code === 0) {
-                    var eta = (rsp.msg && rsp.msg.etaSec) || 2;
-                    toast('征兵 ' + n + ' 人，约 ' + eta + ' 秒后入营', true);
-                    setTimeout(function () { tabArmy(body, c); }, (eta + 1) * 1000);
+                    toast('征兵 ' + n + ' 人。回到大地图后，下一日入营', true);
+                    setTimeout(function () { tabArmy(body, c); }, 200);
                   } else {
                     var reason = (rsp.msg && rsp.msg.reason) || '';
                     toast('征兵失败：' + (reason === 'res_not_enough' ? '资源不足' : errText(rsp)), false);

@@ -136,6 +136,95 @@
     bar.appendChild(mk('确定', true, onYes));
     box.appendChild(p); box.appendChild(bar); mask2.appendChild(box); document.body.appendChild(mask2);
   }
+  /* ★ P63：战法研习对话框（游戏化，参考三国志「委任研究」）。
+     只展示玩家需要决策的三件事：这条战法是什么、研到哪了、派谁研。
+     不再套通用「决策前预览」的「会发生什么 / 风险与失败态 / 数值依据」——
+     对一个纯正向的投卷涨进度操作，那三栏是开发者视角的噪音。 */
+  function researchBox(cfgId) {
+    var s = (data.library || []).find(function (x) { return Number(x.cfgId) === Number(cfgId); });
+    if (!s) return;
+    var assign = (data.researchAssignments || []).find(function (x) { return Number(x.cfgId) === Number(cfgId); });
+    var cands = data.researchCandidates || [];
+    var mask2 = document.createElement('div');
+    mask2.className = 'slgResearchMask';
+    mask2.style.cssText = 'position:fixed;inset:0;z-index:100820;background:rgba(0,0,0,.62);'
+      + 'display:flex;align-items:center;justify-content:center;';
+    var box = document.createElement('div');
+    box.className = 'slgResearchBox';
+    box.style.cssText = 'width:620px;max-width:94vw;max-height:88vh;overflow:auto;'
+      + 'background:linear-gradient(180deg,#26261c,#1b1d17);border:1px solid #a98a48;'
+      + 'border-radius:10px;padding:20px 22px;color:#ecdfbd;font:13px "Microsoft YaHei",sans-serif;'
+      + 'box-shadow:0 18px 48px rgba(0,0,0,.6);';
+    var pct = s.research ? Math.min(100, Math.round(s.research.progress / s.research.need * 100)) : 0;
+    var headH = '<div style="display:flex;align-items:baseline;gap:10px;border-bottom:1px solid #4a4229;'
+      + 'padding-bottom:10px;margin-bottom:14px"><b style="font-size:18px;color:#f2d98a">战法研习</b>'
+      + '<span style="font-size:11px;color:#9c9176">委任武将，逐旬自动研习</span>'
+      + '<span style="margin-left:auto;font-size:12px;color:#c9b98a">兵书残卷 ' + esc(data.scrolls || 0) + ' 卷</span></div>';
+    var infoH = '<div style="display:flex;gap:16px">'
+      + '<div style="flex:1.15">'
+      + '<div style="margin-bottom:6px"><b style="font-size:16px">' + esc(s.name) + '</b> '
+      + '<span class="tag">' + esc(s.trigger || '战法') + '</span></div>'
+      + '<div style="color:#c9bfa2;line-height:1.75;min-height:56px">' + esc(s.des || '暂无效果说明') + '</div>'
+      + '<div style="margin:10px 0 4px;font-size:12px;color:#a89c7f">'
+      + (s.status === 'unlocked' ? '已解锁' : '研习进度 ' + (s.research ? esc(s.research.progress) : '0') + ' / ' + (s.research ? esc(s.research.need) : '100'))
+      + ' · ' + pct + '%</div>'
+      + '<div style="height:10px;background:#12150f;border:1px solid #4a4229;border-radius:5px;overflow:hidden">'
+      + '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#8a6d2e,#d8b45c)"></div></div>'
+      + '</div><div style="flex:1;border-left:1px solid #4a4229;padding-left:16px">'
+      + '<div style="font-size:12px;color:#c9b98a;margin-bottom:8px">委派武将 · 谋略决定速度，政治决定省卷</div>';
+    if (assign) {
+      infoH += '<div style="background:#2f2c1c;border:1px solid #7a6535;border-radius:6px;padding:10px;margin-bottom:10px">'
+        + '<div><b style="color:#f0d488">' + esc(assign.generalName) + '</b> 研习中</div>'
+        + '<div style="font-size:12px;color:#b9ad8c;margin-top:4px">每旬约 +' + esc(assign.points)
+        + ' 点 · 耗 ' + esc(assign.scrolls) + ' 卷 · 进度 ' + esc(assign.progress) + '/' + esc(assign.need) + '</div>'
+        + '<button data-ract="unassign" style="margin-top:8px;background:#20221c;color:#d9c58e;border:1px solid #6a624a;'
+        + 'border-radius:4px;padding:4px 12px;cursor:pointer;font:12px \'Microsoft YaHei\'">撤回委派（进度保留）</button></div>';
+    }
+    if (cands.length) {
+      infoH += '<div style="font-size:12px;color:#a89c7f;margin-bottom:4px">改派 / 新派一名武将（研习为文职，在编亦可）</div>'
+        + '<select data-rsel="general" style="width:100%;box-sizing:border-box;background:#12150f;color:#f0e2b8;'
+        + 'border:1px solid #6a624a;border-radius:4px;padding:6px;font:12px \'Microsoft YaHei\'">'
+        + cands.map(function (g) {
+          return '<option value="' + g.id + '">' + esc(g.name) + (g.inArmy ? '（在编）' : '')
+            + ' · 谋' + g.strategy + ' 政' + g.politics
+            + '（约 +' + g.points + '/旬，耗 ' + g.scrolls + ' 卷）</option>';
+        }).join('') + '</select>'
+        + '<button data-ract="assign" style="margin-top:8px;width:100%;background:#4a4225;color:#f0d488;'
+        + 'border:1px solid #ba9a52;border-radius:4px;padding:6px;cursor:pointer;font:12px \'Microsoft YaHei\'">委派研习</button>';
+    } else {
+      infoH += '<div style="font-size:12px;color:#8f8676;line-height:1.7">没有可委派的武将。</div>';
+    }
+    infoH += '</div></div>';
+    var footH = '<div style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid #4a4229;'
+      + 'padding-top:12px;margin-top:14px">'
+      + '<button data-ract="close" style="background:#20221c;color:#c9b98a;border:1px solid #6a624a;'
+      + 'border-radius:4px;padding:6px 16px;cursor:pointer;font:12px \'Microsoft YaHei\'">关闭</button>'
+      + (s.status === 'unlocked' || (data.scrolls || 0) <= 0 ? ''
+        : '<button data-ract="manual" style="background:#4a4225;color:#f0d488;border:1px solid #ba9a52;'
+        + 'border-radius:4px;padding:6px 16px;cursor:pointer;font:12px \'Microsoft YaHei\'">立即投入 10 卷</button>')
+      + '</div>';
+    box.innerHTML = headH + infoH + footH;
+    mask2.appendChild(box); document.body.appendChild(mask2);
+    function close() { mask2.remove(); }
+    box.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-ract]'); if (!b) return;
+      var ract = b.getAttribute('data-ract');
+      if (ract === 'close') { close(); return; }
+      if (ract === 'manual') {
+        close(); post({ type: 'research', cfgId: Number(cfgId), amount: 10 }); return;
+      }
+      if (ract === 'assign') {
+        var sel = box.querySelector('[data-rsel="general"]');
+        var gid = sel ? Number(sel.value) : 0;
+        if (!gid) { toast('先选一名武将', true); return; }
+        close(); post({ type: 'assignResearch', cfgId: Number(cfgId), generalId: gid }); return;
+      }
+      if (ract === 'unassign') {
+        close(); post({ type: 'unassignResearch', cfgId: Number(cfgId) }); return;
+      }
+    });
+    mask2.addEventListener('click', function (e) { if (e.target === mask2) close(); });
+  }
   /* 文本输入（替代 window.prompt） */
   function askText(text, defaultValue, onYes) {
     var mask2 = document.createElement('div');
@@ -1694,11 +1783,12 @@
             ? '<button class="btn" data-act="learn" data-gid="' + cg.id + '" data-pos="' + lt.pos
               + '" data-cfg="' + s.cfgId + '">装配给 ' + esc(cg.name) + ' 的' + ['自带', '学习', '觉醒'][lt.pos] + '槽</button>'
             : '<button class="btn" disabled title="' + esc(lt.note) + '">暂不能装 · ' + esc(lt.note) + '</button>';
-        } else if ((data.scrolls || 0) > 0) {
-          h += '<button class="btn" data-act="research" data-cfg="' + s.cfgId + '">投入残卷研习（一次最多 10 卷，现有 '
-            + esc(data.scrolls || 0) + ' 卷）</button>';
         } else {
-          h += '<button class="btn" disabled>兵书残卷不足：打胜仗、守城、斩将可获残卷</button>';
+          /* ★ P63：研习入口改成打开游戏化对话框（战法/效果/进度/委派武将），
+             不再直接投 10 卷，也不再弹通用「决策前预览」。 */
+          h += '<button class="btn" data-act="openResearch" data-cfg="' + s.cfgId + '"'
+            + ((data.scrolls || 0) <= 0 && !(data.researchAssignments || []).length
+              ? ' disabled title="兵书残卷不足：打胜仗、守城、斩将可获残卷"' : '') + '>研习 · 委派武将</button>';
         }
         h += '</div></div>';
       }
@@ -1835,6 +1925,8 @@
     if (act === 'dismantle') return confirmBox('分解不可逆，确认分解这件装备？', function () {
       post({ type: 'dismantle', itemId: Number(t.getAttribute('data-item')) });
     });
+    /* ★ P63：打开游戏化研习对话框（不再是通用决策前预览）。 */
+    if (act === 'openResearch') return researchBox(Number(t.getAttribute('data-cfg')));
     if (act === 'research') return post({ type: 'research', cfgId: Number(t.getAttribute('data-cfg')), amount: 10 });
     if (act === 'unskill') return confirmBox('卸下这个槽的战法？卸下后战法回到战法库，可再装配给别人。', function () {
       post({ type: 'downSkill', gId: Number(t.getAttribute('data-gid')), pos: Number(t.getAttribute('data-pos')) });

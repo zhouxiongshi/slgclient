@@ -6,7 +6,20 @@
 export function advanceClock(state, now, rules) {
   const clock = state.clock;
   const scale = clock.scale || 1;
-  const msPerDay = Math.max(1, Math.round((rules.realMsPerDay ?? 60000) / scale));
+  /* mapMsPerDay 只给沙盘自动走日用，不改 scale（scale 仍只允许 1 或 4）。 */
+  const msPerDay = Math.max(400, Math.round(
+    Number(clock.mapMsPerDay) > 0
+      ? Number(clock.mapMsPerDay)
+      : ((rules.realMsPerDay ?? 60000) / scale),
+  ));
+  /* 城池页、出征窗、决策框打开时客户端续期 uiHoldUntil。
+     停住时把 lastRealMs 拨到现在，松手后不会把停着的时间一次补回来。 */
+  /* 城下还有没下令的仗，或者操作界面开着：日子停住，松手后不补走。 */
+  if (clock.decisionHold || (clock.uiHoldUntil || 0) > now) {
+    clock.lastRealMs = now;
+    clock.accMs = 0;
+    return { days: 0, day: clock.day, msPerDay };
+  }
   const elapsed = Math.max(0, now - (clock.lastRealMs ?? now));
   clock.lastRealMs = now;
   clock.accMs = (clock.accMs || 0) + elapsed;

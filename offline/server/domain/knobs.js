@@ -17,7 +17,7 @@ export const KNOBS = {
   conscriptRate: { value: 0.06, min: 0.04, max: 0.08, note: '兵源上限（人口占比）' },
   conscriptGoldPer: { value: 2, min: 1, max: 4, note: '征兵成本（金/兵）' },
   upkeepPerSoldier: { value: 0.02, min: 0.01, max: 0.04, note: '月俸禄（每兵）' },
-  popGrowthYear: { value: 0.015, min: 0.01, max: 0.03, note: '人口年增长' },
+  popGrowthYear: { value: 0.03, min: 0.01, max: 0.06, note: '人口每旬增长，沙盘上要看得见人丁' },
   devMax: { value: 100, min: 60, max: 120, note: '开发度上限' },
   postBonusMax: { value: 30, min: 20, max: 40, note: '官员加成上限（%）' },
   policyBonusMax: { value: 25, min: 15, max: 35, note: '政策加成上限（%）' },

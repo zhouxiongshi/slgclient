@@ -82,7 +82,8 @@ test('M2-5/P61·变招只作风险提示：预案仍真实进入主线计算', (
   assert.ok(p.variant && p.variant.name, '推演应标明当前敌方预案');
   assert.ok(p.riskNotes.some((n) => n.includes(p.variant.name) && n.includes('浮动')));
   assert.ok(p.dStart > 0 && p.dStart <= p.dTotal, '主线应给出实际参战守军，且不超过守军总数');
-  assert.ok(p.riskNotes.some((n) => n.includes('3 旬内战局槽锁定')));
+  /* ★ P63：战局槽 30 日＝1 月，玩家可见文案改为「本月战局已定」（禁裸术语）。 */
+  assert.ok(p.riskNotes.some((n) => n.includes('本月战局已定')));
 });
 
 test('M2-5·确认即锁：出征落 lockedSeed 且与推演种子同参一致', () => {
