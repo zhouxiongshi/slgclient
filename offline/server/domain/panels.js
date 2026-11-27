@@ -66,10 +66,16 @@ export const PANEL_CONF = {
 
 const SKILLS = [...PANEL_CONF.mainSkills, ...PANEL_CONF.libSkills, ...PANEL_CONF.libExtraSkills];
 // ★ P6：战法描述补射程——与内核/原客户端技能面板同一函数，保证描述=计算
-import { applyRangeNote } from '../skills.js';
+// ★ P69：同时取 skills.js 已过覆盖链的运行时表，战法库数值不再绕过成长层
+import { applyRangeNote, SKILLS as RUNTIME_SKILLS } from '../skills.js';
 import { desText } from './battle-narrative.js';
 for (const s of SKILLS) applyRangeNote(s);
 for (const s of PANEL_CONF.innateSkills) applyRangeNote(s);
+/* ★ P69：本文件的 SKILLS 是直接从 conf/skills.json 拼出来的原始表，只过了射程注释，
+   没经过 skills.js 的「镜像 → 成长方向 → 一致性 → 玩家覆盖」覆盖链。战斗用它算伤害，
+   战法库却用原始表画曲线，于是反击 10025 战斗里 37.5→75、界面里十级全 75。
+   等级数值统一取运行时表；名称/类型/描述/来源仍按面板领域层原有口径读 conf。 */
+const RUNTIME_LEVELS_BY_ID = new Map(RUNTIME_SKILLS.map((s) => [Number(s.cfgId), s.ui?.levels || []]));
 const SKILL_BY_ID = new Map(SKILLS.map((s) => [Number(s.cfgId), s]));
 /** 武将自带战法不进战法库列表，但武将页必须能读到名字和说明。 */
 const SKILL_ANY_ID = new Map([
@@ -548,15 +554,18 @@ export function panelState(state, cfg) {
     const res = state.skillbook.research[String(id)] || null;
     const by = equippedBy(state, id);
     const status = unl || owned.has(id) ? 'unlocked' : res ? 'researching' : 'locked';
-    const lv = Object.assign({}, ...(s.ui?.levels || []).map((l, i) => ({ [i + 1]: { probability: l.probability, effect_value: l.effect_value } })));
+    const levels = RUNTIME_LEVELS_BY_ID.get(id) || s.ui?.levels || [];
+    const lv = Object.assign({}, ...levels.map((l, i) => ({ [i + 1]: { probability: l.probability, effect_value: l.effect_value } })));
+    /* 描述里的 %n 必须和曲线用同一份等级数据，否则 Lv1 描述写 75%、曲线写 37.5% */
+    const desSrc = levels === s.ui?.levels ? s : { ...s, ui: { ...s.ui, levels } };
     return {
       cfgId: id,
       name: s.ui?.name ?? s.name,
-      des: desText(s, unl?.level || 1) || s.ui?.des || '',
+      des: desText(desSrc, unl?.level || 1) || s.ui?.des || '',
       range: s.ui?.range ?? null,
       trigger: r.trigger, tags: r.tags, sourceGroup: r.sourceGroup,
       target: s.ui?.target ?? null, arms: s.ui?.arms ?? [],
-      levels: lv, levelCount: (s.ui?.levels || []).length,
+      levels: lv, levelCount: levels.length,
       status, level: unl?.level || (owned.has(id) ? 1 : 0),
       equippedBy: by,
       /* ★ P12：装配上限读原表 ui.limit（80 条可研习战法分布 1~6 人），不再写死 2。

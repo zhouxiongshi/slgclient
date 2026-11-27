@@ -18,6 +18,9 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SKILLS, kernelSkillAt } from '../server/skills.js';
+import { panelState } from '../server/domain/panels.js';
+import { createWorld, normalizeWorld } from '../server/world.js';
+import { loadConfig } from '../server/config.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const MIRROR = JSON.parse(readFileSync(join(ROOT, 'conf', 'skill-mirror.json'), 'utf8'));
@@ -92,4 +95,33 @@ test('P68-④ 反击（用户点名）保持 37.5→75 且回击伤害率随级'
     assert.equal(counter.chance, 1, '受到普攻必反击');
     assert.equal(counter.rate_pct, rate, `反击 Lv${lv} 回击伤害率应为 ${rate}`);
   }
+});
+
+/* ★ P69：P68 只锁了战斗用的 SKILLS，战法库 UI 另有从 conf/skills.json 拼的原始表，
+   绕开镜像/成长/一致性覆盖链，反击在界面上仍是十级全 75。这一条锁 UI 投影。 */
+test('P69-① 战法库数值曲线与运行时同源：反击 Lv1=37.5、Lv10=75，描述随级', () => {
+  const cfg = loadConfig();
+  const state = normalizeWorld(createWorld(cfg), cfg);
+  const lib = panelState(state, cfg).library;
+  const e = lib.find((x) => Number(x.cfgId) === 10025);
+  assert.ok(e, '反击不在战法库投影里');
+  assert.equal(Number(e.levelCount), 10);
+  assert.equal(e.levels[1].effect_value[0], 37.5, '战法库 Lv1 不能是原表里的 75');
+  assert.equal(e.levels[10].effect_value[0], 75, '战法库 Lv10 终点保留');
+  for (let i = 1; i <= 10; i += 1) {
+    assert.equal(e.levels[i].effect_value[0], SKILLS.find((x) => Number(x.cfgId) === 10025).ui.levels[i - 1].effect_value[0],
+      `战法库 Lv${i} 必须与战斗运行时表同源`);
+  }
+  assert.match(e.des, /37\.5%/, 'Lv1 描述里的 %n 也要取同一份等级数据');
+});
+
+test('P69-② 战法库全库不允许十级全平', () => {
+  const cfg = loadConfig();
+  const state = normalizeWorld(createWorld(cfg), cfg);
+  const flat = panelState(state, cfg).library.filter((x) => {
+    if (Number(x.levelCount) < 2) return false;
+    const first = JSON.stringify(x.levels[1].effect_value);
+    return Object.keys(x.levels).every((k) => JSON.stringify(x.levels[k].effect_value) === first);
+  }).map((x) => x.name);
+  assert.deepEqual(flat, [], `战法库升级无反馈：${flat.join('、')}`);
 });

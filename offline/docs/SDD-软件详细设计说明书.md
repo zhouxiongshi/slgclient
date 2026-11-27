@@ -2794,6 +2794,16 @@ build/SLG-Offline-win32-x64/
 
 **回归锁**：新增 `tests/p68-skill-growth-coverage.test.js`（全表平线扫描为零、五条兜底数值与内核缩放、镜像反计/佯攻 50→100 与留痕、反击 37.5→75 防回退）；`skill-balance`/`p31`/`p30`/`p53`/`skills` 全绿；单测 888/888。
 
+### 17.50 战法库数值曲线同源 P69（2026-11-27 用户「反击 Lv1-Lv10 全一样」）
+
+**现象**：P68 收工后用户再次截图反击，战法库「10 级数值曲线」十行全是发动率 100%、效果值 75；但 P68 的运行时全表扫描明明为零，反击在战斗表里是 37.5→75。
+
+**根因**：`domain/panels.js` 自己从 `conf/skills.json` + `library-skills.json` + `library-skills-extra.json` 拼了一份 `SKILLS`，只从 `skills.js` 借了 `applyRangeNote()`，**绕过了「镜像 → 成长方向 → 一致性 → 玩家覆盖」整条覆盖链**。战斗算伤害用 `skills.js` 的运行时表（已覆盖），战法库画曲线用面板自己的原始表（没覆盖），同一条战法于是有两套数值。P68 的闸只扫了运行时表，**漏掉了 UI 投影这一路**。
+
+**改法**：`domain/panels.js` 增加 `RUNTIME_LEVELS_BY_ID`（取 `skills.js` 的 `SKILLS`），`library` 投影的 `levels` / `levelCount` 改取运行时表；描述里的 `%n` 用 `desText(desSrc, level)` 与曲线同源替换，避免「Lv1 描述 75%、曲线 37.5%」。名称、类型、描述原文、来源、装配上限仍按面板领域层原有口径读 `conf`，不改原表、不动战斗结算、满级数值不变。
+
+**回归锁**：`tests/p68-skill-growth-coverage.test.js` 新增 P69 两条——① 反击在 `panelState().library` 里 Lv1=37.5 / Lv10=75 且十级逐项等于运行时表、Lv1 描述含 37.5%；② 战法库全库无十级全平。实测修复后：反击曲线 37.5/41.67/45.83/50/54.17/58.33/62.5/66.67/70.83/75，描述「受到普通攻击时能进行反击（伤害率37.5%）」，平线 0 条。
+
 ---
 
 ## 19. 附录

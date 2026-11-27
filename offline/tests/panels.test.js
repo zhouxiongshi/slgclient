@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 
 import { loadConfig } from '../server/config.js';
 import { createWorld, normalizeWorld } from '../server/world.js';
+import { skillById } from '../server/skills.js';
 import {
   panelState, panelAction, panelSelfCheck, ensurePanels, PANEL_CONF,
   yieldBonusByResource as _yieldBonus, filledPostCount as _filledPosts,
@@ -38,13 +39,18 @@ test('战法库：80 条、每条 ≥2 条公开获取途径、研习兜底、�
   const all = PANEL_CONF.recipes.recipes;
   assert.ok(all.every((r) => r.sources.some((s) => s.type === 'research')), '每条都有战功研习兜底');
   assert.ok(all.every((r) => r.sources.every((s) => s.where && s.cost && s.detail)), '配方无隐藏信息');
-  // 名称/描述不得改写：与 conf 原文逐字比对
+  // 名称不得改写：与 conf 原文逐字比对。
+  // ★ P69：描述里的 %n 改与战斗同源的运行时表（已过镜像/成长/一致性覆盖），
+  //   不再拿 conf/skills.json 的原始等级算——否则一雷惊蛰描述写 150%、曲线写 75%。
   const raw = [...PANEL_CONF.mainSkills, ...PANEL_CONF.libSkills, ...PANEL_CONF.libExtraSkills];
   const byId = new Map(raw.map((s) => [Number(s.cfgId), s]));
   for (const s of panelState(fresh(), cfg).library) {
     const r = byId.get(s.cfgId);
+    const runtime = skillById(s.cfgId);
+    /* 文案仍取 conf 原文，只有 %n 换成运行时等级（镜像/成长/一致性覆盖后的那份）。 */
+    const desSrc = runtime?.ui?.levels ? { ...r, ui: { ...r.ui, levels: runtime.ui.levels } } : r;
     assert.equal(s.name, r.ui?.name ?? r.name);
-    assert.equal(s.des, desText(r, 1) || r.ui?.des || '');
+    assert.equal(s.des, desText(desSrc, 1) || r.ui?.des || '');
   }
 });
 
