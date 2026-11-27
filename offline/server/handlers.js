@@ -43,11 +43,13 @@ import { refusalLine, failLine } from './domain/recruit-refusal.js';
 import {
   strategyTick, strategyAttack, strategyTurnDays, ensureStrategy, clearThreat,
   strategyResolveMarches, strategyRecallMarch, recordEvent, factionReliefTick,
-  assaultEscalationTick, stageGoalTick, clashTick,
+  assaultEscalationTick, stageGoalTick, clashTick, strategyMap,
 } from './domain/strategy.js';
+/* ★ P67：本地清剿与战略攻城共用同一套「折损拆阵亡/负伤、伤兵回城」口径 */
+import { splitCasualties, routeWounded } from './domain/casualties.js';
 import { createHash } from 'node:crypto';
 import { noteIfGeneralDown } from './command.js';
-import { factionTraitOf, protagonistStat } from './domain/oath.js';
+import { factionTraitOf, protagonistStat, oathPending } from './domain/oath.js';
 import { conscriptNeed, checkSlotCaps, splitEven, affordableConscript, planDisarm, ARMS_NAMES } from './domain/conscript.js';
 /* ★ P54：编队资格（同城 / 一人一队 / 派生 order）唯一口径，与六府整编共用。 */
 import { formationGeneralCheck, syncGeneralOrders, releaseSlot, disbandArmy, normalizeArmyOrders } from './domain/formation.js';
@@ -389,8 +391,9 @@ export function settleWorld(ctx, now = Date.now()) {
   if ((settled?.days || 0) > 0) deliverDueConscripts(ctx);
   // ★ P2：行军到达结算（在诸侯推演之前，保证当天抵达当天开打；战报与播报由内部推）
   /* ★ P14：驰援感知在到达结算**之前**跑——玩家大军在途时守方就有机会派援军
-     ★ P62：相遇判定排在驰援之后、抵达结算之前——先记「两军撞上了」，
-       再让当天抵达的部队按既有流程结算，顺序反了就会漏掉最后一天的遭遇。 */
+     ★ P67：相遇判定排在驰援之后、抵达结算之前——先记「两军撞上了」，
+       再由 strategyResolveMarches 把相遇敌军并进守军、抵城自动开战；
+       顺序反了就会漏掉最后一天的遭遇，或把同一支援军算两遍。 */
   factionReliefTick(state, cfg, ctx);
   clashTick(state, cfg, ctx);
   strategyResolveMarches(state, cfg, ctx);
@@ -538,10 +541,34 @@ export function processTask(ctx, task) {
   if (task.type === 'battle_arrive') {
     const army = armyById(state, task.armyId);
     if (!army) return;
+    const begin = [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(army.soldiers?.[i]) || 0)));
     const { report, kernel, endAttackSoldiers, expByGeneral } = resolveBattle({
       cfg, state, army, x: task.x, y: task.y, seed: task.seed,
     });
+    /* ★ P67：清剿也算伤亡——负伤者退出队伍，退往周边最近己方城与出发城。 */
+    const casualties = splitCasualties({
+      lossBySlot: begin.map((n, i) => Math.max(0, n - (endAttackSoldiers[i] || 0))),
+    });
+    const woundedTo = routeWounded(state, {
+      wounded: casualties.wounded,
+      fromCityId: Number(army.cityId) || ensureStrategy(state).playerCity || 0,
+      battleCityId: 0,
+      mapCities: strategyMap().cities,
+      playerCityFallback: oathPending(state),
+    });
     army.soldiers = endAttackSoldiers;
+    const where = woundedTo.map((w) => `${w.name} ${w.count}`).join('、');
+    if (casualties.totalWounded > 0) {
+      const note = `折损中阵亡 ${casualties.totalKilled}、负伤 ${casualties.totalWounded}${where ? `，伤兵退往${where}` : '，伤兵流散未入城'}。`;
+      report.summary = `${report.summary || ''}${note}`;
+      recordEvent(state, `${report.summary}`);
+    }
+    report.analysis = {
+      ...(report.analysis || {}),
+      killed: casualties.totalKilled, wounded: casualties.totalWounded,
+      killedBySlot: casualties.killed, woundedBySlot: casualties.wounded,
+      woundedTo, auto: true,
+    };
     army.cmd = 0;
     army.state = 1;
     army.to_x = 0; army.to_y = 0; army.end = 0;

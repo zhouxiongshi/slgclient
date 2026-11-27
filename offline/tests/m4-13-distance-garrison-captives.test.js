@@ -245,14 +245,13 @@ test('俘虏：两条占领路径与三条处置出口都已接线', () => {
   assert.match(strategy, /captureFromBattle/, '战略层占城必须落俘虏');
   assert.match(index, /captiveRelease/, '放归入口');
   assert.match(index, /captiveExecute/, '处斩入口');
-  assert.match(strategy, /pendingSinceDay/, '待决遭遇必须有超时起点');
-  assert.match(strategy, /strategyRetreatBattle\(state, cfg, ctx, \{ marchId: mm\.id \}\)/,
-    '久候无令要自动班师，不能让队伍永久锁死');
+  assert.match(strategy, /consumeEncounterDefense/, 'P67 相遇敌军必须并进守军，抵城自动开战');
+  assert.match(strategy, /strategyRetreatBattle/, '旧存档待决行仍要有撤回兼容口，不能永久锁死队伍');
 });
 
 /* ---------------- 5. 待决遭遇超时兜底 ---------------- */
 
-test('出征：待决遭遇超过 3 旬自动班师并解锁队伍', () => {
+test('出征：旧存档待决行按新口径自动结算并解锁队伍', () => {
   const state = createWorld(cfg);
   ensureStrategy(state);
   const st = state.strategy;
@@ -267,25 +266,23 @@ test('出征：待决遭遇超过 3 旬自动班师并解锁队伍', () => {
     departDay: 1, arriveDay: 1, grainCost: 200, troops: 100,
     confirmBattle: true, confirmed: false, pendingBattle: true, pendingSinceDay: 1,
   }];
-  state.clock.day = 40;                       // 远超 30 日兜底
+  state.clock.day = 40;                       // 远超旧兜底，验证新口径也不锁死
   strategyResolveMarches(state, cfg, {
     state, cfg, push() {}, save() {}, log() {}, schedule() {},
   });
-  /* 自动班师后那行会被「已结算且过期 3 日」的清理逻辑删掉，
-     所以不按行存在与否判定，只看队伍是否真的解锁。 */
   const left = (st.marches || []).find((m) => m.id === 991);
-  assert.ok(!left || left.resolved === true, '久候无令应自动收兵');
+  assert.ok(!left || left.resolved === true, '旧待决行应被自动结算');
   assert.equal(army.marchId, undefined, '队伍必须解锁，否则永久卡在「已抵城下」');
 });
 
 /* ---------------- 6. 出征 UI 连贯性静态闸 ---------------- */
 
-test('出征：抵达自动引导、智能默认页签、滚动记忆、队列页待决引导都在', () => {
+test('出征：自动开战提示、智能默认页签、滚动记忆、战况入口都在', () => {
   const ui = readSrc('skills.js');
-  assert.match(ui, /lastPendingCount/, '抵达挂起要有状态驱动的主动提示');
+  assert.match(ui, /lastAutoReportId/, '自动开战要有状态驱动的新战报提示');
   assert.match(ui, /markWarBadge/, '出征窗没开时 dock 也要有角标');
   assert.match(ui, /scrollRemember\('war'/, '出征窗重绘要记住滚动位置');
-  assert.match(ui, /去遭遇定夺/, '队列页待决行要给出直达遭遇页的按钮');
-  assert.match(ui, /s\.pendingBattles \|\| \[\]\)\.length \? 'encounter'/, '入口要按待办智能落页');
+  assert.match(ui, /war\.tab = 'encounter'; renderWar\(cache \|\| s\)/, '队列页要给出直达战况页的按钮');
+  assert.match(ui, /s\.pendingBattles \|\| \[\]\)\.length \|\| \(s\.autoBattles \|\| \[\]\)\.length\) \? 'encounter'/, '入口要按战况智能落页');
   assert.ok(!/__slgWarWindow\(\{ tab: 'go' \}\)/.test(ui), '入口不该再硬编码回集结页');
 });

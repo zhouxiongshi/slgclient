@@ -141,14 +141,15 @@ export function interactionState(state, cfg) {
       detail: '征兵按每兵约 10 粮计。按钮上的可征人数是资源够买的数量，不是户役名额。',
     });
   }
-  const waitingBattles = (st.marches || []).filter((m) => m.side === 'player' && m.pendingBattle && !m.resolved);
-  if (waitingBattles.length) {
-    const w0 = waitingBattles[0];
+  const autoBattle = (state.warReports || []).find((r) => r?.analysis?.auto);
+  if (autoBattle) {
+    const an = autoBattle.analysis || {};
+    const where = (an.woundedTo || []).map((w) => `${w.name} ${w.count}`).join('、');
     push({
-      id: 'battle:wait', title: `${waitingBattles.length} 支军队已抵城下，等你开战或收兵`,
-      urgency: 0, deadline: '现在', source: '行军抵达（精确）', confidence: '高',
-      jump: { kind: 'war' }, action: '在沙盘军标上推演、开战或收兵',
-      detail: `${cityNameOf(w0.to)} 城下有一支待决。时间在你做决定之前不会自己把仗打完。`,
+      id: 'battle:auto', title: '刚刚自动接战，战报已成',
+      urgency: 0, deadline: '已结算', source: '行军抵达 / 城下相遇（精确）', confidence: '高',
+      jump: { kind: 'war', tab: 'encounter' }, action: '到出征窗「③ 战况」查看战报与伤兵去向',
+      detail: `折损 ${an.aLoss || 0}：阵亡 ${an.killed || 0}、负伤 ${an.wounded || 0}${where ? `，伤兵退往${where}` : ''}。抵达或相遇会自动开战，无需玩家再下令。`,
     });
   }
   for (const c of lowGrain) {

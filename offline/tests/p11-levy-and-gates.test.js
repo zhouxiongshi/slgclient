@@ -3,7 +3,7 @@
  *
  * 用户 2026-11-13 明确指出的四条兵役规则与「出征流程不完整」，在这里逐条锁死：
  *   妇孺老弱免征 / 一户一丁 / 一旬一征（不许反复征）/ 先发展人口。
- *   本作设计 门 4→5→6：遭遇挂起 → 确认才结算 → 占城有消化待办。
+ *   P67 起出征一次确认：行军途中可撤回，抵达/相遇自动开战 → 战报 → 占城有消化待办。
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -139,10 +139,10 @@ function battlefield() {
   return null;
 }
 
-test('P11 门 4/5：抵达先挂遭遇，确认后才开打', () => {
+test('P67：抵达自动开战，不再挂待决、不再要玩家点第二下', () => {
   const f = battlefield();
   assert.ok(f, '需要一组可打的出发城/目标城');
-  const { state, st, from, to, army } = f;
+  const { state, from, to, army } = f;
   const ctx = makeCtx(state);
   const atk = strategyAttack(state, cfg, ctx, {
     cityId: to, fromCityId: from, armyId: army.id, frac: 1, confirmBattle: true,
@@ -152,30 +152,32 @@ test('P11 门 4/5：抵达先挂遭遇，确认后才开打', () => {
   const reports0 = state.warReports.length;
   strategyResolveMarches(state, cfg, ctx);
   const view = strategyViewState(state, cfg);
-  assert.equal(view.pendingBattles.length, 1, '抵达应进入遭遇待决');
-  assert.equal(state.warReports.length, reports0, '未确认前不许写战报');
-  assert.equal(army.marchId, atk.marchId, '待决期间队伍仍锁定');
-
+  assert.equal(view.pendingBattles.length, 0, '抵达后不应再有需要下令的待决战');
+  assert.equal(state.warReports.length, reports0 + 1, '抵达即写战报，不等确认');
+  assert.equal(army.marchId, undefined, '结算后队伍立即解锁');
+  const rep = state.warReports[0];
+  assert.equal(rep.analysis.auto, true, '战报要标明这是自动接战');
+  assert.equal(rep.analysis.killed + rep.analysis.wounded, rep.analysis.aLoss, '折损必须拆成阵亡与负伤');
+  assert.ok(Array.isArray(rep.analysis.woundedTo), '伤兵去向必须写进战报');
   const done = strategyConfirmBattle(state, cfg, ctx, { marchId: atk.marchId });
-  assert.equal(done.ok, true, JSON.stringify(done));
-  assert.equal(state.warReports.length, reports0 + 1, '确认后写战报');
-  assert.equal(strategyViewState(state, cfg).pendingBattles.length, 0);
-  void st;
+  assert.equal(done.ok, true, '旧按钮点到也不能再触发第二场战斗');
+  assert.equal(done.alreadyResolved, true);
+  assert.equal(state.warReports.length, reports0 + 1);
 });
 
-test('P11 门 4 另一路：临阵收兵退一半粮、队伍归城；门 6 消化待办可清除', () => {
+test('P67：途中可撤回、抵达当日不再撤军；门 6 消化待办可清除', () => {
   const f = battlefield();
   const { state, st, from, to, army } = f;
   const ctx = makeCtx(state);
   const atk = strategyAttack(state, cfg, ctx, {
-    cityId: to, fromCityId: from, armyId: army.id, frac: 1, confirmBattle: true,
+    cityId: to, fromCityId: from, armyId: army.id, frac: 1,
   });
-  state.clock.day = atk.arriveDay;
-  strategyResolveMarches(state, cfg, ctx);
+  const mm = st.marches.find((m) => m.id === atk.marchId);
+  mm.arriveDay = state.clock.day + 2;
   const ret = strategyRetreatBattle(state, cfg, ctx, { marchId: atk.marchId });
   assert.equal(ret.ok, true);
   assert.equal(ret.refund, Math.floor(atk.grainCost / 2));
-  assert.ok(!army.marchId, '收兵后解锁队伍');
+  assert.ok(!army.marchId, '撤回后解锁队伍');
   assert.equal(Number(army.cityId), Number(from));
 
   st.digest = [{ cityId: to, name: '测试城', day: 3, reportId: 1 }];

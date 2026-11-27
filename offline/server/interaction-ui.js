@@ -48,7 +48,7 @@
     { id: 'g3', title: '探索登庸', hint: '在酒馆探索在野贤才。对方可能婉拒——多登门几次，精诚所至或有转机。', term: 'dengyong', jump: 'tavern', done: 'explored' },
     { id: 'g4', title: '征兵与钱粮', hint: '出征之前先补兵：人口 → 兵役 → 征兵。每座城每旬有征兵名额，兵力不足时开战必败。采石场产石 → 修墙/城防，逐城产量汇入府库、俸禄影响忠诚。', term: 'renkou', jump: 'city', done: 'economyRead' },
     { id: 'g5', title: '粮道与运粮', hint: '切到「粮道」透镜看补给线。出征前看出发城城库能撑几日，不足先在城内运粮，断粮会掉民心与守军。', term: 'liangdao', jump: 'city', done: 'transported' },
-    { id: 'g6', title: '编队出征', hint: '在「出征」页编好队伍，选出发城与目标城。面板会同时给出我军兵力与守军兵力——守军明显更多时先回去征兵，再确认开战。', term: 'chuzheng', jump: 'war', done: 'attacked' },
+    { id: 'g6', title: '编队出征', hint: '在「出征」页编好队伍，选出发城与目标城。面板会同时给出我军兵力与守军兵力——守军明显更多时先回去征兵；出征后相遇或抵城自动开战。', term: 'chuzheng', jump: 'war', done: 'attacked' },
   ];
 
   var S = {
@@ -930,7 +930,7 @@
         if (arriving.length) {
           parts.push({ k: '本月会抵达', v: arriving.slice(0, 3).map(function (mv) {
             return (mv.fromName || '') + '→' + (mv.toName || '') + '（剩 ' + mv.remain + ' 日）';
-          }).join('；') + '。抵达城下会停下来等你开战或收兵。', bad: true });
+          }).join('；') + '。抵达后自动开战，不必再下令。', bad: true });
         }
       }
       if (Number(needGrain) > 0 && d.treasury && Number(needGrain) > (d.treasury.grain || 0)) {

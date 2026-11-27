@@ -679,22 +679,22 @@ for (const [label, file] of [['源码态', 'layout-original.json'], ['打包态'
       problems: termsReport?.problems?.length }));
 }
 
-/* ---------------- 7.11 推演→确认→战报 真实点击 E2E（本作设计-7，M2） ---------------- */
+/* ---------------- 7.11 推演→出征→自动接战→战报 真实点击 E2E（P67） ---------------- */
 {
   /* 项目教训：曾有 4 个 P0 因为「冒烟全部绕开真实点击」留到很晚。
-     本项锁死 ui-audit 里那条「切城→推演→确认→队列→推进→战报」链必须跑过且零异常。
+     本项锁死 ui-audit 里那条「切城→推演→出征→队列→推进→自动开战→战报」链必须跑过且零异常。
      审计耗时 3~10 分钟，不在 check-release 里现跑——只验 reports/ui-audit-original.json。 */
   const a = readJson(join(REPORTS, 'ui-audit-original.json'), null);
   const byId = new Map((a?.paths || []).map((p) => [p.id, p]));
   const chainOk = (id) => byId.has(id) && byId.get(id).ok !== false
-    && !/attack-refused|no-preview-btn|no-confirm-modal|no-report-row|not-resolved|no-pending-encounter|no-confirm-battle-btn/.test(byId.get(id).note || '');
+    && !/attack-refused|no-preview-btn|no-confirm-modal|no-report-row|not-resolved|no-auto-battle|manual-battle-button-still-present|auto-battle-not-settled/.test(byId.get(id).note || '');
   const chain = [
     'war.preview.click',     // 点了「推演一次」且拿到结果（战斗种子或明确拒绝）
     'war.preview.confirm',   // 出征被交互层决策预览拦截（两层弹窗的第一层）
     'war.confirm.modal',     // 过预览后「出兵确认」confirmBox 真的弹了（第二层）
     'war.queue.marching',    // 行军队列页有在途记录
-    'war.encounter.pending', // ★ P11 门 4：抵达城下先挂「遭遇」，不自动开打
-    'war.encounter.confirm', // ★ P11 门 5：「确认开战」按钮可点且真的结算
+    'war.auto.encounter',    // ★ P67：抵达自动开战，战况页显示折损/阵亡/负伤/伤兵去向
+    'war.auto.settled',      // ★ P67：没有手动开战按钮，结算已成战报
     'war.march.resolved',    // 推进旬到到达日、队列结算（非 attack-refused）
     'war.report.after',      // 战报页真的读出战报行
   ];

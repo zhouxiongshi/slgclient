@@ -58,7 +58,7 @@ test('P62-A 城下会战：同指一城、抵达日相差 ≤2 日；差远了�
   assert.equal(c.at.x, 100, '会战点落在目标城');
   assert.equal(c.aTroops, 1200);
   assert.equal(c.bTroops, 500);
-  assert.match(c.text, /会战/);
+  assert.match(c.text, /相遇/);
   assert.match(c.text, /城下|城下下/, '城名已带「城」时不要写成「邺城城下」');
   assert.equal(clashOfPair(a, far, { cities: CITY, today: 4 }), null);
 });
@@ -113,7 +113,7 @@ test('P62-A 视图：marches 带 clash/soldiers/order，顶层带 clashes', () =
   assert.equal(mine.clash.cityId, Number(target));
   assert.equal(mine.clash.withLabel, '曹军');
   assert.equal(mine.clash.withTroops, 700);
-  assert.match(mine.clash.text, /会战/);
+  assert.match(mine.clash.text, /相遇/);
   assert.ok(Array.isArray(mine.soldiers), '部队编成要下发，沙盘按盾/弓/骑排队列');
   assert.ok(Number(mine.order) >= 0, '队号要下发，兵力牌与「第 N 队」标注都靠它');
   assert.ok(Array.isArray(v.clashes));

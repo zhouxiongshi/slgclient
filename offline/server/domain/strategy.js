@@ -27,8 +27,12 @@ import { defectRate, FAME_DEFECT_CAP } from './captive-reputation.js';
 import { canMarchBetween, marchableNeighbors, marchGraph } from './march.js';
 /* ★ 验收 #22：地图标注分级（哪座城算要城只有这一处口径） */
 import { cityLabelRank, labelPolicy } from './map-lod.js';
-/* ★ P62：城下会战的唯一判定口径，只产出表现数据（道中拦截已按用户要求撤掉） */
+/* ★ P62：城下相遇的唯一判定口径；P67 起相遇即并兵入守、抵城自动开战 */
 import { detectClashes } from './clash.js';
+/* ★ P67：相遇的诸侯军并入守军（唯一口径，避免驰援重复结算） */
+import { consumeEncounterDefense } from './encounter.js';
+/* ★ P67：折损拆阵亡/负伤，伤兵退回周边与出生城（唯一口径） */
+import { splitCasualties, routeWounded } from './casualties.js';
 /* ★ P11 兵役制：城池视图与战略动作只从 levy.js 取兵源数字，禁止另算一份 */
 import { levyView, checkLevy, commitLevy } from './levy.js';
 import { affordableConscript } from './conscript.js';
@@ -1788,6 +1792,9 @@ function dispatchRelief(state, ctx, faction, targetId, incoming, target, tstate,
 /** 驰援到达：城还在本方手里就并兵入守（真实抬高守军折算）；城已易主则扑空折返。 */
 function resolveReliefArrival(state, ctx, mm, map) {
   const st = ensureStrategy(state);
+  /* ★ P67：援军一旦按「入城 / 扑空」任一分支结算过，就不能再被城下相遇重复计入守军。
+     consumeEncounterDefense 只认未 merged 的援军行。 */
+  mm.reliefMerged = true;
   const targetId = Number(mm.to);
   const tstate = st.cities[targetId];
   const target = map.cities.find((c) => c.id === targetId);
@@ -1820,15 +1827,15 @@ function resolveReliefArrival(state, ctx, mm, map) {
 /* ---------------------------------------------------------------- 相遇
  * ★ P62：把「两军撞上了」做成地图上看得见的事，而不是只在面板里写一行字。
  *
- * 判定在 domain/clash.js（零依赖纯函数）：城下会战 = 援军与玩家军同指一城、
+ * 判定在 domain/clash.js（零依赖纯函数）：城下相遇 = 诸侯军与玩家军同指一城、
  * 抵达日相差不超过 CLASH_CITY_WINDOW。
  * 2026-11-25 按用户要求撤掉「道中遭遇」：野外相向而过不算相遇、不开打、不扣兵，
  * 玩家在沙盘上看到两支军各走各的路，仗只在城下打。
- * 这里只负责两件事：新会战记一条军情（按「日 + 双方 id」去重，不会每次请求刷屏）、
+ * 这里只负责两件事：新相遇记一条军情（按「日 + 双方 id」去重，不会每次请求刷屏）、
  * 留最近 20 条供军情页回看。
  *
- * 刻意不扣兵、不改战果：援军抵达后已并进守军折算（defenseFor），来犯军的压力由
- * 围城推进承担；会战如果再扣一次，同一支部队就被算了两次。
+ * 刻意不在这里扣兵：P67 起相遇的敌军由 encounter.js 并进本次攻城战守军，
+ * 抵城自动开战，结算仍只走 settleArmyBattle；在军情层再扣一次就是重复结算。
  */
 export function clashTick(state, cfg, ctx) {
   const st = ensureStrategy(state);
@@ -2082,6 +2089,7 @@ function applyDefeatCost(state, cfg, { army, aLoss, aTotal, day }) {
  */
 function settleArmyBattle(state, cfg, ctx, {
   army, frac, x, y, defenseOverride, seed, defMul = 1, siege = false, siegeWall = null,
+  fromCityId = 0, battleCityId = 0, battleLabel = '',
 }) {
   const before = [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(army.soldiers?.[i]) || 0)));
   const f = Math.min(1, Math.max(0.05, Number(frac) || 1));
@@ -2108,19 +2116,23 @@ function settleArmyBattle(state, cfg, ctx, {
   });
   const remain = result.endAttackSoldiers;
 
-  // 全歼的槽位留一成溃兵归营：单机不该出现「一次败仗把家底清零」的死循环
-  const recovered = [0, 0, 0];
-  if (result.report.result !== 2) {
-    for (let i = 0; i < 3; i += 1) {
-      if (commit[i] > 0 && remain[i] === 0) recovered[i] = Math.max(1, Math.ceil(commit[i] * 0.1));
-    }
-  }
-  army.soldiers = [0, 1, 2].map((i) =>
-    Math.max(0, before[i] - (commit[i] - remain[i]) + recovered[i]));
+  /* ★ P67：折损不再一个黑箱。逐槽拆成阵亡 / 负伤；负伤者退出原队，
+     自行退往战场周边最近己方城与出生城，不再「原队凭空回血」。 */
+  const lossBySlot = [0, 1, 2].map((i) => Math.max(0, commit[i] - remain[i]));
+  const casualties = splitCasualties({ lossBySlot });
+  const homeId = Number(fromCityId) || Number(army.cityId) || Number(ensureStrategy(state).playerCity) || 0;
+  const woundedTo = routeWounded(state, {
+    wounded: casualties.wounded,
+    fromCityId: homeId,
+    battleCityId: Number(battleCityId) || 0,
+    mapCities: strategyMap().cities,
+    playerCityFallback: oathPending(state),
+  });
+  army.soldiers = [0, 1, 2].map((i) => Math.max(0, before[i] - lossBySlot[i]));
 
   const aTotal = commit.reduce((s, n) => s + n, 0);
   const dTotal = (defenseOverride?.soldiers || []).reduce((s, n) => s + n, 0);
-  const aLoss = aTotal - remain.reduce((s, n) => s + n, 0);
+  const aLoss = casualties.totalLoss;
   /* ★ 修「战报写歼敌 −166」：这里原来拿「未折算的守军总数」当分母，
      而真正参战的是 defense2.soldiers（已叠兵种克制 ×0.87/1.15、敌方预案、宿命组合）。
      守军被折算小时，残兵 > 原数 → 歼敌为负。真打与推演必须同一分母，
@@ -2128,10 +2140,17 @@ function settleArmyBattle(state, cfg, ctx, {
   const dStart = (defense2?.soldiers || defenseOverride?.soldiers || [])
     .reduce((s, n) => s + Math.max(0, Number(n) || 0), 0) || dTotal;
   const dLoss = Math.max(0, dStart - (result.endDefenseSoldiers || []).reduce((s, n) => s + n, 0));
-  const place = defenseOverride?.place || `(${x},${y})`;
+  const place = defenseOverride?.place || battleLabel || `(${x},${y})`;
   const win = result.report.result === 2;
-  const rec = recovered.reduce((s, n) => s + n, 0);
+  const rec = casualties.totalWounded;
   const draw = result.report.result === 1;
+  const woundWhere = woundedTo.map((w) => `${w.name} ${w.count}`).join('、');
+  const woundNote = rec > 0
+    ? `折损中阵亡 ${casualties.totalKilled}、负伤 ${rec}${woundWhere ? `，伤兵退往${woundWhere}` : '，伤兵流散未入城'}。`
+    : '';
+  if (rec > 0) {
+    recordEvent(state, `${place}一战，阵亡 ${casualties.totalKilled}、负伤 ${rec}${woundWhere ? `，伤兵退往${woundWhere}` : '（无处收容）'}。`);
+  }
   /* ★ P61-S11：败仗代价与「下一旬怎么恢复」都必须写进同一份战报。 */
   const defeatCost = (!win && !draw)
     ? applyDefeatCost(state, cfg, {
@@ -2139,11 +2158,11 @@ function settleArmyBattle(state, cfg, ctx, {
     })
     : null;
   let summary = win
-    ? `攻陷${place}：我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}，歼敌 ${dLoss}。`
+    ? `攻陷${place}：我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}，歼敌 ${dLoss}。${woundNote}`
     : draw
-      ? `攻${place}未决：双方收兵。我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}，歼敌 ${dLoss}。守军未溃，城池未下。`
+      ? `攻${place}未决：双方收兵。我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}，歼敌 ${dLoss}。守军未溃，城池未下。${woundNote}`
       : `攻${place}不利：我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}，歼敌 ${dLoss}`
-        + (rec > 0 ? `，溃兵 ${rec} 归营。` : '。')
+        + (woundNote ? `。${woundNote}` : '。')
         /* ★ 2026-11-19 玩法修复：战败后必须告诉玩家下一步怎么做。
            旧版只报数字，玩家 800 兵撞 1750 守军全灭后不知道原因。 */
         + (dTotal > aTotal * 1.2 ? `守军兵力占优（${dTotal} 对 ${aTotal}），下次出征前先在城内征兵补足。` : '')
@@ -2175,6 +2194,13 @@ function settleArmyBattle(state, cfg, ctx, {
   }
   result.report.analysis = {
     aTotal, dTotal, aLoss, dLoss, recovered: rec, win,
+    /* ★ P67：玩家可见的伤亡拆分与伤兵去向，战报/战况页只读这里，不在 UI 复算。 */
+    killed: casualties.totalKilled,
+    wounded: rec,
+    killedBySlot: casualties.killed,
+    woundedBySlot: casualties.wounded,
+    woundedTo,
+    auto: false,
     aBegin: commit, aRemain: remain,
     /* ★ 缺 dRemain 会让战报详情显示「守军 1982 → 0」（reduce 空数组恒为 0），
        而实际歼敌只有 72 —— 同一屏里两个数字互相打脸。这里按真实余兵下发。 */
@@ -2239,6 +2265,7 @@ function settleArmyBattle(state, cfg, ctx, {
   return {
     ok: true, result: result.report.result, report: result.report,
     summary, aTotal, dTotal, recovered: rec, win, loot, siege: sw || null,
+    casualties, woundedTo,
   };
 }
 
@@ -2450,9 +2477,8 @@ export function strategyAttack(state, cfg, ctx, { cityId, armyId, frac = 1, from
     departDay, arriveDay: departDay + marchDays,
     armyId: army.id, frac: ratio, grainCost, troops: deploy,
     km: plan.km, speed: plan.speed,
-    /* ★ P11 / 本作设计 门 3→4→5「遭遇 → 推演 → 确认 → 结算」：
-       玩家从出征面板发的兵默认在抵达时先挂在「遭遇」待决，不自动开打。
-       协议层老调用方不传此标志，行为保持不变（测试与 NPC 不受影响）。 */
+    /* ★ P67：出征只要一次确认。抵达时无论有没有玩家盯着都自动开战；
+       这几个字段仅为旧存档/旧协议兼容保留，不再作为结算闸门。 */
     confirmBattle: !!confirmBattle, pendingBattle: false, confirmed: false,
     /* ★ M2-5 张力守恒 #3「确认即锁」：出征瞬间锁定种子——推演多少次都行，
        确认后不再重来；要重来只能撤军（有代价）。结算只读 lockedSeed。 */
@@ -2501,21 +2527,8 @@ export function strategyResolveMarches(state, cfg, ctx) {
     }
     if (mm.resolved) continue;
     if (today < mm.arriveDay) continue;
-    /* ★ P11 门 4「遭遇」：玩家主动开启的确认制出征，抵达先挂起等玩家决策。
-       队伍仍锁在行军中（marchId 不清），此处不结算、不写战报、不改归属。 */
-    if (mm.confirmBattle && !mm.confirmed && mm.kind !== 'transport') {
-      if (!mm.pendingBattle) {
-        mm.pendingBattle = true;
-        mm.pendingSinceDay = today;
-        const nm = map.cities.find((c) => c.id === mm.to)?.name || cityName(mm.to);
-        recordEvent(state, `前锋抵${nm}城下，两军对阵，请主公定夺（推演 / 开战 / 撤军）。`);
-      } else if (today - (mm.pendingSinceDay ?? mm.arriveDay) > 30) {
-        /* ★ M4-13：久候无令则自动班师。旧版 pending 行永不 resolved，
-           army.marchId 一直不清，玩家若没发现「③ 遭遇」页签，这支兵就永久锁死。 */
-        strategyRetreatBattle(state, cfg, ctx, { marchId: mm.id });
-      }
-      continue;
-    }
+    /* ★ P67：抵达即战。旧存档里残留的 pendingBattle 不再当作闸门，
+       本轮直接结算；玩家不需要再点第二次「开战」。 */
     // ★ P3 运输队：抵达即粮入城库，不走战斗
     if (mm.kind === 'transport') {
       mm.resolved = true;
@@ -2560,6 +2573,14 @@ export function strategyResolveMarches(state, cfg, ctx) {
     const variant = counterVariantFor(state, mm.to, seedSlotDay(mm.arriveDay));
     const defenseOverride = defenseFor(cfg, mm.to, target, tstate, level, state);
     defenseOverride.terrain = target.terrain || '';
+    /* ★ P67：相遇即战。城下相遇的诸侯军并入这一仗的守军；
+       已经先入城的援军带 reliefMerged 标记，由 defenseFor 读城池驻军算过，不再叠加。 */
+    const encounter = consumeEncounterDefense(state, mm);
+    if (encounter.met.length) {
+      defenseOverride.soldiers = defenseOverride.soldiers.map((n, i) => Math.max(0, Number(n) || 0) + encounter.troops[i]);
+      const names = encounter.met.map((m) => `${m.name}${m.troops}`).join('、');
+      recordEvent(state, `${names}与我军在${target.name}城下相遇，已并入守军，两军自动开战。`);
+    }
     /* ★ 2026-11-17 城防：把该城当前的城墙耐久带进战斗——攻方攻城值（destroy）
        在这一战里把它打低；城墙越残，守军防御加成越少，下一波越好打。 */
     const wall = cityWall(state, mm.to);
@@ -2567,11 +2588,19 @@ export function strategyResolveMarches(state, cfg, ctx) {
       army, frac: mm.frac, x: 8000 + mm.to, y: 100 + level, defenseOverride, defMul: variant.defMul,
       siege: true,
       siegeWall: wall,
+      fromCityId: mm.from, battleCityId: mm.to, battleLabel: target.name,
       /* ★ 验收 #10：种子按「到达日」算，战前推演能算出一模一样的种子。
-         ★ 张力守恒 #3：优先用出征时锁定的 lockedSeed（确认即锁）。 */
+         ★ 张力守恒 #3：优先用出征时锁定的 lockedSeed（出征即锁）。 */
       seed: mm.lockedSeed ?? battleSeedFor(army.id, 8000 + mm.to, 100 + level, seedSlotDay(mm.arriveDay)),
     });
     if (!fought.ok) continue;
+    mm.reportId = fought.report.id;
+    mm.battleResult = fought.result;
+    mm.autoBattle = true;
+    mm.pendingBattle = false;
+    mm.confirmed = true;
+    fought.report.analysis.auto = true;
+    fought.report.analysis.encounter = encounter.met;
     if (fought.siege) applySiegeResult(state, mm.to, fought.siege);
     const win = fought.result === 2;
     if (win) {
@@ -2615,7 +2644,7 @@ export function strategyResolveMarches(state, cfg, ctx) {
         time: Date.now(),
       });
     } else if (fought.result === 0) {
-      recordEvent(state, `攻${target.name}不利，败退（折损约 ${fought.aTotal - (fought.recovered || 0)}）。`);
+      recordEvent(state, `攻${target.name}不利，败退（折损 ${fought.report?.analysis?.aLoss ?? fought.aTotal}，负伤 ${fought.recovered || 0} 已退往周边城与出生城）。`);
     } else {
       /* ★ P47#8 配套：相持/平局也要交代折损与歼敌。
          旧文案只有「相持不下，暂退」，玩家与战报链都看不到这一战是否真打过；
@@ -2633,8 +2662,11 @@ export function strategyResolveMarches(state, cfg, ctx) {
     }
     results.push({
       cityId: mm.to, city: target.name, result: fought.result,
-      reportId: fought.report.id, summary: fought.summary,
+      reportId: fought.report.id, summary: fought.summary, auto: true,
       aTotal: fought.aTotal, dTotal: fought.dTotal, recovered: fought.recovered,
+      wounded: fought.report?.analysis?.wounded || 0,
+      killed: fought.report?.analysis?.killed || 0,
+      woundedTo: fought.woundedTo || [],
     });
   }
   // 已结算且过期 3 日的行军记录清掉（客户端留了渲染窗口）
@@ -2643,31 +2675,44 @@ export function strategyResolveMarches(state, cfg, ctx) {
 }
 
 /* ---------------------------------------------------------------------------
- * ★ P11 / 本作设计 门 4→5→6：遭遇待决 / 确认开战 / 临阵撤军 / 新城消化
+ * ★ P67：出征一次确认，抵达/相遇自动开战。下面两个旧入口只为老存档与老协议兼容：
+ *   - battleConfirm：旧「确认开战」按钮再点到，直接回该战役的战报；
+ *   - battleRetreat：行军途中仍可撤回；抵达当日不再接受（仗已经自动打完）。
  * ------------------------------------------------------------------------- */
 
-/** 门 5：玩家在「遭遇」页点确认，才真正走结算（与自动结算同一条 resolveMarches）。 */
+/** 老协议兼容：不再触发第二场战斗，只回已经自动结算的战报。 */
 export function strategyConfirmBattle(state, cfg, ctx, { marchId }) {
   const st = ensureStrategy(state);
-  const mm = (st.marches || []).find((x) => x.id === Number(marchId)
-    && x.side === 'player' && x.pendingBattle && !x.resolved);
+  const mm = (st.marches || []).find((x) => x.id === Number(marchId) && x.side === 'player');
   if (!mm) return { ok: false, reason: 'no_pending_battle' };
-  mm.confirmed = true;
-  mm.pendingBattle = false;
-  const results = strategyResolveMarches(state, cfg, ctx);
-  const r = results.find((x) => Number(x.cityId) === Number(mm.to)) || null;
+  /* 极老存档：抵达时确实挂了 pendingBattle，但还没结算过，这里补一次自动结算。 */
+  if (mm.pendingBattle && !mm.resolved && !mm.reportId) {
+    const results = strategyResolveMarches(state, cfg, ctx);
+    const r = results.find((x) => Number(x.cityId) === Number(mm.to)) || null;
+    return {
+      ok: true, marchId: mm.id, cityId: mm.to, city: r?.city || cityName(mm.to),
+      result: r?.result ?? null, reportId: r?.reportId ?? null, summary: r?.summary || '',
+    };
+  }
+  const report = (state.warReports || []).find((r) => r.id === mm.reportId) || null;
   return {
-    ok: true, marchId: mm.id, cityId: mm.to, city: r?.city || cityName(mm.to),
-    result: r?.result ?? null, reportId: r?.reportId ?? null, summary: r?.summary || '',
+    ok: true, alreadyResolved: true, marchId: mm.id, cityId: mm.to,
+    city: cityName(mm.to), result: mm.battleResult ?? report?.result ?? null,
+    reportId: mm.reportId || report?.id || null,
+    summary: report?.summary || '',
   };
 }
 
-/** 门 4 的另一条出路：不打了，全军退回出发城，行军粮退一半。 */
+/** 老协议兼容：途中撤回走统一撤回口；抵达当日一律不再接受。 */
 export function strategyRetreatBattle(state, cfg, ctx, { marchId }) {
   const st = ensureStrategy(state);
-  const mm = (st.marches || []).find((x) => x.id === Number(marchId)
-    && x.side === 'player' && x.pendingBattle && !x.resolved);
+  const mm = (st.marches || []).find((x) => x.id === Number(marchId) && x.side === 'player' && !x.resolved);
   if (!mm) return { ok: false, reason: 'no_pending_battle' };
+  if (!mm.pendingBattle) {
+    const recalled = strategyRecallMarch(state, cfg, ctx, { marchId });
+    if (!recalled.ok) return recalled;
+    return { ok: true, refund: recalled.refund, cityId: mm.to };
+  }
   mm.resolved = true;
   mm.recalled = true;
   mm.pendingBattle = false;
@@ -2791,6 +2836,8 @@ export function strategyReorderMarch(state, ctx, { marchId, dir } = {}) {
   };
   const fought = settleArmyBattle(state, cfg, ctx, {
     army, frac: 1, x: g.x, y: g.y, defenseOverride,
+    fromCityId: Number(army.cityId) || ensureStrategy(state).playerCity || 0,
+    battleCityId: 0, battleLabel: g.name,
   });
   if (!fought.ok) return { ok: false, reason: fought.reason };
   if (fought.result === 2) {
@@ -3142,12 +3189,13 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
   const road = canMarchBetween(from, to);
   if (!road.ok) return { ok: false, reason: road.reason || 'no_road' };
   let army = pickArmy(state, armyId, from);
-  /* 抵达待决的队伍 marchId 仍锁着，pickArmy 会当成「不在城」。
-     推演必须用城下这支，不能再报「没有可用队伍」。 */
+  /* 旧存档里抵达待决的队伍 marchId 仍锁着，pickArmy 会当成「不在城」。
+     P67 起正常流程不再有待决态，但老档推演仍要能找到这支队伍。 */
   let lockedMarch = null;
   if (!army && armyId) {
     lockedMarch = (st.marches || []).find((mm) => mm.side === 'player' && !mm.resolved
-      && mm.pendingBattle && Number(mm.armyId) === Number(armyId) && Number(mm.to) === to) || null;
+      && (mm.pendingBattle || mm.lockedSeed)
+      && Number(mm.armyId) === Number(armyId) && Number(mm.to) === to) || null;
     if (lockedMarch) {
       army = (state.armys || []).find((a) => a.id === Number(armyId)) || null;
     } else {
@@ -3248,11 +3296,13 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
     intelSpread > 0
       ? `情报仅 ±${Math.round(intelSpread * 100)}%：先侦察可收窄守军区间。`
       : '情报精确：守军按已知量推演。',
-    '同一目标本月战局已定，换出发日不会再换结果；要重来须先撤军。',
+    '同一目标本月战局已定，换出发日不会再换结果；要在途中改主意只能撤军。',
+    '抵达或城下相遇都会自动开战，不用再点第二下；折损中负伤者会退往周边城与出生城。',
   ];
   const remain = result.endAttackSoldiers || [0, 0, 0];
   const dRemain = result.endDefenseSoldiers || [0, 0, 0];
-  const aLoss = Math.max(0, aTotal - remain.reduce((s2, n) => s2 + n, 0));
+  const casualties = splitCasualties({ lossBySlot: commit.map((v, i) => Math.max(0, v - (remain[i] || 0))) });
+  const aLoss = casualties.totalLoss;
   /* ★ 同一处根因的第二次修正：主案的歼敌基线也必须是「实际参战守军」。
      这里曾经写 dTotal（raw 守军），而真正上场的是 mainDef.soldiers
      （已叠兵种克制 / 敌方变招 / 宿命组合）。基线偏大就会出现
@@ -3295,6 +3345,9 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
        显示 1000、实扣 20000（低估 20 倍）。 */
     grainCost: marchGrainCost(state, aTotal, days, target.terrain),
     commit, deploy: aTotal, aTotal, dTotal, dStart: dStartMain, aLoss, dLoss, remain, dRemain: dRemain.slice(),
+    /* ★ P67：推演也按同一口径告诉玩家「折损里多少阵亡、多少负伤退走」。 */
+    killed: casualties.totalKilled, wounded: casualties.totalWounded,
+    killedBySlot: casualties.killed, woundedBySlot: casualties.wounded,
     counter, atkArms, defArms, counterNote,
     /* ★ M3-4 宿命组合：预览面板显示同队加成（与正式结算同一函数） */
     fateMul: fate.mul, fateNotes: fate.notes,
@@ -3322,10 +3375,10 @@ export function previewAssault(state, cfg, { cityId, fromCityId, armyId, frac } 
         ? { hpAfter: result.siege.hpAfter, damage: result.siege.damage, breached: result.siege.breached }
         : null,
     } : null,
-    lockNote: '确认出征即锁定战局（种子已锁）；推演不限次数，确认后要重来只能撤军（有代价）。',
+    lockNote: '出征即锁定战局（种子已锁）；抵达或相遇自动开战，不必再下令。要在途中改主意只能撤军（有代价）。',
     summary: win
-      ? `预计攻陷${target.name}：我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}，歼敌 ${dLoss}。`
-      : `预计攻${target.name}不利：我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}，歼敌 ${dLoss}。`,
+      ? `预计攻陷${target.name}：我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}（阵亡 ${casualties.totalKilled}、负伤 ${casualties.totalWounded}），歼敌 ${dLoss}。`
+      : `预计攻${target.name}不利：我军 ${aTotal} 对守军 ${dTotal}，折损 ${aLoss}（阵亡 ${casualties.totalKilled}、负伤 ${casualties.totalWounded}），歼敌 ${dLoss}。`,
     attribution: attribution + `（守军 ${hold > 0 ? level : 1} 级编成；抵达第 ${arriveDay} 日）`,
     caveat: '预演基于此刻的守军与队伍；期间敌方增援、你的队伍被改派，结算会随之改变。'
       + (intelTier < 2 ? ' 守军数值为情报估算，推演不产生情报。' : ''),
@@ -4077,9 +4130,9 @@ export function strategyViewState(state, cfg = null) {
       rate: Math.round(captiveRecruitRate(state, c) * 100),
       rateParts: captiveRateParts(state, c),
     })),
-    /* ★ P11 / 本作设计 门 4/6：抵达待决的战役、占城后的消化待办 */
+    /* ★ P67：抵达/相遇已自动开战；pendingBattles 只为极老存档保留视图，正常流程恒空。 */
     pendingBattles: (st.marches || [])
-      .filter((mm) => mm.side === 'player' && mm.pendingBattle && !mm.resolved)
+      .filter((mm) => mm.side === 'player' && mm.pendingBattle && !mm.resolved && !mm.reportId)
       .map((mm) => ({
         marchId: mm.id, from: mm.from, to: mm.to, armyId: mm.armyId, frac: mm.frac ?? 1,
         fromName: map.cities.find((x) => x.id === Number(mm.from))?.name || cityName(mm.from),
@@ -4088,6 +4141,23 @@ export function strategyViewState(state, cfg = null) {
         enemyTroops: Number(st.cities[mm.to]?.troops) || 0,
         grainCost: Number(mm.grainCost) || 0, lockedSeed: mm.lockedSeed || 0,
       })),
+    /* ★ P67：自动开战的战况。UI 只读这份投影，不在界面层复算伤亡/伤兵去向。 */
+    autoBattles: (state.warReports || [])
+      .filter((r) => r?.analysis?.auto)
+      .slice(0, 6)
+      .map((r) => ({
+        reportId: r.id, result: r.result, summary: r.summary || '',
+        day: r.ctime ? Math.floor(Number(state.clock?.day) || 1) : 0,
+        aTotal: Number(r.analysis?.aTotal) || 0,
+        dTotal: Number(r.analysis?.dTotal) || 0,
+        aLoss: Number(r.analysis?.aLoss) || 0,
+        dLoss: Number(r.analysis?.dLoss) || 0,
+        killed: Number(r.analysis?.killed) || 0,
+        wounded: Number(r.analysis?.wounded) || 0,
+        woundedTo: r.analysis?.woundedTo || [],
+        encounter: r.analysis?.encounter || [],
+      })),
+    lastAutoBattleId: ((state.warReports || []).find((r) => r?.analysis?.auto)?.id) || 0,
     digest: (st.digest || []).slice(-8),
     // 可出征的城（已按行军校验过滤：关隘封锁即不可走；己方城不再算目标）
     marchable: marchableFrom(st.playerCity || 0, state),
@@ -4115,7 +4185,7 @@ export function strategyViewState(state, cfg = null) {
           kind: c.kind, day: c.day, at: c.at, cityId: c.cityId,
           withLabel: foeLabel,
           withTroops: mine ? c.bTroops : c.aTroops,
-          text: `${foeLabel}亦抵${/城$/.test(toName) ? `${toName}下` : `${toName}城下`}，两军会战`,
+          text: `${foeLabel}亦抵${/城$/.test(toName) ? `${toName}下` : `${toName}城下`}，两军相遇，抵城即战`,
         };
       };
       return (st.marches || []).map((mm) => {
@@ -4134,8 +4204,9 @@ export function strategyViewState(state, cfg = null) {
           : (Number(mm.troops) || 0),
         factionName: mm.factionName || '',
         intel: mm.intel || '',
-        /* ★ P14 UX：自动推旬需要知道「前锋抵城待主公定夺」 */
-        pendingBattle: !!(mm.pendingBattle && !mm.confirmed && mm.side === 'player'),
+        /* ★ P67：抵达即战；这个字段只对极老存档的遗留待决有意义。 */
+        pendingBattle: !!(mm.pendingBattle && !mm.confirmed && !mm.reportId && mm.side === 'player'),
+        autoBattle: !!mm.autoBattle,
         /* ★ M2 粮道 L2：军级补给状态随行军行下发（通畅/断绝/断绝天数），
            客户端只渲染，不再自己猜补给好不好 */
         supplyOk: mm.supplyOk !== false,

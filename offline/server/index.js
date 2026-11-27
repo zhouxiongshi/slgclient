@@ -765,11 +765,11 @@ export async function startOfflineServer(options = {}) {
             armyId: Number(body.armyId) || 0,
             frac: Number.isFinite(fracRaw) && fracRaw > 0 && fracRaw <= 1 ? fracRaw : 1,
             fromCityId: Number(body.fromCityId) || 0,
-            /* ★ P11：玩家从出征面板发的兵，抵达先进「遭遇」待决（本作设计 门 4） */
-            confirmBattle: body.confirmBattle !== false,
+            /* ★ P67：出征一次确认即可；抵达或城下相遇自动开战，不再挂待决。 */
+            confirmBattle: body.confirmBattle === true,
           });
         } else if (act === 'recall') result = strategyRecallMarch(state, cfg, ctx, { marchId: Number(body.marchId) });
-        /* ★ P11 出征六门闭环：遭遇 → 推演 → 确认开战 / 临阵撤军 → 消化新城 */
+        /* ★ P67：出征 → 行军 → 相遇/抵城自动开战 → 战报 → 消化新城；旧端点只兼容老存档 */
         else if (act === 'battleConfirm') result = strategyConfirmBattle(state, cfg, ctx, { marchId: Number(body.marchId) });
         else if (act === 'battleRetreat') result = strategyRetreatBattle(state, cfg, ctx, { marchId: Number(body.marchId) });
         else if (act === 'digest') result = strategyDigestDone(state, { cityId: Number(body.cityId) });

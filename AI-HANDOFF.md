@@ -6,10 +6,10 @@
 ## 当前基线
 
 - 分支：`offline-standalone`
-- 最新提交：`418eb1a`（多 AI 协作交接板）；上一功能提交 `2697471`（P65 研习卡住修复 + 月度行军回放测试同步）
-- 核对时间：2026-11-27 11:29（本轮开工）；收工 2026-11-27 14:29
-- 核对结果：工作区干净，本地与 `origin/offline-standalone` 同步（0 ahead / 0 behind）
-- 上次验收：单测 879/879、内核 42/42、双态 UI 审计 77×2、发布闸 95/95 `ready_for_steam_basics=true`
+- 最新提交：`cdfdfe0`（P66 研习完成不阻塞 + 全局灰按钮悬浮提示）；上一提交 `418eb1a`（多 AI 协作交接板）
+- 核对时间：2026-11-27 15:36（P67 收工验收）
+- 核对结果：P67 改动已全量验收，等待提交与推送
+- 上次验收：单测 884/884、内核 42/42、双态 smoke 33×2、双态 UI 审计 77×2、双态鼠标 46×2、双态布局硬问题 0、双态性能全绿（PF-01a 548/536ms）、pack `byteIdentical=true`、术语覆盖 100%、发布闸 94/95（仅差工作区未提交）
 
 ## 协作规则（硬性，所有会话遵守）
 
@@ -28,11 +28,19 @@
 |---|---|---|---|---|
 | 2026-11-27 11:20 | WorkBuddy-A | `2697471` | P65 研习进度卡住修复 + 接手合并另一个 AI 的月度行军回放改动 | 已推送 |
 | 2026-11-27 11:20 | — | — | 建立本交接板与协作纪律 | 已推送 `418eb1a` |
-| 2026-11-27 11:29 | WorkBuddy-A | P66 | 研习完成不阻塞（装配引导+换战法+卷尽说明）+ 全局灰按钮悬浮提示 | 本轮，待提交 |
+| 2026-11-27 14:29 | WorkBuddy-A | `cdfdfe0` | P66 研习完成不阻塞（装配引导+换战法+卷尽说明）+ 全局灰按钮悬浮提示 | 已推送 |
+| 2026-11-27 14:46 | WorkBuddy-A | P67 | 出征界面重构：相遇/抵城自动开战 + 战伤兵种回撤周边/出生城 | 本轮，待提交 |
 
 ### 进行中 / 待决
 
-_（无。上一轮认领的「研习完成后流程阻塞 + 全局禁用按钮悬浮提示」已完成并通过全量验收，认领解除。）_
+P67 已完成、待提交；本会话实际改动（另一会话收工后请勿覆盖）：
+- 新增：`offline/server/domain/casualties.js`、`offline/server/domain/encounter.js`、`offline/tests/p67-auto-battle-and-casualties.test.js`
+- 领域/协议：`offline/server/domain/strategy.js`、`clash.js`、`interaction.js`、`offline/server/handlers.js`、`index.js`
+- 注入 UI：`offline/server/skills.js`、`interaction-ui.js`；配置：`offline/conf/interaction/terms.json`
+- 取证：`offline/electron/{ui-audit,mouse-playtest,ui-probe}.cjs`、`offline/tools/check-release.js`
+- 测试：`offline/tests/{m4-13-distance-garrison-captives,p11-levy-and-gates,p62-march-clash,p63-ai-prey-and-research,playtest-fixes}.test.js`
+- 文档：`offline/docs/{FIELD-CONTRACT,SDD-软件详细设计说明书,GDD-顶配详细设计,PRD-软件需求规格说明书,P8-出征面板与试玩修复,M4-13-距离做实与守将俘虏出征}.md`
+- `AI-HANDOFF.md`
 
 ## 热点文件（多会话最易冲突）
 

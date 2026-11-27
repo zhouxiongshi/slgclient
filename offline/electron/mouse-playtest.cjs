@@ -523,14 +523,14 @@ async function runMousePlaytest(win, server, app) {
     rec('war.marching', march.marches > 0, '行军队列出现（toast: ' + String(toastTxt).trim().slice(0, 80) + '）', march);
     await shot('03-war-marching');
 
-    /* ---------- 6. 推演回合（真鼠标点沙盘按钮）直到抵达，验证「遭遇」门 ---------- */
+    /* ---------- 6. 推演回合（真鼠标点沙盘按钮）直到抵达，验证「自动开战」门 ---------- */
     await js(`(function(){ var w=document.getElementById('slgWarWin'); if(w) w.remove(); return true; })()`);
     await sleep(400);
-    let pendingCount = 0;
+    let autoCount = 0;
     for (let i = 0; i < 8; i++) {
       const p = await js(`(async function(){ var r=await fetch('/__slg/strategy/state',{cache:'no-store'}); var s=await r.json();
-        return (s.pendingBattles||[]).length; })()`);
-      if (p > 0) { pendingCount = p; break; }
+        return (s.autoBattles||[]).length; })()`);
+      if (p > 0) { autoCount = p; break; }
       await clearBlockers(`turn.clear${i}`);
       /* 城内页是整屏的，会把沙盘的「推演一月」盖住；城里也有同源的「推演一旬」，
          所以按当前所处界面选入口——两个入口本来就是同一实现。 */
@@ -539,28 +539,24 @@ async function runMousePlaytest(win, server, app) {
       await clickThrough(tickSel, `turn.tick${i}`, '真鼠标点「推演」' + (inCity ? '（城内页）' : '（沙盘）'));
       await sleep(850);
     }
-    if (!pendingCount) {
-      pendingCount = await js(`(async function(){ var r=await fetch('/__slg/strategy/state',{cache:'no-store'}); var s=await r.json();
-        return (s.pendingBattles||[]).length; })()`);
+    if (!autoCount) {
+      autoCount = await js(`(async function(){ var r=await fetch('/__slg/strategy/state',{cache:'no-store'}); var s=await r.json();
+        return (s.autoBattles||[]).length; })()`);
     }
-    rec('war.encounter', pendingCount > 0, '抵城进入「遭遇」待决，不自动开打', { pendingCount });
-    if (pendingCount > 0) {
+    rec('war.auto.battle', autoCount > 0, '抵达自动开战，不等待玩家点开战', { autoCount });
+    if (autoCount > 0) {
       await js(`(function(){ if(window.__slgWarWindow) window.__slgWarWindow({tab:'encounter'}); return true; })()`);
-      await wait(`!!document.getElementById('slgWarWin')`, 8000, 'war.encounterPanel', '打开遭遇页');
-      const enc = await js(`(function(){ var b=document.querySelector('#slgWarWin .body'); return b?b.textContent.slice(0,260):''; })()`);
-      rec('war.encounter.buttons', /确认开战/.test(enc) && /临阵收兵/.test(enc), '遭遇页含确认/撤军两条出路');
-      await js(`(function(){ var bs=Array.prototype.slice.call(document.querySelectorAll('#slgWarWin button'));
-        var b=bs.find(function(x){ return /确认开战/.test(x.textContent||''); });
-        if(b) b.setAttribute('data-mouse-target','battle-confirm'); return !!b; })()`);
-      /* 推演回合期间可能弹「必答」事件卡，会盖住遭遇页的操作条。
-         这属于设计内的必答拦截，玩家也是先处理它再点开战——测试同样照做。 */
-      await clearBlockers('enc.clear');
-      await clickThrough('#slgWarWin button[data-mouse-target="battle-confirm"]', 'war.battleConfirm', '真鼠标确认开战');
-      await sleep(1200);
+      await wait(`!!document.getElementById('slgWarWin')`, 8000, 'war.encounterPanel', '打开战况页');
+      const enc = await js(`(function(){ var b=document.querySelector('#slgWarWin .body'); return b?b.textContent.slice(0,320):''; })()`);
+      const manual = await js(`(function(){ return Array.prototype.slice.call(document.querySelectorAll('#slgWarWin button'))
+        .some(function(b){ return /确认开战|临阵收兵/.test(b.textContent||''); }); })()`);
+      rec('war.auto.panel', /自动接战/.test(enc) && /负伤/.test(enc) && /伤兵去向/.test(enc) && !manual,
+        '战况页显示自动接战与伤兵去向，且没有手动开战按钮', { enc: String(enc).slice(0, 160), manual });
       const done = await js(`(async function(){ var r=await fetch('/__slg/strategy/state',{cache:'no-store'}); var s=await r.json();
-        return { pending:(s.pendingBattles||[]).length, digest:(s.digest||[]).length }; })()`);
+        return { pending:(s.pendingBattles||[]).length, digest:(s.digest||[]).length,
+                 auto:(s.autoBattles||[]).length, left:(s.marches||[]).filter(function(m){return m.side==='player'&&!m.resolved;}).length }; })()`);
       report.afterBattle = done;
-      rec('war.settled', done.pending === 0, '确认后战报结算，遭遇待决清空', done);
+      rec('war.settled', done.pending === 0 && done.left === 0, '自动接战已结算，队列清空', done);
     }
     await shot('04-final');
 

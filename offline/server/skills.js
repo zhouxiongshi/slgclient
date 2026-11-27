@@ -1801,6 +1801,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
   var rafId = null;      // ★ P2：行军动画帧句柄
   var lastRafAt = 0;
   var lastPendingCount = -1;   // -1 = 首次拉取，不把「本来就有待决」误报成刚抵达
+  var lastAutoReportId = 0;    // ★ P67：自动开战的战报 id，用来只提示新打完的那一仗
   /* ★ M4-13：沙盘 dock 常驻角标，出征窗没开也能看见「有仗要打」。 */
   function markWarBadge(n) {
     var b = document.getElementById('slgBtnWar');
@@ -1905,22 +1906,32 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       lastState = s; restorePick(); draw(s);
       failstateBanner(s);
       if (window.__slgHudTick) window.__slgHudTick();
-      /* ★ M4-13：抵达挂起后主动引导。旧版 UI 完全不监听 pendingBattles，
-         队伍卡在城下、角标不亮、没有提示，玩家只能自己发现「③ 遭遇」页签；
-         两套 E2E 甚至靠 JS 注入直接跳页，把这个断点掩盖了。 */
+      /* ★ P67：抵达/相遇自动开战。战报推送已自动打开征战画面；这里只补一条
+         轻提示并把出征窗切到「③ 战况」，绝不再要求玩家点第二下开战。 */
+      var autoId = Number(s.lastAutoBattleId) || 0;
+      if (!lastAutoReportId) lastAutoReportId = autoId;
+      else if (autoId && autoId !== lastAutoReportId) {
+        var a0 = (s.autoBattles || [])[0];
+        if (document.getElementById('slgWarWin')) {
+          war.tab = 'encounter';
+          renderWar(s);
+        }
+        if (window.__slgToast) {
+          window.__slgToast('我军已自动开战，战报已成；折损 '
+            + ((a0 && a0.aLoss) || 0) + '（负伤 ' + ((a0 && a0.wounded) || 0) + ' 退往各城）', true);
+        }
+      }
+      lastAutoReportId = autoId;
+      /* 极老存档里还挂着待决的队伍：直接提示它已按新口径自动结算，不再等玩家下令。 */
       if (prev >= 0 && cnt > prev) {
         var p0 = (s.pendingBattles || [])[0];
-        /* ★ P63 修：抵城时把出征窗切到「③ 遭遇」并保留窗口，玩家立刻能推演/开战/收兵；
-           沙盘军标弹窗（showMarchPopup）是并行的快捷入口，不靠关窗来「自动进征战画面」。
-           旧实现在这里 __slgWarClose() 把整窗关掉，既丢了行军队列上下文，
-           也让出征页的锚点检查拿不到窗口。 */
         if (document.getElementById('slgWarWin')) {
           war.tab = 'encounter';
           renderWar(s);
         }
         if (window.__slgToast) {
           window.__slgToast('前锋已抵 ' + ((p0 && (p0.toName || p0.to)) || '目标城')
-            + ' 城下，待主公定夺：可在「③ 遭遇」推演、确认开战或收兵', true);
+            + ' 城下，旧存档中的待决战已按新口径自动结算', true);
         }
       }
       markWarBadge(cnt);
@@ -2052,9 +2063,10 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     box.style.cssText = 'position:fixed;right:18px;bottom:88px;z-index:100640;width:320px;'
       + 'background:#1c1812;color:#f3ead4;border:1px solid #ba9a52;border-radius:8px;'
       + 'padding:12px 14px;font:13px "Microsoft YaHei",sans-serif;box-shadow:0 8px 28px rgba(0,0,0,.45);';
-    var title = pending
-      ? ('已抵 ' + (pending.toName || '') + ' 城下')
-      : ((mm && mm.pendingBattle) ? ('已抵 ' + (mm.toName || '')) : ((mm && mm.toName) ? ('前往 ' + mm.toName) : '行军'));
+    var marching = !!(mm && !mm.resolved && !mm.pendingBattle && !mm.autoBattle);
+    var title = pending || (mm && mm.pendingBattle)
+      ? ('已抵 ' + ((pending && pending.toName) || (mm && mm.toName) || '') + ' 城下')
+      : (mm && mm.autoBattle ? ('已开战 · ' + (mm.toName || '')) : ((mm && mm.toName) ? ('前往 ' + mm.toName) : '行军'));
     var troops = pending ? pending.troops : (mm && mm.troops);
     var enemy = pending ? pending.enemyTroops : 0;
     var grain = pending ? pending.grainCost : (mm && mm.grainCost);
@@ -2064,10 +2076,13 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       + (grain ? (' · 已耗粮 ' + grain) : '')
       + '</div>';
     if (pending || (mm && mm.pendingBattle)) {
-      lines += '<div style="color:#e0c56a;margin-top:4px">日子已停。在这里推演、开战或收兵，沙盘才继续走。关掉这个框不是撤军。</div>';
+      lines += '<div style="color:#e0c56a;margin-top:4px">旧存档遗留的待决战已按新口径自动结算，可在「③ 战况」查看战报。</div>';
     }
-    if (mm && !pending && !mm.pendingBattle) {
-      lines += '<div style="color:#9c9382;margin-top:4px">剩余约 ' + (mm.remainDays || 0) + ' 日</div>';
+    if (mm && mm.autoBattle) {
+      lines += '<div style="color:#e0c56a;margin-top:4px">抵达即战，战报已生成；伤兵已退往周边城与出生城。</div>';
+    }
+    if (marching) {
+      lines += '<div style="color:#9c9382;margin-top:4px">剩余约 ' + (mm.remainDays || 0) + ' 日；抵达自动开战，途中若与敌军相遇也会自动开战。</div>';
     }
     box.innerHTML = lines;
     function act(label, fn) {
@@ -2082,38 +2097,10 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     var toId = pending ? pending.to : (mm && mm.to);
     var fromId = pending ? pending.from : (mm && mm.from);
     var frac = pending ? (pending.frac || 1) : ((mm && mm.frac) || 1);
-    if (pending || (mm && mm.pendingBattle)) {
-      act('推演', function () {
-        fetch('/__slg/strategy/action', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'preview', cityId: toId, fromCityId: fromId, armyId: armyId, frac: frac,
-          }),
-        }).then(function (r) { return r.json(); }).then(function (rs) {
-          var txt = (rs && (rs.attribution || rs.text || rs.reason)) || '推演没有返回结果';
-          if (window.__slgToast) window.__slgToast(String(txt).slice(0, 80), !!(rs && rs.ok !== false && !rs.reason));
-        }).catch(function () {
-          if (window.__slgToast) window.__slgToast('推演失败：本机无响应', false);
-        });
-      });
-      act('开战', function () {
-        fetch('/__slg/strategy/action', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'battleConfirm', marchId: marchId }),
-        }).then(function (r) { return r.json(); }).then(function (rs) {
-          box.remove();
-          if (window.__slgToast) window.__slgToast(rs && rs.ok === false ? '开战未成' : '已开战', !(rs && rs.ok === false));
-          if (window.__slgStrategyShow) window.__slgStrategyShow();
-        });
-      });
-      act('收兵', function () {
-        fetch('/__slg/strategy/action', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'battleRetreat', marchId: marchId }),
-        }).then(function (r) { return r.json(); }).then(function () {
-          box.remove(); pendingCardKey = '';
-          if (window.__slgStrategyShow) window.__slgStrategyShow();
-        });
+    if (pending || (mm && mm.pendingBattle) || (mm && mm.autoBattle)) {
+      act('看战况', function () {
+        box.remove();
+        if (window.__slgWarWindow) window.__slgWarWindow({ tab: 'encounter' });
       });
     } else if (mm && mm.side === 'player' && !mm.resolved) {
       act('撤回', function () {
@@ -3173,9 +3160,8 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
             var mk = 'hit:' + (h.march.id || 0) + ':' + gh.idx;
             if (monthPlay.seen[mk]) return;
             monthPlay.seen[mk] = 1;
-            monthPlay.held = true;
-            showMarchPopup(h.march, (s.pendingBattles || [])[0] || null);
-            if (window.__slgToast) window.__slgToast((h.march.factionName || '我军') + ' 与 ' + gh.who + ' 遭遇，请开战或收兵', true);
+            /* ★ P67：回放里相遇只提示战斗已自动触发，不再停下等玩家下令。 */
+            if (window.__slgToast) window.__slgToast((h.march.factionName || '我军') + ' 与 ' + gh.who + ' 相遇，抵城即战', true);
           });
         });
         for (var gi = 0; gi < ghosts.length; gi++) {
@@ -4732,12 +4718,9 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       if (!war.from || !warOwnCities(s).some(function (c) { return c.id === war.from; })) {
         war.from = s.playerCity;
       }
-      /* ★ M4-13：未显式指定页签时按待办智能落页。过去所有入口硬编码
-         tab:'go'，队伍已抵城下待决，玩家从沙盘/六府/城内页任一入口进来
-         都被拉回「① 集结」，必须自己再找「③ 遭遇」——这是流程断裂的主因。
-         有遭遇先遭遇、有新城先消化，否则回集结。 */
+      /* ★ P67：未显式指定页签时优先看刚打完的战况；有新城再消化，否则回集结。 */
       if (!opts.tab) {
-        war.tab = (s.pendingBattles || []).length ? 'encounter'
+        war.tab = ((s.pendingBattles || []).length || (s.autoBattles || []).length) ? 'encounter'
           : ((s.digest || []).length ? 'digest' : 'go');
       }
       renderWar(s);
@@ -4767,15 +4750,13 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     var queue = (s.marches || []).filter(function (m) { return m.side === 'player' && !m.resolved; });
     var pending = s.pendingBattles || [];
     var digest = s.digest || [];
-    /* ★ P11 / 本作设计 六道门：动机 → 集结 → 行军 → 遭遇 → 结算 → 消化，
-       每一道门在面板里都有对应页签，不再「打完就没有下文」。 */
-    /* ★ P63 修：行军看沙盘军标、抵城自动弹征战画面（下面 showMarchPopup 仍在），
-       但「行军队列 / 遭遇」页签是玩家撤回、下令的确定性入口，也是真鼠标审计的锚点，
-       不能为了新表现删掉。两套入口并存：想快就在军标上点，想全就在页签里看。 */
+    /* ★ P67：出征六门重构为「集结 → 行军 → 自动接战 → 战报 → 消化」。
+       原「③ 遭遇」页签保留 id 但改名「③ 战况」，专门回看自动开战与伤兵去向；
+       不再出现需要玩家补点一下的开战按钮。 */
     var tabs = [
       ['go', '① 集结 · 出击'],
       ['queue', '② 行军队列' + (queue.length ? '（' + queue.length + '）' : '')],
-      ['encounter', '③ 遭遇' + (pending.length ? '（' + pending.length + '）' : '')],
+      ['encounter', '③ 战况' + (((s.autoBattles || []).length) ? '（' + (s.autoBattles || []).length + '）' : '')],
       ['digest', '④ 消化' + (digest.length ? '（' + digest.length + '）' : '')],
       ['diplo', '外交'],
       ['log', '战报'],
@@ -4804,68 +4785,47 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     saveWar();
   }
 
-  /* ★ P11 / 本作设计 门 4：抵城不自动开打，先挂「遭遇」，推演过才让确认。 */
+  /* ★ P67：抵城/相遇自动开战，这里只回看「这一仗怎么打的、伤兵去了哪」。 */
   function warEncounterPanel(s, pending, body) {
-    if (!pending.length) {
+    var auto = s.autoBattles || [];
+    if (!auto.length && !(pending || []).length) {
       body.appendChild(el('div', 'empty',
-        '当前没有待决的遭遇战。出征后抵达目标城下，队伍会在此等候主公定夺：可反复推演、也可临阵收兵。'));
+        '暂无战况。出征后，部队在城下与敌军相遇或抵达目标城时会自动开战，战报与伤兵去向都会记在这里；无需再点开战。'));
       return;
     }
-    pending.forEach(function (p) {
+    if ((pending || []).length) {
+      body.appendChild(el('div', 'card',
+        '<h4 style="margin-top:0">旧存档待决战</h4>'
+        + '<div class="cost">这些队伍已按新口径自动结算，不再需要开战指令；若仍看到此卡，刷新一次即可。</div>'));
+    }
+    auto.forEach(function (a) {
+      var foes = (a.encounter || []).map(function (e) {
+        return (e.name || '诸侯军') + ' ' + fmt(e.troops || 0);
+      }).join('、') || '城中守军';
+      var where = (a.woundedTo || []).map(function (w) {
+        return (w.name || ('城' + w.cityId)) + ' ' + fmt(w.count || 0);
+      }).join('、') || '暂无收容城';
+      var verdict = a.result === 2 ? '克城' : (a.result === 1 ? '相持' : '失利');
       var card = el('div', 'card',
-        '<h4 style="margin-top:0">⚔ ' + esc(p.fromName) + ' → ' + esc(p.toName) + ' · 两军对阵</h4>'
+        '<h4 style="margin-top:0">⚔ 自动接战 · ' + esc(verdict) + '</h4>'
         + '<div class="war-faceoff">'
-        + warSideHtml('a', '我军', p.fromName, p.troops, null)
-        + warSideHtml('d', '守军约', p.toName, p.enemyTroops, null)
+        + warSideHtml('a', '我军', '出征部队', a.aTotal, a.aLoss)
+        + warSideHtml('d', '守军约', (a.encounter || []).length ? '相遇敌军' : '目标城', a.dTotal, a.dLoss)
         + '</div>'
         + '<div class="grid">'
-        + kv('抵达', '第 ' + p.arriveDay + ' 日')
-        + kv('已耗军粮', fmt(p.grainCost))
+        + kv('折损', fmt(a.aLoss))
+        + kv('歼敌', fmt(a.dLoss))
+        + kv('阵亡', fmt(a.killed))
+        + kv('负伤', fmt(a.wounded))
+        + kv('相遇敌军', esc(foes))
+        + kv('伤兵去向', esc(where))
         + '</div>'
-        + '<div class="cost" style="margin-top:6px">此战不可逆：确认后才走正式结算并写战报；撤军退还一半军粮，部队回出发城。</div>');
-      var out = el('div', '');
-      card.appendChild(out);
+        + '<div class="cost" style="margin-top:6px">' + esc(a.summary || '') + '</div>');
       var bar = el('div', 'row');
       bar.style.cssText = 'border:none;gap:7px;justify-content:flex-start;padding-top:8px;';
-      var pv = mkBtn('推演一次', 'ghost', function () {
-        pv.disabled = true; out.innerHTML = '<div class="cost">沙盒演算中…</div>';
-        postJSON('/__slg/strategy/action', {
-          action: 'preview', cityId: p.to, fromCityId: p.from,
-          armyId: p.armyId, frac: p.frac,
-        }).then(function (rs) {
-          pv.disabled = false;
-          out.innerHTML = rs && rs.ok
-            ? warPreviewHtml(rs)
-            : '<div class="cost" style="color:#ff9d6b">推演失败：' + esc(warReason(rs && rs.reason)) + '</div>';
-        });
-      });
-      bar.appendChild(pv);
-      bar.appendChild(mkBtn('确认开战', '', function () {
-        postJSON('/__slg/strategy/action', { action: 'battleConfirm', marchId: p.marchId })
-          .then(function (rs) {
-            if (!rs || !rs.ok) { toast('开战失败：' + warReason(rs && rs.reason), false); return; }
-            /* ★ M4-13：结算后按结果落到下一道门，不再一律丢去战报页。
-               占城直接进「④ 消化」；抓到将即时告知招降入口，不必自己钻进六府。 */
-            fetchState().then(function (s2) {
-              cache = s2; buildNeighbors(s2);
-              var dig = (s2.digest || []).length;
-              var caps = (s2.captives || []).length;
-              war.tab = (rs.result === 2 && dig) ? 'digest' : 'log';
-              renderWar(s2);
-              var msg = rs.result === 2
-                ? ('攻下 ' + rs.city + '！已切到「④ 消化」安置新城')
-                : '战斗已结算，战报已生成';
-              if (caps) msg += '；阵前擒得敌将，可在六府「武将」页招降／放归／处斩';
-              toast(msg, rs.result === 2);
-            }).catch(function () { war.tab = 'log'; warRefresh(s); });
-          });
-      }));
-      bar.appendChild(mkBtn('临阵收兵', 'ghost', function () {
-        postJSON('/__slg/strategy/action', { action: 'battleRetreat', marchId: p.marchId })
-          .then(function (rs) {
-            toast(rs && rs.ok ? ('已收兵，退粮 ' + fmt(rs.refund || 0)) : '收兵失败', !!(rs && rs.ok));
-            war.tab = 'queue'; warRefresh(s);
-          });
+      bar.appendChild(mkBtn('看战报', '', function () {
+        if (window.__slgReportsWindow) window.__slgReportsWindow();
+        else war.tab = 'log', renderWar(s);
       }));
       card.appendChild(bar);
       body.appendChild(card);
@@ -5228,7 +5188,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     atkBtn.setAttribute('data-ix-allow', '1');
     sum.appendChild(atkBtn);
     sum.appendChild(el('div', 'cost',
-      '出征后回到沙盘看军标移动。点军标可撤回；抵达后在军标上决定开战或收兵。'));
+      '出征后回到沙盘看军标移动；途中可撤回。与敌军相遇或抵达目标城即自动开战，无需再点开战。'));
     body.appendChild(sum);
 
     /* ★ P62：军议详情——粮道、站位射程、战前推演，默认收起。
@@ -5403,13 +5363,13 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
           ? '援军约 ' + fmt(extra) + ' 会在你抵达前或同日入城，守军将从 ' + fmt(target.troops) + ' 增至约 ' + fmt((Number(target.troops) || 0) + extra) + '。'
           : '眼下没有会在你抵达前入城的援军。';
       })(),
-      '<span class="cost">军标会出现在沙盘上。点军标可撤回；抵达后时间停下，在军标上推演、开战或收兵。</span>',
+      '<span class="cost">军标会出现在沙盘上，途中可撤回。与敌军相遇或抵达目标城时自动开战，不必再点开战；折损中负伤者会退往周边城与出生城。</span>',
     ], '出征', '取消', function () {
       postJSON('/__slg/strategy/action', {
         action: 'attack', cityId: target.id, armyId: army.id,
         frac: war.frac, fromCityId: fromCity.id,
-        /* ★ P11：抵达先进「遭遇」页，不自动开打（本作设计 门 4→5） */
-        confirmBattle: true,
+        /* ★ P67：出征只确认这一次；抵达/相遇自动开战，不再挂待决。 */
+        confirmBattle: false,
       }).then(function (rs) {
         if (rs && rs.ok) {
           toast('大军自' + (rs.from || fromCity.name) + '开拔，程 ' + Math.round(rs.km || route.km)
@@ -5591,7 +5551,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
           + '<span class="cost">　' + esc(m.fromName || m.from) + ' → ' + esc(m.toName || m.to) + '</span>'
           + '<div class="cost">程 ' + fmt(m.km) + ' 里 · 第 ' + m.departDay + ' 日发 → 第 ' + m.arriveDay + ' 日到 · '
           + (left > 0 ? ('余 <b style="color:#f0d998">' + left + '</b> 日（' + pct + '%）')
-            : (pendIds[m.id] ? '<b style="color:#ff9d6b">已抵城下 · 待主公定夺</b>' : '<b style="color:#ff9d6b">已抵城下</b>'))
+            : (pendIds[m.id] ? '<b style="color:#ff9d6b">旧存档待决 · 已自动结算</b>' : '<b style="color:#ff9d6b">已抵城下</b>'))
           + (m.kind === 'transport'
             ? '　粮 ' + fmt(m.grain)
             : '　兵 ' + fmt(m.troops) + ' · 耗粮 ' + fmt(m.grainCost))
@@ -5610,8 +5570,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         if (idx === queue.length - 1) dn.disabled = true;
         var btn;
         if (pendIds[m.id]) {
-          /* 待决遭遇：给一条直达「③ 遭遇」的路，别再让玩家自己找页签 */
-          btn = mkBtn('去遭遇定夺', '', function () { war.tab = 'encounter'; renderWar(cache || s); });
+          /* 极老存档的待决行：直接看自动结算后的战况，不再回到玩家下令 */
+          btn = mkBtn('看战况', '', function () { war.tab = 'encounter'; renderWar(cache || s); });
         } else {
           btn = mkBtn('撤回', 'ghost', function () {
             confirmBox('撤回行军', [
@@ -5641,7 +5601,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     body.appendChild(card);
     body.appendChild(el('div', 'cost',
       '行军日数 = 里程 ÷（55 × 队速/100），队速取队内最慢武将，长途最多 40 日。'
-      + '抵城后日子停住：点沙盘上的军标推演、开战或收兵。'));
+      + '途中点军标可撤回；相遇或抵城即自动开战，战报与伤兵去向可在「③ 战况」查看。'));
   }
 
   function warReorder(s, marchId, dir) {

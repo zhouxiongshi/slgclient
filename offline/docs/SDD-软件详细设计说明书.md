@@ -81,7 +81,7 @@
 | 表现层 | 客户端画面、确认框、GM 页面 | `web/`（不可改）+ `server/{panels-ui,interaction-ui,ui-shell,editor-ui}.js`（注入）+ `server/gm/*.html` |
 | 适配层 | 协议适配 / GM 适配 | `server/{codec,wsserver,handlers,index}.js`、`server/gm/overrides.js` |
 | 命令层 | 唯一允许改世界状态处 | 实际由 `handlers.js switch` + `strategy.js` 动作函数共同承担【偏差：命令层未独立成 `command.js` 主体】 |
-| 领域层 | 经济/地图/设施/军队/战斗/武将/宿命/剧情 | `server/domain/`（42 个模块，10031 行） |
+| 领域层 | 经济/地图/设施/军队/战斗/武将/宿命/剧情 | `server/domain/`（44 个模块，约 10,150 行） |
 | 状态层 | 存档 / 配置 / 时钟 | `server/{world,config,clock}.js`、`conf/`、`saves/` |
 | 内核 | 只有部队/战法/随机数 | `battle-core/src/` → `offline/kernel/` |
 
@@ -580,7 +580,7 @@ heroes-240 与原表交集 → 史载五维覆盖主属性；非交集生成派�
 
 ## 5. 模块详细设计
 
-### 5.1 `server/domain/` 42 个模块全表【实测，核查快照合计约 10,031 行】
+### 5.1 `server/domain/` 44 个模块全表【P67 新增 casualties / encounter】
 
 > 「上游」= 静态 `import` 本模块的文件。行数会因并行开发微调，以接口签名为准。
 
@@ -2761,6 +2761,23 @@ build/SLG-Offline-win32-x64/
 
 **回归锁**：`tests/p63-ai-prey-and-research.test.js` 新增 P66-①~④；`ui-audit.cjs` 新增 `panel.research.switch-skill` 真 DOM 断言；`mouse-playtest.cjs` 新增 `disabled.hover.hint` 真鼠标悬浮断言。
 
+### 17.50 出征重构：自动接战与伤兵回撤 P67（2026-11-27 用户试玩反馈）
+
+**用户反馈**：「出征界面要重构。现在相遇要手动点开战；应改成部队与敌军相遇或到达目的城后自动触发战斗，不需要玩家重复多余的开战动作。战斗伤亡一部分真死、一部分受伤，受伤兵种逃回周边城市、出生城市。」
+
+**根因**：
+1. `strategyAttack` 对注入层出征写 `confirmBattle:true`，`strategyResolveMarches` 抵达时挂 `pendingBattle` 并 `continue`，玩家被迫进「③ 遭遇」再点一次「确认开战」。
+2. `clash.js` 只做城下相遇事实判定，`clashTick` 只写军情；相遇的诸侯军没有并入守军，玩家在地图上看得到两军撞上，却要等额外命令。
+3. `settleArmyBattle` 用 `recovered` 把「溃兵」直接加回原队，既没有阵亡/负伤拆分，也没有回城路径。
+
+**设计**：
+1. **移除二次确认**：`strategyResolveMarches` 删除 `confirmBattle` 闸门，抵达即走原有 `settleArmyBattle`；`index.js` 默认 `confirmBattle:false`；`strategyConfirmBattle` 退化为旧存档/老协议兼容（只回战报，不触发第二战）。
+2. **相遇并兵**：新增 `domain/encounter.js consumeEncounterDefense()`，在 `defenseFor` 之后、开战之前把同指一城且抵达日差 ≤2 的诸侯军并进守军，标记 `consumedByBattle`；`resolveReliefArrival` 标 `reliefMerged`，已入城援军不再重复加。道中仍不开打。
+3. **伤亡拆分与回撤**：新增零依赖叶子 `domain/casualties.js`——`splitCasualties()` 默认 40% 折损为负伤，其余阵亡；`routeWounded()` 按 60% 周边最近己方城 + 40% 出生城写入 `st.cities[].troops`，举义前用 `st.playerCity` 兜底。`settleArmyBattle` 与 `handlers.js processTask battle_arrive` 共用；`army.soldiers` 只留真正余兵，战报 `analysis` 写 `killed/wounded/woundedTo/auto`。
+4. **视图与 UI**：`strategyViewState` 新增 `autoBattles/lastAutoBattleId`；出征窗「③ 遭遇」改名「③ 战况」并只展示自动接战记录与伤兵去向；沙盘军标弹窗与出征页删除「开战/临阵收兵/请主公定夺」；战报推送照旧自动打开征战画面。
+
+**回归锁**：`tests/p67-auto-battle-and-casualties.test.js` A~E；`p11-levy-and-gates.test.js` 改为抵达即战/途中撤回；`playtest-fixes.test.js` 改验伤兵回城人数守恒；`ui-audit.cjs` `war.auto.encounter/war.auto.settled` 取代旧 `war.encounter.*`；`mouse-playtest.cjs` 真鼠标验证「战况页有伤兵去向、无手动开战按钮」。
+
 ---
 
 ## 19. 附录
@@ -2809,7 +2826,7 @@ node tools/explore-bugs.mjs
 | 战斗外层 / 内核 | `server/battle.js`、`offline/kernel/`、`battle-core/src/`（仓库根） |
 | 战法数据与 bundle 注入 | `server/skills.js` |
 | 状态 / 存档 / 配置 / 时钟 | `server/world.js`、`config.js`、`clock.js` |
-| 领域逻辑 | `server/domain/`（42 个） |
+| 领域逻辑 | `server/domain/`（44 个） |
 | 浏览器注入层 | `server/{panels-ui,interaction-ui,ui-shell,editor-ui}.js` |
 | GM / 覆盖层 | `server/gm/`、`conf/campaign/overrides.json` |
 | Electron | `electron/*.cjs` |

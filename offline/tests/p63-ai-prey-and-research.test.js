@@ -172,7 +172,7 @@ test('P63-⑩ 自动走日不顶掉手动推演：空格/推演按钮与出征�
   const ix = read('server/interaction-ui.js');
   assert.doesNotMatch(skills, /id="slgStratTick" class="pri" style="display:none"/, '推演按钮不能被藏');
   assert.match(skills, /\['queue', '② 行军队列'/, '行军队列页签不能被删');
-  assert.match(skills, /\['encounter', '③ 遭遇'/, '遭遇页签不能被删');
+  assert.match(skills, /\['encounter', '③ 战况'/, '自动接战战况页签不能被删');
   assert.match(ix, /function nextTurn\(\)[\s\S]{0,220}window\.__slgTick/, '空格仍要推进一旬');
   /* 出征成功后停在行军队列页，不关窗（自动走日与行军动画不受影响） */
   assert.match(skills, /war\.tab = 'queue';[\s\S]{0,120}__slgWarWindow/);

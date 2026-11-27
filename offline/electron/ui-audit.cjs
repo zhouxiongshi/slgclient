@@ -583,55 +583,42 @@ const WALK = `(async function(){
     try { if (window.__slgWarClose) window.__slgWarClose(); } catch (e) {}
     await sleep(400);
 
-    /* ⑤ 门 4「遭遇」：推进旬到到达日。
-       ★ P11 变更：抵达不再自动开战，队伍挂在 pendingBattle 等玩家定夺。
-       旧脚本只 tick 不确认，队列永远清不掉、战报永远空——check-release 因此报
-       not-resolved / no-report-row。这里必须像玩家一样进「③ 遭遇」页点「确认开战」。 */
+    /* ⑤ P67：推进旬到到达日，仗自己打完；玩家只到「③ 战况」看结果与伤兵去向。
+       审计必须证明「没有第二下开战」且战况页真的渲染出折损/阵亡/负伤/伤兵去向。 */
     var st2 = await (await fetch('/__slg/strategy/state', { cache: 'no-store' })).json();
     var mm = (st2.marches || []).find(function(m){ return m.side === 'player' && !m.resolved; });
     var ticked = 0;
     if (mm) {
       while (ticked < 8) {
-        if ((st2.pendingBattles || []).length) break;            /* 已挂起，等确认 */
         var live = (st2.marches || []).filter(function(m){ return m.side === 'player' && !m.resolved; });
-        if (!live.length) break;                                  /* 非确认制：已自动结算 */
+        if (!live.length) break;
         if (ticked > 0 && (Number(st2.day) || 0) >= Number(mm.arriveDay)) break;
         await fetch('/__slg/strategy/tick', { method: 'POST' });
         ticked += 1;
         st2 = await (await fetch('/__slg/strategy/state', { cache: 'no-store' })).json();
         mm = (st2.marches || []).find(function(m){ return m.side === 'player' && !m.resolved; }) || mm;
       }
-      var pend = st2.pendingBattles || [];
+      var auto = st2.autoBattles || [];
       var encWinText = '';
-      var goBtn = null;
-      if (pend.length) {
-        /* 门 5：先把「③ 遭遇」页真的渲染出来，再点「确认开战」。
-           ★ 别用状态字符串去校验 UI：pending>0 只证明服务端挂了遭遇，
-             证明不了玩家能看见卡片、能点到按钮。 */
-        window.__slgWarWindow({ tab: 'encounter' });
-        await wait(function(){ return document.getElementById('slgWarWin'); }, 9000);
-        await sleep(700);
-        var encTab = Array.from(document.querySelectorAll('#slgWarWin .tabs button'))
-          .find(function(b){ return txt(b).indexOf('遭遇') >= 0; });
-        if (encTab) { encTab.click(); await sleep(600); }
-        encWinText = txt(document.getElementById('slgWarWin'));
-        goBtn = Array.from(document.querySelectorAll('#slgWarWin button'))
-          .find(function(b){ return txt(b).indexOf('确认开战') >= 0; });
-      }
-      rec('war.encounter.pending', ['两军对阵', '确认开战', '临阵收兵'], {
-        visible: pend.length > 0 && vis(document.getElementById('slgWarWin')),
-        text: encWinText || ('day=' + st2.day + ' ticks=' + ticked + ' pending=' + pend.length),
-        note: pend.length ? '' : 'no-pending-encounter（未挂遭遇，可能是非确认制出征）',
+      window.__slgWarWindow({ tab: 'encounter' });
+      await wait(function(){ return document.getElementById('slgWarWin'); }, 9000);
+      await sleep(700);
+      var encTab = Array.from(document.querySelectorAll('#slgWarWin .tabs button'))
+        .find(function(b){ return txt(b).indexOf('战况') >= 0; });
+      if (encTab) { encTab.click(); await sleep(600); }
+      encWinText = txt(document.getElementById('slgWarWin'));
+      var noBattleBtn = !Array.from(document.querySelectorAll('#slgWarWin button'))
+        .some(function(b){ return /确认开战|开战|临阵收兵/.test(txt(b)); });
+      rec('war.auto.encounter', ['自动接战', '折损', '阵亡', '负伤', '伤兵去向'], {
+        visible: auto.length > 0 && vis(document.getElementById('slgWarWin')),
+        text: encWinText || ('day=' + st2.day + ' ticks=' + ticked + ' auto=' + auto.length),
+        note: auto.length ? (noBattleBtn ? '' : 'manual-battle-button-still-present') : 'no-auto-battle',
       });
-      if (pend.length) {
-        var encBefore = encWinText;
-        if (goBtn) { goBtn.click(); await sleep(2400); }
-        rec('war.encounter.confirm', ['折损', '歼敌', '占领', '已生成', '结算', '安置'], {
-          visible: !!goBtn,
-          text: (encBefore + ' ' + txt(document.getElementById('slgWarWin'))).slice(0, 500),
-          note: goBtn ? '' : 'no-confirm-battle-btn',
-        });
-      }
+      rec('war.auto.settled', ['战报', '折损', '负伤'], {
+        visible: auto.length > 0 && noBattleBtn,
+        text: ('day=' + st2.day + ' ticks=' + ticked + ' auto=' + auto.length + ' ' + encWinText).slice(0, 500),
+        note: auto.length ? '' : 'auto-battle-not-settled',
+      });
       st2 = await (await fetch('/__slg/strategy/state', { cache: 'no-store' })).json();
       var left = (st2.marches || []).filter(function(m){ return m.side === 'player' && !m.resolved; }).length;
       rec('war.march.resolved', [], {

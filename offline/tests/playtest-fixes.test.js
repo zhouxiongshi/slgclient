@@ -135,7 +135,7 @@ test('P0-3 征兵到账不会写出 null / NaN，三个兵种槽恒为合法整�
   assert.ok(!/null/.test(JSON.stringify(army.soldiers)), '存档里不能出现 null');
 });
 
-test('P0-3 战败不会把家底清零：溃兵归营', () => {
+test('P67 战败不会白丢兵：负伤者退往周边城与出生城', () => {
   const state = createWorld(cfg);
   const ctx = makeCtx(state);
   // 挑一个相邻、守军明显多于我军的城（换图后邻接关系会变，按实际路网选）
@@ -158,8 +158,12 @@ test('P0-3 战败不会把家底清零：溃兵归营', () => {
   const fought = strategyResolveMarches(state, cfg, ctx);
   assert.equal(fought.length, 1);
   assert.equal(fought[0].result, 0, `这一仗打不下来（打 ${target.name}，守军 ${garrisonOf(target)}）`);
-  const left = state.armys[0].soldiers.reduce((s, n) => s + n, 0);
-  assert.ok(left > 0, `战败后应有溃兵归营，实际 ${left}`);
+  const an = state.warReports[0].analysis || {};
+  assert.ok(an.wounded > 0, '全军覆没也应有一部分只是负伤，不是全部阵亡');
+  assert.equal(an.killed + an.wounded, an.aLoss, '折损必须拆成阵亡与负伤');
+  assert.ok((an.woundedTo || []).length > 0, '伤兵必须有明确回撤城');
+  const sumBack = an.woundedTo.reduce((s, w) => s + w.count, 0);
+  assert.equal(sumBack, an.wounded, '回撤人数必须等于负伤人数，不许凭空消失');
   assert.equal(state.armys[0].soldiers.length, 3);
 });
 

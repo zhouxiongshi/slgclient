@@ -213,7 +213,7 @@ const SCENARIO_REPORT = `(async function(){
   } catch (e) { return { ok:false, error:String(e && e.stack || e) }; }
 })()`;
 
-/** 场景 D：真打一仗（出征 → 推演 → 抵达遭遇 → 确认开战），取战报详情与该战 anim。 */
+/** 场景 D：真打一仗（出征 → 推演 → 抵达/相遇自动开战），取战报详情与该战 anim。 */
 const SCENARIO_BATTLE = `(async function(){
   var out = {};
   var sleep = function(ms){ return new Promise(function(r){ setTimeout(r, ms); }); };
@@ -236,19 +236,18 @@ const SCENARIO_BATTLE = `(async function(){
       if (c && c.owner !== 'player') { tgt = c; break; }
     }
     if (!tgt) return { ok:false, reason:'no enemy neighbour' };
-    var atk = await post({ action:'attack', cityId:tgt.id, armyId:army.id, frac:1, fromCityId:army.cityId, confirmBattle:true });
+    var atk = await post({ action:'attack', cityId:tgt.id, armyId:army.id, frac:1, fromCityId:army.cityId, confirmBattle:false });
     out.attack = { ok: atk.ok, arriveDay: atk.arriveDay, km: atk.km, deploy: atk.deploy, reason: atk.reason };
     if (!atk.ok) return { ok:false, reason:'attack failed: ' + (atk.reason || '') };
     for (var t = 0; t < 8; t++) {
       await fetch('/__slg/strategy/tick', { method:'POST' });
       await sleep(120);
       var st2 = await (await fetch('/__slg/strategy/state', { cache:'no-store' })).json();
-      var m = (st2.pendingBattles || [])[0];
-      if (m) { out.march = { marchId: m.marchId, to: m.to, toName: m.toName, troops: m.troops, enemyTroops: m.enemyTroops }; break; }
+      var a0 = (st2.autoBattles || [])[0];
+      if (a0) { out.battle = { ok:true, reportId:a0.reportId, result:a0.result,
+        summary:(a0.summary||'').slice(0,120), wounded:a0.wounded }; break; }
     }
-    if (!out.march) return { ok:false, reason:'never reached pendingBattle', attack: out.attack };
-    var res = await post({ action:'battleConfirm', marchId: out.march.marchId });
-    out.battle = { ok: res.ok, result: res.result, city: res.city, reason: res.reason };
+    if (!out.battle) return { ok:false, reason:'auto battle never fired', attack: out.attack };
     await sleep(500);
     var st3 = await (await fetch('/__slg/strategy/state', { cache:'no-store' })).json();
     out.battleLogLen = (st3.battleLog || []).length;
