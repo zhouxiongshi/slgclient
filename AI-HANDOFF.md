@@ -1,0 +1,59 @@
+# AI 协作交接板（多会话共用）
+
+> **任何 AI 会话在开始改动前必须先读本文件；结束改动后必须更新本文件并提交。**
+> 本文件存在的意义：多个 AI 同时改本项目时，避免各改各的、互相覆盖、改动不合并。
+
+## 当前基线
+
+- 分支：`offline-standalone`
+- 最新提交：`2697471`（P65 战法研习进度卡住修复 + 月度行军回放测试同步）
+- 核对时间：2026-11-27 11:20
+- 核对结果：工作区干净，本地与 `origin/offline-standalone` 完全同步（0 ahead / 0 behind）
+- 上次验收：单测 875/875、内核 42/42、发布闸 95/95 `ready_for_steam_basics=true`
+
+## 协作规则（硬性，所有会话遵守）
+
+1. **开工前必做**：`git fetch origin offline-standalone` → `git status --short` → 若本地落后则 `git pull --ff-only`。
+2. **发现非本会话的未提交改动**：立即停下，在下方「待决/进行中」登记，并询问用户如何处理。**禁止直接覆盖、stash 掉、或替它做决定**（上一轮教训：另一个 AI 的月度行军回放改动差点被当成遗留垃圾）。
+3. **改动中只碰自己认领的文件**。同一文件的并发修改是最危险的：开工前在「进行中」登记文件名，其他会话看到后避开。
+4. **收工前必做**：跑全量验收 → `git add` → `git commit` → `git push` → 更新本文件基线并再提交一次（或并入同一提交）。
+5. **推送失败**（TLS/502 常见）：重试 2~3 次；仍失败则本地提交保留，在本文件登记「待推送」，不要 force push。
+6. **禁止 `git reset --hard` / `git checkout --` / `git stash`** 清理未知改动——那会永久丢失另一个 AI 的工作。
+7. **`offline/web/` 逐字节冻结**（1582 文件），UI 一律运行时注入脚本（`skills.js` / `panels-ui.js` / `interaction-ui.js` / `ui-shell.js`）；领域逻辑进 `server/domain/`，`handlers.js` 只许变薄。
+8. **`offline/reports/` 会被并行会话互盖**：取证前核对报告 mtime / `startedAt`，只清理自己 PID 的进程；性能探针红先确认是否窗口后台节流（`SLG_FORCE_TOP=1` 复跑），不放宽阈值。
+
+## 改动登记
+
+| 时间 | 会话 | 提交 | 内容 | 状态 |
+|---|---|---|---|---|
+| 2026-11-27 11:20 | WorkBuddy-A | `2697471` | P65 研习进度卡住修复 + 接手合并另一个 AI 的月度行军回放改动 | 已推送 |
+| 2026-11-27 11:20 | — | — | 建立本交接板与协作纪律 | 本提交 |
+
+### 进行中 / 待决
+
+_（无。任何会话开工前在此登记认领的文件与任务，收工后删除。）_
+
+## 热点文件（多会话最易冲突）
+
+- `offline/server/domain/research.js`、`panels.js`、`strategy.js`、`strategy-brain.js`
+- `offline/server/panels-ui.js`、`interaction-ui.js`、`skills.js`
+- `offline/electron/ui-audit.cjs`
+- `offline/tests/p63-ai-prey-and-research.test.js`、`p44-ai-static-march.test.js`
+- `offline/docs/FIELD-CONTRACT.md`、`SDD-软件详细设计说明书.md`
+- `offline/reports/*`（探针产物，非源码，但取证时互盖）
+
+## 标准验收命令（在 `offline/` 下）
+
+```bash
+npm test                                   # 全量单测
+node tools/smoke.js [--packaged]
+node tools/ui-audit.js [--packaged]
+node tools/mouse-playtest.js [--packaged]
+node tools/layout-audit.js [--packaged]
+node tools/perf-probe.js [--packaged]      # 红先用 SLG_FORCE_TOP=1 复跑，勿宽阈值
+CODEBUDDY_SAFE_DELETE_ENABLED=0 node tools/pack.js
+node tools/check-terms.js && node tools/check-compliance.js && node tools/compliance-report.js
+node tools/check-release.js                # 期望 95/95 ready=true
+```
+
+改了 `server/` 或 `conf/` 必须重 pack 再跑打包态取证；报告新鲜度是硬闸，文档改动也要重跑相关报告。
