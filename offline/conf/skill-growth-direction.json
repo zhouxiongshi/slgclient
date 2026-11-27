@@ -3,8 +3,8 @@
   "sourceSha256": "db82f837fb765ea11de77398ddbe57ba66f6e8022b8140403e58c4130cfe3d92",
   "generatedBy": "tools/sync-growth-direction.mjs",
   "note": "同名战法 Lv1→Lv10 成长方向按官方两端文案对齐；只改方向，保留原 Lv10 终点与内核机制。已镜像战法不重复处理。",
-  "count": 46,
-  "skippedCount": 53,
+  "count": 51,
+  "skippedCount": 49,
   "entries": [
     {
       "cfgId": 10007,
@@ -1011,6 +1011,128 @@
       ]
     },
     {
+      "cfgId": 10020,
+      "name": "一雷惊蛰",
+      "skillClass": "主动",
+      "officialProbability": "",
+      "officialLv1": "",
+      "officialLv10": "",
+      "baselineLv1": {
+        "probability": 42,
+        "effect_value": [
+          150
+        ]
+      },
+      "baselineLv10": {
+        "probability": 50,
+        "effect_value": [
+          150
+        ]
+      },
+      "changes": [
+        {
+          "field": "槽 1",
+          "rule": "flat-upgrade",
+          "from": "150→150",
+          "to": "75→150",
+          "official": ""
+        }
+      ],
+      "levels": [
+        {
+          "probability": 42,
+          "effect_value": [
+            75
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 43,
+          "effect_value": [
+            83.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 44,
+          "effect_value": [
+            91.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 45,
+          "effect_value": [
+            100
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 46,
+          "effect_value": [
+            108.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 46,
+          "effect_value": [
+            116.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 47,
+          "effect_value": [
+            125
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 48,
+          "effect_value": [
+            133.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 49,
+          "effect_value": [
+            141.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 50,
+          "effect_value": [
+            150
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ],
+      "rule": "P68 平线兜底：无同名官方战法，升级零反馈；Lv1 取 Lv10 一半、线性插值，满级终点保留"
+    },
+    {
       "cfgId": 10025,
       "name": "反击",
       "skillClass": "被动",
@@ -1129,6 +1251,494 @@
           ]
         }
       ]
+    },
+    {
+      "cfgId": 10026,
+      "name": "健卒不殆",
+      "skillClass": "被动",
+      "officialProbability": "",
+      "officialLv1": "",
+      "officialLv10": "",
+      "baselineLv1": {
+        "probability": 100,
+        "effect_value": [
+          40
+        ]
+      },
+      "baselineLv10": {
+        "probability": 100,
+        "effect_value": [
+          40
+        ]
+      },
+      "changes": [
+        {
+          "field": "槽 1",
+          "rule": "flat-upgrade",
+          "from": "40→40",
+          "to": "20→40",
+          "official": ""
+        }
+      ],
+      "levels": [
+        {
+          "probability": 100,
+          "effect_value": [
+            20
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            22.22
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            24.44
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            26.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            28.89
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            31.11
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            33.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            35.56
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            37.78
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            40
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ],
+      "rule": "P68 平线兜底：官方同名战法数值与本作槽位不对应，升级零反馈；Lv1 取 Lv10 一半、线性插值，满级终点保留"
+    },
+    {
+      "cfgId": 10027,
+      "name": "混战",
+      "skillClass": "被动",
+      "officialProbability": "",
+      "officialLv1": "",
+      "officialLv10": "",
+      "baselineLv1": {
+        "probability": 100,
+        "effect_value": [
+          50
+        ]
+      },
+      "baselineLv10": {
+        "probability": 100,
+        "effect_value": [
+          50
+        ]
+      },
+      "changes": [
+        {
+          "field": "槽 1",
+          "rule": "flat-upgrade",
+          "from": "50→50",
+          "to": "25→50",
+          "official": ""
+        }
+      ],
+      "levels": [
+        {
+          "probability": 100,
+          "effect_value": [
+            25
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            27.78
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            30.56
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            33.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            36.11
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            38.89
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            41.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            44.44
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            47.22
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            50
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ],
+      "rule": "P68 平线兜底：无同名官方战法，升级零反馈；Lv1 取 Lv10 一半、线性插值，满级终点保留"
+    },
+    {
+      "cfgId": 10029,
+      "name": "轻骑冲阵",
+      "skillClass": "指挥",
+      "officialProbability": "",
+      "officialLv1": "",
+      "officialLv10": "",
+      "baselineLv1": {
+        "probability": 100,
+        "effect_value": [
+          40
+        ]
+      },
+      "baselineLv10": {
+        "probability": 100,
+        "effect_value": [
+          40
+        ]
+      },
+      "changes": [
+        {
+          "field": "槽 1",
+          "rule": "flat-upgrade",
+          "from": "40→40",
+          "to": "20→40",
+          "official": ""
+        }
+      ],
+      "levels": [
+        {
+          "probability": 100,
+          "effect_value": [
+            20
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            22.22
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            24.44
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            26.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            28.89
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            31.11
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            33.33
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            35.56
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            37.78
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            40
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ],
+      "rule": "P68 平线兜底：无同名官方战法，升级零反馈；Lv1 取 Lv10 一半、线性插值，满级终点保留"
+    },
+    {
+      "cfgId": 10030,
+      "name": "异士",
+      "skillClass": "指挥",
+      "officialProbability": "",
+      "officialLv1": "",
+      "officialLv10": "",
+      "baselineLv1": {
+        "probability": 100,
+        "effect_value": [
+          25
+        ]
+      },
+      "baselineLv10": {
+        "probability": 100,
+        "effect_value": [
+          25
+        ]
+      },
+      "changes": [
+        {
+          "field": "槽 1",
+          "rule": "flat-upgrade",
+          "from": "25→25",
+          "to": "12.5→25",
+          "official": ""
+        }
+      ],
+      "levels": [
+        {
+          "probability": 100,
+          "effect_value": [
+            12.5
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            13.89
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            15.28
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            16.67
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            18.06
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            19.44
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            20.83
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            22.22
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            23.61
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            25
+          ],
+          "effect_round": [
+            0
+          ]
+        }
+      ],
+      "rule": "P68 平线兜底：无同名官方战法，升级零反馈；Lv1 取 Lv10 一半、线性插值，满级终点保留"
     },
     {
       "cfgId": 10031,
@@ -5954,26 +6564,6 @@
     {
       "cfgId": 10018,
       "name": "中级扰乱",
-      "reason": "无同名官方战法"
-    },
-    {
-      "cfgId": 10020,
-      "name": "一雷惊蛰",
-      "reason": "无同名官方战法"
-    },
-    {
-      "cfgId": 10027,
-      "name": "混战",
-      "reason": "无同名官方战法"
-    },
-    {
-      "cfgId": 10029,
-      "name": "轻骑冲阵",
-      "reason": "无同名官方战法"
-    },
-    {
-      "cfgId": 10030,
-      "name": "异士",
       "reason": "无同名官方战法"
     },
     {

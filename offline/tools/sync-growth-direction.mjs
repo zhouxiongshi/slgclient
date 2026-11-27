@@ -89,20 +89,57 @@ const entries = [];
 const skipped = [];
 for (const local of ours) {
   const off = byName.get(String(local.name).trim());
-  if (!off || mirrored.has(Number(local.cfgId))) {
-    if (!off) skipped.push({ cfgId: local.cfgId, name: local.name, reason: '无同名官方战法' });
+  const isMirrored = mirrored.has(Number(local.cfgId));
+  const base = local.ui?.levels;
+  const tenLv = Array.isArray(base) && base.length === 10;
+  const b1 = tenLv ? base[0].effect_value.map(Number) : [];
+  const b10 = tenLv ? base[9].effect_value.map(Number) : [];
+  /* ★ P68 平线兜底判据：整条曲线 Lv1==Lv10（升级零反馈，玩家可见缺陷）。
+     已镜像条目不进本层——镜像层自行处理控制命中率成长（P68 同步）。 */
+  const flatAll = tenLv && b1.length > 0
+    && b1.every((v, i) => v === b10[i]) && b1.some((v) => Number(v) > 0);
+
+  /* 无同名官方战法：平线者按本作惯例兜底（Lv1=Lv10/2 线性、终点保留），
+     非平线者维持「无官方方向可依」的 skip 台账。 */
+  if (!off) {
+    if (isMirrored) continue;
+    if (flatAll) {
+      const levels = base.map((lv, i) => ({
+        probability: Number(lv.probability),
+        effect_value: lv.effect_value.map((v, k) => interp(round2(Number(v) / 2), b10[k], i)),
+        effect_round: Array.isArray(lv.effect_round) ? [...lv.effect_round] : [],
+      }));
+      entries.push({
+        cfgId: local.cfgId,
+        name: local.name,
+        skillClass: String(local.kernel?.skill_class || ''),
+        officialProbability: '',
+        officialLv1: '',
+        officialLv10: '',
+        baselineLv1: { probability: Number(base[0].probability), effect_value: b1 },
+        baselineLv10: { probability: Number(base[9].probability), effect_value: b10 },
+        changes: b1.map((v, k) => ({
+          field: `槽 ${k + 1}`, rule: 'flat-upgrade',
+          from: `${v}→${b10[k]}`, to: `${round2(Number(v) / 2)}→${b10[k]}`, official: '',
+        })),
+        levels,
+        rule: 'P68 平线兜底：无同名官方战法，升级零反馈；Lv1 取 Lv10 一半、线性插值，满级终点保留',
+      });
+    } else {
+      skipped.push({ cfgId: local.cfgId, name: local.name, reason: '无同名官方战法' });
+    }
     continue;
   }
+  if (isMirrored) continue;
   const cls = String(local.kernel?.skill_class || '');
   const nonRolling = ['被动', '指挥'].includes(cls);
-  const base = local.ui?.levels;
-  if (!Array.isArray(base) || base.length !== 10) {
+  if (!tenLv) {
     skipped.push({ cfgId: local.cfgId, name: local.name, reason: '本作等级表不是十级' });
     continue;
   }
   const a = base[0], b = base[9];
-  const lv1 = Array.isArray(a.effect_value) ? a.effect_value.map(Number) : [];
-  const lv10 = Array.isArray(b.effect_value) ? b.effect_value.map(Number) : [];
+  const lv1 = b1;
+  const lv10 = b10;
   const o1 = effectNums(off['desc(level1)']), o10 = effectNums(off.desc);
   const changes = [];
   const reasons = [];
@@ -139,6 +176,33 @@ for (const local of ours) {
       slotChanged = true;
       changes.push({ field: `槽 ${i + 1}`, from: `${lv1[i]}→${lv10[i]}`, to: `${start}→${lv10[i]}`, official: `${o1[i]}→${o10[i]}` });
     }
+  }
+  /* ★ P68：有同名官方战法但官方两端数值对不上本作槽位（如健卒不殆）时，
+     官方对齐产不出任何 changes，旧逻辑静默跳过 → 曲线保持平线。
+     此时若整条曲线是平线，同样按本作惯例兜底，不让「升级无反馈」漏网。 */
+  if (!changes.length && flatAll) {
+    const levels = base.map((lv, i) => ({
+      probability: Number(lv.probability),
+      effect_value: lv.effect_value.map((v, k) => interp(round2(Number(v) / 2), b10[k], i)),
+      effect_round: Array.isArray(lv.effect_round) ? [...lv.effect_round] : [],
+    }));
+    entries.push({
+      cfgId: local.cfgId,
+      name: local.name,
+      skillClass: cls,
+      officialProbability: '',
+      officialLv1: '',
+      officialLv10: '',
+      baselineLv1: { probability: p1, effect_value: b1 },
+      baselineLv10: { probability: p10, effect_value: b10 },
+      changes: b1.map((v, k) => ({
+        field: `槽 ${k + 1}`, rule: 'flat-upgrade',
+        from: `${v}→${b10[k]}`, to: `${round2(Number(v) / 2)}→${b10[k]}`, official: '',
+      })),
+      levels,
+      rule: 'P68 平线兜底：官方同名战法数值与本作槽位不对应，升级零反馈；Lv1 取 Lv10 一半、线性插值，满级终点保留',
+    });
+    continue;
   }
   if (!changes.length) continue;
 

@@ -64,9 +64,17 @@ test('效果槽只改方向、不改满级终点；每一级线性插值', () =>
     const slotChanges = g.changes.filter((c) => c.field.startsWith('槽 '));
     for (const c of slotChanges) {
       const i = Number(c.field.replace('槽 ', '')) - 1;
-      assert.equal(dir(end(c.official, 1) - end(c.official, 0)),
-        dir(g.levels[9].effect_value[i] - g.levels[0].effect_value[i]),
-        `${g.name} ${c.field} 方向与官方反向`);
+      /* ★ P68 平线兜底条目（rule: 'flat-upgrade'）没有官方两端可对照：
+         断言「本作设计的正向成长 + 终点保留 + 线性」，其余条目仍对官方方向。 */
+      if (c.rule === 'flat-upgrade') {
+        assert.ok(g.levels[9].effect_value[i] > g.levels[0].effect_value[i],
+          `${g.name} ${c.field} 平线兜底应为正向成长`);
+        assert.match(String(g.rule || ''), /P68 平线兜底/, `${g.name} 兜底条目缺规则留痕`);
+      } else {
+        assert.equal(dir(end(c.official, 1) - end(c.official, 0)),
+          dir(g.levels[9].effect_value[i] - g.levels[0].effect_value[i]),
+          `${g.name} ${c.field} 方向与官方反向`);
+      }
       assert.equal(round2(g.levels[9].effect_value[i]), g.baselineLv10.effect_value[i],
         `${g.name} ${c.field} Lv10 终点被改写`);
       for (let lv = 0; lv < 10; lv += 1) {

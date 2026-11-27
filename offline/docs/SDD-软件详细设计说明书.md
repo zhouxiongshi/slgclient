@@ -2778,6 +2778,22 @@ build/SLG-Offline-win32-x64/
 
 **回归锁**：`tests/p67-auto-battle-and-casualties.test.js` A~E；`p11-levy-and-gates.test.js` 改为抵达即战/途中撤回；`playtest-fixes.test.js` 改验伤兵回城人数守恒；`ui-audit.cjs` `war.auto.encounter/war.auto.settled` 取代旧 `war.encounter.*`；`mouse-playtest.cjs` 真鼠标验证「战况页有伤兵去向、无手动开战按钮」。
 
+### 17.51 战法升级成长全量覆盖 P68（2026-11-27 用户试玩反馈）
+
+**用户反馈**：「反击技能升级没有任何变化，Lv1-Lv10 的属性一模一样。这是严重 bug，检查其他技能是否也存在类似问题。技能参数可以参考率土之滨的升级效果，平衡性要掌握好。」
+
+**排查结论（运行时 177 条全表扫描）**：反击（10025）本身在 P53 已接成长曲线（37.5%→75%，`rate_from_ui` 回击伤害率随级），用户点名的「升级无变化」实为同名一字之差的镜像战法**反计**（920061）。真正平线的共 **7 条**，两类根因：
+1. **成长对齐层盲区**（5 条）：一雷惊蛰/健卒不殆/混战/轻骑冲阵/异士无同名官方战法（或官方数值对不上本作槽位，如健卒不殆），`sync-growth-direction.mjs` 直接 skip，曲线保持构建期的 `fixed:true` 平线；
+2. **镜像层忠实照搬**（2 条）：官方快照里反计/佯攻的 Lv1/Lv10 描述逐字相同且无百分比（「陷入犹豫/怯战状态」），`parseDesc` 按触发即中记 100%→100%，升级零反馈。
+
+**设计（满级平衡不动，Lv1 端拉到一半，线性插值）**：
+1. **平线兜底**：`sync-growth-direction.mjs` 新增兜底分支——无同名官方战法（或已匹配但官方对齐产不出 changes）且整条曲线 Lv1==Lv10 时，生成 `rule:'flat-upgrade'` 成长条目：每槽 Lv1=Lv10/2、逐级线性、Lv10 终点保留。结果：一雷惊蛰 75→150、健卒不殆 20→40、混战 25→50、轻骑冲阵 20→40、异士 12.5→25。
+2. **镜像控制成长**：`mirror-official-skills.mjs` 对无百分比控制槽（`_designedControl`）设计命中率 Lv1=50%→Lv10=100%，`provenance.mirror.designedControlGrowth` 留痕区分「官方原文」与「本作设计」；`effects.control_probability` 与 `rate_pct_lv1/lv10` 随之更新。
+3. **闸门收紧**：`skill-balance.test.js` 控制槽「Lv10=Lv1×2」移除镜像 100→100 豁免；`p31-growth-direction.test.js` 对 `rule:'flat-upgrade'` 条目改为断言「正向成长+终点保留+线性」，其余仍对照官方方向。
+4. **数值通道不变**：曲线只写 `ui.levels`，`kernelSkillAt` 三路同源自动生效——CONTROL 槽 `control_probability=now/100`（反计 Lv1 0.5→Lv10 1）、BUFF 槽 `bonus_terms` 按 growth 缩放（健卒不殆普攻加成 0.2→0.4）、伤害槽 `rate_pct` 随级（一雷惊蛰 75→150）。
+
+**回归锁**：新增 `tests/p68-skill-growth-coverage.test.js`（全表平线扫描为零、五条兜底数值与内核缩放、镜像反计/佯攻 50→100 与留痕、反击 37.5→75 防回退）；`skill-balance`/`p31`/`p30`/`p53`/`skills` 全绿；单测 888/888。
+
 ---
 
 ## 19. 附录

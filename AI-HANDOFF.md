@@ -6,10 +6,11 @@
 ## 当前基线
 
 - 分支：`offline-standalone`
-- 最新提交：`4ce6263`（交接板基线更新）；功能提交 `d19c98a`（P67 出征自动接战 + 伤兵回撤）
-- 核对时间：2026-11-27 15:45（P67 收工）
-- 核对结果：工作区干净，本地与 `origin/offline-standalone` 同步（0 ahead / 0 behind）；推送中途 TLS/502 重试后成功
-- 上次验收：单测 884/884、内核 42/42、双态 smoke 33×2、双态 UI 审计 77×2、双态鼠标 46×2、双态布局硬问题 0、双态性能全绿（PF-01a 548/536ms）、pack `byteIdentical=true`、术语覆盖 100%、发布闸 94/95（仅差工作区未提交）
+- 最新提交：见改动登记末行（P68 战法升级成长全量覆盖）
+- 核对时间：2026-11-27 16:52（P68 收工）
+- 核对结果：P68 全量验收通过，提交并推送；工作区干净
+- 上次验收：单测 **888/888**、内核 42/42、双态 smoke 33×2、双态 UI 审计 77×2、双态鼠标 46×2、双态布局硬问题 0、双态性能全绿、pack `byteIdentical=true`（1582 文件）、术语覆盖 100%、发布闸 **95/95 ready=true**
+- ★ P68 新经验：性能探针 PF-02/PF-07 假红的真凶是 Chromium Windows 原生遮挡计算（`CalculateNativeWinOcclusion`），前台有其它应用盖住探针窗口时 rAF 压到 1fps，`SLG_FORCE_TOP=1` 压不住；已在 `electron/main.cjs` 自动化模式统一追加 `disable-features=CalculateNativeWinOcclusion`（玩家正常游玩不受影响）。PF-01a 仍随系统负载波动，隔时复跑即绿，不放宽阈值。
 
 ## 协作规则（硬性，所有会话遵守）
 
@@ -31,17 +32,11 @@
 | 2026-11-27 14:29 | WorkBuddy-A | `cdfdfe0` | P66 研习完成不阻塞（装配引导+换战法+卷尽说明）+ 全局灰按钮悬浮提示 | 已推送 |
 | 2026-11-27 15:36 | WorkBuddy-A | `d19c98a` | P67 出征自动接战：相遇/抵城即战，折损拆阵亡负伤且伤兵回撤周边/出生城 | 已推送 |
 | 2026-11-27 15:42 | WorkBuddy-A | `4ce6263` | 交接板：登记 P67 基线、全量验收与推送状态 | 已推送 |
+| 2026-11-27 16:52 | WorkBuddy-A | P68 | 战法升级成长全量覆盖：7 条平线战法修复（镜像控制 50→100 + 平线兜底 Lv1=Lv10/2）+ 自动化探针遮挡开关 | 本轮提交推送 |
 
 ### 进行中 / 待决
 
-P67 已完成、待提交；本会话实际改动（另一会话收工后请勿覆盖）：
-- 新增：`offline/server/domain/casualties.js`、`offline/server/domain/encounter.js`、`offline/tests/p67-auto-battle-and-casualties.test.js`
-- 领域/协议：`offline/server/domain/strategy.js`、`clash.js`、`interaction.js`、`offline/server/handlers.js`、`index.js`
-- 注入 UI：`offline/server/skills.js`、`interaction-ui.js`；配置：`offline/conf/interaction/terms.json`
-- 取证：`offline/electron/{ui-audit,mouse-playtest,ui-probe}.cjs`、`offline/tools/check-release.js`
-- 测试：`offline/tests/{m4-13-distance-garrison-captives,p11-levy-and-gates,p62-march-clash,p63-ai-prey-and-research,playtest-fixes}.test.js`
-- 文档：`offline/docs/{FIELD-CONTRACT,SDD-软件详细设计说明书,GDD-顶配详细设计,PRD-软件需求规格说明书,P8-出征面板与试玩修复,M4-13-距离做实与守将俘虏出征}.md`
-- `AI-HANDOFF.md`
+（无。P68 认领已收工：全量验收通过、已提交推送，认领解除。）
 
 ## 热点文件（多会话最易冲突）
 

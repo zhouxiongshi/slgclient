@@ -16,6 +16,20 @@ const { consoleSeverity, consolePayload } = require('./console-level.cjs');
 const ROOT = path.join(__dirname, '..');
 const PACKAGED_WEB = path.join(ROOT, 'web');
 
+/* ★ P68：自动化取证（smoke/audit/mouse/perf/layout/diag）必须关掉 Chromium 的
+   「窗口被遮挡 → rAF 降到 1fps」节流。webPreferences.backgroundThrottling:false
+   只管隐藏渲染器的定时器节流；Windows 上真正把被遮挡窗口 rAF 压到 1fps 的是
+   原生遮挡计算特性 CalculateNativeWinOcclusion（实测 2026-11-27：用户在前台
+   使用其它应用时探针窗口被盖住，PF-02/PF-07 连续假红，旧开关
+   disable-backgrounding-occluded-windows 压不住）。开关只加在自动化模式，
+   玩家正常游玩不受影响（玩家切走时照常降帧省资源）。 */
+const AUTOMATED = ['SLG_SMOKE', 'SLG_AUDIT', 'SLG_MOUSE', 'SLG_PERF', 'SLG_LAYOUT', 'SLG_DIAG']
+  .some((k) => process.env[k] === '1');
+if (AUTOMATED) {
+  app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+  app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
+}
+
 let win = null;
 let server = null;
 

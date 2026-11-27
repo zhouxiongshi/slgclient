@@ -121,10 +121,13 @@ function parseDesc(desc) {
   const out = [];
   for (const clause of String(desc || '').split(/[，；。]/)) {
     if (!clause) continue;
-    /* 官方「陷入犹豫状态」不带百分比：触发即必定施加，内核按 100% 命中落地。 */
+    /* 官方「陷入犹豫状态」不带百分比：触发即必定施加，内核按 100% 命中落地。
+       ★ P68：官方两端文案无百分比（Lv1=Lv10），照搬会导致「升级无反馈」。
+       这里只把 Lv10 记为 100（官方事实），Lv1 端由 mirrorOne 设计为 50，
+       曲线 50→100 线性、满级终点保留——与平衡闸「控制槽 Lv10=Lv1×2」同律。 */
     const st = STATES.find((x) => clause.includes(x));
     if (st && /(陷入|进入)/.test(clause) && !/%/.test(clause)) {
-      out.push({ kind: 'CONTROL', value: 100, state: st, _raw: clause, _placeholder: false });
+      out.push({ kind: 'CONTROL', value: 100, state: st, _raw: clause, _placeholder: false, _designedControl: true });
       continue;
     }
     if (!/%/.test(clause)) continue;
@@ -226,6 +229,10 @@ function mirrorOne(local, off) {
   const lv10 = parseDesc(desc10);
   const lv1 = parseDesc(desc1);
   if (!sameShape(lv1, lv10) || !lv10.length) return { skip: '描述无可忠实映射的百分比效果槽' };
+  /* ★ P68：官方无百分比的控制槽（触发即中），Lv1 端按本作惯例设计为 50，
+     曲线 50→100 线性；其余槽仍按官方 Lv1/Lv10 原值插值。 */
+  const lv1Vals = lv1.map((slot) => (slot._designedControl ? 50 : slot.value));
+  const designed = lv10.some((slot) => slot._designedControl);
   const prepare = Number((String(off.desc || '').match(/(\d+)回合准备/) || [])[1] || 0);
   const detail = local.kernel?.effects?.[0]?.detail_id || local.kernel?.detail_id || 900000;
   const effects = lv10.map((slot, i) => {
@@ -238,10 +245,10 @@ function mirrorOne(local, off) {
         : tgt.tt,
       attack_type: slot.kind === 'STRATEGY_DAMAGE' ? 'chain' : 'normal',
       available_round: 0,
-      control_probability: slot.kind === 'CONTROL' ? round2(lv1[i].value / 100) : 0,
+      control_probability: slot.kind === 'CONTROL' ? round2(lv1Vals[i] / 100) : 0,
       control_state: slot.kind === 'CONTROL' ? slot.state : null,
       bonus_terms: slot.kind === 'BUFF' || slot.kind === 'DEBUFF'
-        ? [{ name: slot.term, value: lv1[i].value, op: 0 }] : [],
+        ? [{ name: slot.term, value: lv1Vals[i], op: 0 }] : [],
     };
     return e;
   });
@@ -249,7 +256,7 @@ function mirrorOne(local, off) {
   for (let i = 0; i < 10; i += 1) {
     levels.push({
       probability: interp(prob[0], prob[1], i),
-      effect_value: lv10.map((slot, k) => interp(lv1[k].value, slot.value, i)),
+      effect_value: lv10.map((slot, k) => interp(lv1Vals[k], slot.value, i)),
       effect_round: lv10.map(() => 0),
     });
   }
@@ -312,6 +319,9 @@ function mirrorOne(local, off) {
         officialTarget: String(off.targetType || '').trim(),
         officialLv1: off['desc(level1)'],
         officialLv10: off.desc,
+        /* ★ P68：官方 Lv1/Lv10 文案逐字相同且无百分比的控制槽，照搬即「升级无反馈」；
+           本层按本作惯例设计命中率成长并在此留痕，供审计区分「官方原文」与「本作设计」。 */
+        ...(designed ? { designedControlGrowth: '官方控制描述无百分比（触发即中）；本作设计命中率 Lv1=50%→Lv10=100% 线性，满级终点保留官方语义' } : {}),
       },
     },
   } };

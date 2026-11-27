@@ -1,0 +1,95 @@
+/**
+ * P68 战法升级成长全量覆盖闸（用户 2026-11-27：「反击技能升级没有任何变化，
+ * Lv1-Lv10 的属性一模一样。这是严重 bug，检查其他技能是否也存在类似问题」）。
+ *
+ * 缺陷根因（两类）：
+ *   ① 无同名官方战法的本作战法整条曲线 Lv1==Lv10（一雷惊蛰/健卒不殆/混战/
+ *      轻骑冲阵/异士），官方成长对齐层直接跳过，升级零反馈；
+ *   ② 镜像层把官方「陷入 X 状态」无百分比描述照搬成命中率 100→100
+ *      （反计/佯攻），升级同样零反馈。
+ * 修复口径（满级平衡不动，只把 Lv1 端拉到一半，线性插值）：
+ *   - ①由 tools/sync-growth-direction.mjs 平线兜底（rule: 'flat-upgrade'）；
+ *   - ②由 tools/mirror-official-skills.mjs designedControlGrowth（50→100）。
+ * 反击（10025）本身一直有 37.5→75 成长（P53 接线），本用例一并锁住防回退。
+ */
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { SKILLS, kernelSkillAt } from '../server/skills.js';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const MIRROR = JSON.parse(readFileSync(join(ROOT, 'conf', 'skill-mirror.json'), 'utf8'));
+const mirrorByName = new Map(MIRROR.skills.map((s) => [s.name, s]));
+
+/** 运行时全表扫描：不允许任何一条战法十级全平（升级必须有反馈）。 */
+test('P68-① 运行时战法表不存在 Lv1==Lv10 的平线战法', () => {
+  const flat = [];
+  for (const s of SKILLS) {
+    const lv = s.ui?.levels || [];
+    if (lv.length < 2) continue;
+    const vals = lv.map((l) => l.effect_value);
+    if (vals.every((v) => JSON.stringify(v) === JSON.stringify(vals[0]))) flat.push(s.name);
+  }
+  assert.deepEqual(flat, [], `以下战法升级无任何变化（平线）：${flat.join('、')}`);
+});
+
+test('P68-② 平线兜底五条：Lv1=Lv10 一半，内核数值随级缩放', () => {
+  const expect = [
+    [10020, '一雷惊蛰', 75, 150],
+    [10026, '健卒不殆', 20, 40],
+    [10027, '混战', 25, 50],
+    [10029, '轻骑冲阵', 20, 40],
+    [10030, '异士', 12.5, 25],
+  ];
+  for (const [cfgId, name, lo, hi] of expect) {
+    const s = SKILLS.find((x) => Number(x.cfgId) === cfgId);
+    assert.ok(s, `${name} 不在运行时表`);
+    const vals = s.ui.levels.map((l) => l.effect_value[0]);
+    assert.equal(vals[0], lo, `${name} Lv1 应为 ${lo}`);
+    assert.equal(vals[9], hi, `${name} Lv10 终点保留 ${hi}`);
+    for (let i = 0; i < 10; i += 1) {
+      const want = Math.round((lo + (hi - lo) * i / 9) * 100) / 100;
+      assert.equal(vals[i], want, `${name} Lv${i + 1} 非线性插值`);
+    }
+    const k10 = kernelSkillAt(cfgId, 10);
+    assert.equal(k10.effects[0].rate_pct, hi, `${name} 内核 Lv10 伤害率应为 ${hi}`);
+    assert.equal(kernelSkillAt(cfgId, 1).effects[0].rate_pct, lo, `${name} 内核 Lv1 伤害率应为 ${lo}`);
+  }
+  /* BUFF 槽（普攻加成）也必须随级：健卒不殆 Lv1 0.2 → Lv10 0.4 */
+  const b1 = kernelSkillAt(10026, 1).effects[0].bonus_terms[0].value;
+  const b10 = kernelSkillAt(10026, 10).effects[0].bonus_terms[0].value;
+  assert.equal(b1, 0.2, '健卒不殆 Lv1 普攻加成应为 0.2');
+  assert.equal(b10, 0.4, '健卒不殆 Lv10 普攻加成应为 0.4');
+});
+
+test('P68-③ 镜像控制槽：命中率 Lv1=50%→Lv10=100%，内核命中随级，留痕可审计', () => {
+  for (const name of ['反计', '佯攻']) {
+    const m = mirrorByName.get(name);
+    assert.ok(m, `${name} 不在镜像层`);
+    const vals = m.ui.levels.map((l) => l.effect_value[0]);
+    assert.equal(vals[0], 50, `${name} 镜像命中率 Lv1 应为 50`);
+    assert.equal(vals[9], 100, `${name} 镜像命中率 Lv10 终点保留 100`);
+    assert.match(String(m.provenance?.mirror?.designedControlGrowth || ''), /Lv1=50%→Lv10=100%/,
+      `${name} 缺设计成长留痕（无法区分官方原文与本作设计）`);
+    const cfgId = Number(m.cfgId);
+    const k1 = kernelSkillAt(cfgId, 1).effects[0];
+    const k10 = kernelSkillAt(cfgId, 10).effects[0];
+    assert.equal(k1.control_probability, 0.5, `${name} 内核 Lv1 命中率应为 0.5`);
+    assert.equal(k10.control_probability, 1, `${name} 内核 Lv10 命中率应为 1`);
+  }
+});
+
+test('P68-④ 反击（用户点名）保持 37.5→75 且回击伤害率随级', () => {
+  const s = SKILLS.find((x) => Number(x.cfgId) === 10025);
+  const vals = s.ui.levels.map((l) => l.effect_value[0]);
+  assert.equal(vals[0], 37.5);
+  assert.equal(vals[9], 75);
+  for (const [lv, rate] of [[1, 37.5], [5, 54.17], [10, 75]]) {
+    const counter = kernelSkillAt(10025, lv).effects[0].mechanics?.counter;
+    assert.ok(counter, `反击 Lv${lv} 缺回击机制`);
+    assert.equal(counter.chance, 1, '受到普攻必反击');
+    assert.equal(counter.rate_pct, rate, `反击 Lv${lv} 回击伤害率应为 ${rate}`);
+  }
+});
