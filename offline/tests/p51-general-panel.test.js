@@ -10,11 +10,21 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { loadConfig } from '../server/config.js';
 import { createWorld, normalizeWorld } from '../server/world.js';
-import { ensureStrategy, oathOptions, chooseOath, dispatchGeneral, dispatchGenerals } from '../server/domain/strategy.js';
+import {
+  ensureStrategy, oathOptions, chooseOath, dispatchGeneral, dispatchGenerals, dispatchTick,
+} from '../server/domain/strategy.js';
 
 const cfg = loadConfig();
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 function ctx() { return { push() {} }; }
+
+/* ★ P74：调遣从「瞬移」改成「启程→在途→抵达」，这些用例验的是落账结果，
+   所以统一推进到抵达日再让 dispatchTick 落城。 */
+function land(s, r) {
+  const days = Math.max(1, ...(r.moved || [r]).map((m) => Number(m.marchDays) || 1));
+  s.clock.day = (Number(s.clock.day) || 1) + days + 1;   // 出发日在当下，抵达日 = 出发 + 天数
+  dispatchTick(s, cfg, ctx());
+}
 
 function freshState() {
   const s = normalizeWorld(createWorld(cfg), cfg);
@@ -80,10 +90,13 @@ test('P51-③ 批量调防：多名武将一次改驻地，返回中文汇总', 
   assert.ok(gs.length >= 2, '前提：出发城有两名以上武将');
   const r = dispatchGenerals(s, cfg, ctx(), { generalIds: gs.map((g) => g.id), toCityId: to });
   assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(r.transit, true, '批量调遣先启程');
   assert.equal(r.moved.length, 2);
   assert.equal(r.skipped.length, 0);
-  for (const g of gs) assert.equal(g.cityId, to, '批量后每人驻地都改到目标城');
-  assert.match(r.text, /2 员武将调往/);
+  for (const g of gs) assert.notEqual(g.cityId, to, '下达当天不许瞬移到位');
+  land(s, r);
+  for (const g of gs) assert.equal(g.cityId, to, '抵达日每人驻地都改到目标城');
+  assert.match(r.text, /2 员武将启程前往/);
   assert.doesNotMatch(r.text, /same_city|no_general|marching/, '玩家文案不夹协议码');
 });
 
@@ -97,6 +110,7 @@ test('P51-④ 混合勾选：不可调者跳过并写明原因，其余照常调
   assert.equal(r.moved.length, 1);
   assert.equal(r.skipped.length, 1);
   assert.equal(r.skipped[0].reason, 'same_city');
+  land(s, r);
   assert.equal(gs[1].cityId, to);
   assert.match(r.text, /已在此城/, '跳过原因写进中文汇总');
 });
@@ -110,6 +124,7 @@ test('P51-⑤ 行军中不可调，也不影响同批其他人', () => {
   assert.equal(r.ok, true);
   assert.equal(r.skipped[0].reason, 'marching');
   assert.equal(gs[0].cityId, from, '行军者原地不动');
+  land(s, r);
   assert.equal(gs[1].cityId, to);
   assert.match(r.text, /行军中不可调/);
 });
@@ -142,7 +157,10 @@ test('P51-⑦ 单人调防回归：与批量共用校验，返回结构不变', 
   assert.equal(r.from, from);
   assert.equal(r.to, to);
   assert.ok(r.toName && r.fromName);
-  assert.equal(g.cityId, to);
+  assert.equal(r.transit, true, '单人调遣同样是启程');
+  assert.equal(g.cityId, from, '下达当天驻地不改');
+  land(s, { moved: [r] });
+  assert.equal(g.cityId, to, '抵达日落到目标城');
   const same = dispatchGeneral(s, cfg, ctx(), { generalId: g.id, toCityId: to });
   assert.equal(same.ok, false);
   assert.equal(same.reason, 'same_city');

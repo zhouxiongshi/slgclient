@@ -28,8 +28,7 @@ import { rngFor } from '../server/domain/strategy-rng.js';
 import { aiRosterCultivateTick, ensureRosters } from '../server/domain/ai-roster.js';
 import {
   factionConf, ensureStrategy, strategyFormup, dispatchGeneral,
-  oathOptions, chooseOath, strategyAttack, strategyViewState,
-} from '../server/domain/strategy.js';
+  oathOptions, chooseOath, strategyAttack, strategyViewState, dispatchTick } from '../server/domain/strategy.js';
 import { ensureCityEcon } from '../server/domain/city-econ.js';
 import { PERSONA_AXES } from '../server/domain/strategy-brain.js';
 
@@ -282,7 +281,13 @@ test('武将调防：改所在城、离队，同城/敌城/无将各有中文原
   const ctx = noopCtx(state);
   const r = dispatchGeneral(state, cfg, ctx, { generalId: g.id, toCityId: to });
   assert.equal(r.ok, true, JSON.stringify(r));
-  assert.equal(g.cityId, to, '调防后武将所在城应变更');
+  /* ★ P74：调防改成行程——下达当天是「启程」，抵达日才落城、摘队。 */
+  assert.equal(r.transit, true, '调防应先启程');
+  assert.equal(g.cityId, from, '下达当天人还没走');
+  assert.ok(g.transit && g.transit.to === to, '途中记为在途');
+  state.clock.day = (Number(state.clock.day) || 1) + Math.max(1, Number(r.marchDays) || 1) + 1;
+  dispatchTick(state, cfg, ctx);
+  assert.equal(g.cityId, to, '抵达日武将所在城应变更');
   assert.equal(g.order, 0, '调离后队伍序号应清零');
   assert.ok(!(army.generals || []).includes(g.id), '应从原队伍摘除');
   assert.equal(dispatchGeneral(state, cfg, ctx, { generalId: g.id, toCityId: to }).reason, 'same_city');

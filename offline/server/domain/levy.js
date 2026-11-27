@@ -47,6 +47,30 @@ function econOf(state, cityId) {
 }
 
 /**
+ * ★ P74 真实在役兵力：本城城内兵 + 归属本城的部队（含在途、含驻城未出征）。
+ *
+ * 为什么必须派生而不是记台账：旧口径把「已征户」累加进 `cityEcon.levied`，只在
+ * `routeWounded()` 的阵亡分支里减。任何没走那条路的掉兵（解散、撤编、城破丢兵、
+ * 旧档迁移）都会让台账永久虚高，于是 `余户 = 适龄 − 已征` 恒等于 0，人口 9.7 万
+ * 的城也报「各户壮丁已尽」——玩家看到的就是「兵打光了就再也征不到兵，只能等死」。
+ * 现在直接数在役的兵：兵死了池子立刻回，不依赖任何一条路径记得去减台账。
+ *
+ * 只读 state，零依赖，不引入 import（本模块是全链路叶子）。
+ */
+export function inServiceOf(state, cityId) {
+  const id = Number(cityId);
+  if (!(id > 0)) return 0;
+  let n = Math.max(0, Math.floor(num(state?.strategy?.cities?.[id]?.troops, 0)));
+  for (const a of state?.armys || []) {
+    if (!a || Number(a.cityId) !== id) continue;
+    /* 行军中的部队 cityId 仍是出发城（抵达才改），所以这里天然把在途兵算进来。 */
+    n += (a.soldiers || []).slice(0, 3)
+      .reduce((s, v) => s + Math.max(0, Math.floor(num(v, 0))), 0);
+  }
+  return n;
+}
+
+/**
  * 兵役台账（旧档自动补 0）。
  * ★ P72 归一化：`levied` 是**在役户**，不得超过当前适龄壮丁户。人口被反复抽丁压低后，
  *   超出部分视为流失/复员，名额回到本城，历史累计 `levyTotal` 不回退。
@@ -80,8 +104,17 @@ export function levyView(state, cityId, opts = {}) {
   const adultMales = Math.floor(households * ADULT_MALE_RATE);
   const exempt = Math.max(0, households - adultMales);
   const ledger = levyLedger(state, id);
+  /* `levied` 是历史台账（只增不减，靠阵亡分支回退）。 */
   const levied = Math.max(0, Math.floor(num(ledger.levied, 0)));
-  const houseBalance = Math.max(0, adultMales - levied);
+  const inService = inServiceOf(state, id);
+  /* ★ P74 核心：台账**不许空占名额**。
+     旧口径直接拿 `levied` 算余户，而这个数只在 routeWounded 的阵亡分支里减；
+     任何没走那条路的掉兵（全军覆没、解散、城破丢兵、旧档迁移）都会让它永久虚高，
+     于是「人口 9.7 万、在役 0」的城照样报「各户壮丁已尽」——玩家看到的就是
+     兵打光后再也征不到、只能等死。
+     现在取 min(台账, 真实在役)：兵没了名额立刻回池，兵还在就照旧受限（不放松上限）。 */
+  const effectiveLevied = Math.min(levied, Math.max(0, inService));
+  const houseBalance = Math.max(0, adultMales - effectiveLevied);
 
   const season = seasonOf(state);
   const seasonFactor = SEASON_FACTOR[season] ?? 1;
@@ -99,11 +132,23 @@ export function levyView(state, cityId, opts = {}) {
   let hint = '';
   if (pop <= 0) { reason = 'no_population'; reasonText = '此城无人口'; hint = '先办「劝课生息」招徕流民。'; }
   else if (cooling) { reason = 'levy_cooldown'; reasonText = '本旬已征过兵'; hint = '每旬只征一次，推进到下一旬再来；或先办内政增殖人口。'; }
-  else if (houseBalance <= 0) { reason = 'levy_exhausted'; reasonText = '各户壮丁已尽（一户一丁）'; hint = '阵亡壮丁战后复员归农，名额回到本城；也可办「劝课生息」招徕新户。'; }
-  else if (quota <= 0) { reason = 'need_population'; reasonText = '兵源不足，需先发展人口'; hint = '办「劝课生息」或等人口自然增长。'; }
+  else if (houseBalance <= 0) {
+    /* ★ P74：说清是「在役已满」还是「人口太少」。旧文案统一说「壮丁已尽」，
+       人口近十万的城这么提示，玩家只会以为游戏卡死。 */
+    if (effectiveLevied >= adultMales && adultMales > 0) {
+      reason = 'levy_exhausted';
+      reasonText = `在役 ${inService} 已达本城壮丁上限 ${adultMales}`;
+      hint = '兵打光了名额立刻回池；也可解散多余部队、或办「劝课生息」添丁。';
+    } else {
+      reason = 'need_population';
+      reasonText = '人丁太少，凑不出壮丁';
+      hint = '办「劝课生息」招徕流民；人口每旬都在长，等它涨上来再征。';
+    }
+  }
+  else if (quota <= 0) { reason = 'need_population'; reasonText = '人丁太少，凑不出壮丁'; hint = '办「劝课生息」招徕流民；人口每旬都在长，等它涨上来再征。'; }
 
   return {
-    pop, households, adultMales, exempt, levied, houseBalance,
+    pop, households, adultMales, exempt, levied, inService, houseBalance,
     seasonalCap, turnCap, quota, season, seasonFactor, armsFactor,
     turn, lastLevyTurn: lastTurn, nextTurn: turn + 1,
     canLevy: !reason && quota > 0, reason, reasonText, hint,
@@ -125,7 +170,9 @@ export function checkLevy(state, cityId, count, opts = {}) {
   if (want > levy.quota) {
     return {
       ok: false,
-      reason: levy.houseBalance <= 0 ? 'levy_exhausted' : (levy.quota <= 0 ? 'need_population' : 'over_quota'),
+      /* ★ P74：直接沿用 levyView 已分好的原因，不再在这里二次判断
+         （旧写法把 houseBalance<=0 一律叫 levied_exhausted，掩盖了「人口太少」）。 */
+      reason: levy.reason || 'over_quota',
       quota: levy.quota, levy, count: want,
     };
   }

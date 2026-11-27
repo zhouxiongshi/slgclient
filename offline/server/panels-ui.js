@@ -1593,12 +1593,12 @@
     var ownRows = (data.strategy.cities || []).filter(function (c) { return c.owner === 'player' && c.levy; });
     if (ownRows.length) {
       out += '<div class="card"><h3>户口与兵役（与城池内页同源）</h3><table><thead><tr>'
-        + '<th>城池</th><th>人口</th><th>户数</th><th>适龄壮丁</th><th>已征</th><th>本旬可征</th></tr></thead><tbody>'
+        + '<th>城池</th><th>人口</th><th>户数</th><th>适龄壮丁</th><th>在役</th><th>本旬可征</th></tr></thead><tbody>'
         + ownRows.map(function (c) {
           var v = c.levy;
           return '<tr><td>' + esc(c.name) + '</td><td class="v">' + fmt(v.pop) + '</td>'
             + '<td class="v">' + fmt(v.households) + '</td><td class="v">' + fmt(v.adultMales) + '</td>'
-            + '<td class="v">' + fmt(v.levied) + '</td>'
+            + '<td class="v">' + fmt(v.inService) + '</td>'
             + '<td class="v">' + (v.quota > 0 ? '<span class="up">' + fmt(v.quota) + '</span>'
               : '<span class="tag no">' + esc(v.reasonText || '需先生息') + '</span>') + '</td></tr>';
         }).join('') + '</tbody></table>'

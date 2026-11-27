@@ -25,6 +25,10 @@ export function formationGeneralCheck(state, { generalId, cityId, armyId = 0, mi
   const g = (state.generals || []).find((x) => idOf(x.id) === gid);
   if (!g) return { ok: false, reason: missingReason, generalId: gid };
 
+  /* ★ P74：赴任途中的武将不在城里——g.cityId 还记着出发城，不拦就会「人还在路上
+     却被编进出征队伍」，抵达时凭空多出一支。 */
+  if (g.transit) return { ok: false, reason: 'in_transit', generalId: gid };
+
   const fromCity = idOf(g.cityId);
   if (fromCity !== city) {
     return { ok: false, reason: 'general_other_city', generalId: gid, cityId: city, generalCityId: fromCity };

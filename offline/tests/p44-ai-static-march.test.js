@@ -29,7 +29,11 @@ test('P62-① 诸侯军不再走静态分支，与玩家军共用移动绘制', 
   assert.doesNotMatch(seg, /if \(isFoe\) \{\s*\n\s*var fLen = total \* 0\.62/, '旧静态分支必须撤掉');
   assert.doesNotMatch(seg, /total \* 0\.62/, '固定 62% 位置的静态标记不得回潮');
   assert.ok(seg.includes('drawTroopToken'), '两边共用部队棋子绘制');
-  assert.ok(seg.includes("isFoe ? '225,92,72' : '232,198,112'"), '敌方赤红、我方金色仍要区分');
+  /* ★ P74：多出「武将调遣」的青蓝一档，配色判据随之放宽到「三色并存」。 */
+  assert.ok(seg.includes("'225,92,72'"), '敌方赤红仍在');
+  assert.ok(seg.includes("'232,198,112'"), '我方金色仍在');
+  assert.ok(seg.includes("'122,178,214'"), '★ P74 调遣青蓝必须与部队区分');
+  assert.match(seg, /isDispatch/, '调遣分支必须在绘制点可见');
 });
 
 test('P62-② 双方军标都由时间驱动：插值移动 + 流光 + 踏步相位', () => {

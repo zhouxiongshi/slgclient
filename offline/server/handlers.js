@@ -43,7 +43,7 @@ import { refusalLine, failLine } from './domain/recruit-refusal.js';
 import {
   strategyTick, strategyAttack, strategyTurnDays, ensureStrategy, clearThreat,
   strategyResolveMarches, strategyRecallMarch, recordEvent, factionReliefTick,
-  assaultBattleTick, assaultEscalationTick, stageGoalTick, clashTick, strategyMap,
+  assaultBattleTick, assaultEscalationTick, dispatchTick, stageGoalTick, clashTick, strategyMap,
 } from './domain/strategy.js';
 /* ★ P67：本地清剿与战略攻城共用同一套「折损拆阵亡/负伤、伤兵回城」口径 */
 import { splitCasualties, routeWounded } from './domain/casualties.js';
@@ -405,6 +405,9 @@ export function settleWorld(ctx, now = Date.now()) {
   /* ★ 2026-11-19：来犯军围城推进。旧版来犯军摆在家门口没有任何后果，
      世界对玩家零压力；现在 40 日不清剿就围城，围城每旬掉守军/民心。 */
   assaultEscalationTick(state, cfg, ctx);
+  /* ★ P74：武将调遣在旬界落城（抵达日到点才改驻地、发军情）。
+     放在行军/开打之后：当天抵达的部队先结算，再让赴任武将入城，避免抢同一城的编制。 */
+  dispatchTick(state, cfg, ctx);
   stageGoalTick(state, cfg, ctx);
   strategyTick(state, cfg, ctx, now);
   ensureTavern(state, cfg);

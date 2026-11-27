@@ -180,6 +180,8 @@ export function governorCandidates(state, cfg, cityId = 0) {
   for (const a of state.armys || []) if (a.marchId) for (const gid of a.generals || []) if (gid) marching.add(Number(gid));
   return (state.generals || [])
     .filter((g) => Number(g.cityId) === cid)
+    /* ★ P74：赴任途中的武将不在城里，不能当太守。 */
+    .filter((g) => !g.transit)
     .filter((g) => !marching.has(Number(g.id)))
     .filter((g) => !taken.has(Number(g.id)))
     .filter((g) => !posting.has(Number(g.id)))

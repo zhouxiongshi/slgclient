@@ -2834,6 +2834,9 @@ export function strategyResolveMarches(state, cfg, ctx) {
      援军已入城的守军（否则驰援永远扑空，形同虚设）。 */
   const ordered = [...st.marches].sort((a, b) => (a.side === 'player' ? 1 : 0) - (b.side === 'player' ? 1 : 0));
   for (const mm of ordered) {
+    /* ★ P74：武将调遣只是「在途表现」，落城由 dispatchTick 在旬界完成，
+       绝不进战斗结算（它没有部队，混进来会被当成零兵部队开打）。 */
+    if (mm.kind === 'dispatch') continue;
     /* 修 U12：诸侯行军只做「可见性 + 到达标记」。战斗已在 applyOrders 抽象结算，
        此处不能重复开打；到达后保留 resolved 行，供战报与情报回看。 */
     if (mm.side !== 'player') {
@@ -3274,6 +3277,10 @@ function dispatchCheck(state, st, g, to, fromFallback = 0) {
   if (!g) return { ok: false, reason: 'no_general' };
   const from = Number(g.cityId) || fromFallback || st.playerCity || 0;
   if (!to) return { ok: false, reason: 'no_city' };
+  /* ★ P74：已在途的武将不能再派一次（否则会出现两条行程争同一个人的驻地）。
+     这条要排在 same_city 之前——在途时 g.cityId 还记着出发城，
+     先判 same_city 会误答「已在此城」，玩家以为人没走。 */
+  if (g.transit) return { ok: false, reason: 'in_transit', generalId: Number(g.id), to: Number(g.transit.to) || 0 };
   if (to === from) return { ok: false, reason: 'same_city', cityId: to, from };
   const tstate = st.cities?.[to];
   if (!tstate) return { ok: false, reason: 'no_city' };
@@ -3283,6 +3290,83 @@ function dispatchCheck(state, st, g, to, fromFallback = 0) {
     return { ok: false, reason: 'marching', generalId: Number(g.id) };
   }
   return { ok: true, from };
+}
+
+/** ★ P74：调遣速度（里/日）。轻装简行比重甲行军快，但不再是瞬移。 */
+export const DISPATCH_SPEED = 90;
+
+/**
+ * ★ P74 调遣行程化：玩家下达的是「启程」而不是「瞬移」。
+ *
+ * 旧实现 `applyDispatch()` 当场把 `g.cityId` 改成目标城——玩家点一下，人就从
+ * 甲城跳到乙城，地图上什么都没有。用户原话：「只是下达了一个任务，应该在结束
+ * 本回合内政结束时触发调遣动作，武将移动动画动作」。
+ *
+ * 现在：`dispatchGeneral` 只写一条行程（复用行军牌，客户端照现有插值画棋子），
+ * 武将挂 `g.transit` 进入「在途」，`dispatchTick()` 在旬界推进，抵达日才真正
+ * 落到目标城（摘原队伍、改驻地、发军情）。途中不可出征、不可再调、不可任太守。
+ */
+function planDispatch(state, st, g, to, from) {
+  if (!Array.isArray(st.marches)) st.marches = [];
+  const today = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  const km = marchKmBetween(Number(from) || 0, Number(to) || 0);
+  const days = Math.max(1, marchDaysBy(km, DISPATCH_SPEED));
+  const marchRow = {
+    id: (st.marchSeq = (st.marchSeq || 0) + 1),
+    side: 'player',
+    kind: 'dispatch',
+    from: Number(from) || 0,
+    to: Number(to) || 0,
+    fromName: cityName(from),
+    toName: cityName(to),
+    departDay: today,
+    arriveDay: today + days,
+    km, speed: DISPATCH_SPEED, marchDays: days,
+    /* 不带兵：棋子按「单车轻骑」画，客户端按 kind 走 dispatch 分支。 */
+    troops: 0,
+    generalId: Number(g.id) || 0,
+    generalName: '',
+    resolved: false,
+  };
+  st.marches.push(marchRow);
+  g.transit = {
+    marchId: marchRow.id, from: marchRow.from, to: marchRow.to,
+    departDay: marchRow.departDay, arriveDay: marchRow.arriveDay,
+  };
+  g.order = 0;
+  return marchRow;
+}
+
+/** 旬界推进：抵达日到了才真正完成调遣。 */
+export function dispatchTick(state, cfg, ctx) {
+  const st = ensureStrategy(state);
+  if (!Array.isArray(st.marches)) return [];
+  const today = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  const out = [];
+  for (const g of state.generals || []) {
+    const tr = g && g.transit;
+    if (!tr) continue;
+    if (today < Math.max(1, Math.floor(Number(tr.arriveDay) || 1))) continue;
+    const to = Number(tr.to) || 0;
+    const from = Number(tr.from) || 0;
+    const owner = st.cities?.[to]?.owner;
+    if (!st.cities?.[to] || owner !== 'player') {
+      /* 目标城已易主：半路折返原城，不让人凭空蒸发。 */
+      delete g.transit;
+      g.cityId = from || st.playerCity || 0;
+      ctx.push?.('general.push', g);
+      recordEvent(state, `${generalDisplayName(state, cfg, g)}赴${cityName(to)}途中该城已易主，折返${cityName(g.cityId)}。`);
+      out.push({ kind: 'dispatch-abort', generalId: Number(g.id), to, from, back: g.cityId });
+      continue;
+    }
+    const landed = applyDispatch(state, ctx, g, to, from);
+    delete g.transit;
+    const row = st.marches.find((mm) => mm.id === tr.marchId);
+    if (row) row.resolved = true;
+    recordEvent(state, `${generalDisplayName(state, cfg, g)}抵达${cityName(to)}。`);
+    out.push({ kind: 'dispatch-arrive', ...landed });
+  }
+  return out;
 }
 
 /* 调防的唯一落账口径：从原队伍摘除并回填 order（与 army.dispose 同口径）。
@@ -3315,10 +3399,17 @@ export function dispatchGeneral(state, cfg, ctx, { generalId, toCityId, fromCity
      绝不在这里写 g.cityId——校验失败的路径此前会留下「被拒绝却改了驻地」的脏档。 */
   const check = dispatchCheck(state, st, g, to, Number(fromCityId) || 0);
   if (!check.ok) return check;
-  const out = applyDispatch(state, ctx, g, to, check.from);
-  const gname = generalDisplayName(state, cfg, g);
-  recordEvent(state, `${gname}自${cityName(check.from)}调往${cityName(to)}。`);
-  return { ok: true, ...out };
+  const row = planDispatch(state, st, g, to, check.from);
+  row.generalName = generalDisplayName(state, cfg, g);
+  ctx.push?.('general.push', g);
+  ctx.push?.('strategy.state', null);
+  recordEvent(state, `${row.generalName}自${cityName(check.from)}启程前往${cityName(to)}，约 ${row.marchDays} 日后到。`);
+  return {
+    ok: true, transit: true, generalId: gid, from: check.from, to,
+    fromName: cityName(check.from), toName: cityName(to),
+    departDay: row.departDay, arriveDay: row.arriveDay, marchDays: row.marchDays,
+    text: `${row.generalName}启程前往${cityName(to)}，约 ${row.marchDays} 日后抵达。`,
+  };
 }
 
 /**
@@ -3339,6 +3430,7 @@ export function dispatchGenerals(state, cfg, ctx, { generalIds, toCityId } = {})
   const explain = {
     no_general: '武将已不在营中', same_city: '已在此城',
     marching: '行军中不可调', no_city: '目标城不存在', not_own_city: '目标城不属我方',
+    in_transit: '已在赴任途中',
   };
   const moved = [];
   const skipped = [];
@@ -3356,18 +3448,28 @@ export function dispatchGenerals(state, cfg, ctx, { generalIds, toCityId } = {})
     return { ok: false, reason: 'all_skipped', moved: [], skipped, to,
       text: `没有武将可调：${why}` };
   }
-  const rows = [];
-  for (const m of moved) rows.push(applyDispatch(state, ctx, m.g, to, m.check.from));
-  const names = rows.map((r) => {
-    const g = (state.generals || []).find((x) => x.id === r.generalId);
-    return generalDisplayName(state, cfg, g) || `武将${r.generalId}`;
+  /* ★ P74：批量调遣同样走行程，不瞬移；同一批同一出发日，抵达日各按距离算。 */
+  const rows = moved.map((m) => {
+    const row = planDispatch(state, st, m.g, to, m.check.from);
+    row.generalName = generalDisplayName(state, cfg, m.g) || `武将${m.g.id}`;
+    ctx.push?.('general.push', m.g);
+    return {
+      generalId: Number(m.g.id), from: m.check.from, to,
+      fromName: cityName(m.check.from), toName: cityName(to),
+      marchDays: row.marchDays, arriveDay: row.arriveDay,
+    };
   });
-  let text = `${names.length} 员武将调往${cityName(to)}：${names.join('、')}。`;
+  const names = rows
+    .map((r) => generalDisplayName(state, cfg, (state.generals || []).find((x) => x.id === r.generalId)))
+    .filter(Boolean);
+  const maxDays = Math.max(...rows.map((r) => r.marchDays));
+  let text = `${names.length} 员武将启程前往${cityName(to)}：${names.join('、')}，最迟 ${maxDays} 日后抵达。`;
   if (skipped.length) {
     text += ` 未调 ${skipped.map((s) => `${s.name}（${explain[s.reason] || '不可调'}）`).join('、')}。`;
   }
+  ctx.push?.('strategy.state', null);
   recordEvent(state, text);
-  return { ok: true, moved: rows, skipped, to, toName: cityName(to), text };
+  return { ok: true, transit: true, moved: rows, skipped, to, toName: cityName(to), marchDays: maxDays, text };
 }
 
 /** ★ P3 运输队：把粮从府库运往指定己方城城库，走行军队列按时抵达。

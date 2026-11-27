@@ -15,7 +15,7 @@ import { loadConfig } from '../server/config.js';
 import { createWorld, normalizeWorld } from '../server/world.js';
 import { handleRequest, processTask } from '../server/handlers.js';
 import {
-  ensureStrategy, oathOptions, chooseOath, dispatchGeneral, dispatchGenerals,
+  ensureStrategy, oathOptions, chooseOath, dispatchGeneral, dispatchGenerals, dispatchTick,
   rebindArmiesIfStranded, strategyAttack,
 } from '../server/domain/strategy.js';
 import { disarmForGold } from '../server/domain/failstate.js';
@@ -60,6 +60,10 @@ test('P55-① 调防退兵：武将离槽时该槽兵力/在途清空并退回�
   const cityBefore = Number(s.strategy.cities[from].troops) || 0;
   const r = dispatchGenerals(s, cfg, mkCtx(s), { generalIds: [hit.g.id], toCityId: to });
   assert.equal(r.ok, true, JSON.stringify(r));
+  /* ★ P74：调遣改为行程，退兵发生在抵达日（人还在路上时仍占着槽，只是不能再战）。 */
+  assert.equal(hit.g.cityId, from, '下达当天人还没走');
+  s.clock.day = (Number(s.clock.day) || 1) + Math.max(1, ...r.moved.map((m) => Number(m.marchDays) || 1)) + 1;
+  dispatchTick(s, cfg, mkCtx(s));
   assert.equal(hit.a.generals[hit.i], 0, '武将已从槽位摘除');
   assert.equal(hit.a.soldiers[hit.i], 0, '空槽不得残留兵力');
   assert.equal(hit.a.con_cnts[hit.i], 0, '空槽不得残留在途征兵');
@@ -72,7 +76,11 @@ test('P55-② 单人调防同样退兵，且返回值带回退兵数', () => {
   const hit = findStaffed(s, from);
   const r = dispatchGeneral(s, cfg, mkCtx(s), { generalId: hit.g.id, toCityId: to });
   assert.equal(r.ok, true);
-  assert.equal(r.returned, hit.a.soldiers[hit.i] + 0 || r.returned);
+  assert.equal(r.transit, true, '★ P74：单人调遣也是启程，不是瞬移');
+  s.clock.day = (Number(s.clock.day) || 1) + Math.max(1, Number(r.marchDays) || 1) + 1;
+  const landed = dispatchTick(s, cfg, mkCtx(s));
+  assert.equal(landed[0].kind, 'dispatch-arrive');
+  assert.equal(landed[0].returned, hit.a.soldiers[hit.i] || landed[0].returned);
   assert.equal(hit.a.generals[hit.i], 0);
   assert.equal(hit.a.soldiers[hit.i], 0);
 });

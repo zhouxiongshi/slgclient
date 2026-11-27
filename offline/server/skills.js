@@ -2956,13 +2956,17 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
         if (!a || !b) return;
         /* ★ U12：诸侯行军同样画在地图上，但用敌红区分；玩家军仍是金色 */
         var isFoe = !!mm.side && mm.side !== 'player';
+        /* ★ P74：武将调遣是「一个人在赶路」，不是部队。用自己的青蓝色棋子，
+           与金色我军、赤红诸侯军区分开，玩家一眼能看出「这是我的官在赴任」。 */
+        var isDispatch = mm.kind === 'dispatch';
         /* ★ P42：诸侯军抵达后 resolved 仍要在存档里留 3 日，静态标记必须立刻撤下，
            否则情报误导（页脚「诸侯动向」已按 !resolved 计数）。玩家 resolved 军
            仍保留原有渲染窗口，不动战报回放。 */
         if (isFoe && mm.resolved) return;
-        var cWalk = isFoe ? 'rgba(225,92,72,.95)' : 'rgba(232,198,112,.9)';
-        var cRest = isFoe ? 'rgba(225,92,72,.45)' : 'rgba(232,198,112,.45)';
-        var cFlag = isFoe ? '#e15c48' : '#e8c670';
+        if (isDispatch && mm.resolved) return;
+        var cWalk = isFoe ? 'rgba(225,92,72,.95)' : (isDispatch ? 'rgba(122,178,214,.95)' : 'rgba(232,198,112,.9)');
+        var cRest = isFoe ? 'rgba(225,92,72,.45)' : (isDispatch ? 'rgba(122,178,214,.45)' : 'rgba(232,198,112,.45)');
+        var cFlag = isFoe ? '#e15c48' : (isDispatch ? '#7ab2d6' : '#e8c670');
         var span = Math.max(1, mm.arriveDay - mm.departDay);
         var p = Math.max(0, Math.min(1, (dayNow - mm.departDay) / span));
         var pts = [[a.x, a.y], [b.x, b.y]];
@@ -3047,18 +3051,20 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
         }
         var tok = drawTroopToken(qm[0] + biasX, qm[1] + biasY, {
           scale: scale, ph: ph, tang: tang,
-          rgb: isFoe ? '225,92,72' : '232,198,112',
-          flag: cFlag, troops: tsum, arrived: p >= 0.995
+          rgb: isFoe ? '225,92,72' : (isDispatch ? '122,178,214' : '232,198,112'),
+          /* 调遣只带亲兵：按最小一档画，别让一个赴任的官看着像三千大军 */
+          flag: cFlag, troops: isDispatch ? 200 : tsum, arrived: p >= 0.995
         });
-        /* 标签：我方「→ 目标城 · 余 N 日」，敌方前置势力名 */
+        /* 标签：我方「→ 目标城 · 余 N 日」，敌方前置势力名，调遣写「某人赴某城」 */
         var head = isFoe ? ((mm.factionName || '诸侯军') + ' ') : '';
-        var label = head + (mm.recalled ? '撤回 ' : '→ ') + (mm.toName || '')
-          + ' · 余 ' + restDay + ' 日';
+        var label = isDispatch
+          ? ((mm.generalName || '武将') + ' 赴 ' + (mm.toName || '') + ' · 余 ' + restDay + ' 日')
+          : (head + (mm.recalled ? '撤回 ' : '→ ') + (mm.toName || '') + ' · 余 ' + restDay + ' 日');
         g.font = Math.max(10, 11.5 * scale).toFixed(1) + 'px "Microsoft YaHei",sans-serif';
         g.textAlign = 'center'; g.textBaseline = 'top';
         g.lineWidth = 3; g.strokeStyle = 'rgba(250,244,228,.88)';
         g.strokeText(label, qm[0] + biasX, tok.labelY);
-        g.fillStyle = isFoe ? '#9e2b1c' : '#6b4a12';
+        g.fillStyle = isFoe ? '#9e2b1c' : (isDispatch ? '#28506b' : '#6b4a12');
         g.fillText(label, qm[0] + biasX, tok.labelY);
         g.restore();
       });
@@ -6766,13 +6772,13 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
             kv('人口', fmt(lv.pop))
             + kv('户数（5 口/户）', fmt(lv.households))
             + kv('适龄壮丁', fmt(lv.adultMales) + ' <span class="cost">（妇孺老弱 ' + fmt(lv.exempt) + ' 户免征）</span>')
-            + kv('已征户（一户一丁）', fmt(lv.levied))
+            + kv('在役兵力', fmt(lv.inService) + ' <span class="cost">（含本城出发的在途部队）</span>')
             + kv('本旬可征', '<b id="slgLevyShown" style="color:' + (lv.quota > 0 ? '#a9e2a0' : '#ff9d6b') + '">' + fmt(lv.quota) + '</b> 丁')
             + kv('征后人口代价', '每丁 −' + lv.popCostPerSoldier + ' 口')));
         }
         levyCard.appendChild(el('div', 'cost',
-          '一户只出一丁，已征之户不再征；妇孺老少一律免征。每城每旬只征一次，'
-          + '兵源耗尽要先办内政「劝课生息」增殖人口。'));
+          '兵源上限是「适龄壮丁 − 在役兵力」：兵打光了名额立刻回到本城，'
+          + '不必等人口也能量力再征。每城每旬只征一次。'));
         if (lv && !lv.canLevy) {
           levyCard.appendChild(el('div', 'cost',
             '<span style="color:#ff9d6b">' + esc(lv.reasonText || '本旬不可征') + '。' + esc(lv.hint || '') + '</span>'));

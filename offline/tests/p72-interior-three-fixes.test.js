@@ -28,6 +28,11 @@ function fresh() {
   const lords = oathOptions(s).lords.filter((l) => l.cities.length >= 2);
   assert.equal(chooseOath(s, cfg, ctx(), { lord: lords[0].id, city: lords[0].cities[0].id }).ok, true);
   const cid = Number(Object.keys(s.strategy.cities).find((id) => s.strategy.cities[id].owner === 'player'));
+  /* ★ P74：兵源额度现在与「真实在役兵力」挂钩（台账不许空占名额）。
+     这组用例是隔离验人口/兵役台账，因此先把守军与部队清零，
+     否则「人口 5 口 / 守军 5000」这种现实中不可能的组合会先撞上在役上限。 */
+  s.strategy.cities[cid].troops = 0;
+  s.armys = (s.armys || []).filter((a) => Number(a.cityId) !== cid);
   return { s, cid, e: s.strategy.cityEcon[cid] };
 }
 
@@ -61,7 +66,8 @@ test('P72-B 全灭后能恢复：低位人口不再被 round 抹平，保底户�
   const cases = splitCasualties({ lossBySlot: [400, 0, 0] });
   routeWounded(s, { wounded: cases.wounded, killed: cases.killed, fromCityId: cid, mapCities: [] });
   assert.equal(e.levied, 0);
-  assert.equal(levyView(s, cid).reason, 'levy_exhausted', 'pop=5 时仍无丁，但必须能长起来');
+  /* ★ P74：人口 5 口时真正的原因是「人丁太少」，不再笼统报「壮丁已尽」。 */
+  assert.equal(levyView(s, cid).reason, 'need_population', 'pop=5 时仍无丁，但必须能长起来');
 
   const before = e.pop;
   popTick(s, ctx());

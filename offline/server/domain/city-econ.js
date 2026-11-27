@@ -23,7 +23,8 @@ import { governorTick } from './governor.js';
 import { policyEffect } from './policy-effects.js';
 import { knobGet } from './knobs.js';
 /* ★ 2026-11-20：春征秋收惩罚的季节判定复用 levy 的唯一口径（零依赖叶子，无环）。 */
-import { seasonOf } from './levy.js';
+/* ★ P74：低位人口按「户」保底，户均人口必须与兵役口径同一常量，不许另写 5。 */
+import { seasonOf, HOUSEHOLD_SIZE } from './levy.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const MAP_PATH = resolve(ROOT, 'conf', 'campaign', 'strategy', 'map.json');
@@ -224,8 +225,12 @@ export function popTick(state, ctx) {
        沙盘一天约 2 秒，坐一分钟就能看见人丁，不再像按年才涨一次。 */
     const rate = knobGet(state, 'popGrowthYear') * (1 + (Number(e.morale ?? 60) / 100));
     const popBefore = Math.max(0, Math.floor(Number(e.pop) || 0));
-    /* ★ P72：低位保底 +1，避免 round 把 5~6 口的增长抹成 0、兵源永久卡死。 */
-    e.pop = Math.min(1000000, Math.max(popBefore + 1, Math.round(popBefore * (1 + rate))));   // ★ P13 上限 10 万 → 100 万
+    /* ★ P72：低位保底 +1，避免 round 把 5~6 口的增长抹成 0、兵源永久卡死。
+       ★ P74：保底改成「按户」——1 户 5 口，只 +1 口等于 5 旬才多 1 户、
+       8 旬才多 1 个壮丁，玩家体感就是「城在等死」。现在 1000 口以下每旬至少 +1 户，
+       受创的小城约 20~30 旬能重新拉出一支能打的队伍。 */
+    const floorStep = popBefore < 1000 ? HOUSEHOLD_SIZE : 1;
+    e.pop = Math.min(1000000, Math.max(popBefore + floorStep, Math.round(popBefore * (1 + rate))));   // ★ P13 上限 10 万 → 100 万
     const y = cityYield(state, id);
     e.store = Math.min(storeCapOf(e), e.store + 3 * (y?.grain || 0));
   }
