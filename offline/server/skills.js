@@ -1312,7 +1312,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     else if (logTab === 'time') html = renderTimeline(s);
     else if (logTab === 'plan') html = renderPlans(s);
     else html = renderBooks(s);
-    body.innerHTML = html || '<div style="opacity:.6">还没有记录。先推演一月。</div>';
+    body.innerHTML = html || '<div style="opacity:.6">还没有记录。办完内政后入下月，天下大事会写在这里。</div>';
   }
 
   function renderWorld(s) {
@@ -1506,9 +1506,7 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       + 'gap:3px;max-width:calc(100% - 320px);';
     dock.innerHTML = ''
       + '<span class="gp">沙盘</span>'
-      + '<button id="slgStratTick" class="pri">推演一月</button>'
-      + '<button id="slgStratTick3" title="连推三旬；遇待决事件或前锋抵城自动停">推演三月</button>'
-      + '<button id="slgStratAuto" style="display:none" title="自动推旬：有事待决自动暂停（再点关闭）">自动推旬 ▶</button>'
+      + '<button id="slgStratTick" class="pri">内政已毕 · 入下月</button>'
       + '<button id="slgBtnWar" class="pri" data-ix-allow="1">出征</button>'
       + '<button id="slgBtnHome">本城</button>'
       + '<i class="sep"></i>'
@@ -1623,53 +1621,6 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
     /* ★ 用户 ⑩：武将 / 战报在左侧坞与右侧六府各有一份，属重复入口。
        六府是它们的家（点开就是完整面板），左侧坞只保留沙盘动作，故此处移除。 */
     document.getElementById('slgStratTick').onclick = function () { window.__slgTick(); };
-    /* ★ P14 UX（降低操作复杂性）：
-       - 推演三月：一次点连推三旬，中期无战事时少点两次；
-       - 自动推旬：挂机推进，有未决事件或前锋抵城待定夺时自动暂停（安全停机）。 */
-    function pendingBlock() {
-      var s = lastState;
-      if (!s) return '';
-      if ((s.pendingEvents || []).length) return '有事件待主公定夺';
-      var pend = (s.marches || []).some(function (mm) { return mm.pendingBattle; });
-      if (pend) return '前锋抵城待定夺（③ 遭遇）';
-      return '';
-    }
-    var tick3 = document.getElementById('slgStratTick3');
-    tick3.onclick = function () {
-      tick3.disabled = true;
-      var run = function (left) {
-        if (left <= 0) { tick3.disabled = false; return; }
-        Promise.resolve(window.__slgTick()).then(function (r) {
-          if (!r || r.skipped) { tick3.disabled = false; return; }
-          var blk = pendingBlock();
-          if (blk) {
-            if (window.__slgToast) window.__slgToast('连推暂停：' + blk, false);
-            tick3.disabled = false;
-            return;
-          }
-          run(left - 1);
-        }).catch(function () { tick3.disabled = false; });
-      };
-      run(3);
-    };
-    var autoTimer = null;
-    var autoBtn = document.getElementById('slgStratAuto');
-    function autoStop(why) {
-      if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
-      autoBtn.textContent = '自动推旬 ▶';
-      autoBtn.classList.remove('pri');
-      if (why && window.__slgToast) window.__slgToast('自动推旬暂停：' + why, false);
-    }
-    autoBtn.onclick = function () {
-      if (autoTimer) { autoStop(''); return; }
-      autoBtn.textContent = '自动推旬 ⏸';
-      autoBtn.classList.add('pri');
-      autoTimer = setInterval(function () {
-        var blk = pendingBlock();
-        if (blk) { autoStop(blk); return; }
-        window.__slgTick();
-      }, 2400);
-    };
     // 滚轮缩放（以光标为锚）＋拖拽平移；轻点仍是选城
     canvas.style.cursor = 'grab';
     var drag = null;
@@ -1739,11 +1690,15 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
      被迫先退出去才能推进回合。两个入口共用同一实现，绝不各写一份。 */
   window.__slgTick = function () {
     var fromDay = lastState ? (Number(lastState.day) || 1) : 1;
+    if (window.__slgCityClose) window.__slgCityClose();
+    if (window.__slgWarClose) window.__slgWarClose();
+    showMap();
     return fetch('/__slg/strategy/tick', { method: 'POST' })
       .then(function (r) { return r.json(); })
       .then(function (res) {
         if (res && !res.skipped && Number(res.day) > fromDay) {
-          monthPlay = { from: fromDay, to: Number(res.day), t0: Date.now(), dur: 2400 };
+          monthPlay = { from: fromDay, to: Number(res.day), t0: Date.now(), dur: 8200, u: 0, seen: {} };
+          if (window.__slgToast) window.__slgToast('诸路开拔。本月行军在沙盘上走过，遇军则交战。', true);
         }
         refresh();
         /* 城内页开着就地重绘，日/旬/本旬可征 立刻跟着变 */
@@ -2985,15 +2940,25 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       });
     }
     // ★ P2：行军线与移动军标——departDay/arriveDay + 日内进度插值，路径优先走既有道路折线
-    if (s.marches && s.marches.length) {
+    if ((s.marches && s.marches.length) || (monthPlay && (s.playback || []).length)) {
       var byId = {};
       s.cities.forEach(function (cc) { byId[cc.id] = cc; });
       var msPerDay = s.msPerDay || 15000;
       var dayNow = (s.day || 1) + (s.clockPaused ? 0 : ((s.dayFrac || 0) + (Date.now() - lastFetchAt) / msPerDay));
       if (monthPlay) {
-        var uPlay = Math.min(1, (Date.now() - monthPlay.t0) / monthPlay.dur);
+        if (monthPlay.held) {
+          if (!monthPlay.pauseAt) monthPlay.pauseAt = Date.now();
+        } else {
+          if (monthPlay.pauseAt) {
+            monthPlay.t0 += Date.now() - monthPlay.pauseAt;
+            monthPlay.pauseAt = 0;
+          }
+          var rawU = Math.min(1, (Date.now() - monthPlay.t0) / monthPlay.dur);
+          monthPlay.u = rawU * rawU * (3 - 2 * rawU);
+        }
+        var uPlay = monthPlay.u || 0;
         dayNow = monthPlay.from + (monthPlay.to - monthPlay.from) * uPlay;
-        if (uPlay >= 1) monthPlay = null;
+        if (uPlay >= 0.999 && !monthPlay.held) monthPlay = null;
       }
       marchHits = [];
       s.marches.forEach(function (mm) {
@@ -3179,6 +3144,55 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
           g.restore();
         });
       }
+      if (monthPlay && (s.playback || []).length) {
+        var uGhost = monthPlay.u || 0;
+        var ghosts = [];
+        (s.playback || []).forEach(function (mv, idx) {
+          var ga = byId[mv.from], gb = byId[mv.to];
+          if (!ga || !gb) return;
+          var gx = ga.x + (gb.x - ga.x) * uGhost;
+          var gy = ga.y + (gb.y - ga.y) * uGhost;
+          ghosts.push({ x: gx, y: gy, who: mv.who || '诸侯', idx: idx, result: mv.result });
+          var gq = P([gx, gy]);
+          drawTroopToken(gq[0], gq[1], {
+            scale: scale, ph: (Date.now() % 1400) / 1400,
+            tang: [gb.x - ga.x, gb.y - ga.y],
+            rgb: '196,72,58', flag: '#c4483a', troops: 800, arrived: uGhost > 0.98
+          });
+          g.font = Math.max(10, 11 * scale).toFixed(1) + 'px "Microsoft YaHei",sans-serif';
+          g.textAlign = 'center'; g.textBaseline = 'bottom';
+          g.lineWidth = 3; g.strokeStyle = 'rgba(255,244,228,.9)';
+          g.strokeText(mv.who || '', gq[0], gq[1] - 16 * scale);
+          g.fillStyle = '#8d2a1e';
+          g.fillText(mv.who || '', gq[0], gq[1] - 16 * scale);
+        });
+        ghosts.forEach(function (gh) {
+          marchHits.forEach(function (h) {
+            if (!h.march || h.march.side === 'faction') return;
+            if (Math.hypot(h.x - gh.x, h.y - gh.y) > 26) return;
+            var mk = 'hit:' + (h.march.id || 0) + ':' + gh.idx;
+            if (monthPlay.seen[mk]) return;
+            monthPlay.seen[mk] = 1;
+            monthPlay.held = true;
+            showMarchPopup(h.march, (s.pendingBattles || [])[0] || null);
+            if (window.__slgToast) window.__slgToast((h.march.factionName || '我军') + ' 与 ' + gh.who + ' 遭遇，请开战或收兵', true);
+          });
+        });
+        for (var gi = 0; gi < ghosts.length; gi++) {
+          for (var gj = gi + 1; gj < ghosts.length; gj++) {
+            if (Math.hypot(ghosts[gi].x - ghosts[gj].x, ghosts[gj].y - ghosts[gi].y) > 22) continue;
+            var gk = 'gg:' + gi + ':' + gj;
+            if (monthPlay.seen[gk]) continue;
+            monthPlay.seen[gk] = 1;
+            if (window.__slgToast) window.__slgToast(ghosts[gi].who + ' 与 ' + ghosts[gj].who + ' 遭遇，两军交战', true);
+          }
+        }
+        if (!monthPlay.held && uGhost > 0.84 && (s.pendingBattles || []).length && !monthPlay.asked) {
+          monthPlay.asked = 1;
+          monthPlay.held = true;
+          showMarchPopup(null, s.pendingBattles[0]);
+        }
+      }
     }
     if (logOpen && logTab === 'plan' && s.plans) {
       s.plans.forEach(function (p) {
@@ -3295,6 +3309,13 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
       });
     }
     if (s.oath && s.oath.done && window.__slgGuideMark) window.__slgGuideMark('g0');
+    if (monthPlay && monthPlay.held && !(s.pendingBattles || []).length && !document.getElementById('slgMarchPop')) {
+      monthPlay.held = false;
+      if (monthPlay.pauseAt) {
+        monthPlay.t0 += Date.now() - monthPlay.pauseAt;
+        monthPlay.pauseAt = 0;
+      }
+    }
     if (!monthPlay && s.pendingBattles && s.pendingBattles.length && !document.getElementById('slgMarchPop')) {
       var pk = s.pendingBattles.map(function (p) { return p.marchId; }).join(',');
       if (pk !== pendingCardKey) {
@@ -3313,12 +3334,13 @@ const STRATEGY_OVERLAY_SOURCE = `;(function () {
         return !mm.resolved && !mm.recalled;
       }));
     };
-    if (anyMarching(s) && overlay && overlay.style.display !== 'none' && !rafId) {
+    if ((anyMarching(s) || monthPlay) && overlay && overlay.style.display !== 'none' && !rafId) {
       rafId = requestAnimationFrame(function loop(ts) {
         rafId = null;
         if (!lastState || (overlay && overlay.style.display === 'none')) return;
-        if (ts - lastRafAt > 50) { lastRafAt = ts; draw(lastState); }
-        if (anyMarching(lastState)) rafId = requestAnimationFrame(loop);
+        var gap = monthPlay ? 16 : 50;
+        if (ts - lastRafAt >= gap) { lastRafAt = ts; draw(lastState); }
+        if (anyMarching(lastState) || monthPlay) rafId = requestAnimationFrame(loop);
       });
     }
   }
@@ -5838,7 +5860,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       + pill('民心', c.morale != null ? c.morale : '—')
       + (lv ? pill('本旬可征', fmt(lv.quota)) : '')
       + '</div><div class="citypage-acts">'
-      + '<button class="tick" id="slgCityTick" title="与沙盘上的「推演一月」同一实现">推演一旬</button>'
+      + '<button class="tick" id="slgCityTick" title="办完城内事务后，回到沙盘看诸路行军">内政已毕 · 入下月</button>'
       + '<button class="back" id="slgCityBack">← 返回沙盘</button></div></div>'
       /* id="slgCityWin" 是给既有回归资产（smoke / ui-audit 的 #slgCityWin 选择器）
          与旧调用方留的兼容锚点：它现在是「城内页主体」，不再是右侧浮窗。

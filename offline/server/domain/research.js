@@ -77,6 +77,23 @@ export function researchPace(g) {
   return { points, scrolls, strategy, politics };
 }
 
+/** 旧档迁移：开局预置的「研习中」若没有委派，就永远卡着不动。
+ *  这是零依赖的字段兜底（不消耗残卷），由 ensurePanels 调；指派主公督研第一条，
+ *  之后每旬由 strategyTick 自然推进。玩家也可以随时改派。 */
+export function adoptOrphanResearch(state, cfg) {
+  const sb = state?.skillbook;
+  if (!sb) return null;
+  const research = sb.research || {};
+  const assign = sb.assign || (sb.assign = {});
+  const keys = Object.keys(research).filter((k) => !sb.unlocked?.[k] && !assign[k]);
+  if (!keys.length) return null;
+  const hero = (state.generals || []).find((g) => g.isProtagonist) || state.generals?.[0];
+  if (!hero) return null;
+  const key = keys[0];
+  assign[key] = { generalId: hero.id, since: int(state.clock?.day, 1), source: '旧档接管' };
+  return { cfgId: int(key, -1), generalId: hero.id };
+}
+
 /** 委派一名武将研习某战法。字段落在 state.skillbook.assign（零依赖）。 */
 export function assignResearch(state, cfg, { cfgId, generalId } = {}) {
   const id = int(cfgId, -1);
@@ -110,51 +127,73 @@ export function unassignResearch(state, { cfgId } = {}) {
   return { ok: true, cfgId: id, text: '已撤回研习委派，进度保留' };
 }
 
-/**
- * 每旬推进所有委派。返回本旬发生的事，供播报/军情使用。
- * 残卷不够时该条本旬不推进（保留委派，等打胜仗补卷），不半途扣卷。
- */
+/** 推进一条委派。卷尽时仍靠武将自行推敲，进度会动，只是更慢。 */
+function advanceAssigned(state, cfg, key, row, ctx) {
+  const assign = state.skillbook.assign;
+  const cfgId = int(key, -1);
+  if (state.skillbook.unlocked?.[key]) { delete assign[key]; return null; }
+  const g = generalOf(state, cfg, row?.generalId);
+  if (!g) { delete assign[key]; return null; }
+  const pace = researchPace(g);
+  const have = scrollCount(state);
+  let gain;
+  let costNote;
+  if (have <= 0) {
+    gain = Math.max(4, Math.round(pace.points * 0.45));
+    costNote = '残卷用尽，武将自行推敲';
+  } else {
+    const used = takeScrolls(state, Math.min(have, pace.scrolls));
+    const ratio = used / Math.max(1, pace.scrolls);
+    gain = Math.max(1, Math.round(pace.points * ratio));
+    costNote = `耗 ${used} 卷`;
+  }
+  const rec = RECIPE_BY_ID.get(cfgId);
+  const need = int(rec?.sources?.find?.((x) => x.type === 'research')?.progressNeed, NEED_DEFAULT);
+  const cur = state.skillbook.research?.[key] || { progress: 0, need };
+  cur.need = need;
+  cur.progress = int(cur.progress) + gain;
+  if (!state.skillbook.research) state.skillbook.research = {};
+  state.skillbook.research[key] = cur;
+  const conf = SKILL_BY_ID.get(cfgId);
+  const title = conf?.ui?.name ?? conf?.name ?? '战法';
+  if (cur.progress >= need) {
+    delete state.skillbook.research[key];
+    delete assign[key];
+    state.skillbook.unlocked[key] = { level: 1, source: '委派研习' };
+    const text = `「${title}」研习完成，已解锁（${g.name}）`;
+    ctx?.push?.('research.unlocked', { cfgId, generalId: g.raw.id });
+    return { cfgId, unlocked: true, text, progress: need, need };
+  }
+  const text = `${g.name}研习「${title}」：+${gain} 点（${cur.progress}/${need}），${costNote}`;
+  return { cfgId, unlocked: false, text, progress: cur.progress, need };
+}
+
+/** 每旬推进所有委派。返回本旬发生的事。 */
 export function researchTick(state, cfg, ctx = {}) {
   if (!state?.skillbook) return [];
   const assign = state.skillbook.assign;
   if (!assign || !Object.keys(assign).length) return [];
   const events = [];
   for (const [key, row] of Object.entries(assign)) {
-    const cfgId = int(key, -1);
-    if (state.skillbook.unlocked?.[key]) { delete assign[key]; continue; }
-    const g = generalOf(state, cfg, row?.generalId);
-    if (!g) { delete assign[key]; continue; }
-    const pace = researchPace(g);
-    const have = scrollCount(state);
-    /* 残卷不足按「有多少卷推多少点」保底，1 卷至少 1 点——
-       否则高政治武将每旬耗 6 卷，开局 30 卷研到 92/100 就永久卡死，
-       玩家只看到委派还挂着却再也不动。卷尽后委派保留，打胜仗补卷即自动续上。 */
-    if (have <= 0) continue;
-    const used = takeScrolls(state, Math.min(have, pace.scrolls));
-    const ratio = used / pace.scrolls;
-    const gain = Math.max(1, Math.round(pace.points * ratio));
-    const rec = RECIPE_BY_ID.get(cfgId);
-    const need = int(rec?.sources?.find?.((x) => x.type === 'research')?.progressNeed, NEED_DEFAULT);
-    const cur = state.skillbook.research?.[key] || { progress: 0, need };
-    cur.need = need;
-    cur.progress = int(cur.progress) + gain;
-    if (!state.skillbook.research) state.skillbook.research = {};
-    state.skillbook.research[key] = cur;
-    const conf = SKILL_BY_ID.get(cfgId);
-    const title = conf?.ui?.name ?? conf?.name ?? '战法';
-    if (cur.progress >= need) {
-      delete state.skillbook.research[key];
-      delete assign[key];
-      state.skillbook.unlocked[key] = { level: 1, source: '委派研习' };
-      const text = `「${title}」研习完成，已解锁（${g.name}历时数旬）`;
-      events.push({ cfgId, unlocked: true, text });
-      ctx?.push?.('research.unlocked', { cfgId, generalId: g.raw.id });
-    } else {
-      const text = `${g.name}研习「${title}」：+${pace.points} 点（${cur.progress}/${need}），耗 ${pace.scrolls} 卷`;
-      events.push({ cfgId, unlocked: false, text, progress: cur.progress, need });
-    }
+    const ev = advanceAssigned(state, cfg, key, row, ctx);
+    if (ev) events.push(ev);
   }
   return events;
+}
+
+/** 玩家当场研习一条。没委派就用这次选的武将。 */
+export function studyOnce(state, cfg, { cfgId, generalId } = {}) {
+  if (!state?.skillbook) return { ok: false, text: '战法库还没准备好' };
+  const key = String(int(cfgId, -1));
+  if (state.skillbook.unlocked?.[key]) return { ok: false, text: '该战法已解锁' };
+  if (!state.skillbook.assign?.[key]) {
+    const assigned = assignResearch(state, cfg, { cfgId, generalId });
+    if (!assigned.ok) return { ok: false, text: assigned.reason === 'no_general' ? '先选一名武将' : '这条战法不能研习' };
+  }
+  const row = state.skillbook.assign?.[key];
+  const ev = row ? advanceAssigned(state, cfg, key, row, {}) : null;
+  if (!ev) return { ok: false, text: '这一次没有推进' };
+  return { ok: true, ...ev };
 }
 
 /** 面板下发：可委派武将的速度（唯一口径，UI 只读不自己算）。 */

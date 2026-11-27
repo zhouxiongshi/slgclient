@@ -2727,6 +2727,23 @@ build/SLG-Offline-win32-x64/
 
 ---
 
+### 17.48 战法研习进度停滞 P65（2026-11-27 用户试玩反馈）
+
+**用户反馈**：「检查战法检索、研习思路，我试玩过程中发现研习的战法一直处于研习中，进度条卡着不动。」
+
+**根因（真实存档取证）**：玩家存档 `skillbook = { unlocked..., research: { '10002': { progress: 12, need: 100 } } }`，`assign` 字段完全缺失。开局预置这条 12/100 是原型期为了展示「研习中」三色状态塞进去的，P63 引入委派研习后没有给它委派源——`researchTick` 只遍历 `skillbook.assign`，空对象直接 `return []`，于是这条进度永远停在 12。此外 `assignResearch` 只挂字段不改进度，进度要等下一旬（10 游戏日）才涨，玩家点完委派盯着进度条毫无变化，主观上就是「卡住」。战法库也不区分「有人在督研」和「有半截进度没人管」，两种状态都标「研习中」，玩家无法自辨。
+
+**修复**：
+1. `research.js` 新增零依赖叶子 `adoptOrphanResearch(state, cfg)`：`research` 里有未完成条目但 `assign` 没有时，指派主公（或第一名武将）督研第一条，只补字段不扣残卷；`ensurePanels()` 每次归一化调用，旧档加载即恢复推进源。
+2. `panels.js` 的 `assignResearch` 动作委派成功后当场调一次 `studyOnce`（内部走 `advanceAssigned`，与逐旬推进同一口径），进度立即涨；反馈文案合并两段。
+3. `panelState()` 战法库投影每条带 `assignment: researchView 摘要 || null`。UI 列表据此显示「督研 · 每旬 +N」或「待委派 · 进度停滞」；研习框显示「约 N 旬可成」。
+4. 委派 / 撤回 / 当场研习后 post 回调重开研习框，界面即时刷新。
+5. `ui-audit.cjs` 的 `panel.research.progress-advances` 真点委派并比对前后进度数字（真 DOM 取证），补上此前只查「框开没开」的漏检。
+
+**回归锁**：`tests/p63-ai-prey-and-research.test.js` 新增 P65-①~④（旧档接管、委派即推进、投影委派摘要、UI 文案与刷新）。
+
+---
+
 ## 19. 附录
 
 ### 19.1 命令速查

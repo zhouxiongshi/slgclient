@@ -259,11 +259,17 @@
       + '.slgIxPV .pv-stat{padding:11px 18px;background:rgba(16,22,16,.75)}'
       + '.slgIxPV .pv-stat small{display:block;font-size:10.5px;color:#a9a48f;letter-spacing:1px}'
       + '.slgIxPV .pv-stat b{font-size:15px;color:#f0e2b8;font-weight:600}'
-      + '.slgIxPV .pv-cols{display:grid;grid-template-columns:1fr 1fr;gap:0;max-height:46vh;overflow:auto}'
-      + '.slgIxPV .pv-col{padding:13px 18px 16px}'
-      + '.slgIxPV .pv-col+.pv-col{border-left:1px solid rgba(186,154,82,.16);background:rgba(120,40,30,.06)}'
-      + '.slgIxPV .pv-col h4{margin:0 0 9px;font-size:12px;letter-spacing:2px;color:#c8b88a;font-weight:600}'
-      + '.slgIxPV .pv-col.risk h4{color:#e6a08c}'
+      + '.slgIxPV .pv-cols{display:block;max-height:42vh;overflow:auto;padding:4px 18px 8px}'
+      + '.slgIxPV .pv-col{padding:0}'
+      + '.slgIxPV .pv-col+.pv-col{border:none;background:transparent}'
+      + '.slgIxPV .pv-col h4{display:none}'
+      + '.slgIxPV .pv-note{display:grid;grid-template-columns:88px 1fr;gap:8px;padding:8px 0;'
+      + 'border-bottom:1px solid rgba(186,154,82,.16)}'
+      + '.slgIxPV .pv-note b{font-weight:600;color:#d7c48a;font-size:12px}'
+      + '.slgIxPV .pv-note span{color:#efe6d2;font-size:12.5px;line-height:1.65}'
+      + '.slgIxPV .pv-note.warn b{color:#e7b199}'
+      + '.slgIxPV .pv-calm{margin:8px 0 4px;padding:10px 12px;border-radius:8px;'
+      + 'background:rgba(90,120,70,.16);color:#d5e6c8;font-size:12.5px;line-height:1.6}'
       + '.slgIxPV .pv-row{padding:7px 0 7px 10px;border-left:2px solid #5c6b4e;margin-bottom:7px}'
       + '.slgIxPV .pv-col.risk .pv-row{border-left-color:#a8564a;background:rgba(168,86,74,.08)}'
       + '.slgIxPV .pv-row.final{border-left-color:#e3c46a}'
@@ -895,11 +901,10 @@
     var pvFolded = false;
     try { pvFolded = localStorage.getItem('slgPVFolded') === '1'; } catch (e) { /* 隐私模式 */ }
     if (pvFolded) box.classList.add('folded');
-    var normal = parts.filter(function (p) { return !p.bad; });
+    var normal = parts.filter(function (p) { return !p.bad && p.k !== '所需'; });
     var risks = parts.filter(function (p) { return !!p.bad; });
-    var row = function (p) {
-      return '<div class="pv-row' + (p.final ? ' final' : '') + '">'
-        + '<div class="pv-k">' + esc(p.k) + '</div><div class="pv-v">' + esc(p.v) + '</div></div>';
+    var note = function (p, warn) {
+      return '<div class="pv-note' + (warn ? ' warn' : '') + '"><b>' + esc(p.k) + '</b><span>' + esc(p.v) + '</span></div>';
     };
     /* ★ 玩家反馈：游戏就是游戏，不要「决策前预览 / 会发生什么 / 风险与失败态 /
        数值依据」这套开发者拆解词。改成军议口吻——玩家看到的是「主公下令，
@@ -916,10 +921,9 @@
       + '<div class="pv-stat"><small>仓中粮</small><b>' + fmt((d.treasury && d.treasury.grain) || 0) + ' 石</b></div>'
       + '</div>'
       + '<div class="pv-cols">'
-      + '<section class="pv-col"><h4>此令所及</h4>' + (normal.length ? normal.map(row).join('') : '<div class="pv-empty">无额外结算</div>') + '</section>'
-      + '<section class="pv-col risk"><h4>隐忧</h4>'
-      + (risks.length ? risks.map(row).join('') : '<div class="pv-empty">未见阻碍，钱粮充裕、粮道通畅。</div>')
-      + '</section></div>'
+      + (risks.length ? risks.map(function (p) { return note(p, true); }).join('') : '<div class="pv-calm">未见阻碍。钱粮和粮道都还撑得住。</div>')
+      + (normal.length ? normal.map(function (p) { return note(p, false); }).join('') : '')
+      + '</div>'
       + (m.term && BY_ID[m.term] ? '<div class="pv-term"><button data-act="term" data-id="' + esc(m.term)
         + '">查阅「' + esc(BY_ID[m.term].名称) + '」条陈 →</button></div>' : '')
       + '<div class="acts"><button class="foldbtn" data-act="fold">'

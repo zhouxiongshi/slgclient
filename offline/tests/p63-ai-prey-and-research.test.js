@@ -16,7 +16,7 @@ import { createWorld, normalizeWorld } from '../server/world.js';
 import { ensureStrategy, strategySnapshot, localBrain, factionConf } from '../server/domain/strategy.js';
 import { panelState, panelAction } from '../server/domain/panels.js';
 import {
-  assignResearch, unassignResearch, researchTick, researchView, researchPace,
+  assignResearch, unassignResearch, researchTick, researchView, researchPace, adoptOrphanResearch,
 } from '../server/domain/research.js';
 
 const cfg = loadConfig();
@@ -183,4 +183,64 @@ test('P63-⑪ 显式推演无视界面暂停，抵达待决不冻结全局时钟
   const hd = read('server/handlers.js');
   assert.match(idx, /strategy\/tick[\s\S]{0,600}uiHoldUntil = 0/, 'tick 端点要清界面暂停');
   assert.doesNotMatch(hd, /decisionHold = waitingOrder/, '待决战斗不得冻结全局时钟');
+});
+
+/* ---------------- P65：进度条卡住（委派无源 / 委派无即时反馈） ---------------- */
+
+test('P65-① 旧档预置的研习中有委派源，不再永远卡在 12/100', () => {
+  const s = fresh();
+  /* 模拟真实玩家存档：只有半截进度，没有任何委派 */
+  delete s.skillbook.assign;
+  s.skillbook.research = { '10002': { progress: 12, need: 100 } };
+  const before = s.skillbook.research['10002'].progress;
+  const adopted = adoptOrphanResearch(s, cfg);
+  assert.ok(adopted, '孤研习条目应被接管');
+  assert.equal(s.skillbook.assign['10002'].generalId, adopted.generalId);
+  assert.equal(s.skillbook.research['10002'].progress, before, '接管只补委派，不改进度');
+  const ev = researchTick(s, cfg, {});
+  assert.equal(ev.length, 1, '接管后每旬会真的推进');
+  assert.ok(s.skillbook.research['10002'].progress > before, '进度条开始动');
+});
+
+test('P65-② 委派即开工：动作当场推进一次，不必等十天', () => {
+  const s = fresh();
+  const hero = s.generals.find((g) => g.isProtagonist) || s.generals[0];
+  const before = s.skillbook.research['10002']?.progress || 0;
+  const r = panelAction(s, cfg, { type: 'assignResearch', cfgId: 10002, generalId: hero.id });
+  assert.equal(r.ok, true);
+  const after = s.skillbook.research['10002']?.progress || 0;
+  assert.ok(after > before, `委派后进度应立即推进：${before} → ${after}`);
+  assert.equal(s.skillbook.assign['10002'].generalId, hero.id);
+  /* 下一旬继续推进，两条路径同源 */
+  const p2 = after;
+  researchTick(s, cfg, {});
+  assert.ok(s.skillbook.research['10002'].progress > p2, '每旬继续涨');
+});
+
+test('P65-③ 战法库投影带委派摘要，能区分督研中与停滞', () => {
+  const s = fresh();
+  /* fresh() 走 normalizeWorld，开局预置条目已被自动接管 —— 正是修复点本身。
+     「停滞」状态的 UI 分支由 P65-④ 源码锁覆盖。 */
+  const st0 = panelState(s, cfg);
+  const seeded = st0.library.find((x) => x.cfgId === 10002);
+  assert.ok(seeded.assignment, '开局预置那条已自动接管');
+  assert.equal(seeded.assignment.generalId, seeded.assignment.generalId, '投影带委派摘要');
+  const hero = s.generals.find((g) => g.isProtagonist) || s.generals[0];
+  panelAction(s, cfg, { type: 'assignResearch', cfgId: 10002, generalId: hero.id });
+  const st1 = panelState(s, cfg);
+  const assigned = st1.library.find((x) => x.cfgId === 10002);
+  assert.ok(assigned.assignment, '委派后战法库直接带委派摘要');
+  assert.equal(assigned.assignment.generalId, hero.id);
+  assert.ok(assigned.assignment.points > 0);
+});
+
+test('P65-④ UI 展示督研状态与预计旬数，委派/撤回后重开对话框', () => {
+  const ui = read('server/panels-ui.js');
+  const box = ui.slice(ui.indexOf('function researchBox'), ui.indexOf('function askText'));
+  assert.match(box, /约 \' \+ eta \+ \' 旬可成/, '研习框给出预计旬数');
+  assert.match(box, /type: \'assignResearch\'[\s\S]{0,180}researchBox\(Number\(cfgId\)\)/, '委派后重开框刷新进度');
+  assert.match(box, /type: \'unassignResearch\'[\s\S]{0,180}researchBox\(Number\(cfgId\)\)/, '撤回后重开框');
+  const lib = ui.slice(ui.indexOf('function viewLibrary'), ui.indexOf('function viewEquipment') >= 0 ? ui.indexOf('function viewEquipment') : undefined);
+  assert.match(lib, /督研 · 每旬 \+/, '列表要区分有人在督研');
+  assert.match(lib, /待委派 · 进度停滞/, '没有委派源的研习中要有明确提示');
 });

@@ -177,17 +177,42 @@ const WALK = `(async function(){
         var rassign = rbox && rbox.querySelector('[data-ract="assign"]');
         var pvAfterAssign = false;
         if (rassign) {
+          /* ★ P65：真点委派后要看到两件事——① 不弹通用预览；② 进度条当场涨。
+             旧实现只挂委派字段，进度要等十天，玩家看到的就是「研习中但卡住」。 */
+          /* 注入脚本经字符串拼接执行，\s / \d 会被吃掉，这里用纯字符扫描取进度数字 */
+          var pickPct = function (t) {
+            var i = t ? t.indexOf('研习进度') : -1;
+            if (i < 0) return 0;
+            var j = i + 4;
+            while (j < t.length && t.charAt(j) === ' ') j++;
+            var num = '';
+            while (j < t.length && t.charAt(j) >= '0' && t.charAt(j) <= '9') { num += t.charAt(j); j++; }
+            return Number(num || 0);
+          };
+          var beforePct = pickPct(rtxt);
           rassign.click();
-          await sleep(420);
+          await sleep(520);
           pvAfterAssign = !!document.querySelector('.slgIxPV');
           var pvTxt = pvAfterAssign ? txt(document.querySelector('.slgIxPV')) : '';
           rec('panel.research.no-double-preview', [], {
             visible: !pvAfterAssign, text: pvTxt ? pvTxt.slice(0, 200) : '点击委派后未弹通用预览',
             note: pvAfterAssign ? 'FAIL: 委派按钮被二次拦截' : '委派按钮直达协议层',
           });
+          /* 委派动作会重开研习框并刷新进度，重新抓一次 DOM */
+          var rbox2 = document.querySelector('.slgResearchBox');
+          var rtxt2 = rbox2 ? txt(rbox2) : '';
+          var afterPct = pickPct(rtxt2);
+          rec('panel.research.progress-advances', [], {
+            visible: afterPct > beforePct,
+            text: '委派前 ' + beforePct + ' → 委派后 ' + afterPct,
+            note: afterPct > beforePct ? '委派即开工，进度条当场动' : 'FAIL: 委派后进度没涨',
+          });
+          var rcancel2 = rbox2 && rbox2.querySelector('[data-ract="close"]');
+          if (rcancel2) rcancel2.click();
+        } else if (rbox.isConnected) {
+          var rcancel = rbox.querySelector('[data-ract="close"]');
+          if (rcancel) rcancel.click();
         }
-        var rcancel = rbox && rbox.querySelector('[data-ract="close"]');
-        if (rcancel && rbox.isConnected) rcancel.click();
         await sleep(250);
       } else {
         rec('panel.research.assign', ['委派武将', '研习进度'], { visible: false, text: '', note: 'no-research-button' });
@@ -628,7 +653,8 @@ const WALK = `(async function(){
   if (typeof window.__slgStrategyShow === 'function') { try { window.__slgStrategyShow(); } catch (e) {} }
   await sleep(800);
   var dock = document.getElementById('slgDock');
-  rec('map.dock', ['推演'], { visible: vis(dock), text: txt(dock) });
+  /* 月度行军回放改口径：推演按钮 = 「内政已毕 · 入下月」（推演三月/自动推旬已撤） */
+  rec('map.dock', ['内政已毕', '入下月'], { visible: vis(dock), text: txt(dock) });
 
   var zoomIn = document.getElementById('slgBtnZoomIn');
   if (zoomIn) { zoomIn.click(); await sleep(260); zoomIn.click(); await sleep(260); }
@@ -701,7 +727,7 @@ const WALK = `(async function(){
   try { if (window.__slgIX) window.__slgIX.closeAll(); } catch (e) {}
   try { if (window.__slgPanels) window.__slgPanels.close(); } catch (e) {}
   await sleep(300);
-  rec('final.back-to-map', ['推演'], { visible: vis(document.getElementById('slgDock')), text: txt(document.getElementById('slgDock')) });
+  rec('final.back-to-map', ['内政已毕', '入下月'], { visible: vis(document.getElementById('slgDock')), text: txt(document.getElementById('slgDock')) });
 
   return { paths: out, pageErrors: (window.__slgErrors || []).slice(0, 40) };
 })()`;
@@ -805,7 +831,7 @@ async function runAudit(win, server, app) {
       const tb = await turnOf();
       await press('Space');
       const ta = await turnOf();
-      kv('key.space-tick', ['推演'], typeof tb === 'number' && typeof ta === 'number' && ta > tb,
+      kv('key.space-tick', ['诸路开拔'], typeof tb === 'number' && typeof ta === 'number' && ta > tb,
         'turn ' + tb + ' → ' + ta);
       await js(`(function(){try{if(window.__slgIX)window.__slgIX.closeAll();}catch(e){}return true;})()`);
 

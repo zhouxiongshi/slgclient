@@ -158,7 +158,7 @@
     var pct = s.research ? Math.min(100, Math.round(s.research.progress / s.research.need * 100)) : 0;
     var headH = '<div style="display:flex;align-items:baseline;gap:10px;border-bottom:1px solid #4a4229;'
       + 'padding-bottom:10px;margin-bottom:14px"><b style="font-size:18px;color:#f2d98a">战法研习</b>'
-      + '<span style="font-size:11px;color:#9c9176">委任武将，逐旬自动研习</span>'
+      + '<span style="font-size:11px;color:#9c9176">委派之后可以当场研习，入下月也会继续涨</span>'
       + '<span style="margin-left:auto;font-size:12px;color:#c9b98a">兵书残卷 ' + esc(data.scrolls || 0) + ' 卷</span></div>';
     var infoH = '<div style="display:flex;gap:16px">'
       + '<div style="flex:1.15">'
@@ -173,10 +173,12 @@
       + '</div><div style="flex:1;border-left:1px solid #4a4229;padding-left:16px">'
       + '<div style="font-size:12px;color:#c9b98a;margin-bottom:8px">委派武将 · 谋略决定速度，政治决定省卷</div>';
     if (assign) {
+      var eta = Math.max(1, Math.ceil((assign.need - assign.progress) / assign.points));
       infoH += '<div style="background:#2f2c1c;border:1px solid #7a6535;border-radius:6px;padding:10px;margin-bottom:10px">'
         + '<div><b style="color:#f0d488">' + esc(assign.generalName) + '</b> 研习中</div>'
         + '<div style="font-size:12px;color:#b9ad8c;margin-top:4px">每旬约 +' + esc(assign.points)
-        + ' 点 · 耗 ' + esc(assign.scrolls) + ' 卷 · 进度 ' + esc(assign.progress) + '/' + esc(assign.need) + '</div>'
+        + ' 点 · 耗 ' + esc(assign.scrolls) + ' 卷 · 进度 ' + esc(assign.progress) + '/' + esc(assign.need)
+        + ' · 约 ' + eta + ' 旬可成</div>'
         + '<button data-ract="unassign" style="margin-top:8px;background:#20221c;color:#d9c58e;border:1px solid #6a624a;'
         + 'border-radius:4px;padding:4px 12px;cursor:pointer;font:12px \'Microsoft YaHei\'">撤回委派（进度保留）</button></div>';
     }
@@ -199,9 +201,10 @@
       + 'padding-top:12px;margin-top:14px">'
       + '<button data-ract="close" style="background:#20221c;color:#c9b98a;border:1px solid #6a624a;'
       + 'border-radius:4px;padding:6px 16px;cursor:pointer;font:12px \'Microsoft YaHei\'">关闭</button>'
-      + (s.status === 'unlocked' || (data.scrolls || 0) <= 0 ? ''
+      + (s.status === 'unlocked' ? ''
         : '<button data-ract="manual" style="background:#4a4225;color:#f0d488;border:1px solid #ba9a52;'
-        + 'border-radius:4px;padding:6px 16px;cursor:pointer;font:12px \'Microsoft YaHei\'">立即投入 10 卷</button>')
+        + 'border-radius:4px;padding:6px 16px;cursor:pointer;font:12px \'Microsoft YaHei\'">'
+        + ((data.scrolls || 0) > 0 ? '当场研习（耗残卷）' : '当场研习（无残卷，进度较慢）') + '</button>')
       + '</div>';
     box.innerHTML = headH + infoH + footH;
     mask2.appendChild(box); document.body.appendChild(mask2);
@@ -211,16 +214,28 @@
       var ract = b.getAttribute('data-ract');
       if (ract === 'close') { close(); return; }
       if (ract === 'manual') {
-        close(); post({ type: 'research', cfgId: Number(cfgId), amount: 10 }); return;
+        var selNow = box.querySelector('[data-rsel="general"]');
+        var gidNow = selNow ? Number(selNow.value) : (assign ? assign.generalId : 0);
+        post({ type: 'studyNow', cfgId: Number(cfgId), generalId: gidNow }, function () {
+          close();
+          researchBox(Number(cfgId));
+        });
+        return;
       }
       if (ract === 'assign') {
         var sel = box.querySelector('[data-rsel="general"]');
         var gid = sel ? Number(sel.value) : 0;
         if (!gid) { toast('先选一名武将', true); return; }
-        close(); post({ type: 'assignResearch', cfgId: Number(cfgId), generalId: gid }); return;
+        close(); post({ type: 'assignResearch', cfgId: Number(cfgId), generalId: gid }, function () {
+          researchBox(Number(cfgId));
+        });
+        return;
       }
       if (ract === 'unassign') {
-        close(); post({ type: 'unassignResearch', cfgId: Number(cfgId) }); return;
+        close(); post({ type: 'unassignResearch', cfgId: Number(cfgId) }, function () {
+          researchBox(Number(cfgId));
+        });
+        return;
       }
     });
     mask2.addEventListener('click', function (e) { if (e.target === mask2) close(); });
@@ -1728,8 +1743,15 @@
        因此「找某条战法」的路径没有变慢（筛完通常只剩几条）。 */
     var shown = list.slice(0, ui.skillLimit);
     out += shown.map(function (s) {
+      /* ★ P65：「研习中」必须能分清有人在督研（会涨）与只有半截进度没人管（卡住），
+         否则玩家盯着一条没有委派源的预置进度，只会看到永远不动的进度条。 */
       var tag = s.status === 'unlocked' ? '<span class="tag ok">已解锁 Lv' + esc(s.level) + '</span>'
-        : s.status === 'researching' ? '<span class="tag mid">研习中</span>' : '<span class="tag no">未解锁</span>';
+        : s.status === 'researching'
+          ? '<span class="tag mid">研习中</span>' + (s.assignment
+            ? '<span class="tag ok" style="margin-left:4px">' + esc(s.assignment.generalName)
+              + ' 督研 · 每旬 +' + esc(s.assignment.points) + '</span>'
+            : '<span class="tag no" style="margin-left:4px">待委派 · 进度停滞</span>')
+          : '<span class="tag no">未解锁</span>';
       // ★ P3：语义摘要——不展开就能看到「怎么触发、Lv10 发动率、效果值」
       var lv10 = s.levels && s.levels[10];
       /* 修 U09：图鉴必须显示「有效距离」，否则玩家查不到战法射程，

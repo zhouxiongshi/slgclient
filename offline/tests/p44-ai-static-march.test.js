@@ -17,7 +17,11 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
 const src = readFileSync(resolve(ROOT, 'server/skills.js'), 'utf8');
-const seg = src.slice(src.indexOf('if (s.marches && s.marches.length)'), src.indexOf('if (logOpen && logTab ==='));
+/* ★ P65：月度行军回放把起点条件扩成「在途 || 回放」，切片起点不能用旧字面量，
+   否则 indexOf=-1 取到空串，明明绘制实现还在却误报整段丢失。 */
+const marchAt = src.indexOf('// ★ P2：行军线与移动军标');
+if (marchAt < 0) throw new Error('找不到行军绘制段');
+const seg = src.slice(marchAt, src.indexOf('if (logOpen && logTab ===', marchAt));
 const rafAt = src.indexOf('var anyMarching = function (st)');
 const tail = rafAt < 0 ? '' : src.slice(rafAt, src.indexOf('})();', rafAt));
 

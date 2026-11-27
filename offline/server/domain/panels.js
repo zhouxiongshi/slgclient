@@ -15,7 +15,7 @@ import { slotBlock, slotUnlock, skillUpgradeCost, skillUpgradeBlock, SKILL_LEVEL
 import { generalProgress } from './general-progress.js';
 import { materialGuide } from './armory.js';
 /* ★ P63：委派自动研习（零依赖叶子，只读 conf 两张表，不成环）。 */
-import { assignResearch, unassignResearch, researchView, researchCandidatesView } from './research.js';
+import { assignResearch, unassignResearch, researchView, researchCandidatesView, studyOnce, adoptOrphanResearch } from './research.js';
 /* ★ M4-10：属性一律走唯一派生层（0~100 百分制），面板不再自己读原表。 */
 import { toPercentFromRaw } from './general-stat.js';
 /* ★ 2026-11-16：官阶名称单一口径（零依赖叶子），功勋晋升由 official-rank 统一 */
@@ -171,6 +171,9 @@ export function ensurePanels(state, cfg = {}) {
     state.skillbook.research['10002'] = { progress: 12, need: 100 };
     state.panelBootstrapped = true;
   }
+  /* ★ P65：旧档里开局那条 12/100 是「研习中」却没有委派武将，
+     没有任何推进源，玩家看到的就是进度条永远卡住。这里接管并指派主公督研。 */
+  adoptOrphanResearch(state, cfg);
   return state;
 }
 
@@ -535,6 +538,9 @@ export function panelState(state, cfg) {
     };
   });
 
+  /* ★ P65：战法库直接带委派摘要——「研习中」要能分清是有人在督研（会涨），
+     还是只有半截进度没人管（卡住）。UI 只读，不在界面层拼数值。 */
+  const assignmentByCfg = new Map(researchView(state, cfg).map((x) => [x.cfgId, x]));
   const library = SKILLS.map((s) => {
     const id = Number(s.cfgId);
     const r = RECIPE_BY_ID.get(id) || { sources: [], trigger: `类型${s.trigger}`, tags: [] };
@@ -558,6 +564,7 @@ export function panelState(state, cfg) {
          「最多 2 人」拒绝，换协议层（读配置）却能成，同一件事两套口径。 */
       equipLimit: Math.max(1, Math.trunc(Number(s.ui?.limit) || 2)),
       research: res ? { progress: res.progress, need: res.need } : null,
+      assignment: assignmentByCfg.get(id) || null,
       sources: r.sources || [],
       guarantee: r.guarantee || '',
     };
@@ -901,12 +908,21 @@ export function panelAction(state, cfg, action = {}) {
        每旬由 strategyTick 调 researchTick 推进；这里只登记/撤回，不改进度。 */
     if (type === 'assignResearch') {
       const r = assignResearch(state, cfg, { cfgId: action.cfgId, generalId: action.generalId });
-      return r.ok ? done(r.text, r) : fail(r.reason === 'already_unlocked' ? '该战法已解锁'
+      if (!r.ok) return fail(r.reason === 'already_unlocked' ? '该战法已解锁'
         : r.reason === 'no_general' ? '找不到该武将' : '战法不存在');
+      /* ★ P65：委派即开工。旧版只挂个字段，进度要等下一旬才动，
+         玩家盯着进度条看到的就是「研习中但卡住」。这里当场推进一次，
+         之后仍由 strategyTick 每旬续推，两条路径都走 advanceAssigned 同一口径。 */
+      const first = studyOnce(state, cfg, { cfgId: action.cfgId, generalId: action.generalId });
+      return done(first.ok ? `${r.text}；${first.text}` : r.text, { ...r, ...(first.ok ? first : {}) });
     }
     if (type === 'unassignResearch') {
       const r = unassignResearch(state, { cfgId: action.cfgId });
       return r.ok ? done(r.text, r) : fail('这条战法没有委派中的武将');
+    }
+    if (type === 'studyNow') {
+      const r = studyOnce(state, cfg, { cfgId: action.cfgId, generalId: action.generalId });
+      return r.ok ? done(r.text, r) : fail(r.text || '研习没有推进');
     }
 
     if (type === 'lvSkill') {

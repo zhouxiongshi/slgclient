@@ -930,6 +930,28 @@ export function accrueFactionGrain(state, factionId) {
  *  属于「世界在动」的背景音，不该占据玩家的军情流——实测 150 旬 480 条事件里
  *  大部分是「某某晋为中郎将」，玩家自己的战事被挤掉了。现在这类写 st.dynamics
  *  （上限 120 条，战略页单独一栏「势力动态」展示），玩家事件流只留与我有关的。 */
+/** 天下日志里写了交战，战报里必须有同一条，玩家才对得上。 */
+function fileFieldReport(state, ctx, { summary, place, result = 1 }) {
+  if (!Array.isArray(state.warReports)) state.warReports = [];
+  const report = {
+    id: nextId(state, 'warReportId'),
+    summary,
+    analysis: summary,
+    result,
+    rounds: '[]',
+    a_is_read: false,
+    d_is_read: false,
+    ctime: Date.now(),
+    place: place || '',
+    x: 0,
+    y: 0,
+  };
+  state.warReports.unshift(report);
+  if (state.warReports.length > 100) state.warReports.length = 100;
+  ctx?.push?.('warReport.push', report);
+  return report;
+}
+
 export function recordEvent(state, text, opts) {
   const st = state.strategy;
   if (opts && opts.quiet) {
@@ -1063,6 +1085,15 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
         }
         applied.attacked_player += 1;
         noteMarch(state, faction, order, target, tstate, quote, '来犯', 0, drawn);
+        const fromNm = order.params?.fromName
+          || map.cities.find((c) => c.id === Number(drawn?.fromId))?.name
+          || '邻城';
+        const soldiers = Math.max(200, Math.min(2000, Math.round(troops / 6)));
+        fileFieldReport(state, ctx, {
+          summary: `${faction.name}从${fromNm}出兵${target.name}，来犯我军，兵力约 ${soldiers}。此战已写入战报。`,
+          place: target.name,
+          result: 1,
+        });
         continue;
       }
       const defender = st.cities[targetId];
@@ -1492,9 +1523,11 @@ export function assaultEscalationTick(state, cfg, ctx) {
       g.cleared = true;
       noteCityCaptured(state, g.faction, prevOwner);
       noteCityLost(state, prevOwner, hit.id, g.faction);
-      recordEvent(state, gateOpen && (Number(city.troops) || 0) > 0
+      const fallLine = gateOpen && (Number(city.troops) || 0) > 0
         ? `${nm}被围既久，民心溃散，城内开门降于${g.name || '敌军'}。`
-        : `${nm}守军耗尽，城陷于${g.name || '敌军'}。`);
+        : `${nm}守军耗尽，城陷于${g.name || '敌军'}。`;
+      recordEvent(state, fallLine);
+      fileFieldReport(state, ctx, { summary: fallLine, place: nm, result: 0 });
       ctx.push?.('chat.push', {
         rid: 0, nickName: '系统', type: 0,
         msg: `【天下】${nm}失守，落入${g.name || '敌军'}之手。`,
@@ -4138,6 +4171,12 @@ export function strategyViewState(state, cfg = null) {
     events: [...st.events].slice(-40).reverse()
       .map((e) => ({ ...e, month: Math.max(1, e.turn || 0) })),
     chronicle: [...(st.chronicle || [])].reverse().slice(0, 36),
+    playback: ((st.chronicle || []).slice(-1)[0]?.moves || [])
+      .filter((m) => m && m.kind === '出征' && m.result !== '未发' && Number(m.fromId) && Number(m.toId))
+      .map((m) => ({
+        from: Number(m.fromId), to: Number(m.toId),
+        who: m.who || '', result: m.result || '', toName: m.toName || '',
+      })),
     cityLogs: st.cityLogs || {},
     plans: conf.factions.map((f) => {
       const g = st.memory?.[f.id]?.goal;

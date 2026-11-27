@@ -262,12 +262,10 @@ function require0() {
 
 test('P14-G UX：推演三月/自动推旬注入层存在且有安全停机', () => {
   const src = readFileSync(new URL('../server/skills.js', import.meta.url), 'utf8');
-  assert.ok(src.includes('id="slgStratTick3"'), '应注入「推演三月」按钮');
-  assert.ok(src.includes('id="slgStratAuto"'), '应注入「自动推旬」开关');
-  assert.ok(src.includes('function pendingBlock()'), '应有统一停机判据');
-  assert.ok(/pendingEvents \|\| \[\]\)\.length/.test(src), '未决事件必须停机');
+  assert.ok(src.includes('内政已毕 · 入下月'), '入下月按钮要在');
+  assert.ok(!src.includes('id="slgStratTick3"'), '推演三月已删除');
+  assert.ok(!src.includes('id="slgStratAuto"'), '自动推旬已删除');
   assert.ok(/mm\.pendingBattle/.test(src), '前锋抵城待定夺必须停机');
-  assert.ok(src.includes('clearInterval(autoTimer)'), '自动模式可真正关闭');
   /* z-index 阶梯红线：字符串拼接的注释必须放表达式外 */
   assert.doesNotMatch(src, /\+\s*\/\*[\s\S]{0,200}?\*\//, '拼接表达式中不许夹注释（会变一元加号丢整条 CSS/HTML）');
   const sv = readFileSync(new URL('../server/domain/strategy.js', import.meta.url), 'utf8');
