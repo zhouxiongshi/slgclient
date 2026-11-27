@@ -551,6 +551,7 @@ export function processTask(ctx, task) {
     });
     const woundedTo = routeWounded(state, {
       wounded: casualties.wounded,
+      killed: casualties.killed,
       fromCityId: Number(army.cityId) || ensureStrategy(state).playerCity || 0,
       battleCityId: 0,
       mapCities: strategyMap().cities,

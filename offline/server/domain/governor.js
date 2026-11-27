@@ -161,8 +161,9 @@ export function governorListView(state, cfg) {
 }
 
 /**
- * 太守候选：己方武将，排除行军中、他城太守、六府在岗者。
- * 政治降序 → 忠诚降序 → id 升序（重放一致）。主角可手工任命，但一键补任不占主角。
+ * 太守候选：**本城官员**（P72），再排除行军中、他城太守、六府在岗者。
+ * 政治降序 → 忠诚降序 → id 升序（重放一致）。主角在本城时可手工任命，但一键补任不占主角。
+ * 不在本城的武将必须先去武将页调城，不能隔着地图遥任。
  */
 export function governorCandidates(state, cfg, cityId = 0) {
   const cid = Number(cityId) || 0;
@@ -178,6 +179,7 @@ export function governorCandidates(state, cfg, cityId = 0) {
   const marching = new Set();
   for (const a of state.armys || []) if (a.marchId) for (const gid of a.generals || []) if (gid) marching.add(Number(gid));
   return (state.generals || [])
+    .filter((g) => Number(g.cityId) === cid)
     .filter((g) => !marching.has(Number(g.id)))
     .filter((g) => !taken.has(Number(g.id)))
     .filter((g) => !posting.has(Number(g.id)))
@@ -194,7 +196,7 @@ export function governorCandidates(state, cfg, cityId = 0) {
 /**
  * 任免太守 / 改方针（同一入口，body 里给了什么就改什么）。
  * officerId=0 表示撤任（在施任务照常推进）。
- * reason: not_own_city / bad_policy / no_general / marching / busy_elsewhere
+ * reason: not_own_city / bad_policy / no_general / not_local_city / marching / busy_elsewhere
  */
 export function governorSet(state, cfg, ctx, { cityId, officerId, policy } = {}) {
   const st = state?.strategy;
@@ -220,6 +222,9 @@ export function governorSet(state, cfg, ctx, { cityId, officerId, policy } = {})
     if (oid) {
       const g = (state.generals || []).find((x) => Number(x.id) === oid);
       if (!g) return { ok: false, reason: 'no_general' };
+      /* ★ P72：太守必须是本城官员——UI 过滤之外再留一道领域硬闸，
+         防止旧页面/直接调端点绕过。调城后才可任命。 */
+      if (Number(g.cityId) !== cid) return { ok: false, reason: 'not_local_city' };
       if ((state.armys || []).some((a) => a.marchId && (a.generals || []).includes(oid))) {
         return { ok: false, reason: 'marching' };
       }

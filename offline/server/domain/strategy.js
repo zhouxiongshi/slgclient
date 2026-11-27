@@ -2123,6 +2123,7 @@ function settleArmyBattle(state, cfg, ctx, {
   const homeId = Number(fromCityId) || Number(army.cityId) || Number(ensureStrategy(state).playerCity) || 0;
   const woundedTo = routeWounded(state, {
     wounded: casualties.wounded,
+    killed: casualties.killed,
     fromCityId: homeId,
     battleCityId: Number(battleCityId) || 0,
     mapCities: strategyMap().cities,

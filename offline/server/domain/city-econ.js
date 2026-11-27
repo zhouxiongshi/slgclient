@@ -223,7 +223,9 @@ export function popTick(state, ctx) {
     /* 每 10 日结一次。默认 3%×(1+民心/100)，民心 60 时大约每旬 +4.8%。
        沙盘一天约 2 秒，坐一分钟就能看见人丁，不再像按年才涨一次。 */
     const rate = knobGet(state, 'popGrowthYear') * (1 + (Number(e.morale ?? 60) / 100));
-    e.pop = Math.min(1000000, Math.round(e.pop * (1 + rate)));   // ★ P13 上限 10 万 → 100 万
+    const popBefore = Math.max(0, Math.floor(Number(e.pop) || 0));
+    /* ★ P72：低位保底 +1，避免 round 把 5~6 口的增长抹成 0、兵源永久卡死。 */
+    e.pop = Math.min(1000000, Math.max(popBefore + 1, Math.round(popBefore * (1 + rate))));   // ★ P13 上限 10 万 → 100 万
     const y = cityYield(state, id);
     e.store = Math.min(storeCapOf(e), e.store + 3 * (y?.grain || 0));
   }

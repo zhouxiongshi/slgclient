@@ -14,7 +14,7 @@ import { ensureStrategy, strategyViewState, oathOptions, chooseOath } from '../s
 import { ensureCityEcon } from '../server/domain/city-econ.js';
 import { advanceInteriorTasks } from '../server/domain/interior-task.js';
 import {
-  governorSet, governorAutoFill, governorTick, POLICIES,
+  governorSet, governorAutoFill, governorTick, governorCandidates, POLICIES,
 } from '../server/domain/governor.js';
 
 const cfg = loadConfig();
@@ -34,10 +34,15 @@ function freshState() {
 
 function ctx() { return { push() {} }; }
 
-test('G1 任免太守：政治最高者优先可用，一人一城、行军者被拒', () => {
+test('G1 任免太守：只任本城官员，一人一城、行军者被拒', () => {
   const { s, cid } = freshState();
   const cands = s.generals.filter((g) => !g.isProtagonist);
   assert.ok(cands.length >= 1, '前提：有可任太守的武将');
+  /* ★ P72：先调城再任命——非本城武将一律拒绝 */
+  const foreign = governorSet(s, cfg, ctx(), { cityId: cid, officerId: cands[0].id });
+  assert.equal(foreign.ok, false);
+  assert.equal(foreign.reason, 'not_local_city');
+  cands[0].cityId = cid;
   const r = governorSet(s, cfg, ctx(), { cityId: cid, officerId: cands[0].id });
   assert.equal(r.ok, true, JSON.stringify(r));
   assert.equal(s.strategy.governors[cid].officerId, cands[0].id);
@@ -45,6 +50,7 @@ test('G1 任免太守：政治最高者优先可用，一人一城、行军者�
   const otherEntry = Object.entries(s.strategy.cities)
     .find(([id, c]) => c.owner === 'player' && Number(id) !== cid);
   if (otherEntry) {
+    cands[0].cityId = Number(otherEntry[0]);
     const r2 = governorSet(s, cfg, ctx(), { cityId: Number(otherEntry[0]), officerId: cands[0].id });
     assert.equal(r2.ok, false, '同一武将不能任两城太守');
     assert.equal(r2.reason, 'busy_elsewhere');
@@ -52,6 +58,7 @@ test('G1 任免太守：政治最高者优先可用，一人一城、行军者�
   // 行军中不能任
   const marcher = s.generals.find((g) => (s.armys || []).some((a) => a.marchId && (a.generals || []).includes(g.id)));
   if (marcher) {
+    marcher.cityId = cid;
     const r3 = governorSet(s, cfg, ctx(), { cityId: cid, officerId: marcher.id });
     assert.equal(r3.ok, false, '行军中不能任太守');
     assert.equal(r3.reason, 'marching');
@@ -77,6 +84,7 @@ test('G2 改方针：六种方针可设，非法方针拒绝', () => {
 test('G3 旬界自动办政：与手动同源、太守本人执行、每城每旬一单', () => {
   const { s, cid } = freshState();
   const cand = s.generals.find((g) => !g.isProtagonist);
+  cand.cityId = cid;
   governorSet(s, cfg, ctx(), { cityId: cid, officerId: cand.id, policy: 'auto' });
   const gold0 = s.roleRes.gold;
   const out = governorTick(s, cfg, ctx());
@@ -127,17 +135,31 @@ test('G5 有灾自动赈济：只赈真实减产，丰收不赈', () => {
   assert.equal(Number(e.mod.grain), 1.5, '丰收加成不得被赈灾取消');
 });
 
-test('G6 一键补任：只填空缺、政治最高者、主角不占名额', () => {
-  const { s, cid } = freshState();
+test('G6 一键补任：只填空缺、本城官员、政治最高者、主角不占名额', () => {
+  const { s } = freshState();
   const r = governorAutoFill(s, cfg, ctx(), {});
   assert.equal(r.ok, true);
   assert.ok(r.filled.length >= 1, '至少补任一城');
-  const gv = s.strategy.governors[cid];
-  assert.ok(gv.officerId > 0, '玩家城应补上任太守');
-  const picked = s.generals.find((g) => Number(g.id) === Number(gv.officerId));
+  const filled = r.filled[0];
+  const officerId = Number(s.strategy.governors[filled.cityId].officerId);
+  const picked = s.generals.find((g) => Number(g.id) === officerId);
   assert.ok(picked && !picked.isProtagonist, '补任不占主角');
+  assert.equal(Number(picked.cityId), Number(filled.cityId), '补任只能选本城官员');
   const again = governorAutoFill(s, cfg, ctx(), {});
   assert.equal(again.filled.length, 0, '已满不再补');
+});
+
+test('G10 候选：只有本城未忙的武将可任，主角在本城也保留手工任命权', () => {
+  const { s, cid } = freshState();
+  const local = governorCandidates(s, cfg, cid);
+  const lord = s.generals.find((g) => g.isProtagonist);
+  assert.equal(local.length, 0, '本城没有官员时候选为空（不能隔着地图遥任）');
+  assert.ok(governorCandidates(s, cfg, lord.cityId).some((g) => g.isProtagonist), '主公驻在的本城仍可手工任命');
+  const other = s.generals.find((g) => !g.isProtagonist);
+  assert.ok(other && !local.some((g) => g.id === other.id), '他城武将不得出现在候选里');
+  other.cityId = cid;
+  const now = governorCandidates(s, cfg, cid);
+  assert.ok(now.some((g) => g.id === other.id), '调城后进入候选');
 });
 
 test('G7 旧档 appointments 迁移为太守记录', () => {

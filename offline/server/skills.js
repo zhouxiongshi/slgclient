@@ -4466,6 +4466,11 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     return e;
   }
   function kv(k, v) { return '<div class="kv"><span>' + k + '</span><span>' + v + '</span></div>'; }
+  /* ★ P72：民心/治安标签显式挂术语锚点，悬浮即出「作用 + 提升方式」，
+     不等 220ms 的增量扫描；只加属性不改文本，既有 UI 审计锚点不受影响。 */
+  function kvTerm(k, v, termId) {
+    return '<div class="kv"><span data-term="' + termId + '">' + k + '</span><span>' + v + '</span></div>';
+  }
   /* 双方对阵卡：相同结构、相同宽度、相同数字字号，只换阵营色，方便一眼对照。 */
   function warSideHtml(side, title, where, troops, loss) {
     return '<div class="war-side ' + (side === 'a' ? 'mine' : 'theirs') + '">'
@@ -5808,7 +5813,9 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     /* 下面 page.innerHTML 会把 #slgCityBody 一起重建，先记住玩家当前看到哪一段 */
     scrollRemember('page', page.querySelector('#slgCityBody'));
     var lv = c.levy || null;
-    var pill = function (k, v) { return '<div class="pill"><small>' + k + '</small><b>' + v + '</b></div>'; };
+    var pill = function (k, v, termId) {
+      return '<div class="pill"><small' + (termId ? ' data-term="' + termId + '"' : '') + '>' + k + '</small><b>' + v + '</b></div>';
+    };
     page.innerHTML = '<div class="citypage-head">'
       + '<div><div class="ct">' + esc(c.name) + (c.level === 3 ? ' · 州治' : '') + '</div>'
       + '<div class="cs">' + esc(c.province) + ' · <span style="color:' + c.color + '">' + esc(c.ownerName) + '</span>'
@@ -5817,7 +5824,7 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       + pill('人口', fmt(c.pop || c.population || 0))
       + pill('城库粮', fmt(c.store || 0))
       + pill(c.owner === 'player' ? '驻城兵' : '守军约', fmt(c.owner === 'player' ? (c.troopSum || 0) : (c.troops || 0)))
-      + pill('民心', c.morale != null ? c.morale : '—')
+      + pill('民心', c.morale != null ? c.morale : '—', 'minxin')
       + (lv ? pill('本旬可征', fmt(lv.quota)) : '')
       + '</div><div class="citypage-acts">'
       + '<button class="tick" id="slgCityTick" title="办完城内事务后，回到沙盘看诸路行军">内政已毕 · 入下月</button>'
@@ -5998,8 +6005,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       };
       var card = el('div', 'card', '<h4 style="margin-top:0">' + c.name + ' · 治理</h4>'
         + '<div class="grid">'
-        + kv('民心', (c.morale != null ? c.morale : '—') + '　' + bar(c.morale, 100))
-        + kv('治安', (c.order != null ? c.order : '—') + '　' + bar(c.order, 100))
+        + kvTerm('民心', (c.morale != null ? c.morale : '—') + '　' + bar(c.morale, 100), 'minxin')
+        + kvTerm('治安', (c.order != null ? c.order : '—') + '　' + bar(c.order, 100), 'zhian')
         + kv('农田', 'Lv' + (c.lvAgri || 1) + ' · ' + (c.devAgri || 0) + '/120')
         + kv('市集', 'Lv' + (c.lvTrade || 1) + ' · ' + (c.devTrade || 0) + '/120')
         + kv('兵营', 'Lv' + (c.lvArms || 1) + ' · ' + (c.devArms || 0) + '/120')
@@ -6082,18 +6089,38 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         var govRow = el('div', '');
         govRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px';
         var selGov = document.createElement('select');
+        /* ★ P72：候选已由领域层限定为本城官员。默认选现任太守；无现任则选首位非主公，
+           不再让政治最高的主公永远占着下拉第一项。 */
+        var govPick = Number(gv.officerId) || 0;
+        var pick = gvCands.find(function (g) { return Number(g.id) === govPick; });
+        if (!pick) pick = gvCands.find(function (g) { return !g.isProtagonist; }) || gvCands[0];
         selGov.innerHTML = gvCands.map(function (g) {
-          return '<option value="' + g.id + '">' + esc(g.name) + ' · 治政 ' + g.politics + ' · 忠 ' + g.loyal + '</option>';
+          var on = pick && Number(g.id) === Number(pick.id) ? ' selected' : '';
+          return '<option value="' + g.id + '"' + on + '>' + esc(g.name) + ' · 治政 ' + g.politics + ' · 忠 ' + g.loyal + '</option>';
         }).join('');
+        if (!gvCands.length) {
+          var emptyOpt = document.createElement('option');
+          emptyOpt.value = '0';
+          emptyOpt.textContent = '本城无在城官员';
+          selGov.appendChild(emptyOpt);
+          selGov.disabled = true;
+          selGov.setAttribute('data-tip', '本城没有可调的官员；先在武将页把武将调入本城。');
+          govRow.appendChild(el('span', 'cost', '本城无在城官员，先在武将页调城。'));
+        }
         govRow.appendChild(selGov);
-        govRow.appendChild(mkBtn('任命太守', '', function () {
+        var btnAppoint = mkBtn('任命太守', '', function () {
           postJSON('/__slg/strategy/action', {
             action: 'governorSet', cityId: c.id, officerId: Number(selGov.value) || 0,
           }).then(function (rs) {
             toast(rs.ok ? '太守已任命：内政从此由太守按方针自动办理' : '无法任命：' + errText(rs), !!rs.ok);
             fetchState().then(function (s2) { cache = s2; refreshCityView(s2); });
           }).catch(function () { toast('任命失败，请稍后再试', false); });
-        }));
+        });
+        if (!gvCands.length) {
+          btnAppoint.disabled = true;
+          btnAppoint.setAttribute('data-tip', '本城没有可调的官员；先在武将页把武将调入本城。');
+        }
+        govRow.appendChild(btnAppoint);
         if (gv.officerId) {
           govRow.appendChild(mkBtn('撤任太守', 'ghost', function () {
             postJSON('/__slg/strategy/action', {
@@ -6140,8 +6167,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
       govCard.appendChild(sink);
 
       body.appendChild(el('div', 'cost',
-        '民心的作用：影响人口增长（+2%~6%/月）与粮金产量（×0.85~1.10）。'
-        + '治安越高灾害越少。开发度到 100 以上收益递减，别把一座城堆到顶。'));
+        '民心影响粮金产量与人口增长，治安影响灾害概率；悬浮标签可看作用与提升方式。'
+        + '赈灾、劝课生息、修城都能改善；开发度到 100 以上收益递减，别把一座城堆到顶。'));
 
       /* ★ 修 bug-6：分城也有自己的一套设施（举义时逐城建立），在此可查看与升级。
          ★ 2026-11-14：卡片内容抽到 mountFacilitiesCard()，升级后只重画卡片不重画整页 */
@@ -6303,7 +6330,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
         + kv('城库存粮', fmt(c.store))
         + kv('日产 · 粮', '+' + fmt(c.yieldGrain))
         + kv('日产 · 金', '+' + fmt(c.yieldGold))
-        + kv('民心', (c.morale != null ? c.morale : '—') + ' / 治安 ' + (c.order != null ? c.order : '—'))
+        + kvTerm('民心', c.morale != null ? c.morale : '—', 'minxin')
+        + kvTerm('治安', c.order != null ? c.order : '—', 'zhian')
         + kv('粮道', (c.supply && c.supply.connected === false)
           ? ('断绝 ' + (c.supply.days || 0) + ' 日')
           : ('通 · ' + ((c.supply && c.supply.hops) || 0) + ' 跳 / 约 ' + ((c.supply && c.supply.km) || 0) + ' 里'))

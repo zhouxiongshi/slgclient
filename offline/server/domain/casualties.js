@@ -4,13 +4,16 @@
  * 口径（玩家可见）：
  *  - 一场仗打完，折损不是全部「没了」：一部分阵亡，一部分只是负伤；
  *  - 负伤者退出战斗序列，**不会留在原队**，而是自行退往周边己方城与出生城；
- *  - 周边城按战场位置取最近的一座己方城，出生城按该支部队的出发城取。
+ *  - 周边城按战场位置取最近的一座己方城，出生城按该支部队的出发城取；
+ *  - P72：阵亡者在出发城「复员归农」，释放在役户名额；负伤者仍在役，不释放。
  *
  * 为什么是纯模块：战斗内核只回答「剩多少人」，伤兵去向属于战略层口径；
  * 这里不读配置、不碰内核，攻城/清剿/推演共用同一套拆分，避免三处各算一套。
  */
 
 /** 负伤占折损的比例。阵亡 = 折损 − 负伤。 */
+import { releaseFallenLevy } from './levy.js';
+
 export const WOUNDED_RATE = 0.4;
 /** 负伤者中回出生城的比例，其余退回周边最近己方城；没有第二座城时全给唯一可去的那座。 */
 export const HOME_SHARE = 0.4;
@@ -70,11 +73,15 @@ export function splitTroopsToSlots(total) {
  * 只认 owner==='player' 的城，敌城与中立城不收容伤兵。
  */
 export function routeWounded(state, {
-  wounded = [], fromCityId = 0, battleCityId = 0, mapCities = [], strategyCities = null,
+  wounded = [], killed = [], fromCityId = 0, battleCityId = 0, mapCities = [], strategyCities = null,
   playerCityFallback = false,
 } = {}) {
   const st = state?.strategy || {};
   const rows = strategyCities || st.cities || {};
+  /* ★ P72：阵亡者复员归农——名额按出发城退回兵役台账。
+     必须在「无负伤可退」的早退之前做，否则全军尽殁恰恰不会释放名额。 */
+  const dead = [0, 1, 2].reduce((s, i) => s + Math.max(0, Math.floor(num(killed[i]))), 0);
+  if (dead > 0 && Number(fromCityId) > 0) releaseFallenLevy(state, fromCityId, dead);
   const total = [0, 1, 2].reduce((s, i) => s + Math.max(0, Math.floor(num(wounded[i]))), 0);
   const out = [];
   if (total <= 0) return out;

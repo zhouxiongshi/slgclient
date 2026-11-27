@@ -7,7 +7,8 @@
  *
  * 四条规则（用户 2026-11-13 明确要求，本作设计 已同步修订）：
  *   1. 妇孺老少不征：户均 5 口，只有 62% 的户有适龄壮丁（其余为老弱/妇孺/幼户）。
- *   2. 一户征兵一位：已征户数 `levied` 永久累计，人口增长产生的新户才补进来。
+ *   2. 一户征兵一位：已征户数 `levied` 记的是**在役户**；阵亡者复员归农、名额回到本城
+ *      （P72），负伤者退城仍算在役。`levyTotal` 另记历史累计，不随复员回退。
  *   3. 不允许反复征兵：每城每旬（turn）只允许一次征兵，`lastLevyTurn` 卡住。
  *   4. 内政先发展人口：可征为 0 时明确回 `need_population`，指向「劝课生息」内政。
  *
@@ -18,6 +19,8 @@ export const HOUSEHOLD_SIZE = 5;        // 户均人口
 export const ADULT_MALE_RATE = 0.62;    // 有适龄壮丁的户占比（其余为妇孺老弱户）
 export const POP_PER_SOLDIER = 4;       // 本作设计：征 1 兵，人口基数 -4（抽丁 + 眷属随军 + 田荒）
 export const TURN_CAP_RATE = 0.05;      // 单旬最多征总人口的 5%，防止一次抽空
+/** P72 保底：8 户（约 4~5 丁），保证冬季 + 低兵营下旬可征仍 ≥1，不再死亡螺旋。 */
+export const MIN_CITY_POP = HOUSEHOLD_SIZE * 8;
 export const SEASON_FACTOR = { 春: 0.8, 夏: 1.0, 秋: 1.1, 冬: 0.7 };
 const SEASONS = ['春', '夏', '秋', '冬'];
 
@@ -43,7 +46,12 @@ function econOf(state, cityId) {
   return state?.strategy?.cityEcon?.[id] || null;
 }
 
-/** 兵役台账（旧档自动补 0，不覆盖已有值）。 */
+/**
+ * 兵役台账（旧档自动补 0）。
+ * ★ P72 归一化：`levied` 是**在役户**，不得超过当前适龄壮丁户。人口被反复抽丁压低后，
+ *   超出部分视为流失/复员，名额回到本城，历史累计 `levyTotal` 不回退。
+ *   没有这条，已经卡死在 pop=5 / levied=上千 的旧档即使修了增长也永远解不了套。
+ */
 export function levyLedger(state, cityId) {
   const e = econOf(state, cityId);
   if (!e) return { levied: 0, lastLevyTurn: -1, levyCount: 0, levyTotal: 0 };
@@ -51,6 +59,9 @@ export function levyLedger(state, cityId) {
   if (e.lastLevyTurn == null) e.lastLevyTurn = -1;
   if (e.levyCount == null) e.levyCount = 0;
   if (e.levyTotal == null) e.levyTotal = 0;
+  const pop = Math.max(0, Math.floor(num(e.pop, 0)));
+  const adultMales = Math.floor(Math.floor(pop / HOUSEHOLD_SIZE) * ADULT_MALE_RATE);
+  e.levied = Math.min(Math.max(0, Math.floor(num(e.levied, 0))), adultMales);
   return e;
 }
 
@@ -88,7 +99,7 @@ export function levyView(state, cityId, opts = {}) {
   let hint = '';
   if (pop <= 0) { reason = 'no_population'; reasonText = '此城无人口'; hint = '先办「劝课生息」招徕流民。'; }
   else if (cooling) { reason = 'levy_cooldown'; reasonText = '本旬已征过兵'; hint = '每旬只征一次，推进到下一旬再来；或先办内政增殖人口。'; }
-  else if (houseBalance <= 0) { reason = 'levy_exhausted'; reasonText = '各户壮丁已尽（一户一丁）'; hint = '妇孺老弱不可征；办「劝课生息」增加户口后才有新丁。'; }
+  else if (houseBalance <= 0) { reason = 'levy_exhausted'; reasonText = '各户壮丁已尽（一户一丁）'; hint = '阵亡壮丁战后复员归农，名额回到本城；也可办「劝课生息」招徕新户。'; }
   else if (quota <= 0) { reason = 'need_population'; reasonText = '兵源不足，需先发展人口'; hint = '办「劝课生息」或等人口自然增长。'; }
 
   return {
@@ -132,7 +143,7 @@ export function commitLevy(state, cityId, count) {
   const ledger = levyLedger(state, id);
   const want = Math.max(0, Math.floor(num(count, 0)));
   const popBefore = Math.max(0, Math.floor(num(e.pop, 0)));
-  const popAfter = Math.max(HOUSEHOLD_SIZE, popBefore - want * POP_PER_SOLDIER);
+  const popAfter = Math.max(MIN_CITY_POP, popBefore - want * POP_PER_SOLDIER);
   e.pop = popAfter;
   ledger.levied = Math.max(0, Math.floor(num(ledger.levied, 0))) + want;
   ledger.lastLevyTurn = levyTurnOf(state);
@@ -142,6 +153,22 @@ export function commitLevy(state, cityId, count) {
   const bite = (want * POP_PER_SOLDIER / Math.max(1, popBefore)) * 60;
   e.morale = Math.max(0, Math.round((num(e.morale, 60) - bite) * 10) / 10);
   return { popBefore, popAfter, popCost: popBefore - popAfter, levy: levyView(state, id) };
+}
+
+/**
+ * ★ P72 复员归农：阵亡者不再占在役户名额，下一旬即可由本城新丁补上。
+ * 负伤者由 routeWounded 退回驻城、仍在役，不调用这里；`levyTotal` 是历史累计，不回退。
+ * 与 `commitLevy` 共用同一本台账，零依赖，攻城/清剿都从 casualties 接线调用。
+ */
+export function releaseFallenLevy(state, cityId, fallen = 0) {
+  const e = econOf(state, cityId);
+  if (!e) return null;
+  const n = Math.max(0, Math.floor(num(fallen, 0)));
+  if (!n) return null;
+  const ledger = levyLedger(state, cityId);
+  const before = Math.max(0, Math.floor(num(ledger.levied, 0)));
+  ledger.levied = Math.max(0, before - n);
+  return { cityId: Number(cityId), released: before - ledger.levied, levied: ledger.levied };
 }
 
 /** 春征超过上限 50% → 秋收田赋 −15%（本作设计 农时冲突，提前显示在预览里）。
