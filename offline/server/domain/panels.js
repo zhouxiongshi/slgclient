@@ -71,23 +71,34 @@ import { applyRangeNote, SKILLS as RUNTIME_SKILLS } from '../skills.js';
 import { desText } from './battle-narrative.js';
 for (const s of SKILLS) applyRangeNote(s);
 for (const s of PANEL_CONF.innateSkills) applyRangeNote(s);
-/* ★ P69：本文件的 SKILLS 是直接从 conf/skills.json 拼出来的原始表，只过了射程注释，
-   没经过 skills.js 的「镜像 → 成长方向 → 一致性 → 玩家覆盖」覆盖链。战斗用它算伤害，
-   战法库却用原始表画曲线，于是反击 10025 战斗里 37.5→75、界面里十级全 75。
-   等级数值统一取运行时表；名称/类型/描述/来源仍按面板领域层原有口径读 conf。 */
-const RUNTIME_LEVELS_BY_ID = new Map(RUNTIME_SKILLS.map((s) => [Number(s.cfgId), s.ui?.levels || []]));
-const SKILL_BY_ID = new Map(SKILLS.map((s) => [Number(s.cfgId), s]));
+/* ★ P69/P71：本文件的 SKILLS 是直接从 conf/skills.json 等拼出来的原始表，只过了射程注释，
+   没经过 skills.js 的「镜像 → 成长方向 → 一致性 → 玩家覆盖」覆盖链。P69 只把战法库的
+   levels/des 换成运行时表，P71 用户又发现武将页学习槽仍显示原始 75%——同类漏网第三处。
+   P71 收口：所有玩家可见的战法数据（名称/描述/等级/概率/射程/装配上限）统一从运行时表取，
+   原始 conf 只作为「运行时表没有这条」时的 fallback，不再是任何展示的权威。 */
+const RUNTIME_BY_ID = new Map(RUNTIME_SKILLS.map((s) => [Number(s.cfgId), s]));
+const SKILL_BY_ID = new Map([
+  ...SKILLS.map((s) => [Number(s.cfgId), s]),
+  ...RUNTIME_SKILLS.map((s) => [Number(s.cfgId), s]), // 运行时覆盖原始
+]);
 /** 武将自带战法不进战法库列表，但武将页必须能读到名字和说明。 */
 const SKILL_ANY_ID = new Map([
   ...SKILLS.map((s) => [Number(s.cfgId), s]),
   ...PANEL_CONF.innateSkills.map((s) => [Number(s.cfgId), s]),
+  ...RUNTIME_SKILLS.map((s) => [Number(s.cfgId), s]), // 运行时覆盖原始
 ]);
 if (PANEL_CONF.protagonistSkill?.cfgId) {
   applyRangeNote(PANEL_CONF.protagonistSkill);
-  SKILL_ANY_ID.set(Number(PANEL_CONF.protagonistSkill.cfgId), PANEL_CONF.protagonistSkill);
+  if (!SKILL_ANY_ID.has(Number(PANEL_CONF.protagonistSkill.cfgId))) {
+    SKILL_ANY_ID.set(Number(PANEL_CONF.protagonistSkill.cfgId), PANEL_CONF.protagonistSkill);
+  }
 }
 function skillConfOf(cfgId) {
   return SKILL_ANY_ID.get(Number(cfgId)) || null;
+}
+/** 展示统一取数：命中运行时表即用运行时条目（已过覆盖链），未命中才退原始 conf。 */
+function displaySkillOf(cfgId) {
+  return RUNTIME_BY_ID.get(Number(cfgId)) || skillConfOf(cfgId) || null;
 }
 const ITEM_BY_ID = new Map(PANEL_CONF.items.items.map((i) => [Number(i.id), i]));
 const RECIPE_BY_ID = new Map(PANEL_CONF.recipes.recipes.map((r) => [Number(r.cfgId), r]));
@@ -447,7 +458,9 @@ export function panelState(state, cfg) {
     const slots = [0, 1, 2].map((pos) => {
       const s = g.skills?.[pos];
       const cfgId = s && typeof s === 'object' ? s.cfgId : s;
-      const conf = cfgId ? skillConfOf(cfgId) : null;
+      /* ★ P71：学习槽/觉醒槽必须和研习框、战斗用同一份运行时数值——
+         旧口径 skillConfOf() 取原始 conf，反击在 Lv5 显示 75%，而研习/内核是 90%。 */
+      const conf = cfgId ? displaySkillOf(cfgId) : null;
       /* ★ P58：解锁条件走 slotUnlock 唯一口径，锁着也要说清「差几级」，
          不再只给一句「需武将 Lv5 解锁」让玩家自己猜当前等级。 */
       const unlock = slotUnlock(g, pos);
@@ -547,17 +560,20 @@ export function panelState(state, cfg) {
   /* ★ P65：战法库直接带委派摘要——「研习中」要能分清是有人在督研（会涨），
      还是只有半截进度没人管（卡住）。UI 只读，不在界面层拼数值。 */
   const assignmentByCfg = new Map(researchView(state, cfg).map((x) => [x.cfgId, x]));
-  const library = SKILLS.map((s) => {
+  const library = SKILLS.map((raw) => {
+    /* ★ P71：整条战法都取运行时表，不只是 levels/des——名称、射程、目标、兵种、
+       装配上限也一并同源；原始表只决定「战法库有哪些条目」。 */
+    const s = displaySkillOf(raw.cfgId) || raw;
     const id = Number(s.cfgId);
     const r = RECIPE_BY_ID.get(id) || { sources: [], trigger: `类型${s.trigger}`, tags: [] };
     const unl = state.skillbook.unlocked[String(id)] || null;
     const res = state.skillbook.research[String(id)] || null;
     const by = equippedBy(state, id);
     const status = unl || owned.has(id) ? 'unlocked' : res ? 'researching' : 'locked';
-    const levels = RUNTIME_LEVELS_BY_ID.get(id) || s.ui?.levels || [];
+    const levels = s.ui?.levels || [];
     const lv = Object.assign({}, ...levels.map((l, i) => ({ [i + 1]: { probability: l.probability, effect_value: l.effect_value } })));
-    /* 描述里的 %n 必须和曲线用同一份等级数据，否则 Lv1 描述写 75%、曲线写 37.5% */
-    const desSrc = levels === s.ui?.levels ? s : { ...s, ui: { ...s.ui, levels } };
+    /* s 已是运行时条目，描述 %n 与曲线天然同源；此行保留 desText 调用以统一口径。 */
+    const desSrc = s;
     return {
       cfgId: id,
       name: s.ui?.name ?? s.name,

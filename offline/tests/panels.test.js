@@ -29,7 +29,7 @@ const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const cfg = loadConfig();
 const fresh = () => normalizeWorld(createWorld(cfg), cfg);
 
-test('战法库：80 条、每条 ≥2 条公开获取途径、研习兜底、文本与 本作配置 原文一致', () => {
+test('战法库：80 条、每条 ≥2 条公开获取途径、研习兜底、文本与运行时表同源', () => {
   const chk = panelSelfCheck();
   assert.equal(chk.ok, true, JSON.stringify(chk));
   assert.equal(chk.skillCount, 80);
@@ -47,10 +47,13 @@ test('战法库：80 条、每条 ≥2 条公开获取途径、研习兜底、�
   for (const s of panelState(fresh(), cfg).library) {
     const r = byId.get(s.cfgId);
     const runtime = skillById(s.cfgId);
-    /* 文案仍取 conf 原文，只有 %n 换成运行时等级（镜像/成长/一致性覆盖后的那份）。 */
-    const desSrc = runtime?.ui?.levels ? { ...r, ui: { ...r.ui, levels: runtime.ui.levels } } : r;
-    assert.equal(s.name, r.ui?.name ?? r.name);
-    assert.equal(s.des, desText(desSrc, 1) || r.ui?.des || '');
+    /* ★ P71：整条展示都取运行时表——包括一致性层改过的措辞（如控制槽「伤害率」→「几率」、
+       删掉内核不支持的分兵/优先行动）。P69 只统一数值、保留 conf 原文的口径已作废：
+       战法库写「伤害率」而研习框/战斗按控制几率处理，本身就是用户反馈的不同步。 */
+    assert.equal(s.name, runtime?.ui?.name ?? runtime?.name ?? r?.ui?.name ?? r?.name);
+    assert.equal(s.des, runtime
+      ? (desText(runtime, 1) || runtime.ui?.des || '')
+      : (desText(r, 1) || r?.ui?.des || ''));
   }
 });
 

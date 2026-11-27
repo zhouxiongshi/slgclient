@@ -14,6 +14,10 @@
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+/* ★ P71：研习回执里的战法名必须与战法库/学习槽/战斗同源。skills.js 只依赖 node 内置
+   模块，import 它不会引入 panels.js ↔ strategy.js 的环；SKILL_BY_ID 仍只做「这条战法
+   是否可研习」的存在性判断（原始三表），不改变 19001 不可研习的既有行为。 */
+import { skillById } from '../skills.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const load = (p) => JSON.parse(readFileSync(resolve(ROOT, p), 'utf8'));
@@ -29,6 +33,11 @@ const SKILLS = (() => {
 const SKILL_BY_ID = new Map(SKILLS.map((s) => [Number(s.cfgId), s]));
 const RECIPE_BY_ID = new Map((load('conf/panels/skill-recipes.json').recipes || [])
   .map((r) => [Number(r.cfgId), r]));
+/** 展示名统一取运行时表（已过镜像/成长/一致性/玩家覆盖）；原始 conf 仅作兜底。 */
+function displayName(cfgId, conf) {
+  const rt = skillById(Number(cfgId));
+  return rt?.ui?.name ?? rt?.name ?? conf?.ui?.name ?? conf?.name ?? '战法';
+}
 
 const NEED_DEFAULT = 100;
 const PER_XUN_BASE = 8;          // 每旬基础研习点
@@ -114,7 +123,7 @@ export function assignResearch(state, cfg, { cfgId, generalId } = {}) {
   return {
     ok: true, cfgId: id, generalId: gid, name: g.name,
     points: pace.points, scrolls: pace.scrolls,
-    text: `已委派${g.name}研习「${conf.ui?.name ?? conf.name ?? '战法'}」：每旬约 ${pace.points} 点、耗 ${pace.scrolls} 卷`,
+    text: `已委派${g.name}研习「${displayName(id, conf)}」：每旬约 ${pace.points} 点、耗 ${pace.scrolls} 卷`,
   };
 }
 
@@ -155,7 +164,7 @@ function advanceAssigned(state, cfg, key, row, ctx) {
   if (!state.skillbook.research) state.skillbook.research = {};
   state.skillbook.research[key] = cur;
   const conf = SKILL_BY_ID.get(cfgId);
-  const title = conf?.ui?.name ?? conf?.name ?? '战法';
+  const title = displayName(cfgId, conf);
   if (cur.progress >= need) {
     delete state.skillbook.research[key];
     delete assign[key];
@@ -222,7 +231,7 @@ export function researchView(state, cfg) {
     const r = state.skillbook.research?.[key] || { progress: 0, need: NEED_DEFAULT };
     const conf = SKILL_BY_ID.get(cfgId);
     out.push({
-      cfgId, name: conf?.ui?.name ?? conf?.name ?? '战法',
+      cfgId, name: displayName(cfgId, conf),
       generalId: g.raw.id, generalName: g.name,
       points: pace.points, scrolls: pace.scrolls,
       progress: int(r.progress), need: int(r.need) || NEED_DEFAULT,
