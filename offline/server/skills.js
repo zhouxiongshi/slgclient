@@ -979,6 +979,9 @@ export function patchClientBundle(source) {
           if (!rep || !rep.anim) return;
           window.lastWarReport = rep;
           // 本地地图已删除：Cocos 面板都在遮罩之下打不开，战报详情统一走 DOM 战报窗
+          /* ★ P73：同日多场（多支来犯军抵达）必须排队播，不能互相顶掉；
+             入队由回放层统一调度，这里只负责交给它。 */
+          if (window.__slgQueueBattleReport) { window.__slgQueueBattleReport(rep); return; }
           if (window.__slgReportsWindow) window.__slgReportsWindow();
           if (window.__slgPlayBattle) window.__slgPlayBattle(rep.anim);
         };
@@ -3427,6 +3430,8 @@ const BATTLE_ANIM_SOURCE = `;(function () {
   function createStage(anim, opt) {
     opt = opt || {};
     injectCss();
+    /* ★ P73：守城战里 d 侧是攻城军，不能一律写「守军」。 */
+    var SIDE_LABEL = anim && anim.defense ? { a: '我军', d: '攻城军' } : { a: '我军', d: '守军' };
     var host = document.createElement('div');
     host.className = 'slgStage';
     if (opt.height) host.style.height = opt.height;
@@ -3613,7 +3618,7 @@ const BATTLE_ANIM_SOURCE = `;(function () {
       ['a', 'd'].forEach(function (side) {
         var s = totals[side];
         var hit = now - state.sideHitLossT[side] < 1300 && state.sideHitLoss[side] > 0;
-        var label = (side === 'a' ? '我军 ' : '守军 ') + fmt(s.cur) + '/' + fmt(s.max)
+        var label = SIDE_LABEL[side] + ' ' + fmt(s.cur) + '/' + fmt(s.max)
           + (hit ? '　−' + fmt(state.sideHitLoss[side]) : '');
         g.font = 'bold 12px "Microsoft YaHei",sans-serif';
         g.textAlign = 'left';
@@ -3972,7 +3977,7 @@ const BATTLE_ANIM_SOURCE = `;(function () {
         g.font = '15px "Microsoft YaHei",sans-serif'; g.fillStyle = '#c8b88a';
         var sa = 0, sd = 0;
         for (var kk in state.units) { if (state.units[kk].side === 'a') sa += state.units[kk].cur; else sd += state.units[kk].cur; }
-        g.fillText('我军余 ' + fmt(sa) + ' · 守军余 ' + fmt(sd), rect.width / 2, rect.height / 2 + 34);
+        g.fillText(SIDE_LABEL.a + '余 ' + fmt(sa) + ' · ' + SIDE_LABEL.d + '余 ' + fmt(sd), rect.width / 2, rect.height / 2 + 34);
       }
     }
 
@@ -4112,12 +4117,14 @@ const BATTLE_ANIM_SOURCE = `;(function () {
     overlay.appendChild(head); overlay.appendChild(body);
     document.body.appendChild(overlay);
     document.getElementById('slgBattleReport').onclick = function () {
-      hide();
+      /* ★ P73：走「结束这一场」而不是裸 hide()，否则排队中的下一场永远不放。
+         战报窗随后由 __slgOpenWarReport 打开。 */
+      finishOneReport();
       if (window.__slgOpenWarReport) window.__slgOpenWarReport();
       else if (window.__slgReportsWindow) window.__slgReportsWindow();
     };
     document.addEventListener('keydown', function (ev) {
-      if (ev.key === 'Escape' && overlay && overlay.style.display !== 'none') hide();
+      if (ev.key === 'Escape' && overlay && overlay.style.display !== 'none') finishOneReport();
     });
   }
 
@@ -4127,17 +4134,63 @@ const BATTLE_ANIM_SOURCE = `;(function () {
     if (current) { current.destroy(); current = null; }
   }
 
-  window.__slgPlayBattle = function (data) {
+  /* ★ P73：战报排队。一支来犯军一场仗；多支同日抵达时逐场播，
+     旧实现后一场直接顶掉前一场，玩家只看到最后一场（或什么都没有）。
+     忙闲判据用「覆盖层是否可见」而不是布尔标志——标志一旦被别的路径 hide() 掉就会永久卡住。 */
+  var reportQueue = [];
+  var titleData = null;
+  /** 标题单独重绘：队列长度随时会变（同一天后续战报不断进来），不能只在开播时算一次。 */
+  function renderBattleTitle() {
+    var el = document.getElementById('slgBattleTitle');
+    if (!el || !titleData) return;
+    var d = titleData;
+    var html = d.defense
+      ? ((d.a && d.a.name ? d.a.name : '我军') + ' 守 ' + (d.place || '')
+        + '（攻城 ' + (d.d && d.d.name ? d.d.name : '敌军') + '）')
+      : ((d.a && d.a.name ? d.a.name : '我军') + ' 攻 ' + (d.place || '')
+        + '（守军 ' + (d.d && d.d.name ? d.d.name : '') + '）');
+    if (reportQueue.length) {
+      html += '　<span style="color:#9c9382;font-weight:400">还有 '
+        + reportQueue.length + ' 场待看</span>';
+    }
+    el.innerHTML = html;
+  }
+  function playNextReport() {
+    if (overlay && overlay.style.display !== 'none') return;
+    var rep = reportQueue.shift();
+    if (!rep || !rep.anim) return;
+    window.__slgPlayBattle(rep.anim);
+  }
+  function finishOneReport() {
+    hide();
+    playNextReport();
+  }
+  /** 服务端推来的每一份带动作流的战报都从这里入队（onWarReportAnim 调用）。 */
+  window.__slgQueueBattleReport = function (rep) {
+    if (!rep || !rep.anim) return;
+    reportQueue.push(rep);
+    if (overlay && overlay.style.display !== 'none') {
+      /* 已有一场在播：只排队，并把「还有 N 场」刷新出来，关掉后自动接上。 */
+      renderBattleTitle();
+      return;
+    }
+    /* 批量战报只在第一批开一次战报窗，避免同一天三场仗把窗口反复重建。 */
+    if (window.__slgReportsWindow) window.__slgReportsWindow();
+    playNextReport();
+  };
+
+  window.__slgPlayBattle = function (data, opt) {
     if (!data || !data.rounds || !data.rounds.length) return;
     ensureOverlay();
     if (current) { current.destroy(); current = null; }
     overlay.style.display = 'block';
     document.querySelectorAll('.slgIx-modal.slgIxEvent').forEach(function (n) { n.style.display = 'none'; });
-    document.getElementById('slgBattleTitle').textContent =
-      (data.a && data.a.name ? data.a.name : '我军') + ' 攻 ' + (data.place || '') + '（守军 ' + (data.d && data.d.name ? data.d.name : '') + '）';
+    /* 守城战里我军是守方：标题不能写成「昌邑守军 攻 昌邑」。 */
+    titleData = data;
+    renderBattleTitle();
     var body = document.getElementById('slgBattleBody');
     body.innerHTML = '';
-    current = createStage(data, { autoPlay: true, height: 'calc(100vh - 58px)', onClose: hide });
+    current = createStage(data, { autoPlay: true, height: 'calc(100vh - 58px)', onClose: finishOneReport });
     body.appendChild(current.el);
   };
 
@@ -7325,7 +7378,8 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     }
 
     /* ---- 3. 双方阵容 + 战法效果（回答「健卒不殆到底是什么」） ---- */
-    [['我军', anim.a, '#c0392b'], ['守军', anim.d, '#2c5f8a']].forEach(function (side) {
+    /* ★ P73：守城战里我方是守方，对方是攻城军，标签不能写「守军」。 */
+    [['我军', anim.a, '#c0392b'], [r.defense ? '攻城军' : '守军', anim.d, '#2c5f8a']].forEach(function (side) {
       var units = (side[1] && side[1].units) || [];
       if (!units.length) return;
       var card = el('div', 'card');

@@ -34,7 +34,7 @@ import { consumeEncounterDefense } from './encounter.js';
 /* ★ P67：折损拆阵亡/负伤，伤兵退回周边与出生城（唯一口径） */
 import { splitCasualties, routeWounded } from './casualties.js';
 /* ★ P11 兵役制：城池视图与战略动作只从 levy.js 取兵源数字，禁止另算一份 */
-import { levyView, checkLevy, commitLevy } from './levy.js';
+import { levyView, checkLevy, commitLevy, releaseFallenLevy } from './levy.js';
 import { affordableConscript } from './conscript.js';
 import { resolveBattle, battleSeedFor, wallMaxOf, wallDefMul, WALL } from '../battle.js';
 import { repairCostOf } from './city-wall.js';
@@ -1089,15 +1089,12 @@ export function applyOrders(state, cfg, ctx, faction, sheet) {
         }
         applied.attacked_player += 1;
         noteMarch(state, faction, order, target, tstate, quote, '来犯', 0, drawn);
-        const fromNm = order.params?.fromName
-          || map.cities.find((c) => c.id === Number(drawn?.fromId))?.name
-          || '邻城';
-        const soldiers = Math.max(200, Math.min(2000, Math.round(troops / 6)));
-        fileFieldReport(state, ctx, {
-          summary: `${faction.name}从${fromNm}出兵${target.name}，来犯我军，兵力约 ${soldiers}。此战已写入战报。`,
-          place: target.name,
-          result: 1,
-        });
+        /* ★ P73：这里不再写一条「此战已写入战报」的空战报。
+           旧实现先造一份没有 anim、没有结算的假战报，真正开打的地方却不存在——
+           玩家看到的就是「部队走到城下消失、军情有记录、战报点不开」。
+           现在只在军情里报「来犯」，战报由抵达当日的守城战产出（assaultBattleTick）。
+           continue 必须保留：来犯走本地地图守城战，战略层**不许**在这里改归属，
+           否则旬界就会静默把城判给诸侯（p73/strategy 双闸锁死）。 */
         continue;
       }
       const defender = st.cities[targetId];
@@ -1266,14 +1263,17 @@ export function spawnFactionAssault(state, cfg, ctx, faction, targetCity, troops
     id: (st.marchSeq = (st.marchSeq || 0) + 1),
     side: 'faction', kind: 'assault', from: srcId, to: Number(targetCity?.id) || 0,
     departDay, arriveDay: departDay + marchDays,
-    troops: Math.max(200, Math.min(2000, Math.round(troops / 6))),
+    /* ★ P73：来犯军按**实际抽调的兵力**出兵，不再 ÷6 折算。
+       旧口径把 2000 兵显示成 333，抵达后又只做抽象围城，玩家看到的是一支
+       走到城下就消失的小股部队。现在显示的兵力就是这一仗真正参战的兵力。 */
+    troops: Math.max(200, Math.min(20000, Math.round(troops))),
     km, speed: npcSpeed, marchDays,
     factionId: faction.id, factionName: faction.name || '',
     intel: 'estimated',
   };
   st.marches.push(marchRow);
   const rules = cfg.campaignRules || {};
-  const soldiers = Math.max(200, Math.min(2000, Math.round(troops / 6)));
+  const soldiers = marchRow.troops;
   const at = { x: city.x + 2, y: city.y };
   const build = makeBuild(cfg, { rid: 2, x: at.x, y: at.y, type: 52, level: 1 });
   build.name = `${faction.name}军`;
@@ -1290,12 +1290,18 @@ export function spawnFactionAssault(state, cfg, ctx, faction, targetCity, troops
     targetCity: Number(targetCity?.id) || 0,
     /* ★ 2026-11-19：记录出现日，围城倒计时从这里算起。 */
     spawnDay: departDay,
+    /* ★ P73：抵达日与「是否已打完守城战」。抵达当日由 assaultBattleTick
+       打一场真实守城战（内核结算 + 战报 + 回放），不再拖成 40 日围城。 */
+    arriveDay: marchRow.arriveDay,
+    battleResolved: false,
+    marchId: marchRow.id,
   };
   state.garrisons.push(garrison);
   ctx.push?.('roleBuild.push', build);
+  const srcName = strategyMap().cities.find((c) => c.id === Number(srcId))?.name || '邻城';
   ctx.push?.('chat.push', {
     rid: 0, nickName: '系统', type: 0,
-    msg: `【天下】${faction.name}自${targetCity.name}方向来犯，兵力 ${soldiers}，已出现在 (${at.x},${at.y})。`,
+    msg: `【天下】${faction.name}兴兵来犯，自${srcName}出兵 ${soldiers}，兵锋直指${targetCity.name}，约 ${marchDays} 日后抵达。`,
     time: Date.now(),
   });
   return garrison;
@@ -1561,6 +1567,318 @@ export function assaultEscalationTick(state, cfg, ctx) {
   /* 城破也可能带走「部队驻地」：同一次兜底里回收，见 rebindArmiesIfStranded。 */
   rebindArmiesIfStranded(state, ctx);
   return out;
+}
+
+/* ---------------------------------------------------------------- 守城战
+ * ★ P73（2026-11-27，用户反馈：「公孙瓒的部队走到昌邑就消失了，军情有记录，
+ *   但没有任何战斗痕迹，也没跳战斗界面」）。
+ *
+ * 旧链路为什么无声无息：
+ *   1. applyOrders 在旬界就把「来犯」当成一条指令处理，只生成一支**纯表现**的行军
+ *      （side:'faction'）+ 一份没有 anim、没有结算的假战报（「此战已写入战报」）；
+ *   2. strategyResolveMarches 对 side!=='player' 只做「标记已到达」，不打仗；
+ *   3. 真正的伤害来自 40 日后的围城倒计时（assaultEscalationTick），与「部队抵达」无关。
+ *   于是玩家看到的是：军队走到城下凭空消失，战报点开是空的，回放按钮不存在。
+ *
+ * 现在：抵达当日直接走与出征**同一个内核**（resolveBattle），产出可回放的战报。
+ *   · 攻方 = 诸侯名册武将（defenseFor 按势力生成）+ 来犯军实有兵力；
+ *   · 守方 = 本城驻军 + 驻城武将（名册优先，与玩家攻城时同一套守军构造）；
+ *   · 城墙完好度按攻城战口径参与，破墙照常回写（applySiegeResult）；
+ *   · 战报以我军为守方重写（result / analysis / anim 全部换边），
+ *     客户端拿到带 anim 的战报就会自动打开战报窗并回放，多场排队播。
+ * 战果是决定性的：守方胜 → 来犯军溃退；攻方胜 → 城当即易帜。
+ * 围城倒计时只留给没有抵达日的旧档营地（见 assaultEscalationTick）。
+ */
+export function assaultBattleTick(state, cfg, ctx) {
+  const st = ensureStrategy(state);
+  const today = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  const map = strategyMap();
+  const out = [];
+  for (const g of state.garrisons || []) {
+    if (!g || g.cleared || !g.faction || g.battleResolved) continue;
+    const cityId = Number(g.targetCity) || 0;
+    /* 没有目标城的营地（黄巾流寇等本地图野怪）不走来犯链路，仍由清剿/围城处理。 */
+    if (!cityId) continue;
+    /* 旧档没有 arriveDay：按 spawnDay 视为「早已抵达」，本轮就补打这一仗。 */
+    const arrive = Math.max(1, Math.floor(Number(g.arriveDay) || Number(g.spawnDay) || today));
+    if (today < arrive) continue;
+    const tstate = st.cities?.[cityId];
+    const target = map.cities.find((c) => c.id === cityId);
+    g.battleResolved = true;
+    g.battleDay = today;
+    if (!tstate || !target || tstate.owner !== 'player') {
+      /* 目标已非我所有（被别人先打下/已割让）：这支军失去目标，散掉。 */
+      g.cleared = true;
+      continue;
+    }
+    const fought = settleDefenseBattle(state, cfg, ctx, { garrison: g, cityId, target, tstate });
+    if (fought) out.push(fought);
+  }
+  if (out.length) {
+    rebindCapitalIfLost(state, ctx);
+    rebindArmiesIfStranded(state, ctx);
+  }
+  return out;
+}
+
+/** 守城方的战力池：城池守军 + 驻城部队 + 驻城武将（最多三槽）。
+ *  玩家把大军驻在城里时，这一仗必须由它们来打——否则战报的「我军」会少算一大截。 */
+function defenseForceOf(cfg, state, cityId, target, tstate, level) {
+  const sumOf = (rows) => (rows || []).reduce((s, n) => s + Math.max(0, Math.round(Number(n) || 0)), 0);
+  const armies = (state.armys || []).filter((a) => !a.marchId && Number(a.cityId) === Number(cityId));
+  const cityTroops = Math.max(0, Math.round(Number(tstate.troops) || 0));
+  const pool = cityTroops + armies.reduce((s, a) => s + sumOf(a.soldiers), 0);
+  const seen = new Set();
+  const picked = [];
+  const take = (gid) => {
+    const g = (state.generals || []).find((x) => Number(x.id) === Number(gid));
+    if (!g || seen.has(Number(g.id))) return;
+    seen.add(Number(g.id));
+    picked.push(g);
+  };
+  /* 部队武将先上（他们本来就在带兵），再补城内待命武将；按等级取前三。 */
+  for (const a of armies) for (const gid of a.generals || []) if (gid) take(gid);
+  for (const g of state.generals || []) if (Number(g.cityId) === Number(cityId)) take(g.id);
+  picked.sort((a, b) => (Number(b.level) || 1) - (Number(a.level) || 1) || Number(a.id) - Number(b.id));
+  const generals = picked.slice(0, 3);
+  let force;
+  if (generals.length) {
+    const slot = Math.max(1, Math.ceil(pool / generals.length));
+    force = {
+      generals,
+      soldiers: generals.map(() => slot),
+      level,
+      name: `${target?.name || ''}守军`,
+      place: target?.name || '',
+      terrain: target?.terrain || '',
+    };
+  } else {
+    /* 无将可派：沿用 hash 守将（与玩家攻城时面对的空城守军同口径）。 */
+    force = defenseFor(cfg, cityId, target, tstate, level, state);
+    force.name = `${target?.name || ''}守军`;
+    force.place = target?.name || '';
+    force.terrain = target?.terrain || '';
+  }
+  return {
+    force,
+    cityId: Number(cityId),
+    tstate,
+    cityTroops,
+    armies,
+    owners: [{ kind: 'city', troops: cityTroops }, ...armies.map((a) => ({ kind: 'army', army: a, troops: sumOf(a.soldiers) }))],
+  };
+}
+
+/** 从一支部队里扣人：先扣兵最多的槽，扣完为止。 */
+function deductArmySoldiers(army, n) {
+  let left = Math.max(0, Math.round(Number(n) || 0));
+  const rows = [0, 1, 2].map((i) => Math.max(0, Math.round(Number(army.soldiers?.[i]) || 0)));
+  while (left > 0) {
+    const idx = rows.indexOf(Math.max(...rows));
+    if (rows[idx] <= 0) break;
+    const cut = Math.min(rows[idx], left);
+    rows[idx] -= cut;
+    left -= cut;
+  }
+  army.soldiers = rows;
+}
+
+/** 把守城伤亡分摊回「城 / 各驻军」：阵亡按投入比例扣，伤兵留城疗养。 */
+function applyGuardLosses(state, guard, cas, { cityLost, enemyRemain }) {
+  const owners = guard.owners || [];
+  const total = owners.reduce((s, o) => s + o.troops, 0);
+  const killed = Math.max(0, Number(cas.totalKilled) || 0);
+  const assigned = owners.map((o) => (total > 0 ? Math.floor((killed * o.troops) / total) : 0));
+  let left = killed - assigned.reduce((s, n) => s + n, 0);
+  for (let i = 0; left > 0 && owners.length; i = (i + 1) % owners.length) {
+    assigned[i] += 1;
+    left -= 1;
+  }
+  let cityLose = 0;
+  owners.forEach((o, i) => {
+    const lose = Math.min(o.troops, assigned[i] || 0);
+    if (o.kind === 'city') cityLose += lose;
+    else deductArmySoldiers(o.army, lose);
+  });
+  const tstate = guard.tstate;
+  if (!tstate) return;
+  if (cityLost) {
+    /* 城破：城内守军随城覆没，敌军的余兵成为新驻军。驻城部队的余兵由
+       rebindArmiesIfStranded 撤往他城（不在这一处硬删，免得兵凭空消失）。 */
+    tstate.troops = Math.max(300, (enemyRemain || []).reduce((s, n) => s + Math.max(0, Math.round(Number(n) || 0)), 0));
+  } else {
+    tstate.troops = Math.max(0, guard.cityTroops - cityLose) + Math.max(0, Number(cas.totalWounded) || 0);
+  }
+}
+
+/** 守城战结算：内核一场定胜负，产出**我军视角**的战报（内部函数，只由 assaultBattleTick 调）。 */
+function settleDefenseBattle(state, cfg, ctx, { garrison, cityId, target, tstate }) {
+  const today = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  const level = Math.max(1, Math.min(3, Number(target?.level) || 1));
+  const place = target?.name || cityName(cityId);
+  const conf = factionConfFor(state);
+  const faction = conf.factions.find((f) => f.id === garrison.faction);
+  const fname = faction?.name || garrison.factionName || garrison.name || '敌军';
+  const enemyTroops = Math.max(1, Math.round(Number(garrison.soldiers) || 0));
+
+  /* 攻方：与「清剿来犯军」同一套守将构造（名册优先 → hash 兜底），只是这次由它来攻。 */
+  const enemyForce = defenseFor(
+    cfg, 9000 + (Number(garrison.id) || 1), { name: place },
+    { troops: enemyTroops, owner: garrison.faction }, level, state,
+  );
+  const enemyArmy = {
+    id: 900000 + (Number(garrison.id) || 1), cityId: 0, order: 0,
+    generals: enemyForce.generals,
+    soldiers: enemyForce.soldiers.map((n) => Math.max(0, Math.round(Number(n) || 0))),
+    name: fname,
+  };
+  /* 守方：本城驻军 + **驻城部队** + 驻城武将，城墙按攻城战口径参与。
+     旧口径只看城池守军，实测玩家把三支部队（13533 兵）驻在昌邑、城里只有 1810 时，
+     战报会写「我军 1810」——驻城大军在旁边看着城破，显然不能说「描述=计算」。 */
+  const guard = defenseForceOf(cfg, state, cityId, target, tstate, level);
+  const defense = guard.force;
+  const wall = cityWall(state, cityId);
+  const seed = battleSeedFor(
+    enemyArmy.id, 8000 + cityId, 100 + level, seedSlotDay(today),
+  );
+  const res = resolveBattle({
+    cfg, state, army: enemyArmy, x: 8000 + cityId, y: 100 + level,
+    defenseOverride: defense, seed, siege: true, siegeWall: wall,
+  });
+  const sumOf = (rows) => (rows || []).reduce((s, n) => s + Math.max(0, Math.round(Number(n) || 0)), 0);
+
+  const playerBegin = defense.soldiers.map((n) => Math.max(0, Math.round(Number(n) || 0)));
+  const playerRemain = (res.endDefenseSoldiers || [0, 0, 0]).map((n) => Math.max(0, Math.round(Number(n) || 0)));
+  const enemyBegin = enemyArmy.soldiers.slice();
+  const enemyRemain = (res.endAttackSoldiers || [0, 0, 0]).map((n) => Math.max(0, Math.round(Number(n) || 0)));
+  const playerLoss = playerBegin.map((n, i) => Math.max(0, n - playerRemain[i]));
+  const cas = splitCasualties({ lossBySlot: playerLoss });
+  const aTotal = sumOf(playerBegin);
+  const dTotal = sumOf(enemyBegin);
+  const aLoss = cas.totalLoss;
+  const dLoss = Math.max(0, dTotal - sumOf(enemyRemain));
+  const kernelResult = Number(res.report?.result) || 0; // 以攻方（诸侯军）视角
+  const playerResult = 2 - kernelResult;                // 换成我军视角：2 胜 / 1 平 / 0 负
+  const playerWin = playerResult === 2;
+  const cityLost = playerResult === 0;
+
+  /* ---- 兵力落地：阵亡按「城 / 各驻军」投入比例分摊，伤兵留城疗养 ----
+     守恒：池子 − 阵亡 = 战场余兵；余兵 = 城余兵(+伤兵) + 各部队余兵。 */
+  applyGuardLosses(state, guard, cas, { cityLost, enemyRemain, place });
+  if (cas.totalKilled > 0) releaseFallenLevy(state, cityId, cas.totalKilled);
+  garrison.soldiers = cityLost ? 0 : Math.max(0, sumOf(enemyRemain));
+  garrison.cleared = true;
+  garrison.reportId = res.report?.id || 0;
+  if (res.siege) applySiegeResult(state, cityId, res.siege);
+  /* 营地实体一并撤掉，否则地图上会留下一座空营。 */
+  const camp = (state.builds || []).find((b) => b.x === garrison.x && b.y === garrison.y && b.rid !== state.role.rid);
+  if (camp) {
+    state.builds = state.builds.filter((b) => b !== camp);
+    ctx.push?.('roleBuild.push', {
+      rid: 0, x: camp.x, y: camp.y, type: camp.type, level: camp.level || 1, curDurable: 0, maxDurable: 0,
+    });
+  }
+
+  /* ---- 战报换边：内核以攻方为主线，玩家要看到「我军」是守方 ---- */
+  const report = res.report;
+  report.place = place;
+  report.defense = true;
+  report.result = playerResult;
+  report.destroy = 0;
+  report.occupy = 0;
+  const swap = (a, b) => { const t = report[a]; report[a] = report[b]; report[b] = t; };
+  swap('b_a_army', 'b_d_army'); swap('e_a_army', 'e_d_army');
+  swap('b_a_general', 'b_d_general'); swap('e_a_general', 'e_d_general');
+  if (report.anim) {
+    const anim = report.anim;
+    const a = anim.a;
+    anim.a = anim.d;
+    anim.d = a;
+    anim.winner = 2 - (Number(anim.winner) || 0);
+    anim.place = place;
+    anim.defense = true;
+  }
+
+  const wallNote = res.siege
+    ? (res.siege.breached
+      ? '城墙被攻破，守军溃散。'
+      : `城墙 ${res.siege.ratioBefore}% → ${res.siege.ratioAfter}%。`)
+    : '';
+  const armsMain = (rows) => (rows || []).indexOf(Math.max(...(rows || [0]))) + 1;
+  const counter = armsCounter(armsMain(playerBegin), armsMain(enemyBegin));
+  const counterNote = counter > 0
+    ? `我军${ARMS_NAMES[armsMain(playerBegin)]}克制敌军${ARMS_NAMES[armsMain(enemyBegin)]}（战力+15%）。`
+    : (counter < 0
+      ? `敌军${ARMS_NAMES[armsMain(enemyBegin)]}克制我军${ARMS_NAMES[armsMain(playerBegin)]}（战力-15%）。`
+      : '');
+  const woundNote = cas.totalWounded > 0
+    ? `阵亡 ${cas.totalKilled}、负伤 ${cas.totalWounded}（留城疗养）`
+    : `阵亡 ${cas.totalKilled}`;
+  let summary = playerWin
+    ? `守住${place}：${fname} ${dTotal} 来犯，我军 ${aTotal} 守城，折损 ${aLoss}（${woundNote}），歼敌 ${dLoss}。`
+    : (playerResult === 1
+      ? `${place}城下未决：${fname} ${dTotal} 来犯，我军 ${aTotal} 守城，折损 ${aLoss}（${woundNote}），歼敌 ${dLoss}，敌军收兵。`
+      : `${place}失守：${fname} ${dTotal} 来犯，我军 ${aTotal} 守城，折损 ${aLoss}（${woundNote}），歼敌 ${dLoss}。`);
+  const expLine = levelUpSentence(grantBattleExp(state, cfg, res.expByGeneral, { win: playerWin }));
+  const promos = takeBattlePromos();
+  const promoLine = promos.length
+    ? ` ${promos.map((p) => `${p.name}积功升为${p.rank >= 7 ? '将军' : '校尉'}`).join('，')}。`
+    : '';
+  report.summary = summary + wallNote + counterNote + expLine + promoLine;
+  report.analysis = {
+    aTotal, dTotal, aLoss, dLoss,
+    recovered: cas.totalWounded, win: playerWin,
+    killed: cas.totalKilled, wounded: cas.totalWounded,
+    killedBySlot: cas.killedBySlot, woundedBySlot: cas.woundedBySlot,
+    woundedTo: cas.totalWounded > 0 ? [{ cityId, name: place, count: cas.totalWounded }] : [],
+    auto: false, defense: true,
+    aBegin: playerBegin, aRemain: playerRemain,
+    dRemain: enemyRemain,
+    counter, atkArms: armsMain(playerBegin), defArms: armsMain(enemyBegin), counterNote,
+    fateMul: 1, fateNotes: [],
+    garrisonId: garrison.id,
+  };
+
+  const strat = state.strategy || ensureStrategy(state);
+  strat.battleHistory = strat.battleHistory || [];
+  strat.battleHistory.push({ turn: strat.turn || 0, win: playerWin, place });
+  if (strat.battleHistory.length > 60) strat.battleHistory.splice(0, strat.battleHistory.length - 60);
+
+  state.warReports.unshift(report);
+  if (state.warReports.length > 100) state.warReports.length = 100;
+  ctx.push?.('warReport.push', report);
+
+  if (cityLost) {
+    const prevOwner = tstate.owner;
+    tstate.owner = garrison.faction;
+    tstate.besieged = false;
+    delete tstate.besiegedBy;
+    delete tstate.besiegeSince;
+    noteCityCaptured(state, garrison.faction, prevOwner);
+    noteCityLost(state, prevOwner, cityId, garrison.faction);
+    recordEvent(state, `${place}守军尽殁，城陷于${fname}。`);
+    ctx.push?.('chat.push', {
+      rid: 0, nickName: '系统', type: 0,
+      msg: `【天下】${place}失守，落入${fname}之手。`,
+      time: Date.now(),
+    });
+  } else {
+    recordEvent(state, playerWin
+      ? `${place}守城告捷：击退${fname} ${dTotal}，歼敌 ${dLoss}，我军折损 ${aLoss}。`
+      : `${place}城下未决：${fname}收兵退走，我军折损 ${aLoss}、歼敌 ${dLoss}。`);
+    noteCity(state, cityId, {
+      kind: '守城', text: `${fname}来攻，${playerWin ? '我军击退来犯' : '两军相持，敌退'}（歼敌 ${dLoss}）。`,
+    });
+    ctx.push?.('chat.push', {
+      rid: 0, nickName: '系统', type: 0,
+      msg: `【军情】${fname}攻${place}，${playerWin ? '我军守住了城池' : '敌军收兵退走'}。战报已入册，可回放查看。`,
+      time: Date.now(),
+    });
+  }
+  return {
+    kind: 'assault-battle', cityId, city: place, result: playerResult,
+    reportId: report.id, win: playerWin, aTotal, dTotal, aLoss, dLoss,
+  };
 }
 
 /** ★ 2026-11-20：部队驻地失效时回收残部。

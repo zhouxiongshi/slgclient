@@ -432,7 +432,9 @@ export function buildBattleAnim({ kernel, attackers, defense, army, beginSoldier
     byRound.get(ev.round).push(ev);
   }
   const unitOf = (uid) => ({ s: uid[0], i: Number(uid.slice(1)) });
-  const nameA = state.role?.nickName || '我军';
+  /* ★ P73：守城战里攻方是诸侯军，anim.a.name 不能再硬写玩家昵称。
+     army.name 由调用方给出（诸侯势力名）；玩家出征不带该字段，回落到昵称。 */
+  const nameA = army?.name || state.role?.nickName || '我军';
   const garrison = (state.garrisons || []).find((g) => g.x === x && g.y === y && !g.cleared);
   const nameD = defense.name || garrison?.name || '守军';
   const place = defense.place || garrison?.name || `(${x},${y})`;
@@ -606,8 +608,13 @@ export function resolveBattle({
      一次推演要跑 4~5 场内核，累计就顶爆 本作设计 的单次 ≤50ms 预算。 */
   const beginSoldiers = [0, 1, 2].map((i) => Math.max(0, Math.floor(Number(army.soldiers?.[i]) || 0)));
   // 有武将且有余兵的槽位才上阵；slot 保留原槽位号，序号 i 才是内核 unit id
+  /* ★ P73：守城战的攻方是诸侯名册里的虚拟武将（不在 state.generals 里）。
+     允许槽位直接给武将对象，出征路径仍传 id，行为不变。 */
   const attackers = (army.generals || [])
-    .map((gid, slot) => ({ slot, g: gid ? findGeneral(state, gid) : null }))
+    .map((gid, slot) => ({
+      slot,
+      g: gid ? (typeof gid === 'object' ? gid : findGeneral(state, gid)) : null,
+    }))
     .filter(({ slot, g }) => g && beginSoldiers[slot] > 0);
   const defense = makeDefenders(cfg, state, x, y, defenseOverride);
   const defenders = defense.generals;

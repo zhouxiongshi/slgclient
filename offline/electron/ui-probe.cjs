@@ -758,6 +758,83 @@ async function runProbe(win, server, app) {
     await sleep(2200);
     report.scenarios.clashShot = await shot(wc, outDir, `probe-clash-${tag}.png`);
 
+    /* ★ P73：守城战必须自己弹出来，而且多场要排队。
+       这里直接给前端喂两份「守城战报」（结构与服务端 assaultBattleTick 产出一致），
+       验证三件事：① 覆盖层自动打开且标题是「守」；② 标题标出还有几场待看；
+       ③ 关掉第一场后第二场自动接上，而不是被顶掉。 */
+    report.scenarios.defend = await wc.executeJavaScript(`(async function(){
+      try {
+        /* 先清场：前面的战斗场景可能还留着覆盖层，不清掉就分不清「没弹」和「被旧画面占着」。 */
+        var clean = function () {
+          var ov = document.getElementById('slgBattleOverlay');
+          if (!ov || ov.style.display === 'none') return;
+          var btns = ov.querySelectorAll('button');
+          for (var i = 0; i < btns.length; i++) {
+            if (String(btns[i].textContent || '').trim() === '关闭') { btns[i].click(); break; }
+          }
+        };
+        clean();
+        await new Promise(function (r) { setTimeout(r, 260); });
+        clean();
+        var mkReport = function (place, aName, dName, result) {
+          return {
+            id: 9000 + Math.floor(Math.random() * 900),
+            defense: true, result: result, place: place, x: 8000, y: 101, ctime: Date.now(),
+            summary: '守城战探针：' + place + '（' + aName + ' 对 ' + dName + '）',
+            rounds: '[]',
+            anim: {
+              id: 1, x: 8000, y: 101, place: place, defense: true,
+              winner: result === 2 ? 2 : 0,
+              a: { name: aName, total: 1800, units: [{ slot: 0, armySlot: 0, cfgId: 900001,
+                name: aName, troops: 1800, remain: 1100, skills: [] }] },
+              d: { name: dName, total: 900, units: [{ slot: 0, armySlot: 0, cfgId: 900002,
+                name: dName, troops: 900, remain: 200, skills: [] }] },
+              rounds: [{ round: 1, acts: [] }],
+            },
+          };
+        };
+        window.__slgQueueBattleReport(mkReport('昌邑', '昌邑守军', '公孙瓒', 2));
+        window.__slgQueueBattleReport(mkReport('定陶', '定陶守军', '刘备', 0));
+        await new Promise(function (r) { setTimeout(r, 900); });
+        var ov = document.getElementById('slgBattleOverlay');
+        var title = document.getElementById('slgBattleTitle');
+        var body = document.getElementById('slgBattleBody');
+        return {
+          ok: true,
+          visible: !!ov && ov.style.display !== 'none',
+          title: title ? title.textContent : '',
+          queued: /待看/.test(title ? title.textContent : ''),
+          hasStage: !!body && body.children.length > 0,
+        };
+      } catch (e) { return { ok: false, error: String(e && e.stack || e) }; }
+    })()`, true);
+    await sleep(400);
+    report.scenarios.defendShot = await shot(wc, outDir, `probe-defend-${tag}.png`);
+
+    report.scenarios.defendNext = await wc.executeJavaScript(`(async function(){
+      try {
+        var ov = document.getElementById('slgBattleOverlay');
+        var clicked = false;
+        var btns = (ov || document).querySelectorAll('button');
+        for (var i = 0; i < btns.length; i++) {
+          if (String(btns[i].textContent || '').trim() === '关闭') { btns[i].click(); clicked = true; break; }
+        }
+        await new Promise(function (r) { setTimeout(r, 1000); });
+        var title = document.getElementById('slgBattleTitle');
+        var out = {
+          ok: true, closed: clicked,
+          visible: !!ov && ov.style.display !== 'none',
+          title: title ? title.textContent : '',
+          nextIsSecond: /定陶/.test(title ? title.textContent : ''),
+        };
+        /* 收尾：别把覆盖层留给后续步骤 */
+        for (var j = 0; j < btns.length; j++) {
+          if (String(btns[j].textContent || '').trim() === '关闭') { btns[j].click(); break; }
+        }
+        return out;
+      } catch (e) { return { ok: false, error: String(e && e.stack || e) }; }
+    })()`, true);
+
     report.pageErrors = pageErrors.concat(await wc.executeJavaScript('window.__slgErrors || []', true));
     report.consoleErrors = consoleErrors;
   } catch (err) {

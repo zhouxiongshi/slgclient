@@ -11,7 +11,7 @@ import { createWorld, normalizeWorld } from '../server/world.js';
 import { handleRequest, settleWorld } from '../server/handlers.js';
 import { suppressionOf } from '../server/battle.js';
 import {
-  ensureStrategy, oathOptions, chooseOath, strategyAttack,
+  ensureStrategy, oathOptions, chooseOath, strategyAttack, strategyResolveMarches,
 } from '../server/domain/strategy.js';
 import { ensureCityEcon, cityYield, cityLayer } from '../server/domain/city-econ.js';
 import { editorSave, sanitizeGeneralEdit } from '../server/domain/general-editor.js';
@@ -57,11 +57,15 @@ test('出征不再吞兵：没上阵的槽位（无将）兵力原样带回，�
   const before = state.armys[0].soldiers.reduce((s, n) => s + n, 0);
   const r = strategyAttack(state, cfg, ctx, { cityId: 77, fromCityId: home, frac: 1 });
   assert.equal(r.ok, true);
-  let t = Date.UTC(2026, 0, 1);
+  /* ★ P73：这里只跑「行军抵达结算」，不跑完整世界推演。
+     完整 settleWorld 会同时让诸侯来犯、抵达即开打，那支部队回城后会被卷进守城战、
+     真的折损——测的就不是「回程吞不吞兵」了。手动推日子 + 只解析行军，
+     把这一个口径单独钉住。 */
   for (let d = 0; d < 30; d++) {
-    t += 86400000;
-    settleWorld(ctx, t);
-    if (!(state.strategy.marches || []).length) break;
+    state.clock.day = Math.max(1, Math.floor(Number(state.clock.day) || 1)) + 1;
+    strategyResolveMarches(state, cfg, ctx);
+    const pending = (state.strategy.marches || []).filter((m) => m.side === 'player' && !m.resolved);
+    if (!pending.length) break;
   }
   const after = state.armys[0].soldiers.reduce((s, n) => s + n, 0);
   assert.ok(after >= 600, `没上阵的 600 兵必须活着回来，实际剩 ${after}/${before}`);

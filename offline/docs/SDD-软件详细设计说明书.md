@@ -2866,6 +2866,39 @@ build/SLG-Offline-win32-x64/
 
 **回归锁**：`tests/p72-interior-three-fixes.test.js` 六条——阵亡释放/负伤不释放/历史累计不回退、全灭后人口能长回可征、征兵人口下限、非本城硬拒绝、术语与锚点、下拉默认与空态；`p50` G1/G3/G6 迁移到调城口径并新增 G10 候选过滤。实测：`pop=5, levied=240` 全灭后释放到 0，人口每旬至少 +1，21 口即恢复旬可征 1。
 
+### 17.54 诸侯来犯＝抵达即守城战 P73（2026-11-27）
+
+**玩家现象**：公孙瓒军来攻昌邑，军情与日志都有记录，但部队走到城下直接消失——没有战报、没有回放、没有任何跳转。玩家判定为「假打」，这是本轮唯一要修的缺陷。
+
+**旧链路三个断点**（用玩家真实存档逐层取证，非推测）：
+
+1. `applyOrders()` 在旬界就写一份战报，`result=1`、`hasAnim=false`、正文写着「此战已写入战报。」——战报列表里有一条，点开空白。这是纯占位，从未有任何结算。
+2. `strategyResolveMarches()` 对 `side !== 'player'` 的行军只打 `resolved = true` 就跳过，来犯军在抵达日从地图上被抹掉，没有任何战斗发生。
+3. 真正造成掉兵的只有 `assaultEscalationTick()`——抵达后围城 40 日的倒计时惩罚。它与「抵达」这个时点完全脱节，所以玩家看到的是「到了就没了、几十天后莫名少兵」。
+
+存档实证（`save.json` day 1775 / turn 109）：昌邑 `id=68 owner=player troops=1810`；`garrison#11 公孙瓒军 faction=youzhou soldiers=493 targetCity=68 spawnDay=1756 cleared=false`（无 `arriveDay`，旧档结构）；`warReport#13 result=1 place=昌邑 hasAnim=false`。同一城还驻着 `army2004 [4513,4510,4510]`（13533 兵、将 1010/1014/1007）——这一条决定了守方不能只取 `city.troops`，否则战报会把 15345 的守军写成 1810。
+
+**新口径**（`server/domain/strategy.js` 三个新函数，全部走既有唯一入口）：
+
+- `assaultBattleTick(state, cfg, ctx)`：逐 `garrison` 检查——已 `cleared`／已 `battleResolved`／无 `targetCity`／`today < arriveDay` 一律跳过；旧档无 `arriveDay` 时按 `spawnDay` 视为已抵达（玩家存档下次启动即自动补打一场）。命中则调 `settleDefenseBattle()`，战后跑 `rebindCapitalIfLost` + `rebindArmiesIfStranded`。挂在 `handlers.js settleWorld` 里 `strategyResolveMarches` 之后、`assaultEscalationTick` 之前。
+- `defenseForceOf(cfg, state, cityId, target, tstate, level)`：守方兵力＝`city.troops` ＋ Σ 驻城非行军部队兵力；守将＝驻城部队武将优先、其次城内待命武将，按等级取前三；无将时才回落 `defenseFor()` 的 hash 守军。这是「城里有兵有将就必须上阵」的唯一口径。
+- `settleDefenseBattle()`：攻方由 `defenseFor(9000 + garrison.id, {troops, owner})` 构造并令 `army.name = 势力名`；守方由 `defenseForceOf()` 构造；统一走 `resolveBattle({ siege: true, siegeWall: cityWall(...), seed: battleSeedFor(...) })`。返回后**换边**——`report.result = 2 - 内核结果`、`b_a_army/b_d_army` 互换、`anim.a ↔ anim.d`、`anim.winner = 2 - winner`、`anim.defense = true`、`analysis` 全部改成本军视角并带 `defense/garrisonId`。内核完全不知道自己被换过边，玩家侧永远是「我军 vs 攻城军」。
+- `applyGuardLosses()`：阵亡按投入比例分摊到城墙兵与各驻军（`deductArmySoldiers()` 从兵力最多的槽逐次扣），伤兵留城疗养走既有 `routeWounded`；城破则城内守军覆没、敌军余兵成为新驻军。阵亡经 `releaseFallenLevy()` 释放在役户（P72 口径）。
+
+**来犯兵力**：原 `Math.round(troops / 6)` 的缩水系数删掉，改为 `Math.max(200, Math.min(20000, Math.round(troops)))`，与玩家出征同一量级。旧行为等于来犯军只有纸面六分之一，即便真打也毫无压力。出兵播报改为「【天下】某自某地出兵 N，兵锋直指某城，约 M 日后抵达」，不再提前宣布结果。
+
+**客户端排队**（`server/skills.js`，`web/` 仍冻结）：
+
+- 新增 `reportQueue` + `window.__slgQueueBattleReport(rep)`；`onWarReportAnim` 先交给队列，队列不存在才回落直播。
+- 忙闲判据是**覆盖层是否可见**，不是布尔标志——上一版用 `queuePlaying` 布尔值，覆盖层被别的路径 `hide()` 掉后标志仍为 true，队列直接卡死（探针实测抓到过）。
+- 标题单独渲染 `renderBattleTitle()`，数据存 `titleData`；队列 push 时重绘，玩家能在标题右侧看到「还有 N 场待看」。守城战标题为「A守军 守 城（攻城 B）」。
+- Esc、战报「详情」按钮、`createStage.onClose` 三条关闭路径统一走 `finishOneReport()` → 自动接下一场，不再互相顶掉。
+- 回放画布两侧标签按 `anim.defense` 切 `SIDE_LABEL`，d 侧由「守军」变「攻城军」——原先硬编码导致守城战里攻城方被标成守军。
+
+**实测**（玩家真实存档内存跑，不写盘）：`aTotal 15345 / dTotal 494 / aLoss 0 / dLoss 494`，3 回合，城墙 100% → 87%，昌邑仍归玩家、驻军三格兵数保留、来犯军 `cleared:true`，战报正文「守住昌邑：公孙瓒 494 来犯，我军 15345 守城，折损 0（阵亡 0），歼敌 494」。
+
+**回归锁**：`tests/p73-assault-battle.test.js` 七条——①抵达当日开打且战报带 `anim`、撤营、幂等、胜负与城池归属一致；②我军视角兵力不颠倒（守方数字在 a 侧）；③出兵不写战报、全文无「此战已写入战报」；④驻城部队参战（城 100 + 部 3600 → `aTotal ≥ 3700`）；⑤旧档无 `arriveDay` 也补打；⑥同日两支各成局、重复 tick 不重算；⑦来犯兵力不再 ÷6。`tests/p20-gameplay-fixes.test.js` 的「出征不再吞兵」用例收敛为只跑 `strategyResolveMarches`——原期望「回城部队零损失」与新机制冲突，新守城战会真实折损，测试口径过期而非机制回归。
+
 ---
 
 ## 19. 附录
