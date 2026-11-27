@@ -38,13 +38,15 @@
 | 2026-11-27 18:10 | WorkBuddy-B | `220b6af` | P70 反击玩家指定数值：Lv1 70%、每级 +5%、Lv10 115%；成长层加 manualOverride，生成器复跑不再冲回官方 37.5→75 | 已推送 |
 | 2026-11-27 20:32 | WorkBuddy-B | `c22d213` | 玩家可见战法数值全局同源：三槽/战法库/研习统一取运行时表，P69「文案读 conf 原文」口径作废；新增全战法四路径一致性闸（6 条） | 已推送 |
 | 2026-11-27 21:18 | WorkBuddy-B | `d6c8801` | 内政三事：民心/治安悬浮说明、太守只任本城官员（默认非主公）、兵源恢复（阵亡复员归农 + 在役户归一化 + 人口保底） | 已推送 |
-| 2026-11-27 22:20 | WorkBuddy-B | P73 | 诸侯来犯＝抵达即守城战：`assaultBattleTick`/`settleDefenseBattle` 走同一内核结算并产出可回放战报、删掉「此战已写入战报」假战报、守方合并驻城部队与守将、来犯兵力不再 ÷6、客户端战报排队（标题带「还有 N 场待看」） | 已推送 |
+| 2026-11-27 22:20 | WorkBuddy-B | `e91e285` | 诸侯来犯＝抵达即守城战：`assaultBattleTick`/`settleDefenseBattle` 走同一内核结算并产出可回放战报、删掉「此战已写入战报」假战报、守方合并驻城部队与守将、来犯兵力不再 ÷6、客户端战报排队（标题带「还有 N 场待看」） | **待推送**（502 隧道阻断，重试 3 次未果） |
 
 ### 进行中 / 待决
 
 （无。P73 认领已收工：913/913 单测、内核 42/42、双态八套全绿、perf 双态通过、发布闸 95/95。）
 
 留痕 P73：修 `applyOrders` 假战报块时连带丢了 `continue`，导致来犯分支穿透到战略层占城逻辑（旬界静默易主）。已由 `tests/strategy.test.js` 的归属断言抓出并修复，另补 `P73-⑧` 专锁该控制流出口。**改动 `strategy.js` 的来犯分支前务必保留 `continue`。**
+
+留痕 P73 推送：`git push origin offline-standalone` 三次均失败（`Empty reply from server` / `CONNECT tunnel failed, response 502`），为子网阻断而非权限。本地提交 `e91e285` 完整保留，未 force push、未 rebase。网络恢复后先 `git log --oneline -3` 核对再推。
 
 留痕：P71 两笔曾因子网阻断滞留本地，本轮网络恢复后随 P72 一并推送成功；期间 fetch 失败（Empty reply from server），未做 pull、未 force push。
 
