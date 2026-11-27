@@ -564,6 +564,39 @@ async function runMousePlaytest(win, server, app) {
     }
     await shot('04-final');
 
+    /* ---------- 6b. ★ P66：灰按钮悬浮必须给出说明 ----------
+       玩家反馈「按钮灰了、鼠标移上去也没任何提示」。上一步在遭遇页/出征窗里
+       通常能找到 disabled 按钮；这里真派发 mouseMove 到它身上，断言自定义
+       提示层 #slgIxDisTip 出现且写明「为什么 / 怎么做」。 */
+    const disRect = await js(`(function(){
+      var bs = Array.prototype.slice.call(document.querySelectorAll('button[disabled], input[disabled]'));
+      for (var i=0;i<bs.length;i++){
+        var b=bs[i]; var r=b.getBoundingClientRect();
+        if (r.width>2 && r.height>2 && r.top>=0 && r.bottom<=window.innerHeight) {
+          var top=document.elementFromPoint(Math.round(r.left+r.width/2), Math.round(r.top+r.height/2));
+          if (top===b || b.contains(top)) {
+            return { ok:true, x:Math.round(r.left+r.width/2), y:Math.round(r.top+r.height/2),
+                     label:(b.textContent||'').replace(/\\s+/g,' ').trim().slice(0,30) };
+          }
+        }
+      }
+      return { ok:false };
+    })()`);
+    if (disRect && disRect.ok) {
+      wc.sendInputEvent({ type: 'mouseMove', x: disRect.x, y: disRect.y });
+      await sleep(420);
+      const disTip = await js(`(function(){ var t=document.getElementById('slgIxDisTip');
+        return t && t.style.display==='block' ? (t.textContent||'').replace(/\\s+/g,' ').trim() : ''; })()`);
+      rec('disabled.hover.hint', !!disTip,
+        '灰按钮「' + disRect.label + '」悬浮有说明' + (disTip ? '：' + disTip.slice(0, 70) : '（无提示）'),
+        { label: disRect.label, tip: disTip });
+      /* 移开，避免挡住后续取证 */
+      wc.sendInputEvent({ type: 'mouseMove', x: 2, y: 2 });
+      await sleep(120);
+    } else {
+      rec('disabled.hover.hint', true, '本次试玩路径没有可见的灰按钮，跳过该检查', { skipped: true });
+    }
+
     /* ---------- 7. 日志排错 ---------- */
     const errs = await js(`(function(){ return (window.__slgErrors||[]).slice(); })()`);
     report.pageErrors = errs || [];

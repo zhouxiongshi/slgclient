@@ -244,3 +244,46 @@ test('P65-④ UI 展示督研状态与预计旬数，委派/撤回后重开对�
   assert.match(lib, /督研 · 每旬 \+/, '列表要区分有人在督研');
   assert.match(lib, /待委派 · 进度停滞/, '没有委派源的研习中要有明确提示');
 });
+
+/* ---------------- P66：研习完成后流程阻塞 + 禁用按钮无提示 ---------------- */
+
+test('P66-① 残卷用尽且无委派时，战法库研习入口不再被禁用（死锁根因）', () => {
+  const ui = read('server/panels-ui.js');
+  assert.ok(!/data-act="openResearch"[\s\S]{0,220}disabled/.test(ui),
+    '研习入口不得再因残卷不足而 disabled —— 那会把玩家锁死在灰按钮前');
+  assert.match(ui, /残卷用尽也能委派武将自行推敲/, '入口旁说明卷尽仍可研习');
+});
+
+test('P66-② 研习框给完成态出路：装配引导 + 换一条战法研习', () => {
+  const ui = read('server/panels-ui.js');
+  const box = ui.slice(ui.indexOf('function researchBox'), ui.indexOf('function askText'));
+  assert.match(box, /var unlocked = s\.status === 'unlocked'/, '研习框识别完成态');
+  assert.match(box, /此战法已研习完成/, '完成态有明确说明');
+  assert.match(box, /data-ract="gotoGeneral"/, '完成态给去武将页装配按钮');
+  assert.match(box, /换一条战法研习/, '提供换战法入口，不阻塞');
+  assert.match(box, /data-ract="switch"/, '切换战法按钮存在');
+  assert.match(box, /ract === 'switch'/, '切换战法有点击处理');
+  assert.match(box, /ract === 'gotoGeneral'/, '装配引导有点击处理');
+});
+
+test('P66-③ 残卷用尽说明与完成态不显示灰按钮', () => {
+  const ui = read('server/panels-ui.js');
+  const box = ui.slice(ui.indexOf('function researchBox'), ui.indexOf('function askText'));
+  assert.match(box, /兵书残卷已用尽：委派的武将仍会自行推敲/, '卷尽时说明进度照常增长');
+  assert.match(box, /残卷可通过打胜仗、守城、斩将获得/, '卷尽时给出获取路径');
+  assert.ok(!/unlocked \? ''[\s\S]{0,120}data-ract="manual"/.test(box),
+    '完成态不再渲染当场研习按钮（灰死按钮）');
+  assert.match(box, /unlocked \? '<span[^>]*>已研习完成，无需再投卷<\/span>'/, '完成态改文字说明');
+});
+
+test('P66-④ 全局禁用按钮悬浮提示：elementFromPoint 探测 + 为何/怎么做', () => {
+  const ix = read('server/interaction-ui.js');
+  assert.match(ix, /bindDisabledHints/, '交互层注册了禁用提示');
+  assert.match(ix, /elementFromPoint\(e\.clientX, e\.clientY\)/, '用坐标探测 disabled 按钮本体');
+  assert.match(ix, /closest\('button\[disabled\], input\[disabled\], select\[disabled\]'\)/, '识别所有禁用控件');
+  assert.match(ix, /slgIxDisTip/, '自定义提示层存在');
+  assert.match(ix, /class="why"/, '提示给出「为什么不能点」');
+  assert.match(ix, /class="how"/, '提示给出「怎么才能点」');
+  assert.ok(/data-tip[\s\S]{0,120}\|\|[\s\S]{0,120}title/.test(ix), '优先读按钮自带说明');
+  assert.ok(ix.includes('bindDisabledHints(); interceptCosts()'), 'boot 中已接线');
+});

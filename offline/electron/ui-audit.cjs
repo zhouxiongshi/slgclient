@@ -207,6 +207,15 @@ const WALK = `(async function(){
             text: '委派前 ' + beforePct + ' → 委派后 ' + afterPct,
             note: afterPct > beforePct ? '委派即开工，进度条当场动' : 'FAIL: 委派后进度没涨',
           });
+          /* ★ P66：研习完成后不阻塞——框内必须给出「换一条战法研习」入口，
+             且进度条满格的战法要显示「已研习完成」出路，而不是让灰按钮困住玩家。 */
+          var rbox3 = document.querySelector('.slgResearchBox');
+          var rSwitch = rbox3 && rbox3.querySelector('[data-ract="switch"]');
+          /* text 不能截断——「换一条战法研习」在框体末尾，截断会让关键词检查误报。 */
+          rec('panel.research.switch-skill', ['换一条战法研习'], {
+            visible: !!rSwitch, text: rbox3 ? txt(rbox3) : '',
+            note: rSwitch ? '研习框可切换战法，流程不阻塞' : 'FAIL: 研习框没有换战法入口',
+          });
           var rcancel2 = rbox2 && rbox2.querySelector('[data-ract="close"]');
           if (rcancel2) rcancel2.click();
         } else if (rbox.isConnected) {
@@ -217,6 +226,38 @@ const WALK = `(async function(){
       } else {
         rec('panel.research.assign', ['委派武将', '研习进度'], { visible: false, text: '', note: 'no-research-button' });
       }
+      /* ★ P66：灰按钮悬浮必须有说明。找一个可见的 disabled 按钮，向 document 派发
+         带坐标的 mousemove（交互层用 elementFromPoint 探测，合成事件同样生效），
+         断言 #slgIxDisTip 浮出且写明「为什么/怎么做」。 */
+      var disBtn = null, disList = document.querySelectorAll('button[disabled], input[disabled]');
+      for (var di2 = 0; di2 < disList.length; di2++) {
+        var db = disList[di2], dr = db.getBoundingClientRect();
+        if (dr.width > 2 && dr.height > 2 && dr.top >= 0 && dr.bottom <= window.innerHeight) {
+          disBtn = db; break;
+        }
+      }
+      var disTemp = null;
+      if (!disBtn) {
+        /* 兜底：本次存档恰好没有可见灰按钮时，临时放一个同款控件验证提示机制本身。
+           测完立即移除，不留 DOM 痕迹。 */
+        disTemp = document.createElement('button');
+        disTemp.disabled = true;
+        disTemp.textContent = '暂不能装 · 先在武将页选一名武将';
+        disTemp.style.cssText = 'position:fixed;left:40px;top:120px;z-index:100850;padding:8px 12px;background:#2c2f22;color:#e8c670';
+        document.body.appendChild(disTemp);
+        disBtn = disTemp;
+      }
+      var dbr = disBtn.getBoundingClientRect();
+      var dx = Math.round(dbr.left + dbr.width / 2), dy = Math.round(dbr.top + dbr.height / 2);
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: dx, clientY: dy, bubbles: true }));
+      await sleep(260);
+      var dt = document.getElementById('slgIxDisTip');
+      var dtxt = dt && dt.style.display === 'block' ? txt(dt) : '';
+      rec('panel.disabled.hover-hint', [], {
+        visible: !!dtxt, text: dtxt,
+        note: (dtxt ? '灰按钮悬浮给出说明' : 'FAIL: 灰按钮悬浮无提示') + (disTemp ? '（临时控件测机制）' : ''),
+      });
+      if (disTemp) { disTemp.remove(); document.dispatchEvent(new MouseEvent('mousemove', { clientX: 2, clientY: 2, bubbles: true })); }
     }
 
     // 内部页签（.tabs 里的按钮）逐个点

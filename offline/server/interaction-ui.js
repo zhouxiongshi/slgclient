@@ -157,6 +157,14 @@
       + '#slgIxToast{position:fixed;left:50%;bottom:74px;transform:translateX(-50%);z-index:100900;'
       + 'padding:9px 16px;border:1px solid #ba9a52;background:rgba(22,32,20,.97);border-radius:4px;display:none;max-width:70vw}'
       + '#slgIxToast.ok{border-color:#4f8a5b}#slgIxToast.fail{border-color:#a84f47;background:rgba(58,24,20,.97)}'
+      /* ★ P66：不可操作按钮的悬浮说明。原生 disabled 按钮不派发鼠标事件、title 不显示，
+         故用 document 级 mousemove + elementFromPoint 探测，浮出自定义提示。z 100895 仅低于 toast。 */
+      + '#slgIxDisTip{position:fixed;z-index:100895;max-width:300px;min-width:150px;pointer-events:none;'
+      + 'display:none;background:rgba(30,26,16,.98);border:1px solid #ba9a52;border-radius:4px;'
+      + 'padding:8px 11px;box-shadow:0 6px 22px rgba(0,0,0,.6);color:#f0e2b8;'
+      + 'font:12px/1.65 "Microsoft YaHei",sans-serif}'
+      + '#slgIxDisTip b{color:#e8c670;display:block;margin-bottom:2px}'
+      + '#slgIxDisTip .why{color:#d8c79a}#slgIxDisTip .how{color:#a9d8ae;margin-top:4px}'
       + '#slgIxPhase{position:fixed;left:12px;bottom:12px;z-index:100120;font-size:12px;padding:3px 9px;'
       + 'border-left:3px solid #6b6142;background:rgba(14,18,14,.88);color:#b9b29b}'
       + '#slgIxPhase.busy{border-color:#6f9fd0;color:#c7dcf2}'
@@ -532,6 +540,63 @@
       showTip(term.id, r.right, r.top, { pinned: true, crumbs: [] });
       toast('已锁定术语框（最多 3 个，可拖动；Esc 关闭最上层）');
     }, true);
+  }
+
+  /* ★ P66：不可操作按钮悬浮提示（用户硬要求：所有灰按钮都要说清「为什么不能点、怎么才能点」）。
+     浏览器对 disabled 表单控件完全不派发 mouseover/click，原生 title 也不显示；
+     这里用 document 级 mousemove + elementFromPoint 探测到按钮本体，再浮出自定义说明。
+     纯只读增强：不改按钮 DOM、不改 disabled 状态、不改任何点击行为，零测试锚点风险。 */
+  var DIS_DEFAULT = [
+    { re: /研习|委派/, why: '当前没有可继续的研习操作', how: '打开战法库 → 研习 · 委派武将；残卷不足也能委派武将自行推敲' },
+    { re: /装配|学习|觉醒|暂不能装|装不上/, why: '当前没有可装配的战法槽', how: '先在「武将」页选中武将并升到对应等级，再来装配' },
+    { re: /颁行|政令/, why: '本回合已颁行过政令', how: '等下个回合刷新提案后再颁行' },
+    { re: /解散/, why: '队伍正在行军中', how: '等部队抵达或从行军队列撤回后再解散' },
+    { re: /推演|下月|入下月/, why: '结算进行中或有未决军务', how: '处理完当前事务后再次推进' },
+    { re: /出征|进攻|攻打/, why: '当前没有可出征的队伍或目标', how: '先在征兵页编好队伍并备足军粮' },
+  ];
+  function disabledHint(btn) {
+    var tip = btn.getAttribute('data-tip') || btn.getAttribute('title') || '';
+    var label = (btn.textContent || '').replace(/\s+/g, ' ').trim();
+    if (tip) return { why: tip, how: '' };
+    for (var i = 0; i < DIS_DEFAULT.length; i += 1) {
+      if (DIS_DEFAULT[i].re.test(label)) {
+        return { why: DIS_DEFAULT[i].why, how: DIS_DEFAULT[i].how };
+      }
+    }
+    return { why: '此操作当前不可用', how: '满足按钮旁列出的条件后再试，或先完成前置步骤' };
+  }
+  function bindDisabledHints() {
+    var tip = null, lastBtn = null;
+    function hide() { if (tip) tip.style.display = 'none'; lastBtn = null; }
+    function show(btn, x, y) {
+      if (!tip) {
+        tip = el('div', '', ''); tip.id = 'slgIxDisTip'; document.body.appendChild(tip);
+      }
+      var h = disabledHint(btn);
+      var label = (btn.textContent || '').replace(/\s+/g, ' ').trim();
+      tip.innerHTML = '<b>' + esc(label || '暂不可用') + '</b>'
+        + '<div class="why">' + esc(h.why) + '</div>'
+        + (h.how ? '<div class="how">→ ' + esc(h.how) + '</div>' : '');
+      tip.style.display = 'block';
+      var w = tip.offsetWidth, ht = tip.offsetHeight;
+      tip.style.left = Math.max(4, Math.min(x + 14, window.innerWidth - w - 6)) + 'px';
+      tip.style.top = Math.max(4, Math.min(y + 18, window.innerHeight - ht - 6)) + 'px';
+    }
+    var timer = 0;
+    on(document, 'mousemove', function (e) {
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        var node = document.elementFromPoint(e.clientX, e.clientY);
+        var btn = node && node.closest ? node.closest('button[disabled], input[disabled], select[disabled]') : null;
+        /* 只在按钮本体上时显示；点在按钮内的 span 也算（closest 已覆盖） */
+        if (btn && btn === (node.closest('button, input, select') || btn)) {
+          if (btn !== lastBtn || tip.style.display !== 'block') show(btn, e.clientX, e.clientY);
+          lastBtn = btn;
+        } else hide();
+      }, 90);
+    }, { passive: true });
+    on(document, 'mouseleave', hide);
+    on(document, 'scroll', hide, true);
   }
 
   /* ---------------- 4. 6.11 离线百科（可搜索 / 超链接 / 与提示框同源） ---------------- */
@@ -1586,7 +1651,7 @@
   }
   function boot() {
     injectCss();
-    bindGlobalHover(); bindTipEvents(); interceptCosts(); wrapFetch();
+    bindGlobalHover(); bindTipEvents(); bindDisabledHints(); interceptCosts(); wrapFetch();
     bindAgenda(); bindLens(); bindQueue(); bindKeys();
     buildAgendaHtml(); buildLens(); buildQueue(); buildGuide();
     loadState();

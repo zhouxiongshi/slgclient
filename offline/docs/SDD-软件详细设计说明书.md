@@ -2744,6 +2744,25 @@ build/SLG-Offline-win32-x64/
 
 ---
 
+### 17.49 研习完成不阻塞 · 灰按钮悬浮说明 P66（2026-11-27 用户试玩反馈）
+
+**用户反馈**：「研习完成后无法手动选择研习战法，研习委派武将按钮是灰色的，也没有提示怎么手动研习，流程阻塞；鼠标移到不可操作的按钮上没有任何提示。所有按钮不可操作时悬浮一定要有提示和描述。」
+
+**三层根因**：
+1. **死锁**：`viewLibrary()` 的研习入口条件是「残卷 ≤0 且无任何委派 → disabled」。研习完成时 `advanceAssigned` 会 `delete assign[key]`，若此时残卷也耗尽，所有未解锁战法的研习按钮同时变灰，玩家彻底无法继续。而领域层 `advanceAssigned` 早已支持 `have<=0` 时武将自行推敲（gain = max(4, points×0.45)），UI 约束比领域层更严，属于 UI 与领域口径不一致。
+2. **完成态无出路**：研习完成后 `status='unlocked'`，研习框既不显示装配引导，也没有切换其它战法的入口；「当场研习」按钮消失但无替代说明。
+3. **灰按钮无提示**：浏览器对 `disabled` 表单控件完全不派发 `mouseover`/`click`，原生 `title` tooltip 也不显示，所以旧代码里写了 `title` 的灰按钮玩家照样看不到。
+
+**设计**：
+1. **入口永不禁用**：`viewLibrary()` 的 `openResearch` 按钮去掉 disabled 分支，恒定可点 + `title` 说明。
+2. **完成态分支**：`researchBox()` 以 `var unlocked = s.status === 'unlocked'` 分流——完成态显示「已研习完成」+ `data-ract="gotoGeneral"`（调 `window.__slgPanels.open('general')`），底部把「当场研习」换成纯文字「已研习完成，无需再投卷」；未完成态新增 `others` 战法列表 + `data-rsel="switch"` 下拉 + `data-ract="switch"` 切换处理。
+3. **卷尽说明**：`var noScroll` 分支写明「武将仍会自行推敲、进度照常增长」+「残卷可通过打胜仗、守城、斩将获得」。
+4. **全局灰按钮提示**：`interaction-ui.js` 新增 `bindDisabledHints()`——document 级 `mousemove`（90ms 节流）+ `elementFromPoint` 探测到 `button/input/select[disabled]`，浮出 `#slgIxDisTip`（z-index 100895，仅低于 toast）。文案优先级：按钮 `data-tip` → `title` → `DIS_DEFAULT` 按按钮文字正则匹配（研习/装配/政令/解散/推演/出征各给 why+how）→ 通用兜底。纯只读增强，不改 DOM 状态、不改点击行为、零测试锚点风险。
+
+**回归锁**：`tests/p63-ai-prey-and-research.test.js` 新增 P66-①~④；`ui-audit.cjs` 新增 `panel.research.switch-skill` 真 DOM 断言；`mouse-playtest.cjs` 新增 `disabled.hover.hint` 真鼠标悬浮断言。
+
+---
+
 ## 19. 附录
 
 ### 19.1 命令速查

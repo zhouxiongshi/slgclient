@@ -155,10 +155,16 @@
       + 'background:linear-gradient(180deg,#26261c,#1b1d17);border:1px solid #a98a48;'
       + 'border-radius:10px;padding:20px 22px;color:#ecdfbd;font:13px "Microsoft YaHei",sans-serif;'
       + 'box-shadow:0 18px 48px rgba(0,0,0,.6);';
-    var pct = s.research ? Math.min(100, Math.round(s.research.progress / s.research.need * 100)) : 0;
+    /* ★ P66：研习完成后不阻塞——已解锁给装配引导，未解锁给换条战法入口，卷尽给自行推敲说明。 */
+    var unlocked = s.status === 'unlocked';
+    var noScroll = (data.scrolls || 0) <= 0;
+    var others = (data.library || []).filter(function (x) {
+      return x.status !== 'unlocked' && Number(x.cfgId) !== Number(cfgId);
+    });
+    var pct = unlocked ? 100 : (s.research ? Math.min(100, Math.round(s.research.progress / s.research.need * 100)) : 0);
     var headH = '<div style="display:flex;align-items:baseline;gap:10px;border-bottom:1px solid #4a4229;'
       + 'padding-bottom:10px;margin-bottom:14px"><b style="font-size:18px;color:#f2d98a">战法研习</b>'
-      + '<span style="font-size:11px;color:#9c9176">委派之后可以当场研习，入下月也会继续涨</span>'
+      + '<span style="font-size:11px;color:#9c9176">委派武将逐旬自动推进；残卷用尽也能自行推敲，进度不会停</span>'
       + '<span style="margin-left:auto;font-size:12px;color:#c9b98a">兵书残卷 ' + esc(data.scrolls || 0) + ' 卷</span></div>';
     var infoH = '<div style="display:flex;gap:16px">'
       + '<div style="flex:1.15">'
@@ -166,45 +172,75 @@
       + '<span class="tag">' + esc(s.trigger || '战法') + '</span></div>'
       + '<div style="color:#c9bfa2;line-height:1.75;min-height:56px">' + esc(s.des || '暂无效果说明') + '</div>'
       + '<div style="margin:10px 0 4px;font-size:12px;color:#a89c7f">'
-      + (s.status === 'unlocked' ? '已解锁' : '研习进度 ' + (s.research ? esc(s.research.progress) : '0') + ' / ' + (s.research ? esc(s.research.need) : '100'))
+      + (unlocked ? '已研习完成 · 可直接装配' : '研习进度 ' + (s.research ? esc(s.research.progress) : '0') + ' / ' + (s.research ? esc(s.research.need) : '100'))
       + ' · ' + pct + '%</div>'
       + '<div style="height:10px;background:#12150f;border:1px solid #4a4229;border-radius:5px;overflow:hidden">'
       + '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#8a6d2e,#d8b45c)"></div></div>'
       + '</div><div style="flex:1;border-left:1px solid #4a4229;padding-left:16px">'
       + '<div style="font-size:12px;color:#c9b98a;margin-bottom:8px">委派武将 · 谋略决定速度，政治决定省卷</div>';
-    if (assign) {
-      var eta = Math.max(1, Math.ceil((assign.need - assign.progress) / assign.points));
-      infoH += '<div style="background:#2f2c1c;border:1px solid #7a6535;border-radius:6px;padding:10px;margin-bottom:10px">'
-        + '<div><b style="color:#f0d488">' + esc(assign.generalName) + '</b> 研习中</div>'
-        + '<div style="font-size:12px;color:#b9ad8c;margin-top:4px">每旬约 +' + esc(assign.points)
-        + ' 点 · 耗 ' + esc(assign.scrolls) + ' 卷 · 进度 ' + esc(assign.progress) + '/' + esc(assign.need)
-        + ' · 约 ' + eta + ' 旬可成</div>'
-        + '<button data-ract="unassign" style="margin-top:8px;background:#20221c;color:#d9c58e;border:1px solid #6a624a;'
-        + 'border-radius:4px;padding:4px 12px;cursor:pointer;font:12px \'Microsoft YaHei\'">撤回委派（进度保留）</button></div>';
-    }
-    if (cands.length) {
-      infoH += '<div style="font-size:12px;color:#a89c7f;margin-bottom:4px">改派 / 新派一名武将（研习为文职，在编亦可）</div>'
-        + '<select data-rsel="general" style="width:100%;box-sizing:border-box;background:#12150f;color:#f0e2b8;'
-        + 'border:1px solid #6a624a;border-radius:4px;padding:6px;font:12px \'Microsoft YaHei\'">'
-        + cands.map(function (g) {
-          return '<option value="' + g.id + '">' + esc(g.name) + (g.inArmy ? '（在编）' : '')
-            + ' · 谋' + g.strategy + ' 政' + g.politics
-            + '（约 +' + g.points + '/旬，耗 ' + g.scrolls + ' 卷）</option>';
-        }).join('') + '</select>'
-        + '<button data-ract="assign" style="margin-top:8px;width:100%;background:#4a4225;color:#f0d488;'
-        + 'border:1px solid #ba9a52;border-radius:4px;padding:6px;cursor:pointer;font:12px \'Microsoft YaHei\'">委派研习</button>';
+    if (unlocked) {
+      /* ★ P66：研习完成后的明确出路——不让玩家盯着灰色按钮发呆。 */
+      infoH += '<div style="background:#26361f;border:1px solid #4e7a3e;border-radius:6px;padding:10px;margin-bottom:10px;line-height:1.8">'
+        + '<div style="color:#bfe0a3;font-weight:600">此战法已研习完成</div>'
+        + '<div style="font-size:12px;color:#b9c9a0">到「武将」页选一名武将，在战法槽点「装配」即可使用；'
+        + '也可在下方「换一条研习」继续解锁其它战法。</div>'
+        + '<button data-ract="gotoGeneral" style="margin-top:8px;background:#2f3a28;color:#cfe6b4;border:1px solid #6a8a52;'
+        + 'border-radius:4px;padding:4px 12px;cursor:pointer;font:12px \'Microsoft YaHei\'">去武将页装配 →</button></div>';
     } else {
-      infoH += '<div style="font-size:12px;color:#8f8676;line-height:1.7">没有可委派的武将。</div>';
+      if (assign) {
+        var eta = Math.max(1, Math.ceil((assign.need - assign.progress) / assign.points));
+        infoH += '<div style="background:#2f2c1c;border:1px solid #7a6535;border-radius:6px;padding:10px;margin-bottom:10px">'
+          + '<div><b style="color:#f0d488">' + esc(assign.generalName) + '</b> 研习中</div>'
+          + '<div style="font-size:12px;color:#b9ad8c;margin-top:4px">每旬约 +' + esc(assign.points)
+          + ' 点 · 耗 ' + esc(assign.scrolls) + ' 卷 · 进度 ' + esc(assign.progress) + '/' + esc(assign.need)
+          + ' · 约 ' + eta + ' 旬可成</div>'
+          + '<button data-ract="unassign" style="margin-top:8px;background:#20221c;color:#d9c58e;border:1px solid #6a624a;'
+          + 'border-radius:4px;padding:4px 12px;cursor:pointer;font:12px \'Microsoft YaHei\'">撤回委派（进度保留）</button></div>';
+      }
+      if (noScroll) {
+        infoH += '<div style="background:#2a2618;border:1px solid #6a5a32;border-radius:6px;padding:8px 10px;margin-bottom:10px;'
+          + 'font-size:12px;color:#d8c79a;line-height:1.7">兵书残卷已用尽：委派的武将仍会自行推敲，每旬约 +'
+          + esc(cands.length ? cands[0].points : 7) + ' 点（进度照常增长）。'
+          + '残卷可通过打胜仗、守城、斩将获得。</div>';
+      }
+      if (cands.length) {
+        infoH += '<div style="font-size:12px;color:#a89c7f;margin-bottom:4px">改派 / 新派一名武将（研习为文职，在编亦可）</div>'
+          + '<select data-rsel="general" style="width:100%;box-sizing:border-box;background:#12150f;color:#f0e2b8;'
+          + 'border:1px solid #6a624a;border-radius:4px;padding:6px;font:12px \'Microsoft YaHei\'">'
+          + cands.map(function (g) {
+            return '<option value="' + g.id + '">' + esc(g.name) + (g.inArmy ? '（在编）' : '')
+              + ' · 谋' + g.strategy + ' 政' + g.politics
+              + '（约 +' + g.points + '/旬，耗 ' + g.scrolls + ' 卷）</option>';
+          }).join('') + '</select>'
+          + '<button data-ract="assign" style="margin-top:8px;width:100%;background:#4a4225;color:#f0d488;'
+          + 'border:1px solid #ba9a52;border-radius:4px;padding:6px;cursor:pointer;font:12px \'Microsoft YaHei\'">委派研习</button>';
+      } else {
+        infoH += '<div style="font-size:12px;color:#8f8676;line-height:1.7">没有可委派的武将。</div>';
+      }
+      /* ★ P66：换一条战法研习——列表可绝对没有一条能研习吗？有残卷或已委派就能继续。 */
+      if (others.length) {
+        infoH += '<div style="margin-top:10px;border-top:1px dashed #4a4229;padding-top:9px">'
+          + '<div style="font-size:12px;color:#a89c7f;margin-bottom:4px">换一条战法研习（进度各自保留）</div>'
+          + '<select data-rsel="switch" style="width:100%;box-sizing:border-box;background:#12150f;color:#f0e2b8;'
+          + 'border:1px solid #6a624a;border-radius:4px;padding:6px;font:12px \'Microsoft YaHei\'">'
+          + others.map(function (x) {
+            return '<option value="' + x.cfgId + '">' + esc(x.name)
+              + (x.status === 'researching' ? '（研习中 ' + (x.research ? x.research.progress : 0) + '/' + (x.research ? x.research.need : 100) + '）' : '（未研习）')
+              + '</option>';
+          }).join('') + '</select>'
+          + '<button data-ract="switch" style="margin-top:6px;width:100%;background:#20221c;color:#d9c58e;'
+          + 'border:1px solid #6a624a;border-radius:4px;padding:5px;cursor:pointer;font:12px \'Microsoft YaHei\'">切换去研习这条 →</button></div>';
+      }
     }
     infoH += '</div></div>';
     var footH = '<div style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid #4a4229;'
       + 'padding-top:12px;margin-top:14px">'
       + '<button data-ract="close" style="background:#20221c;color:#c9b98a;border:1px solid #6a624a;'
       + 'border-radius:4px;padding:6px 16px;cursor:pointer;font:12px \'Microsoft YaHei\'">关闭</button>'
-      + (s.status === 'unlocked' ? ''
+      + (unlocked ? '<span style="font-size:12px;color:#8f8676;align-self:center">已研习完成，无需再投卷</span>'
         : '<button data-ract="manual" style="background:#4a4225;color:#f0d488;border:1px solid #ba9a52;'
         + 'border-radius:4px;padding:6px 16px;cursor:pointer;font:12px \'Microsoft YaHei\'">'
-        + ((data.scrolls || 0) > 0 ? '当场研习（耗残卷）' : '当场研习（无残卷，进度较慢）') + '</button>')
+        + ((data.scrolls || 0) > 0 ? '当场研习（耗残卷）' : '当场研习（无残卷，自行推敲）') + '</button>')
       + '</div>';
     box.innerHTML = headH + infoH + footH;
     mask2.appendChild(box); document.body.appendChild(mask2);
@@ -235,6 +271,20 @@
         close(); post({ type: 'unassignResearch', cfgId: Number(cfgId) }, function () {
           researchBox(Number(cfgId));
         });
+        return;
+      }
+      if (ract === 'gotoGeneral') {
+        close();
+        if (window.__slgPanels && typeof window.__slgPanels.open === 'function') {
+          window.__slgPanels.open('general');
+        }
+        return;
+      }
+      if (ract === 'switch') {
+        var sw = box.querySelector('[data-rsel="switch"]');
+        var next = sw ? Number(sw.value) : 0;
+        if (!next) { toast('先选一条战法', true); return; }
+        close(); researchBox(next);
         return;
       }
     });
@@ -1806,11 +1856,11 @@
               + '" data-cfg="' + s.cfgId + '">装配给 ' + esc(cg.name) + ' 的' + ['自带', '学习', '觉醒'][lt.pos] + '槽</button>'
             : '<button class="btn" disabled title="' + esc(lt.note) + '">暂不能装 · ' + esc(lt.note) + '</button>';
         } else {
-          /* ★ P63：研习入口改成打开游戏化对话框（战法/效果/进度/委派武将），
-             不再直接投 10 卷，也不再弹通用「决策前预览」。 */
+          /* ★ P66：研习入口永远可点——残卷用尽也能委派武将自行推敲（领域层已支持），
+             旧版「无卷且无委派就禁用」会把玩家锁死在灰色按钮前，必须去掉。
+             框内会自己说明当前状态、进度与获取残卷的路径。 */
           h += '<button class="btn" data-act="openResearch" data-cfg="' + s.cfgId + '"'
-            + ((data.scrolls || 0) <= 0 && !(data.researchAssignments || []).length
-              ? ' disabled title="兵书残卷不足：打胜仗、守城、斩将可获残卷"' : '') + '>研习 · 委派武将</button>';
+            + ' title="打开研习框：委派武将逐旬推进，残卷用尽也能自行推敲">研习 · 委派武将</button>';
         }
         h += '</div></div>';
       }
