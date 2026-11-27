@@ -1155,87 +1155,16 @@
         {
           "field": "槽 1",
           "from": "75→75",
-          "to": "37.5→75",
-          "official": "37.5→75"
+          "to": "70→115",
+          "official": "37.5→75",
+          "rule": "manual-override"
         }
       ],
       "levels": [
         {
           "probability": 100,
           "effect_value": [
-            37.5
-          ],
-          "effect_round": [
-            0
-          ]
-        },
-        {
-          "probability": 100,
-          "effect_value": [
-            41.67
-          ],
-          "effect_round": [
-            0
-          ]
-        },
-        {
-          "probability": 100,
-          "effect_value": [
-            45.83
-          ],
-          "effect_round": [
-            0
-          ]
-        },
-        {
-          "probability": 100,
-          "effect_value": [
-            50
-          ],
-          "effect_round": [
-            0
-          ]
-        },
-        {
-          "probability": 100,
-          "effect_value": [
-            54.17
-          ],
-          "effect_round": [
-            0
-          ]
-        },
-        {
-          "probability": 100,
-          "effect_value": [
-            58.33
-          ],
-          "effect_round": [
-            0
-          ]
-        },
-        {
-          "probability": 100,
-          "effect_value": [
-            62.5
-          ],
-          "effect_round": [
-            0
-          ]
-        },
-        {
-          "probability": 100,
-          "effect_value": [
-            66.67
-          ],
-          "effect_round": [
-            0
-          ]
-        },
-        {
-          "probability": 100,
-          "effect_value": [
-            70.83
+            70
           ],
           "effect_round": [
             0
@@ -1249,8 +1178,82 @@
           "effect_round": [
             0
           ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            80
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            85
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            90
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            95
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            100
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            105
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            110
+          ],
+          "effect_round": [
+            0
+          ]
+        },
+        {
+          "probability": 100,
+          "effect_value": [
+            115
+          ],
+          "effect_round": [
+            0
+          ]
         }
-      ]
+      ],
+      "manualOverride": true,
+      "manualReason": "P70 用户指定：Lv1 伤害率 70%，每级 +5%（Lv10 115%）；官方快照 37.5→75 仅留痕，不再作为本作曲线"
     },
     {
       "cfgId": 10026,

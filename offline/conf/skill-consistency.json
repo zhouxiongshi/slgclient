@@ -39,10 +39,15 @@
       "cfgId": 10025,
       "kernelPatch": {
         "mechanics": {
-          "counter": { "chance": 1, "rate_pct": 37.5, "rate_from_ui": true, "damage_type": "normal" }
+          "counter": {
+            "chance": 1,
+            "rate_pct": 70,
+            "rate_from_ui": true,
+            "damage_type": "normal"
+          }
         }
       },
-      "reason": "内核已有 counter 回击机制，接线即可；不删描述、不改数值（75% 为原表 Lv1/Lv10 同值）"
+      "reason": "P70：反击伤害率按玩家指定 70% 起每级 +5%；rate_from_ui=true，各级实际数值取成长层 ui.levels"
     },
     {
       "cfgId": 10028,

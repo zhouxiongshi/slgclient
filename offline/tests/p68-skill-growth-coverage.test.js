@@ -10,7 +10,7 @@
  * 修复口径（满级平衡不动，只把 Lv1 端拉到一半，线性插值）：
  *   - ①由 tools/sync-growth-direction.mjs 平线兜底（rule: 'flat-upgrade'）；
  *   - ②由 tools/mirror-official-skills.mjs designedControlGrowth（50→100）。
- * 反击（10025）本身一直有 37.5→75 成长（P53 接线），本用例一并锁住防回退。
+ * 反击（10025）由 P53 接线、P70 改为玩家指定曲线 70→115（每级 +5%），一并锁住防回退。
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -84,35 +84,36 @@ test('P68-③ 镜像控制槽：命中率 Lv1=50%→Lv10=100%，内核命中随�
   }
 });
 
-test('P68-④ 反击（用户点名）保持 37.5→75 且回击伤害率随级', () => {
+test('P68-④ / P70 反击伤害率 70% 起每级 +5%，战斗与战法库同源', () => {
   const s = SKILLS.find((x) => Number(x.cfgId) === 10025);
   const vals = s.ui.levels.map((l) => l.effect_value[0]);
-  assert.equal(vals[0], 37.5);
-  assert.equal(vals[9], 75);
-  for (const [lv, rate] of [[1, 37.5], [5, 54.17], [10, 75]]) {
-    const counter = kernelSkillAt(10025, lv).effects[0].mechanics?.counter;
-    assert.ok(counter, `反击 Lv${lv} 缺回击机制`);
+  assert.equal(vals[0], 70, 'P70 玩家指定 Lv1 伤害率 70%');
+  assert.equal(vals[9], 115, 'P70 每级 +5%，Lv10 为 115%');
+  for (let i = 0; i < 10; i += 1) {
+    assert.equal(vals[i], 70 + 5 * i, `反击 Lv${i + 1} 伤害率应为 ${70 + 5 * i}`);
+    const counter = kernelSkillAt(10025, i + 1).effects[0].mechanics?.counter;
+    assert.ok(counter, `反击 Lv${i + 1} 缺回击机制`);
     assert.equal(counter.chance, 1, '受到普攻必反击');
-    assert.equal(counter.rate_pct, rate, `反击 Lv${lv} 回击伤害率应为 ${rate}`);
+    assert.equal(counter.rate_pct, vals[i], `反击 Lv${i + 1} 内核回击伤害率应与界面同源`);
   }
 });
 
 /* ★ P69：P68 只锁了战斗用的 SKILLS，战法库 UI 另有从 conf/skills.json 拼的原始表，
    绕开镜像/成长/一致性覆盖链，反击在界面上仍是十级全 75。这一条锁 UI 投影。 */
-test('P69-① 战法库数值曲线与运行时同源：反击 Lv1=37.5、Lv10=75，描述随级', () => {
+test('P69-① / P70 战法库数值曲线与运行时同源：反击 Lv1=70、Lv10=115，描述随级', () => {
   const cfg = loadConfig();
   const state = normalizeWorld(createWorld(cfg), cfg);
   const lib = panelState(state, cfg).library;
   const e = lib.find((x) => Number(x.cfgId) === 10025);
   assert.ok(e, '反击不在战法库投影里');
   assert.equal(Number(e.levelCount), 10);
-  assert.equal(e.levels[1].effect_value[0], 37.5, '战法库 Lv1 不能是原表里的 75');
-  assert.equal(e.levels[10].effect_value[0], 75, '战法库 Lv10 终点保留');
+  assert.equal(e.levels[1].effect_value[0], 70, '战法库 Lv1 应为玩家指定的 70');
+  assert.equal(e.levels[10].effect_value[0], 115, '战法库 Lv10 应为 115');
   for (let i = 1; i <= 10; i += 1) {
     assert.equal(e.levels[i].effect_value[0], SKILLS.find((x) => Number(x.cfgId) === 10025).ui.levels[i - 1].effect_value[0],
       `战法库 Lv${i} 必须与战斗运行时表同源`);
   }
-  assert.match(e.des, /37\.5%/, 'Lv1 描述里的 %n 也要取同一份等级数据');
+  assert.match(e.des, /70%/, 'Lv1 描述里的 %n 也要取同一份等级数据');
 });
 
 test('P69-② 战法库全库不允许十级全平', () => {
@@ -124,4 +125,23 @@ test('P69-② 战法库全库不允许十级全平', () => {
     return Object.keys(x.levels).every((k) => JSON.stringify(x.levels[k].effect_value) === first);
   }).map((x) => x.name);
   assert.deepEqual(flat, [], `战法库升级无反馈：${flat.join('、')}`);
+});
+
+/* ★ P70：玩家指定数值必须能扛住生成器复跑，且原表/一致性元数据不漂移。
+   生成器复跑字节一致性由 p31-growth-direction.test.js 的复跑自检锁住。 */
+test('P70-① 反击人工覆写有留痕，原表与一致性元数据同源', () => {
+  const growth = JSON.parse(readFileSync(join(ROOT, 'conf', 'skill-growth-direction.json'), 'utf8'));
+  const g = growth.entries.find((x) => Number(x.cfgId) === 10025);
+  assert.equal(g.manualOverride, true, '反击必须标记为人工覆写，防生成器按官方快照冲回');
+  assert.match(g.manualReason, /P70/);
+  assert.deepEqual(g.levels.map((l) => l.effect_value[0]), [70, 75, 80, 85, 90, 95, 100, 105, 110, 115]);
+
+  const raw = JSON.parse(readFileSync(join(ROOT, 'conf', 'skills.json'), 'utf8'));
+  const src = raw.skills.find((x) => Number(x.cfgId) === 10025);
+  assert.ok(src.ui.levels.every((l) => l.effect_value[0] === 75), 'conf 原表必须保持官方快照不动');
+
+  const fix = JSON.parse(readFileSync(join(ROOT, 'conf', 'skill-consistency.json'), 'utf8'));
+  const f = fix.entries.find((x) => Number(x.cfgId) === 10025);
+  assert.equal(f.kernelPatch.mechanics.counter.rate_pct, 70);
+  assert.equal(f.kernelPatch.mechanics.counter.rate_from_ui, true);
 });

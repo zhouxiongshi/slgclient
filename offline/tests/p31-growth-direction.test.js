@@ -75,8 +75,14 @@ test('效果槽只改方向、不改满级终点；每一级线性插值', () =>
           dir(g.levels[9].effect_value[i] - g.levels[0].effect_value[i]),
           `${g.name} ${c.field} 方向与官方反向`);
       }
-      assert.equal(round2(g.levels[9].effect_value[i]), g.baselineLv10.effect_value[i],
-        `${g.name} ${c.field} Lv10 终点被改写`);
+      /* ★ P70：玩家指定数值（manualOverride）不受「满级终点保留」约束，
+         但仍必须留痕，且复跑生成器时必须原样保留（下方复跑自检锁）。 */
+      if (g.manualOverride) {
+        assert.match(String(g.manualReason || ''), /P70/, `${g.name} 人工覆写缺留痕`);
+      } else {
+        assert.equal(round2(g.levels[9].effect_value[i]), g.baselineLv10.effect_value[i],
+          `${g.name} ${c.field} Lv10 终点被改写`);
+      }
       for (let lv = 0; lv < 10; lv += 1) {
         assert.equal(round2(g.levels[lv].effect_value[i]),
           round2(g.levels[0].effect_value[i]

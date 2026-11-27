@@ -2804,6 +2804,23 @@ build/SLG-Offline-win32-x64/
 
 **回归锁**：`tests/p68-skill-growth-coverage.test.js` 新增 P69 两条——① 反击在 `panelState().library` 里 Lv1=37.5 / Lv10=75 且十级逐项等于运行时表、Lv1 描述含 37.5%；② 战法库全库无十级全平。实测修复后：反击曲线 37.5/41.67/45.83/50/54.17/58.33/62.5/66.67/70.83/75，描述「受到普通攻击时能进行反击（伤害率37.5%）」，平线 0 条。
 
+### 17.51 反击数值口径改为玩家指定 P70（2026-11-27 用户指令）
+
+**需求**：反击（10025）初始伤害率 70%，每升一级 +5%，即 Lv10 = 115%。这覆盖了 P53 以来按官方快照 37.5→75 的口径，也覆盖了 P68「满级终点保留」的通用约束——玩家指定值优先。
+
+**为什么只改一处就够**：`conf/skill-consistency.json` 给反击接了 `mechanics.counter.rate_from_ui=true`，`kernelSkillAt()` 遇到这个标记直接用 `ui.levels[lv-1].effect_value[0]` 覆盖 `counter.rate_pct`；P69 又让战法库投影也取同一份运行时表。所以成长层是唯一权威，战斗、描述 `%n`、UI 曲线三处自然同源，不需要分别改三份。
+
+**改法**：
+
+| 位置 | 改动 |
+| --- | --- |
+| `conf/skill-growth-direction.json` | 10025 的 `levels` 改为 70/75/…/115；`changes[0].to` 记「70→115」，`official` 仍留官方 37.5→75 作追溯；加 `manualOverride: true` 与 `manualReason` |
+| `conf/skill-consistency.json` | `kernelPatch.mechanics.counter.rate_pct` 37.5 → 70（Lv1 元数据，实际各级仍取 `ui.levels`） |
+| `tools/sync-growth-direction.mjs` | 生成前从**出厂产物**读 `manualOverride` 条目原样带回；读的是固定出厂路径而非可被 `SLG_GROWTH_OUT` 重定向的临时路径，保证复跑自检能复现同一份 JSON |
+| `conf/skills.json` 原表 | **不动**，仍是官方快照十级全 75（留痕基线） |
+
+**回归锁**：`p31` 对 `manualOverride` 条目豁免「满级终点保留」但要求 P70 留痕；`p31` 复跑自检仍锁生成器字节一致（即覆写不会被重算冲掉）；`p53` 锁内核 Lv1=70 / Lv10=115；`p68` 锁十级逐级 +5% 且战斗/UI 同源；`p70-①` 锁原表不动与一致性元数据。实测：运行时与战法库曲线均为 70/75/80/85/90/95/100/105/110/115，Lv1 描述「伤害率70%」，内核 Lv1/Lv5/Lv10 = 70/90/115。
+
 ---
 
 ## 19. 附录

@@ -85,9 +85,25 @@ const probOf = (t) => {
   return m ? [Number(m[1]), Number(m[2] || m[1])] : null;
 };
 
+/* ★ P70 人工覆写保护：玩家指定的数值不能按官方快照重算回去。
+   读取**出厂产物**（而不是 OUT——OUT 可被 SLG_GROWTH_OUT 重定向到临时文件做复跑自检），
+   带 manualOverride 的条目原样带回，官方端点/满级终点约束对这类条目不适用。 */
+const CANONICAL_OUT = join(ROOT, 'conf', 'skill-growth-direction.json');
+const MANUAL = new Map();
+if (existsSync(CANONICAL_OUT)) {
+  try {
+    const prev = JSON.parse(readFileSync(CANONICAL_OUT, 'utf8'));
+    for (const e of prev.entries || []) {
+      if (e.manualOverride) MANUAL.set(Number(e.cfgId), e);
+    }
+  } catch { /* 出厂表损坏不阻塞生成 */ }
+}
+
 const entries = [];
 const skipped = [];
 for (const local of ours) {
+  const manual = MANUAL.get(Number(local.cfgId));
+  if (manual) { entries.push(manual); continue; }
   const off = byName.get(String(local.name).trim());
   const isMirrored = mirrored.has(Number(local.cfgId));
   const base = local.ui?.levels;

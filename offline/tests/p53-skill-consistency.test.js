@@ -47,8 +47,8 @@ test('P53-③ 反击走既有 counter 机制，伤害率随等级（不再当触
   const m10 = kernelSkillAt(10025, 10).effects[0].mechanics?.counter;
   assert.ok(m1 && m10, '单效果战法也必须透传 mechanics');
   assert.equal(m1.chance, 1);
-  assert.equal(m1.rate_pct, 37.5);
-  assert.equal(m10.rate_pct, 75, 'Lv10 伤害率翻倍，与原表一致');
+  assert.equal(m1.rate_pct, 70, 'P70 玩家指定 Lv1 伤害率 70%');
+  assert.equal(m10.rate_pct, 115, 'P70 每级 +5%，Lv10 为 115%');
 });
 
 test('P53-④ 语义词条仍以原数值下发，由内核分桶消费', () => {
