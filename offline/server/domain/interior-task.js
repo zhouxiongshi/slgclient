@@ -340,7 +340,12 @@ export function advanceInteriorTasks(state, cfg, ctx) {
       const K = KINDS[t.kind];
       const label = K?.note || K?.label || t.kind;
       ticked.push({ taskId: t.id, cityId: t.cityId, city: t.cityName, kind: t.kind, gain, label, tick: shouldTicks });
-      recordEvent(state, `${t.cityName}${label} +${gain}（${t.officerName}${t.officerStat ? `·${t.officerStat}` : ''}）`);
+      /* ★ P75：「劝课生息」这类在完工日一次性结算的办差（total=0、只有 popGain），
+         过程里 gain 恒为 0，旧文案写成「户口 +0」，玩家看日志会以为毫无效果。
+         有实增才写数字，没有就明说在办差。 */
+      recordEvent(state, gain > 0
+        ? `${t.cityName}${label} +${gain}（${t.officerName}${t.officerStat ? `·${t.officerStat}` : ''}）`
+        : `${t.cityName}${label}办差中（${t.officerName}${t.officerStat ? `·${t.officerStat}` : ''}）`);
       /* 内政经验：唯一口径在 general-progress.js，每旬 12 点（原 5 点，8 旬一级 → 约 3~4 旬一级）。 */
       const off = (state.generals || []).find((g) => Number(g.id) === Number(t.officerId));
       if (off) {

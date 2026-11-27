@@ -339,6 +339,32 @@
 5. **武将调遣是行程不是瞬移**：`dispatchGeneral(s)` 只写一条 `kind:'dispatch'` 的行军牌并给武将挂 `g.transit`，驻地（`g.cityId`）在**抵达日**才改；`dispatchTick()` 在 `settleWorld` 里推进落城（在行军/守城/围城结算之后）。行程牌 `troops = 0`，客户端按青蓝单骑棋子绘制并写「某 赴 某城 · 余 N 日」。
 6. **在途武将不可用**：`dispatchCheck()` 回 `in_transit`（须排在 `same_city` 之前）；`formationGeneralCheck()` 拒绝编入出征队伍；`governorCandidates()` 排除；`strategyResolveMarches()` **必须跳过** `kind:'dispatch'`（它没有部队，混进去会被当零兵部队开打）。目标城途中易主则折返原城，不许凭空蒸发。
 
+## P75 旬界唯一判据 + 闭环支线端到端（写死，防回归）
+
+1. **旬界只许有一个判据**：`strategyTick` 过 `day - lastTurnDay >= turnDays` 闸后，调
+   `cityEconTick(state, cfg, ctx, { isTurn: true, turnDays })` **显式声明本旬是旬界**。
+   `cityEconTick` 内部**禁止**再用 `day % 10 === 0` 自行判断——那是绝对相位，与
+   `lastTurnDay` 的相对相位一旦错开就整旬漏算。实测玩家存档 `lastTurnDay = 1846`
+   → strategyTick 落在 1859/1869/1889（`%10 = 9`）→ 俸禄、忠诚、断粮、太守、开发、
+   人口 **40 天一次都没结算**（人口 216793 一动不动）。这就是「人口增长还是没修复」
+   的真因；`popTick` 的增长率本身没问题。
+2. **`cityEconTick` 的旬结算清单**（全部受 `isTurn` 控制，一个都不许私自加判据）：
+   `supplyTick` → `armySupplyTick` → `governorTick` → `cityDevTick` → `disasterTick`
+   → `loyaltyTick` → `popTick`。`advanceInteriorTasks` 按 `startDay` 每日推进，不受影响。
+3. **欠饷必须留痕**：府库不足以发旬俸时，除即时提示外还要 `pushEvent` 一条
+   「府库空虚：旬俸 N 金仅发 M，全军忠诚 -5」。同一天只记一次（`strategy.lastArrearDay`）。
+   只闪一条 toast、事后查不到，等同于静默。
+4. **办差日志不许写假数字**：「劝课生息」这类完工日一次性结算的办差（`total = 0`、
+   只有 `popGain`），过程 `gain` 恒为 0，日志写「户口 +0」会让玩家以为毫无效果。
+   有实增才写 `+N`，否则写「办差中」。
+5. **端到端支线验证器**：`node tools/line-check.js`（`--packaged` 不适用，它走进程内
+   真实服务）。它用玩家存档副本起真实 HTTP/WS 服务，逐条跑 20 条支线并断言「状态真的
+   变了」，判定不依赖返回码。任何支线改动后必须先跑它，再跑单测。
+6. **支线清单**（缺一不可，新增支线要同步加进验证器）：征兵 / 兵源回池 / 运输粮道 /
+   内政建设 / 太守任命 / 武将调遣 / 战法研习 / 武将成长与进阶 / 外交赠礼与停战 /
+   事件抉择 / 阶段目标 / 编队解散 / 清剿营地 / 出征攻城 / 俘虏三出口 / 酒馆登庸 /
+   守城战 / 粮道断绝 / 军粮欠付。
+
 ## 变更流程
 
 1. 新数值：先在本表登记 → 再实现服务端权威源 → 最后接 UI。

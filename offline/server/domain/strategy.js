@@ -671,7 +671,10 @@ export function strategyTick(state, cfg, ctx, now = Date.now()) {
     }
   } catch { /* 研习失败不影响回合推进 */ }
   // ★ P2/P3 城市经营：旬灾害（蝗/瘟/丰收）+ 旬忠诚/俸禄/叛逃 + 30日人口增长
-  cityEconTick(state, cfg, ctx);
+  /* ★ P75：这里本身就是旬界（上一行刚过 turnDays 闸），必须显式告知
+     cityEconTick「本次是旬结算」。旧实现让 cityEconTick 自己用 day%10 判，
+     相位与 lastTurnDay 错位时（存档 1846 → 1859/1869 执行）整旬漏算。 */
+  cityEconTick(state, cfg, ctx, { isTurn: true, turnDays });
   /* ★ P50：物资任务层已删，物资去处回归 armory 即时动作；旬结算里不再有 advanceMaterialTasks。 */
   /* ★ 2026-11-17 城防：城墙每旬自然修复（被围不修）——否则打过一次就永久残破，
      城防属性从此失去意义。 */

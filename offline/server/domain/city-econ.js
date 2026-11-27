@@ -476,6 +476,13 @@ export function loyaltyTick(state, cfg, ctx) {
         setLoyalty(g, loyaltyOf(g) - 5);
       }
       recordRes(state, 'gold', -salaryPaid, '欠饷（俸禄不足，全军忠诚-5）', day);
+      /* ★ P75：欠饷此前只发一条即时提示，回看大事记却什么都没有——玩家事后
+         根本查不出「忠诚为什么掉了」。按旬留痕（同一天只记一次，避免连旬刷屏）。 */
+      const lastDue = state.strategy?.lastArrearDay;
+      if (Number(lastDue) !== day) {
+        if (state.strategy) state.strategy.lastArrearDay = day;
+        pushEvent(state, `府库空虚：旬俸 ${salaryDue} 金仅发 ${Math.floor(salaryPaid)}，全军忠诚 -5。`);
+      }
       ctx?.push?.('chat.push', { rid: 0, nickName: '系统', type: 0, msg: '【朝堂】府库空虚，武将俸禄发放不足，军心浮动（忠诚-5）。', time: Date.now() });
     } else {
       recordRes(state, 'gold', -salaryPaid, '武将旬俸', day);
@@ -524,23 +531,36 @@ export function loyaltyTick(state, cfg, ctx) {
   return { salaryDue, salaryPaid, defected: defected.map((g) => cfg.generalByCfg?.get(Number(g.cfgId))?.name || `武将${g.cfgId}`) };
 }
 
-/** 统一入口：strategyTick 按日历调用。 */
-export function cityEconTick(state, cfg, ctx) {
+/**
+ * 统一入口：strategyTick 按日历调用。
+ *
+ * ★ P75：旬界判据只许有一个来源——调用方声明「本次是不是旬界」。
+ * 旧实现自己用 `day % 10 === 0` 判断，与 strategyTick 的
+ * `day - lastTurnDay >= turnDays` 是两套相位：玩家存档里 lastTurnDay=1846，
+ * strategyTick 在 1859/1869/1889 执行（%10=9），此处的旬结算一次都没命中，
+ * 俸禄/忠诚/断粮/太守/开发/人口整整 40 天不结算（实测人口 216793 一动不动）。
+ * 现在由 strategyTick 传 `{isTurn:true, turnDays}`；直接调用（测试/旧路径）
+ * 才回落到 `day % turnDays`。
+ */
+export function cityEconTick(state, cfg, ctx, turnInfo = null) {
   const day = Math.floor(Number(state.clock?.day) || 1);
+  const turnDays = Math.max(1, Math.floor(Number(turnInfo?.turnDays) || knobGet(state, 'turnDays') || 10));
+  const isTurn = turnInfo?.isTurn === true
+    || (turnInfo?.isTurn == null && day % turnDays === 0);
   ensureCityEcon(state);
   /* ★ U14 内政任务状每日推进：旬界到账、完工写归因事件（无任务时是一次空循环，开销可忽略） */
   const tasks = advanceInteriorTasks(state, cfg, ctx);
   // ★ P7：旬结算先跑委任开发（官员推动驻城成长），再掷灾害
   /* ★ U20 粮道：旬界先判连通性（断粮城本旬就吃惩罚），再跑委任开发 */
-  const supply = day % 10 === 0 ? supplyTick(state, cfg, ctx) : { isolated: [], recovered: [], hits: [] };
+  const supply = isTurn ? supplyTick(state, cfg, ctx) : { isolated: [], recovered: [], hits: [] };
   /* ★ M2 粮道 L2：军级补给结算（通畅扣节点粮 / 断绝警告与逃兵），NPC 与玩家同入口 */
-  const armySupply = day % 10 === 0 ? armySupplyTick(state, ctx) : { fed: [], cut: [] };
+  const armySupply = isTurn ? armySupplyTick(state, ctx) : { fed: [], cut: [] };
   /* ★ P50 太守制：旬界太守按方针自动办政（blocked 置顶报告），产出与手动同源 */
-  const govs = day % 10 === 0 ? governorTick(state, cfg, ctx) : { started: [], blocked: [], resumed: [], ended: [] };
-  const dev = day % 10 === 0 ? cityDevTick(state, cfg, ctx) : { gains: [], upsets: [] };
-  const fired = day % 10 === 0 ? disasterTick(state, cfg, ctx) : [];
-  const loyalty = day % 10 === 0 ? loyaltyTick(state, cfg, ctx) : null;
-  if (day % 10 === 0) popTick(state, ctx);
+  const govs = isTurn ? governorTick(state, cfg, ctx) : { started: [], blocked: [], resumed: [], ended: [] };
+  const dev = isTurn ? cityDevTick(state, cfg, ctx) : { gains: [], upsets: [] };
+  const fired = isTurn ? disasterTick(state, cfg, ctx) : [];
+  const loyalty = isTurn ? loyaltyTick(state, cfg, ctx) : null;
+  if (isTurn) popTick(state, ctx);
   // 开发有实感时才播报（每旬每城最多一条），避免日志被 +0.3 刷屏
   const notable = dev.gains.filter((g) => g.gain >= 1);
   if (notable.length && ctx?.push) {
