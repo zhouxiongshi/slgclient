@@ -21,6 +21,8 @@
 
 import { beginInteriorTask, interiorTasks, officerStat, KINDS } from './interior-task.js';
 import { policyEffect } from './policy-effects.js';
+/* ★ P76：占身闸——研习/办差中的武将不能任太守。 */
+import { busyReasonOf, busyText } from './general-busy.js';
 
 /** 城方针（玩家可见六选一）。
  *  ★ P61-S1：方针不再只是施工顺序——同时决定资源配比与互斥工程，
@@ -185,6 +187,8 @@ export function governorCandidates(state, cfg, cityId = 0) {
     .filter((g) => !marching.has(Number(g.id)))
     .filter((g) => !taken.has(Number(g.id)))
     .filter((g) => !posting.has(Number(g.id)))
+    /* ★ P76：研习/办差中的武将不当太守候选（任命端另有硬闸给可读拒绝）。 */
+    .filter((g) => !busyReasonOf(state, Number(g.id)))
     .map((g) => ({
       id: Number(g.id),
       name: cfg?.generalByCfg?.get?.(Number(g.cfgId))?.name || g.name || `武将${g.id}`,
@@ -229,6 +233,12 @@ export function governorSet(state, cfg, ctx, { cityId, officerId, policy } = {})
       if (Number(g.cityId) !== cid) return { ok: false, reason: 'not_local_city' };
       if ((state.armys || []).some((a) => a.marchId && (a.generals || []).includes(oid))) {
         return { ok: false, reason: 'marching' };
+      }
+      /* ★ P76：占身闸——研习/办差/六府当值的武将不能任太守，给可读拒绝。 */
+      const busy = busyReasonOf(state, oid);
+      if (busy) {
+        const gname = cfg?.generalByCfg?.get?.(Number(g.cfgId))?.name || g.name || `武将${g.id}`;
+        return { ok: false, reason: `busy_${busy}`, text: busyText(busy, gname) + '任太守。' };
       }
       for (const [otherId, other] of Object.entries(governors(state))) {
         if (Number(otherId) !== cid && Number(other?.officerId) === oid) {

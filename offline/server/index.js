@@ -33,7 +33,7 @@ import { releaseCaptive, executeCaptive } from './domain/captives.js';
 import {
   strategyViewState, oathOptions, chooseOath, strategyFormup, strategyTransport, dispatchGeneral, dispatchGenerals,
   strategyContinueSandbox,
-  rewardGeneral, advanceGeneral, strategyInvest, recruitCaptive, strategyAttack, strategyRecallMarch, cancelInvest,
+  rewardGeneral, advanceGeneral, strategyInvest, recruitCaptive, strategyAttack, strategyRecallMarch, strategyArmyMove, cancelInvest,
   previewAssault, strategyReorderMarch,
   diplomacyAct,
   /* ★ M3-4 事件系统：旬 tick 触发进 pendingEvents，玩家点选走 eventChoice */
@@ -769,6 +769,11 @@ export async function startOfflineServer(options = {}) {
             confirmBattle: body.confirmBattle === true,
           });
         } else if (act === 'recall') result = strategyRecallMarch(state, cfg, ctx, { marchId: Number(body.marchId) });
+        /* ★ P76 部队调防：整队（含兵）进驻相邻己方城，抵达后归属地改到目标城。 */
+        else if (act === 'armyMove') result = strategyArmyMove(state, cfg, ctx, {
+          armyId: Number(body.armyId), toCityId: Number(body.cityId),
+          fromCityId: Number(body.fromCityId) || 0,
+        });
         /* ★ P67：出征 → 行军 → 相遇/抵城自动开战 → 战报 → 消化新城；旧端点只兼容老存档 */
         else if (act === 'battleConfirm') result = strategyConfirmBattle(state, cfg, ctx, { marchId: Number(body.marchId) });
         else if (act === 'battleRetreat') result = strategyRetreatBattle(state, cfg, ctx, { marchId: Number(body.marchId) });

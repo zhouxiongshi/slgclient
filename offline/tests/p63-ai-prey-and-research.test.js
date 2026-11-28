@@ -193,8 +193,14 @@ test('P65-① 旧档预置的研习中有委派源，不再永远卡在 12/100',
   delete s.skillbook.assign;
   s.skillbook.research = { '10002': { progress: 12, need: 100 } };
   const before = s.skillbook.research['10002'].progress;
+  /* ★ P76：接管对象是「非主公、无占身」的闲员——fresh 世界只有主公，无人可接则跳过；
+     给他配一名闲员幕僚后，接管必须落到幕僚身上，绝不锁主公。 */
+  const aide = { id: 99001, cfgId: 880001, name: '幕僚', cityId: 1, level: 1, exp: 0 };
+  s.generals.push(aide);
   const adopted = adoptOrphanResearch(s, cfg);
   assert.ok(adopted, '孤研习条目应被接管');
+  assert.notEqual(adopted.generalId, (s.generals.find((g) => g.isProtagonist) || {}).id,
+    '接管绝不落主公（P76 占身互斥会把主公开局锁死）');
   assert.equal(s.skillbook.assign['10002'].generalId, adopted.generalId);
   assert.equal(s.skillbook.research['10002'].progress, before, '接管只补委派，不改进度');
   const ev = researchTick(s, cfg, {});
@@ -219,14 +225,16 @@ test('P65-② 委派即开工：动作当场推进一次，不必等十天', () 
 
 test('P65-③ 战法库投影带委派摘要，能区分督研中与停滞', () => {
   const s = fresh();
-  /* fresh() 走 normalizeWorld，开局预置条目已被自动接管 —— 正是修复点本身。
+  /* ★ P76：主公不再被开局自动接管（占身互斥会把他锁死）。
+     fresh 世界只有主公 → 开局预置条目保持未委派，「停滞」由玩家手动指派解决；
      「停滞」状态的 UI 分支由 P65-④ 源码锁覆盖。 */
   const st0 = panelState(s, cfg);
   const seeded = st0.library.find((x) => x.cfgId === 10002);
-  assert.ok(seeded.assignment, '开局预置那条已自动接管');
-  assert.equal(seeded.assignment.generalId, seeded.assignment.generalId, '投影带委派摘要');
+  assert.ok(seeded, '开局预置条目在战法库里');
+  assert.ok(!seeded.assignment, '主公不被自动接管（P76）');
   const hero = s.generals.find((g) => g.isProtagonist) || s.generals[0];
-  panelAction(s, cfg, { type: 'assignResearch', cfgId: 10002, generalId: hero.id });
+  const r = panelAction(s, cfg, { type: 'assignResearch', cfgId: 10002, generalId: hero.id });
+  assert.equal(r.ok, true, JSON.stringify(r).slice(0, 120));
   const st1 = panelState(s, cfg);
   const assigned = st1.library.find((x) => x.cfgId === 10002);
   assert.ok(assigned.assignment, '委派后战法库直接带委派摘要');

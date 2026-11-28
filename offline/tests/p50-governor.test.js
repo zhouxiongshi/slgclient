@@ -53,7 +53,8 @@ test('G1 任免太守：只任本城官员，一人一城、行军者被拒', ()
     cands[0].cityId = Number(otherEntry[0]);
     const r2 = governorSet(s, cfg, ctx(), { cityId: Number(otherEntry[0]), officerId: cands[0].id });
     assert.equal(r2.ok, false, '同一武将不能任两城太守');
-    assert.equal(r2.reason, 'busy_elsewhere');
+    /* ★ P76：他城太守即占身，拒绝码统一走 busy_governor（含义同旧 busy_elsewhere） */
+    assert.equal(r2.reason, 'busy_governor');
   }
   // 行军中不能任
   const marcher = s.generals.find((g) => (s.armys || []).some((a) => a.marchId && (a.generals || []).includes(g.id)));

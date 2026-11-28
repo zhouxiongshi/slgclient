@@ -17,6 +17,9 @@ export const ADVANCE_COST_GOLD = 1200;
 /* ★ 2026-11-22：成长入口统一在这里定量，UI/战报只读不重算。
    内政由 5 点/旬提到 12 点/旬；出征增加参战底数，低折损仗也有成长。 */
 export const INTERIOR_EXP_PER_TICK = 12;
+/* ★ P76：留守历练。没差事、没仗打的驻城武将每旬也有这份经验——
+   不然「一直在内政的武将」永远 1 级。办差官另有上面这份更快的通道。 */
+export const IDLE_EXP_PER_TICK = 6;
 export const BATTLE_EXP_PER_LOSS = 0.8;
 export const BATTLE_EXP_PARTICIPATION = 20;
 

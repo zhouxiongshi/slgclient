@@ -5178,6 +5178,46 @@ const CITY_WINDOW_V2_IMPL = `;(function () {
     tgtCard.appendChild(tgtGrid);
     body.appendChild(tgtCard);
 
+    /* ★ P76 调防：玩家此前没有任何入口把一支带兵的队伍移驻另一座己方城
+       （调遣只调人、兵留在原城），队伍永远挂在出发城。出征页里直接把
+       己方邻城列出来，点一下整队开拔，抵达后归属地改到目标城。 */
+    var ownRoutes = (fromCity.marchRoutes || []).filter(function (r0) {
+      var t0 = cityOf(s, r0.id);
+      return t0 && t0.owner === 'player';
+    });
+    if (ownRoutes.length && army && !army.marchId) {
+      var movCard = el('div', 'card', '<h4 style="margin-top:0">调防 · 整队进驻己方邻城</h4>');
+      var movRow = el('div', '');
+      movRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;';
+      ownRoutes.forEach(function (r1) {
+        var t1 = cityOf(s, r1.id);
+        var d1 = warDays(r1.km, army.speed || 100);
+        var b1 = mkBtn(t1.name + '（' + d1 + ' 日 · ' + fmt(r1.km) + ' 里）', 'ghost', function () {
+          confirmBox('调防确认', [
+            '队伍：<b>#' + army.order + '</b>　' + warGenLine(army),
+            '行程：<b>' + esc(fromCity.name) + '</b> → <b>' + esc(t1.name) + '</b>，'
+              + '程 ' + fmt(r1.km) + ' 里，预计 ' + d1 + ' 日后抵达。',
+            '<span class="cost">整队（含全部兵）进驻，抵达后队伍归属改为' + esc(t1.name) + '；途中可撤回。按实出兵力 × 行程日结算行军粮。</span>',
+          ], '开拔', '取消', function () {
+            postJSON('/__slg/strategy/action', {
+              action: 'armyMove', armyId: army.id, cityId: t1.id, fromCityId: fromCity.id,
+            }).then(function (rs) {
+              if (rs && rs.ok) {
+                toast('大军开拔，调防' + (rs.city || t1.name) + '，预计第 ' + rs.arriveDay + ' 日抵达（耗粮 ' + fmt(rs.grainCost) + '）', true);
+                war.tab = 'queue';
+                renderWar(cache);
+              } else {
+                toast('调防失败：' + warReason(rs && rs.reason), false);
+              }
+            }).catch(function () { toast('调防失败：本机无响应', false); });
+          });
+        });
+        movRow.appendChild(b1);
+      });
+      movCard.appendChild(movRow);
+      body.appendChild(movCard);
+    }
+
     var target = war.target ? cityOf(s, war.target) : null;
     var route = target ? routes.filter(function (r) { return Number(r.id) === Number(target.id); })[0] : null;
     if (!army || !target || !route) {

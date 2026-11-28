@@ -365,6 +365,37 @@
    事件抉择 / 阶段目标 / 编队解散 / 清剿营地 / 出征攻城 / 俘虏三出口 / 酒馆登庸 /
    守城战 / 粮道断绝 / 军粮欠付。
 
+## P76 武将占身互斥 + 留守历练 + 部队调防（写死，防回归）
+
+1. **占身唯一口径 `general-busy.js`**：`busyReasonOf(state, gid)` 是「这名武将还能不能派」
+   的唯一判据，原因码 `research / task / governor / post / marching / transit`。
+   写侧（各任务入口拒绝）与读侧（候选过滤）都必须走它，**禁止各模块私自另判**。
+   注意：只是挂在驻城队伍编制里**不算占身**（那是编制不是任务）——否则办差自动挑人
+   会全军误拦；随军行军（`marchId`）才算。
+2. **研习互斥双侧拦**：占身武将（办差/太守/六府/行军/在途）`assignResearch` 必须拒
+   （`busy_*` + 中文 `text`）；研习中的武将不能办差（`officer_busy`）、不能调遣
+   （`busy_research`）、不能任太守（`busy_research`）、不能编入出征队伍（`busy_research`）。
+   **豁免唯一例外：换研习目标**——先把旧委派摘掉再挂新的，一人一职仍然成立。
+   同一武将多份委派（旧档脏数据）由 `normalizeResearchAssign` 归一，保留进度最深那份。
+3. **太守办本城的差不占身**：`beginInteriorTask` / `pickOfficer` 对「本城太守本人」豁免
+   governor 占身——太守亲办本城政务就是他的职务；否则 `governorTick` 旬界自动办政会
+   整城停摆（实测 G3 直接 0 单）。他城太守照拦。
+4. **失败动作不得改状态**：`beginInteriorTask` 的占身闸必须在扣金与 `investDays` 落账
+   **之前**——放错位置被拒一次玩家白扣 300 金还吃 10 日冷却（实测抓出）。
+5. **留守历练**：驻在己方城、没行军/没在途/没办差的武将每旬 `IDLE_EXP_PER_TICK = 6`
+   点经验（`interiorIdleExpTick`，挂 `strategyTick` 旬界闸内），攒满经 `applyGeneralExp`
+   自动升级并发「留守历练」大事记。办差官走 12 点/旬通道，**不再重复拿**留守那份。
+   升级口径唯一：`applyGeneralExp`，满 10 级清零。
+6. **主公不被自动接管研习**：`adoptOrphanResearch` 只接管给「非主公、无占身」的闲员，
+   没有就跳过——主公被开局自动挂研习 + 占身互斥＝主公从开局锁死（不能出征/调遣/
+   办差/任太守），玩家无感却处处碰壁。研习保持未委派由玩家手动指派。
+7. **部队调防 `strategyArmyMove`**：整队（含全部兵与在途征兵）进驻相邻己方城。
+   与出征同链路：`marchPlan` 算程、按实出兵力扣行军粮、写 `kind:'armyMove'` 行军牌、
+   `army.marchId` 锁队；抵达由 `strategyResolveMarches` 的 armyMove 分支落城，
+   **归属地 `army.cityId` 改到目标城**、武将随迁（`syncGeneralsCity`）、大事记留痕。
+   途中目标城易帜则整队折返原城。硬闸：非己方城/不邻接/行军中再调/空队，全拒且不改状态。
+   行军粮不够回 `no_grain`。UI 入口在出征页「调防 · 整队进驻己方邻城」卡。
+
 ## 变更流程
 
 1. 新数值：先在本表登记 → 再实现服务端权威源 → 最后接 UI。

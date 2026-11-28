@@ -49,7 +49,10 @@ import { recordRes } from './economy.js';
 import {
   grantBattleExp, levelUpSentence, takeBattlePromos,
   ADVANCE_COST_GOLD, ADVANCED_LEVEL_CAP,
+  applyGeneralExp, IDLE_EXP_PER_TICK,
 } from './general-progress.js';
+/* ★ P76：武将占身唯一口径——研习/办差/任太守的武将不能调遣。 */
+import { busyReasonOf, busyText } from './general-busy.js';
 import {
   ensureCityEcon, consumeMarchGrain, deliverGrain, cityEconTick, cityName,
   cityYield, armsApt, armsCounter, ARMS_NAMES, devLevel, cityDevTick, storeCapOf,
@@ -653,6 +656,47 @@ export function strategySnapshot(state, factionId) {
   };
 }
 
+/**
+ * ★ P76 留守历练（每旬）：驻在己方城、没行军/没在途/没办差的武将，
+ * 每旬得 IDLE_EXP_PER_TICK 点历练经验，攒满自动升级——「一直在内政的武将」
+ * 不再永远停在 1 级。办差官走 interior-task 的 12 点/旬，不重复发。
+ * 升级者聚合一条军情 + 逐个 general.push（武将页立即可见新等级）。
+ */
+export function interiorIdleExpTick(state, cfg, ctx) {
+  const st = ensureStrategy(state);
+  const busyOfficers = new Set();
+  for (const t of state.strategy?.interiorTasks || []) {
+    if (t && t.status === 'active' && Number(t.officerId) > 0) busyOfficers.add(Number(t.officerId));
+  }
+  const marching = new Set();
+  for (const a of state.armys || []) {
+    if (a.marchId) for (const gid of a.generals || []) if (gid) marching.add(Number(gid));
+  }
+  const ups = [];
+  for (const g of state.generals || []) {
+    if (!g || g.transit || marching.has(Number(g.id))) continue;
+    if (busyOfficers.has(Number(g.id))) continue;      // 办差官已有更快通道
+    const cid = Number(g.cityId) || 0;
+    const cs = st.cities?.[cid];
+    if (!cs || cs.owner !== 'player') continue;        // 不在己方城的不历练
+    const before = Math.max(1, Math.trunc(Number(g.level) || 1));
+    const r = applyGeneralExp(g, IDLE_EXP_PER_TICK);
+    if (r.to > before) {
+      ups.push(`${generalDisplayName(state, cfg, g) || `武将${g.id}`} 升至 ${r.to} 级`);
+      ctx.push?.('general.push', g);
+    }
+  }
+  if (ups.length) {
+    recordEvent(state, `留守历练：${ups.slice(0, 5).join('、')}${ups.length > 5 ? ` 等 ${ups.length} 员` : ''}。`);
+    ctx.push?.('chat.push', {
+      rid: 0, nickName: '系统', type: 0,
+      msg: `【成长】${ups.slice(0, 5).join('、')}${ups.length > 5 ? ` 等 ${ups.length} 员` : ''}因留守历练进阶。`,
+      time: Date.now(),
+    });
+  }
+  return ups;
+}
+
 /** 月度回合：每个有脑的诸侯决策一次并执行。 */
 export function strategyTick(state, cfg, ctx, now = Date.now()) {
   const conf = factionConfFor(state);
@@ -675,6 +719,10 @@ export function strategyTick(state, cfg, ctx, now = Date.now()) {
      cityEconTick「本次是旬结算」。旧实现让 cityEconTick 自己用 day%10 判，
      相位与 lastTurnDay 错位时（存档 1846 → 1859/1869 执行）整旬漏算。 */
   cityEconTick(state, cfg, ctx, { isTurn: true, turnDays });
+  /* ★ P76：留守历练——没差事、没仗打的驻城武将每旬也有经验进账，
+     否则「一直在内政的武将」永远停在 1 级（用户原话）。办差官另有 12 点/旬，
+     不重复发。升级走 applyGeneralExp 唯一口径，升级名单聚合一条军情。 */
+  interiorIdleExpTick(state, cfg, ctx);
   /* ★ P50：物资任务层已删，物资去处回归 armory 即时动作；旬结算里不再有 advanceMaterialTasks。 */
   /* ★ 2026-11-17 城防：城墙每旬自然修复（被围不修）——否则打过一次就永久残破，
      城防属性从此失去意义。 */
@@ -2854,7 +2902,29 @@ export function strategyResolveMarches(state, cfg, ctx) {
     if (today < mm.arriveDay) continue;
     /* ★ P67：抵达即战。旧存档里残留的 pendingBattle 不再当作闸门，
        本轮直接结算；玩家不需要再点第二次「开战」。 */
-    // ★ P3 运输队：抵达即粮入城库，不走战斗
+    /* ★ P76 部队调防：抵达即整队落城（归属地改到目标城），不走战斗。
+       途中目标城易帜则整队折返原城，绝不把大军丢进敌城。 */
+    if (mm.kind === 'armyMove') {
+      mm.resolved = true;
+      const army = (state.armys || []).find((a) => a.id === mm.armyId);
+      if (!army) continue;
+      delete army.marchId;
+      const tstate2 = st.cities[mm.to];
+      if (!tstate2 || tstate2.owner !== 'player') {
+        army.cityId = Number(mm.from) || st.playerCity || army.cityId;
+        syncGeneralsCity(state, army, army.cityId);
+        recordEvent(state, `${mm.toName || '目标城'}途中易帜，调防大军折返${cityName(army.cityId)}。`);
+        results.push({ kind: 'armyMove', aborted: true, cityId: army.cityId });
+        continue;
+      }
+      army.cityId = mm.to;
+      syncGeneralsCity(state, army, mm.to);
+      const nm = map.cities.find((c) => c.id === mm.to)?.name || cityName(mm.to);
+      recordEvent(state, `调防大军进驻${nm}，兵力 ${(Number(mm.troops) || 0)}，归属已改。`);
+      results.push({ kind: 'armyMove', cityId: mm.to, troops: Number(mm.troops) || 0 });
+      continue;
+    }
+    /* ★ P3 运输队：抵达即粮入城库，不走战斗 */
     if (mm.kind === 'transport') {
       mm.resolved = true;
       const ok2 = deliverGrain(state, mm.to, mm.grain);
@@ -3292,6 +3362,11 @@ function dispatchCheck(state, st, g, to, fromFallback = 0) {
   if ((state.armys || []).some((a) => a.marchId && (a.generals || []).includes(Number(g.id)))) {
     return { ok: false, reason: 'marching', generalId: Number(g.id) };
   }
+  /* ★ P76：占身闸——研习/办差/任太守的武将不能调遣，先解除任务再走。 */
+  {
+    const busy = busyReasonOf(state, Number(g.id));
+    if (busy) return { ok: false, reason: `busy_${busy}`, generalId: Number(g.id) };
+  }
   return { ok: true, from };
 }
 
@@ -3401,7 +3476,13 @@ export function dispatchGeneral(state, cfg, ctx, { generalId, toCityId, fromCity
   /* ★ P55：旧调用方显式给的出发城只在武将未记驻地时作局部兜底参与校验，
      绝不在这里写 g.cityId——校验失败的路径此前会留下「被拒绝却改了驻地」的脏档。 */
   const check = dispatchCheck(state, st, g, to, Number(fromCityId) || 0);
-  if (!check.ok) return check;
+  if (!check.ok) {
+    /* ★ P76：占身拒绝给可读文案（研习/办差/太守在身）。 */
+    if (String(check.reason).startsWith('busy_')) {
+      return { ...check, text: `${busyText(check.reason.slice(5), generalDisplayName(state, cfg, g) || `武将${gid}`)}，调不了遣。` };
+    }
+    return check;
+  }
   const row = planDispatch(state, st, g, to, check.from);
   row.generalName = generalDisplayName(state, cfg, g);
   ctx.push?.('general.push', g);
@@ -3435,6 +3516,9 @@ export function dispatchGenerals(state, cfg, ctx, { generalIds, toCityId } = {})
     marching: '行军中不可调', no_city: '目标城不存在', not_own_city: '目标城不属我方',
     in_transit: '已在赴任途中',
   };
+  const whyNot = (s) => (String(s.reason).startsWith('busy_')
+    ? busyText(s.reason.slice(5), s.name)
+    : (explain[s.reason] || '不可调'));
   const moved = [];
   const skipped = [];
   for (const gid of ids) {
@@ -3447,7 +3531,7 @@ export function dispatchGenerals(state, cfg, ctx, { generalIds, toCityId } = {})
     moved.push({ g, check });
   }
   if (!moved.length) {
-    const why = skipped.map((s) => `${s.name}（${explain[s.reason] || '不可调'}）`).join('、');
+    const why = skipped.map((s) => `${s.name}（${whyNot(s)}）`).join('、');
     return { ok: false, reason: 'all_skipped', moved: [], skipped, to,
       text: `没有武将可调：${why}` };
   }
@@ -3468,7 +3552,7 @@ export function dispatchGenerals(state, cfg, ctx, { generalIds, toCityId } = {})
   const maxDays = Math.max(...rows.map((r) => r.marchDays));
   let text = `${names.length} 员武将启程前往${cityName(to)}：${names.join('、')}，最迟 ${maxDays} 日后抵达。`;
   if (skipped.length) {
-    text += ` 未调 ${skipped.map((s) => `${s.name}（${explain[s.reason] || '不可调'}）`).join('、')}。`;
+    text += ` 未调 ${skipped.map((s) => `${s.name}（${whyNot(s)}）`).join('、')}。`;
   }
   ctx.push?.('strategy.state', null);
   recordEvent(state, text);
@@ -3511,8 +3595,77 @@ export function strategyTransport(state, cfg, ctx, { cityId, grain, fromCityId =
   return { ok: true, marchId: row.id, arriveDay: row.arriveDay, city: cityName(id), grain: amount, km, days };
 }
 
-/** ★ P1 赏赐：金 +amount/100 忠诚（单次上限 +15）。 */
-export function rewardGeneral(state, cfg, ctx, { generalId, amount }) {
+/**
+ * ★ P76 部队调防：把一支带兵的队伍整队调往相邻己方城。
+ *
+ * 用户原话：「部队出征到其他城市后，归属地应该发生改变」。实测攻占敌城/抵达
+ * 己方城后 `army.cityId` 都会变更，真正的缺口是：调遣（P74）只调人不带兵，
+ * 玩家没有任何入口把一支带兵的队伍移驻另一座己方城——队伍永远挂在出发城。
+ *
+ * 与出征同一条行军链路：marchPlan 算程、按实出兵力扣行军粮、写 march 牌、
+ * army.marchId 锁队；抵达由 strategyResolveMarches 的 armyMove 分支落城，
+ * 途中目标城易帜则整队折返原城。行军中不可再出征/清剿/再调防（marchId 闸）。
+ */
+export function strategyArmyMove(state, cfg, ctx, { armyId, toCityId, fromCityId = 0 } = {}) {
+  const st = ensureStrategy(state);
+  const aid = Number(armyId) || 0;
+  const army = (state.armys || []).find((a) => a.id === aid);
+  if (!army) return { ok: false, reason: 'no_army', text: '没有这支队伍' };
+  if (army.marchId) return { ok: false, reason: 'marching', text: '队伍行军中，不可再调防' };
+  const from = Number(fromCityId) || Number(army.cityId) || st.playerCity || 0;
+  const to = Number(toCityId) || 0;
+  const fromState = st.cities[from];
+  const tstate = st.cities[to];
+  if (!fromState || fromState.owner !== 'player') return { ok: false, reason: 'not_own_city', text: '出发城不是你的' };
+  if (!tstate || tstate.owner !== 'player') return { ok: false, reason: 'not_own_city', text: '只能进驻己方城池' };
+  if (to === from) return { ok: false, reason: 'same_city', text: '队伍已在此城' };
+  const march = canMarchBetween(from, to);
+  if (march && march.ok === false) {
+    return { ok: false, reason: march.reason === 'gate_blocked' ? 'gate_blocked' : 'not_adjacent',
+      text: march.reason === 'gate_blocked' ? '关隘封锁，过不去' : '只能进驻相邻己方城' };
+  }
+  if (!neighborsOf(from).includes(to)) return { ok: false, reason: 'not_adjacent', text: '只能进驻相邻己方城' };
+  if ((army.soldiers || []).every((n) => !(n > 0))) {
+    return { ok: false, reason: 'no_troops', text: '空队不必调防，用武将调遣就好' };
+  }
+  const map = strategyMap();
+  const target = map.cities.find((c) => c.id === to);
+  const troopsTotal = (army.soldiers || []).reduce((s, n) => s + Math.max(0, Number(n) || 0), 0)
+    + (army.con_cnts || []).reduce((s, n) => s + Math.max(0, Number(n) || 0), 0);
+  const plan = marchPlan(state, cfg, from, to, { ...army, cityId: from, soldiers: army.soldiers });
+  const grainCost = marchGrainCost(state, Math.max(1, troopsTotal), plan.days, target?.terrain);
+  const pay = consumeMarchGrain(state, from, grainCost);
+  if (!pay.enough) {
+    return { ok: false, reason: 'no_grain', need: grainCost, text: `粮草不足：调防需粮 ${grainCost}` };
+  }
+  if (!Array.isArray(st.marches)) st.marches = [];
+  const departDay = Math.max(1, Math.floor(Number(state.clock?.day) || 1));
+  const row = {
+    id: (st.marchSeq = (st.marchSeq || 0) + 1),
+    side: 'player', kind: 'armyMove', from, to,
+    departDay, arriveDay: departDay + plan.days,
+    armyId: army.id, frac: 1, grainCost, troops: troopsTotal,
+    km: plan.km, speed: plan.speed,
+    toName: target?.name || cityName(to),
+  };
+  st.marches.push(row);
+  army.marchId = row.id;   // 锁队：到达前不能再出征/清剿/再调防
+  const fromName = map.cities.find((c) => c.id === from)?.name || cityName(from);
+  recordEvent(state, `大军自${fromName}开拔，调防${row.toName}，兵力 ${troopsTotal}，`
+    + `预计第 ${row.arriveDay} 日抵达（耗粮 ${grainCost}）。`);
+  ctx.push?.('chat.push', {
+    rid: 0, nickName: '系统', type: 0,
+    msg: `【天下】我军自${fromName}调防${row.toName}，程 ${Math.round(plan.km)} 里，预计 ${plan.days} 日后抵达。`,
+    time: Date.now(),
+  });
+  return {
+    ok: true, marching: true, marchId: row.id, arriveDay: row.arriveDay,
+    city: row.toName, grainCost, marchDays: plan.days, km: plan.km, speed: plan.speed,
+    from: fromName, armyId: army.id, troops: troopsTotal,
+  };
+}
+
+/** ★ P1 赏赐：金 +amount/100 忠诚（单次上限 +15）。 */export function rewardGeneral(state, cfg, ctx, { generalId, amount }) {
   const g = (state.generals || []).find((x) => x.id === Number(generalId));
   if (!g) return { ok: false, reason: 'no_general' };
   const amt = Math.floor(Number(amount) || 0);

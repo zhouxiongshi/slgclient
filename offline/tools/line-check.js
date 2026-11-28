@@ -17,6 +17,7 @@ import { settleWorld, handleRequest } from '../server/handlers.js';
 import { loadConfig } from '../server/config.js';
 import { factionConf } from '../server/domain/strategy.js';
 import { salaryDueOf } from '../server/domain/city-econ.js';
+import { busyReasonOf } from '../server/domain/general-busy.js';
 import { diplomacyView } from '../server/domain/diplomacy.js';
 import { mkdtempSync, copyFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -194,7 +195,8 @@ try {
   /* ============ L6 调遣行程 ============ */
   if (run('L6') && homes.length >= 2) {
     const to = homes.find((id) => id !== HOME);
-    const g = (state.generals || []).find((x) => Number(x.cityId) === HOME && !x.transit);
+    /* ★ P76：跳过占身武将（L5 刚任命的太守正占身，被拦是正确行为） */
+    const g = (state.generals || []).find((x) => Number(x.cityId) === HOME && !x.transit && !busyReasonOf(state, x.id));
     if (!g) rec('L6', '调遣：启程→在途→抵达', false, '出发城无武将');
     else {
       const from = Number(g.cityId);
@@ -209,7 +211,9 @@ try {
 
   /* ============ L8 战法研习（挑真正未解锁的） ============ */
   if (run('L8')) {
-    const g = (state.generals || []).find((x) => Number(x.cityId) === richHome);
+    /* ★ P76：占身武将不能接研习，挑无占身的 */
+    const g = (state.generals || []).find((x) => Number(x.cityId) === richHome && !busyReasonOf(state, x.id))
+      || (state.generals || []).find((x) => !x.transit && !busyReasonOf(state, x.id));
     const lib = (await getj('/__slg/panels/state'))?.library || [];
     const locked = lib.find((s) => s && s.cfgId && !state.skillbook?.unlocked?.[String(s.cfgId)]);
     if (!g || !locked) rec('L8', '研习：委派→逐旬→习得', false, `武将=${!!g} 未解锁战法=${!!locked}（库${lib.length}条）`);
@@ -308,7 +312,8 @@ try {
 
   /* ============ L7 编队→征兵→解散（用临时小队，不动主力） ============ */
   if (run('L7')) {
-    const g = (state.generals || []).find((x) => Number(x.cityId) === HOME && !x.transit && !x.order);
+    /* ★ P76：无占身才能编队（太守/研习/办差中的会被正确拦下） */
+    const g = (state.generals || []).find((x) => Number(x.cityId) === HOME && !x.transit && !x.order && !busyReasonOf(state, x.id));
     const cid = HOME;
     const t0 = Number(state.strategy.cities[cid].troops) || 0;
     if (!g) rec('L7', '编队：新建队伍→征兵→解散→兵回城', false, '本城无空闲武将');
@@ -479,6 +484,75 @@ try {
       rec('L19', '粮道：断绝→民心降+守军逃散→复通恢复',
         cut && morale1 < morale0 && troops1 <= troops0 && recovered,
         `${cityName(tid)} 断绝=${cut} 民心 ${morale0}→${morale1} 守军 ${troops0}→${troops1} 复通=${recovered}`);
+    }
+  }
+
+  /* ============ L20 研习占身互斥（P76） ============ */
+  if (run('L20')) {
+    const lib = (await getj('/__slg/panels/state'))?.library || [];
+    const lockedList = lib.filter((x) => x && x.cfgId && !state.skillbook?.unlocked?.[String(x.cfgId)]);
+    const g = (state.generals || []).find((x) => Number(x.cityId) === HOME && !x.transit && !busyReasonOf(state, x.id));
+    if (!g || lockedList.length < 2) {
+      rec('L20', '研习占身：有任务在身不能接研习', false, `闲员=${!!g} 未解锁战法=${lockedList.length}条`);
+    } else {
+      /* 真实占身路径：任命太守（他城/本城太守都算占身） */
+      const rGov = await act({ action: 'governorSet', cityId: HOME, officerId: g.id, policy: 'agri' });
+      const r = await pnl({ type: 'assignResearch', cfgId: lockedList[0].cfgId, generalId: g.id });
+      const blocked = r?.ok === false && /研习战法|腾不出手|正任太守/.test(String(r.message || ''));
+      rec('L20', '研习占身：太守在身委派研习被拦且给中文理由', rGov?.ok === true && blocked,
+        `${g.name || g.id} 任太守后委派研习→${r?.ok === false ? String(r.message).slice(0, 60) : '被放行(缺陷)'}`);
+      /* 反向：研习中的武将不能任太守 */
+      const g2 = (state.generals || []).find((x) => !x.transit && !busyReasonOf(state, x.id)
+        && Number(x.cityId) !== Number(g.id));
+      if (g2) {
+        const key = String(lockedList[1].cfgId);
+        state.skillbook.research = state.skillbook.research || {};
+        if (!state.skillbook.research[key]) state.skillbook.research[key] = { progress: 0, need: 120 };
+        const a = await pnl({ type: 'assignResearch', cfgId: Number(key), generalId: g2.id });
+        const gvCity = Number(g2.cityId);
+        const r2 = await act({ action: 'governorSet', cityId: gvCity, officerId: g2.id, policy: null });
+        rec('L20b', '研习占身：研习中的武将任太守被拦', a?.ok === true && r2?.ok === false
+          && String(r2.reason || '').startsWith('busy_'),
+          `${g2.name || g2.id} 研习后任太守→${r2?.ok === false ? r2.reason : '被放行(缺陷)'}`);
+        delete state.skillbook.assign[key];
+      }
+    }
+  }
+
+  /* ============ L21 部队调防（P76）：整队进驻己方邻城，归属地改到目标城 ============ */
+  if (run('L21')) {
+    const marchableFrom = (await import('../server/domain/strategy.js')).marchableFrom;
+    const pool = (state.armys || []).filter((a) => state.strategy.cities[a.cityId]?.owner === 'player'
+      && (a.soldiers || []).some((n) => n > 0) && !a.marchId);
+    let picked = null;
+    for (const a of pool) {
+      const near = marchableFrom(Number(a.cityId), state).map(Number);
+      /* 有己方邻城直接用；没有就把一个邻城临时划给玩家（验证器存档副本，跑完不还原，
+         便于观察归属变更后的世界——正式回归锁在 tests/p76-busy-and-moves.test.js） */
+      const own = near.filter((id) => state.strategy.cities[id]?.owner === 'player');
+      if (own.length) { picked = { army: a, to: own[0], flipped: false }; break; }
+      if (near.length) {
+        const b = near[0];
+        state.strategy.cities[b].owner = 'player';
+        picked = { army: a, to: b, flipped: true };
+        break;
+      }
+    }
+    if (!picked) rec('L21', '部队调防：整队进驻→归属地变更', false, '没有带兵队伍可调');
+    else {
+      const { army: a0, to, flipped } = picked;
+      const from = Number(a0.cityId);
+      state.roleRes.grain = Math.max(Number(state.roleRes.grain) || 0, 500000);
+      const r = await act({ action: 'armyMove', armyId: a0.id, cityId: to, fromCityId: from });
+      const departed = r?.ok === true && !!a0.marchId;
+      if (departed) {
+        const m = (state.strategy.marches || []).find((x) => x.kind === 'armyMove' && !x.resolved);
+        tick((Number(m?.arriveDay) || state.clock.day) - state.clock.day + 1);
+      }
+      rec('L21', '部队调防：整队进驻→归属地变更',
+        r?.ok === true && departed && Number(a0.cityId) === to && !a0.marchId,
+        `队伍${a0.id} ${cityName(from)}→${cityName(to)}${flipped ? '（邻城临时划入）' : ''} `
+        + `${r?.ok === false ? JSON.stringify(r).slice(0, 80) : ''} 抵达后归属=${cityName(a0.cityId)}`);
     }
   }
 

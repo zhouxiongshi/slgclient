@@ -18,6 +18,8 @@ import { fileURLToPath } from 'node:url';
    模块，import 它不会引入 panels.js ↔ strategy.js 的环；SKILL_BY_ID 仍只做「这条战法
    是否可研习」的存在性判断（原始三表），不改变 19001 不可研习的既有行为。 */
 import { skillById } from '../skills.js';
+/* ★ P76：武将占身唯一口径——有任务在身就不能再接研习。 */
+import { busyReasonOf, busyText, normalizeResearchAssign } from './general-busy.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const load = (p) => JSON.parse(readFileSync(resolve(ROOT, p), 'utf8'));
@@ -87,8 +89,10 @@ export function researchPace(g) {
 }
 
 /** 旧档迁移：开局预置的「研习中」若没有委派，就永远卡着不动。
- *  这是零依赖的字段兜底（不消耗残卷），由 ensurePanels 调；指派主公督研第一条，
- *  之后每旬由 strategyTick 自然推进。玩家也可以随时改派。 */
+ *  这是零依赖的字段兜底（不消耗残卷），由 ensurePanels 调。
+ *  ★ P76：接管对象改为「非主公、无占身」的闲员——主公一旦被自动挂上研习，
+ *  占身互斥会把他从开局就锁死（不能出征/调遣/办差/任太守），玩家完全无感却处处碰壁。
+ *  没有合适闲员时不强行指派：研究保持未委派，玩家手动选人。 */
 export function adoptOrphanResearch(state, cfg) {
   const sb = state?.skillbook;
   if (!sb) return null;
@@ -96,7 +100,7 @@ export function adoptOrphanResearch(state, cfg) {
   const assign = sb.assign || (sb.assign = {});
   const keys = Object.keys(research).filter((k) => !sb.unlocked?.[k] && !assign[k]);
   if (!keys.length) return null;
-  const hero = (state.generals || []).find((g) => g.isProtagonist) || state.generals?.[0];
+  const hero = (state.generals || []).find((g) => !g.isProtagonist && !g.transit && !busyReasonOf(state, g.id));
   if (!hero) return null;
   const key = keys[0];
   assign[key] = { generalId: hero.id, since: int(state.clock?.day, 1), source: '旧档接管' };
@@ -114,6 +118,15 @@ export function assignResearch(state, cfg, { cfgId, generalId } = {}) {
   if (!conf) return { ok: false, reason: 'no_skill' };
   if (state.skillbook.unlocked?.[String(id)]) return { ok: false, reason: 'already_unlocked' };
   const assign = state.skillbook.assign || (state.skillbook.assign = {});
+  /* ★ P76：旧档归一——同一武将只留一份委派（进度不丢），杜绝「一人多研习」。 */
+  normalizeResearchAssign(state);
+  const name = g.name || `武将${g.id}`;
+  /* ★ P76：有任务在身就不能再接研习。唯一豁免：换研习目标（先把旧委派摘掉、
+     换新战法——这是「换活儿」不是「兼差」，一人一职仍然成立）。 */
+  const reason = busyReasonOf(state, gid);
+  if (reason && reason !== 'research') {
+    return { ok: false, reason: `busy_${reason}`, text: `${busyText(reason, name)}研习战法。` };
+  }
   /* 这名武将若已派去别的战法，先摘掉（一人一职，不静默双份进度）。 */
   for (const [key, row] of Object.entries(assign)) {
     if (int(row?.generalId) === gid) delete assign[key];
@@ -180,6 +193,8 @@ function advanceAssigned(state, cfg, key, row, ctx) {
 /** 每旬推进所有委派。返回本旬发生的事。 */
 export function researchTick(state, cfg, ctx = {}) {
   if (!state?.skillbook) return [];
+  /* ★ P76：旧档归一——同一武将多份委派只留一份，防止双份进度叠加推进。 */
+  normalizeResearchAssign(state);
   const assign = state.skillbook.assign;
   if (!assign || !Object.keys(assign).length) return [];
   const events = [];

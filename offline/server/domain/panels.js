@@ -933,8 +933,9 @@ export function panelAction(state, cfg, action = {}) {
        每旬由 strategyTick 调 researchTick 推进；这里只登记/撤回，不改进度。 */
     if (type === 'assignResearch') {
       const r = assignResearch(state, cfg, { cfgId: action.cfgId, generalId: action.generalId });
-      if (!r.ok) return fail(r.reason === 'already_unlocked' ? '该战法已解锁'
-        : r.reason === 'no_general' ? '找不到该武将' : '战法不存在');
+      if (!r.ok) return fail(r.text
+        || (r.reason === 'already_unlocked' ? '该战法已解锁'
+          : r.reason === 'no_general' ? '找不到该武将' : '战法不存在'));
       /* ★ P65：委派即开工。旧版只挂个字段，进度要等下一旬才动，
          玩家盯着进度条看到的就是「研习中但卡住」。这里当场推进一次，
          之后仍由 strategyTick 每旬续推，两条路径都走 advanceAssigned 同一口径。 */

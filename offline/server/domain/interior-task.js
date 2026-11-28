@@ -22,6 +22,8 @@ import { gameStatOf, charmStatOf, effectiveStatOf } from './general-stat.js';
 /* ★ 2026-11-19 武将养成：内政岗位也给经验。旧版经验只来自打仗，
    纯内政流武将永远停在 1 级，exp 恒 0。general-progress 是叶子模块，不成环。 */
 import { applyGeneralExp, INTERIOR_EXP_PER_TICK } from './general-progress.js';
+/* ★ P76：武将占身唯一口径——有任务在身就不能再接差事。 */
+import { busyReasonOf, busyText } from './general-busy.js';
 /* ★ 2026-11-16：官阶反哺治政——谋臣/政治家政治随官阶提升（零依赖叶子） */
 import { careerTagOf } from './official-rank.js';
 
@@ -120,12 +122,16 @@ export function pickOfficer(state, cfg, cityId, key) {
   }
   let best = null;
   let bestStat = -1;
+  const ownGov = Number(state.strategy?.governors?.[cid]?.officerId) || 0;
   for (const a of state.armys || []) {
     if (Number(a.cityId) !== cid || a.marchId) continue;
     for (const gid of a.generals || []) {
       if (!gid || marching.has(Number(gid))) continue;
       const g = (state.generals || []).find((x) => Number(x.id) === Number(gid));
       if (!g) continue;
+      /* ★ P76：占身闸——研习/任他城太守/六府当值的武将不能被自动挑去办差。
+         本城太守例外：办本城的差就是他的职务。 */
+      if (Number(gid) !== ownGov && busyReasonOf(state, Number(gid))) continue;
       const s = officerStat(cfg, g, key);
       if (s > bestStat) { best = g; bestStat = s; }
     }
@@ -243,6 +249,23 @@ export function beginInteriorTask(state, cfg, ctx, { cityId, kind, officerId } =
   const gold = Number(state.roleRes?.gold) || 0;
   if (gold < K.cost) return { ok: false, reason: 'no_gold', cost: K.cost };
   if (kind === 'relief' && !e.mod && !e.disaster) return { ok: false, reason: 'no_disaster' };
+
+  /* ★ P76：占身闸放在扣钱**之前**——失败动作不得改状态。旧位置在扣金与
+     investDays 落账之后，被拒一次玩家就白扣 300 金还吃 10 日冷却。
+     豁免：本城太守办本城的差——那本来就是他的职务，不是第二份差事
+     （governorTick 旬界自动办政传的就是 gv.officerId，不豁免会整城停摆）。 */
+  const oidPre = Number(officerId) || 0;
+  if (oidPre) {
+    const gPre = (state.generals || []).find((x) => Number(x.id) === oidPre);
+    const ownGovernor = Number(st.governors?.[id]?.officerId) === oidPre;
+    const busyPre = gPre && !ownGovernor ? busyReasonOf(state, oidPre) : '';
+    if (gPre && busyPre && busyPre !== 'marching') {
+      return {
+        ok: false, reason: 'officer_busy', busyReason: busyPre,
+        text: `${busyText(busyPre, gPre.name || `武将${gPre.id}`)}，办不了${K.label}。`,
+      };
+    }
+  }
 
   state.roleRes.gold = gold - K.cost;
   e.investDays[kind] = day;

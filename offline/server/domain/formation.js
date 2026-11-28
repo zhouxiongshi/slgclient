@@ -12,6 +12,9 @@ const idOf = (v) => {
   return Number.isFinite(n) && n > 0 ? Math.trunc(n) : 0;
 };
 
+/* ★ P76：武将占身唯一口径——研习中的武将不能编入出征队伍。 */
+import { busyReasonOf } from './general-busy.js';
+
 /**
  * 判断一名武将能否进入指定城的队伍。
  * `armyId` 是目标队伍；同队内换槽允许，跨队占用一律拒绝。
@@ -28,6 +31,12 @@ export function formationGeneralCheck(state, { generalId, cityId, armyId = 0, mi
   /* ★ P74：赴任途中的武将不在城里——g.cityId 还记着出发城，不拦就会「人还在路上
      却被编进出征队伍」，抵达时凭空多出一支。 */
   if (g.transit) return { ok: false, reason: 'in_transit', generalId: gid };
+
+  /* ★ P76：占身闸——正研习战法的武将不能编入出征队伍（先解除研习再点将）。 */
+  {
+    const busy = busyReasonOf(state, gid);
+    if (busy && busy !== 'marching') return { ok: false, reason: `busy_${busy}`, generalId: gid };
+  }
 
   const fromCity = idOf(g.cityId);
   if (fromCity !== city) {
